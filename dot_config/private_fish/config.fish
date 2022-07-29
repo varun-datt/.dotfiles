@@ -1,6 +1,8 @@
 # Set
 set -x VISUAL nvim
 set -x EDITOR "$VISUAL"
+set -x NODE_OPTIONS "--max_old_space_size=6144"
+set -x NVM_SYMLINK_CURRENT true
 
 if status is-interactive
   # Commands to run in interactive sessions can go here
