@@ -1,0 +1,10 @@
+{{- $name := "Varun Datt" -}}
+{{- $email := "35286616+varun-datt@users.noreply.github.com" -}}
+
+git:
+  autoAdd: true
+  autoCommit: true
+
+data:
+  name: {{ $name | quote }}
+  email: {{ $email | quote }}
