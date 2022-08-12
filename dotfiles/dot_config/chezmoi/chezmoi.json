@@ -1,7 +1,0 @@
-{
-  "sourceDir": "~/.dotfiles",
-  "git": {
-    "autoAdd": true,
-    "autoCommit": true
-  }
-}
