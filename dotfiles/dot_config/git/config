@@ -41,9 +41,9 @@
   changed = green
   untracked = cyan
 
-/* [core] */
-/* 	excludesfile = /Users/dattv2/.gitignore_global */
-/* 	longpaths = true */
+; [core]
+;  excludesfile = /Users/dattv2/.gitignore_global
+;  longpaths = true
 
 [fetch]
   prune = true
