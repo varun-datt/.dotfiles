@@ -41,9 +41,9 @@
   changed = green
   untracked = cyan
 
-/* [core] */
-/* 	excludesfile = ~/.gitignore_global */
-/* 	longpaths = true */
+; [core]
+;  excludesfile = ~/.gitignore_global
+;  longpaths = true
 
 [fetch]
   prune = true
