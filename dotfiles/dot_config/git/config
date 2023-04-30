@@ -9,6 +9,7 @@
   co = checkout
   df = diff
   dfc = diff --cached
+  pr = pull --rebase
   pf = push --force-with-lease
   lg = log -p
   hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
