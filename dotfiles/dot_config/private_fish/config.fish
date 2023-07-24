@@ -2,6 +2,7 @@
 set -x VISUAL nvim
 set -x EDITOR "$VISUAL"
 set -x NODE_OPTIONS "--max_old_space_size=6144"
+set -x NVM_DIR "$HOME/.nvm"
 set -x NVM_SYMLINK_CURRENT true
 set fish_color_command --bold
 
