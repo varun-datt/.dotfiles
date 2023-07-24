@@ -18,3 +18,5 @@ defaults write com.apple.menuextra.clock "DateFormat" -string "\"EEE d MMM HH:mm
 # Dock
 defaults write com.apple.dock "autohide" -bool "true" && killall Dock
 
+# Brew install
+brew bundle --file ~/Brewfile
