@@ -15,4 +15,7 @@ if status is-interactive
   if command -v starship &> /dev/null
     starship init fish | source
   end
+  if command -v kubectl &> /dev/null
+    kubectl completion fish | source
+  end
 end
