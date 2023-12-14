@@ -1,0 +1,56 @@
+#!/bin/sh
+
+set -e
+
+{{ if eq .chezmoi.os "windows" -}}
+
+{{ else -}}
+mkdir -p ~/sandbox
+
+git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
+
+git clone --depth 1 https://github.com/AstroNvim/AstroNvim ~/.config/nvim
+
+# fisher update
+
+{{ if eq .chezmoi.os "linux" -}}
+pamac upgrade
+
+pamac install alacritty bat bitwarden broot chezmoi fd fish git github-cli lsd neovim obsidian ripgrep starship tmux veracrypt zoxide
+
+pamac build brave-bin gnome-shell-extension-nordvpn-connect-git librewolf-bin mailspring notion-app tor-browser visual-studio-code-bin
+
+# Gnome settings
+gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'librewolf.desktop', 'Alacritty.desktop', 'bitwarden.desktop', 'obsidian.desktop', 'Mailspring.desktop', 'notion-app-enhanced.desktop']"
+
+gsettings set org.gnome.nautilus.preferences show-hidden-files true
+gsettings set org.gnome.desktop.interface show-battery-percentage true
+gsettings set org.gnome.desktop.interface clock-show-weekday true
+
+{{ else if eq .chezmoi.os "darwin" -}}
+
+# Finder
+defaults write com.apple.finder "AppleShowAllFiles" -bool "true"
+defaults write com.apple.finder "ShowPathbar" -bool "true"
+defaults write com.apple.finder "FXDefaultSearchScope" -string "SCcf" 
+defaults write com.apple.finder "FXPreferredViewStyle" -string "Nlsv"
+killall Finder
+
+# Global
+defaults write NSGlobalDomain "AppleShowAllExtensions" -bool "true"
+defaults write NSGlobalDomain KeyRepeat -int 0
+defaults write NSGlobalDomain InitialKeyRepeat -int 10
+
+# Menu
+defaults write com.apple.menuextra.clock "DateFormat" -string "\"EEE d MMM HH:mm:ss\"" 
+
+# Dock
+defaults write com.apple.dock "autohide" -bool "true" && killall Dock
+
+# Brew install
+brew bundle --file ~/Brewfile
+
+{{ end -}}
+
+{{ end -}}
+
