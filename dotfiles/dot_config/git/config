@@ -43,12 +43,25 @@
   changed = green
   untracked = cyan
 
-; [core]
+[core]
+  pager = delta
 ;  excludesfile = /Users/dattv2/.gitignore_global
 ;  longpaths = true
 
+[delta]
+  navigate = true    # use n and N to move between diff sections
+
+[diff]
+  colorMoved = default
+
 [fetch]
   prune = true
+
+[interactive]
+  diffFilter = delta --color-only
+
+[merge]
+  conflictstyle = diff3
 
 [push]
   autoSetupRemote = true
