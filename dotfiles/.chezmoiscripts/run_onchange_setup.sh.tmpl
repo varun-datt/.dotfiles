@@ -20,12 +20,39 @@ fi
 
 # fisher update
 
+  # echo "RSA and DSA, at least 4096 bits, infinite expiry"
+  # echo "user ID / email: Github email"
+
+  # gpg --full-generate-key
+
+  # gpg --list-secret-keys --keyid-format LONG
+
+  # read -p "Enter key id: " _key_id
+
+  # gpg --armor --export "${_key_id}"
+
+  # # https://help.github.com/en/github/authenticating-to-github/adding-a-new-gpg-key-to-your-github-account
+
+  # git config --global user.signingkey "${_key_id}"
+  
+  # git config commit.gpgsign true
+
 {{ if eq .chezmoi.os "linux" -}}
 pamac upgrade
 
-pamac install alacritty bat bitwarden broot chezmoi fd fish git git-delta github-cli lsd neovim ttf-jetbrains-mono-nerd obsidian ripgrep starship tldr tmux torbrowser-launcher veracrypt zoxide
+_arch_packages="alacritty bat bitwarden broot chezmoi docker fd fish git git-delta github-cli lsd neovim ttf-jetbrains-mono-nerd obsidian ripgrep starship tldr tmux torbrowser-launcher veracrypt zoxide"
+for _package in ${_arch_packages}; do
+  if [ -z "$(pamac search -i $_package)" ]; then
+    pamac install $_package
+  fi
+done
 
-pamac build brave-bin librewolf-bin mailspring notion-app visual-studio-code-bin
+_aur_packages="brave-bin librewolf-bin mailspring notion-app visual-studio-code-bin"
+for _package in ${_aur_packages}; do
+  if [ -z "$(pamac search -i $_package)" ]; then
+    pamac build $_package
+  fi
+done
 
 # Gnome settings
 gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'librewolf.desktop', 'Alacritty.desktop', 'bitwarden.desktop', 'obsidian.desktop', 'Mailspring.desktop', 'notion-app-enhanced.desktop']"
@@ -58,6 +85,11 @@ defaults write com.apple.dock "autohide" -bool "true" && killall Dock
 brew bundle --file ~/Brewfile
 
 {{ end -}}
+
+_fish_path=$(which fish)
+if [[ "$SHELL" != "${_fish_path}" ]]; then
+  chsh -s $(which fish)
+fi
 
 {{ end -}}
 
