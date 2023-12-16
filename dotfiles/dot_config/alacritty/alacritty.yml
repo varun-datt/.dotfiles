@@ -19,3 +19,6 @@ shell:
     - -s
     # - -D
     - main
+
+window:
+  startup_mode: Maximized
