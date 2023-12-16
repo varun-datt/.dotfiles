@@ -7,9 +7,16 @@ set -e
 {{ else -}}
 mkdir -p ~/sandbox
 
-git clone https://github.com/tmux-plugins/tpm ~/.config/tmux/plugins/tpm
+_tmux_plugins_directory="$HOME/.config/tmux/plugins/tpm"
+_nvim_directory="$HOME/.config/nvim"
 
-git clone --depth 1 https://github.com/AstroNvim/AstroNvim ~/.config/nvim
+if [ ! -d "$_tmux_plugins_directory" ]; then
+  git clone https://github.com/tmux-plugins/tpm "$_tmux_plugins_directory"
+fi
+
+if [ ! -d "$_nvim_directory" ]; then
+ git clone --depth 1 https://github.com/AstroNvim/AstroNvim "$_nvim_directory"
+fi
 
 # fisher update
 
