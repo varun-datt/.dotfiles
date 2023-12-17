@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# curl -o- https://raw.githubusercontent.com/varun-datt/.dotfiles/main/install.sh | sh
+
 set -e # -e: exit on error
 
 if [ ! "$(command -v chezmoi)" ]; then

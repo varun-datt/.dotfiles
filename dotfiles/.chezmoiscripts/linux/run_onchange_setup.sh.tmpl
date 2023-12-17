@@ -1,0 +1,27 @@
+{{ if eq .chezmoi.os "linux" -}}
+#!/bin/sh
+
+set -e
+
+pamac upgrade
+
+# Install packages
+cat "$HOME/Archfile" | while read line
+do
+  _type=$(echo "$line" | cut -d " " -f 1)
+  _package=$(echo "$line" | cut -d " " -f 2)
+  _command=$([ "$_type" == "arch" ] && echo "install" || echo "build")
+
+  if [ -z "$(pamac search -i $_package)" ]; then
+    pamac "${_command}" $_package
+  fi
+done
+
+# Gnome settings
+gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'librewolf.desktop', 'Alacritty.desktop', 'bitwarden.desktop', 'obsidian.desktop', 'Mailspring.desktop', 'notion.desktop', 'code.desktop']"
+
+gsettings set org.gnome.nautilus.preferences show-hidden-files true
+gsettings set org.gnome.desktop.interface show-battery-percentage true
+gsettings set org.gnome.desktop.interface clock-show-weekday true
+
+{{ end -}}
