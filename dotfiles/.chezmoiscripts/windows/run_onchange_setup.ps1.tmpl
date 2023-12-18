@@ -1,12 +1,20 @@
 {{ if eq .chezmoi.os "windows" -}}
 #!/usr/bin/env pwsh
 
+$chocolateyInstalled = $null -ne (get-command choco)
+if (-not $chocolateyInstalled)
+{
+  $installPs1 = ((new-object net.webclient).DownloadString('https://chocolatey.org/install.ps1'))
+  Invoke-Expression $installPs1
+}
+
 # Install packages
 {{ $packageFilePath := "packages/ChocoPackages.config" }}
 echo "hash: {{ include $packageFilePath | sha256sum }}"
 choco install -y "$(chezmoi source-path)/packages/ChocoPackages.config"
 
-if (!(Test-Path -Path $env:LOCALAPPDATA\nvim)) {
+if (!(Test-Path -Path $env:LOCALAPPDATA\nvim))
+{
   git clone --depth 1 https://github.com/AstroNvim/AstroNvim $env:LOCALAPPDATA\nvim
 }
 
