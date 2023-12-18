@@ -21,6 +21,8 @@ if [[ "$SHELL" != "${_fish_path}" ]]; then
   chsh -s $(which fish)
 fi
 
+{{ $fisherfilePath := "dot_config/private_fish/fish_plugins" }}
+echo "hash: {{ include $fisherfilePath | sha256sum }}"
 fish -c "fisher update"
 
   # echo "RSA and DSA, at least 4096 bits, infinite expiry"
