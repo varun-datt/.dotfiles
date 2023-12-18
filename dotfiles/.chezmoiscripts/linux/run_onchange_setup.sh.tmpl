@@ -6,22 +6,39 @@ set -e
 pamac upgrade
 
 # Install packages
-cat "$HOME/Archfile" | while read line
+_install_arch_packages=""
+_install_aur_packages=""
+
+{{ $archfilePath := "Archfile" }}
+echo "hash: {{ include $archfilePath | sha256sum }}"
+
+cat "$(chezmoi source-path)/Archfile" | while read line
 do
   _type=$(echo "$line" | cut -d " " -f 1)
-  _package=$(echo "$line" | cut -d " " -f 2)
-  _command=$([ "$_type" == "arch" ] && echo "install" || echo "build")
+  _package=$(echo "$line" | cut -d " " -f 2 | tr -d '"')
 
   if [ -z "$(pamac search -i $_package)" ]; then
-    pamac "${_command}" $_package
+    if [ "$_type" = "arch" ]; then
+      _install_arch_packages="${_install_arch_packages} $_package"
+    else
+      _install_aur_packages="${_install_aur_packages} $_package"
+    fi
   fi
 done
+
+if [ -n "${_install_arch_packages}" ]; then
+  pamac install "${_install_arch_packages}"
+fi
+
+if [ -n "${_install_aur_packages}" ]; then
+  pamac build "${_install_aur_packages}"
+fi
 
 # Gnome settings
 gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'librewolf.desktop', 'Alacritty.desktop', 'bitwarden.desktop', 'obsidian.desktop', 'Mailspring.desktop', 'notion.desktop', 'code.desktop']"
 
 gsettings set org.gnome.nautilus.preferences show-hidden-files true
-gsettings set org.gnome.desktop.interface show-battery-percentage true
 gsettings set org.gnome.desktop.interface clock-show-weekday true
+gsettings set org.gnome.desktop.interface show-battery-percentage true
 
 {{ end -}}

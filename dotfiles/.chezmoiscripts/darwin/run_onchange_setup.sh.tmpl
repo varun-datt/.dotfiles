@@ -4,7 +4,9 @@
 set -e
 
 # Install packages
-brew bundle --file ~/Brewfile
+{{ $brewfilePath := "Brewfile" }}
+echo "hash: {{ include $brewfilePath | sha256sum }}"
+brew bundle --file "$(chezmoi source-path)/Brewfile"
 
 # Finder
 defaults write com.apple.finder "AppleShowAllFiles" -bool "true"
