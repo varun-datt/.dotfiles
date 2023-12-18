@@ -3,7 +3,7 @@ Configuration files -  https://dotfiles.github.io
 
 Getting started on a new machine:
 ```shell
-sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply varun-datt
+sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply https://github.com/varun-datt/.dotfiles.git
 ```
 
 ## dotfiles manager
