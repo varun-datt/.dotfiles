@@ -1,0 +1,8 @@
+"$schema" = 'https://starship.rs/config-schema.json'
+
+[git_status]
+ignore_submodules = true
+
+[git_metrics]
+ignore_submodules = true
+
