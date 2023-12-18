@@ -1,8 +1,12 @@
 # Alias
 Set-Alias -Name g -Value git
+Set-Alias -Name kc -Value kubectl
+Set-Alias -Name v -Value nvim
 
 # Functions
 function st { git status }
+function gs { git submodule }
+function gsf { git submodule foreach }
 
 # Keymaps
 Set-PSReadLineKeyHandler -Chord ctrl+w -Function BackwardDeleteWord
