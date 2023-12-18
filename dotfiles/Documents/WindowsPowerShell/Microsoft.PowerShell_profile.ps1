@@ -17,3 +17,4 @@ Invoke-Expression (& {
   (zoxide init --hook $hook powershell | Out-String)
 })
 
+Invoke-Expression (&starship init powershell)

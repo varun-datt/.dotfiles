@@ -4,7 +4,7 @@
 # Install packages
 {{ $packageFilePath := "ChocoPackages.config" }}
 echo "hash: {{ include $packageFilePath | sha256sum }}"
-choco install "$(chezmoi source-path)/ChocoPackages.config"
+choco install -y "$(chezmoi source-path)/ChocoPackages.config"
 
 if (!(Test-Path -Path $env:LOCALAPPDATA\nvim)) {
   git clone --depth 1 https://github.com/AstroNvim/AstroNvim $env:LOCALAPPDATA\nvim
