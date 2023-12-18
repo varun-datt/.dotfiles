@@ -1,6 +1,4 @@
-Archfile
-Brewfile
-ChocoPackages.config
+packages
 
 {{ if ne .chezmoi.os "windows" }}
 Documents

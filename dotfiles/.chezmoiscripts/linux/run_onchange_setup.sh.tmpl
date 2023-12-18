@@ -9,10 +9,10 @@ pamac upgrade
 _install_arch_packages=""
 _install_aur_packages=""
 
-{{ $archfilePath := "Archfile" }}
+{{ $archfilePath := "packages/Archfile" }}
 echo "hash: {{ include $archfilePath | sha256sum }}"
 
-cat "$(chezmoi source-path)/Archfile" | while read line
+cat "$(chezmoi source-path)/packages/Archfile" | while read line
 do
   _type=$(echo "$line" | cut -d " " -f 1)
   _package=$(echo "$line" | cut -d " " -f 2 | tr -d '"')

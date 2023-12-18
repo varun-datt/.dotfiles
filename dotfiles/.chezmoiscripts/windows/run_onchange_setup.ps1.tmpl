@@ -2,9 +2,9 @@
 #!/usr/bin/env pwsh
 
 # Install packages
-{{ $packageFilePath := "ChocoPackages.config" }}
+{{ $packageFilePath := "packages/ChocoPackages.config" }}
 echo "hash: {{ include $packageFilePath | sha256sum }}"
-choco install -y "$(chezmoi source-path)/ChocoPackages.config"
+choco install -y "$(chezmoi source-path)/packages/ChocoPackages.config"
 
 if (!(Test-Path -Path $env:LOCALAPPDATA\nvim)) {
   git clone --depth 1 https://github.com/AstroNvim/AstroNvim $env:LOCALAPPDATA\nvim
