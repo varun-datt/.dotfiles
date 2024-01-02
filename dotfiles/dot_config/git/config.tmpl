@@ -86,10 +86,8 @@
   helper = !gh auth git-credential
 
 [credential "https://dev.azure.com"]
-  helper =
-  {{ if ne .chezmoi.os "windows" }}
-  helper = /usr/local/share/gcm-core/git-credential-manager
-  {{ end }}
+  {{ if ne .chezmoi.os "windows" }}helper =
+  helper = /usr/local/share/gcm-core/git-credential-manager{{ end }}
   useHttpPath = true
 
 [includeIf "gitdir:~/sandbox/work/**"]
