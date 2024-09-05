@@ -81,10 +81,7 @@
   extendRegexp = true
   lineNumber = true
 
-[credential]
-	helper =
-	helper = /usr/local/share/gcm-core/git-credential-manager
-
+# gh handler
 [credential "https://github.com"]
   helper =
   helper = !gh auth git-credential
@@ -92,6 +89,11 @@
 [credential "https://gist.github.com"]
   helper =
   helper = !gh auth git-credential
+
+# azdo handler
+[credential]
+	helper =
+	helper = /usr/local/share/gcm-core/git-credential-manager
 
 [credential "https://dev.azure.com"]
   {{ if ne .chezmoi.os "windows" }}helper =

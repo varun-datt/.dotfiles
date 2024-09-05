@@ -9,7 +9,7 @@ function awsSaml --description 'aws saml login'
 
   set -l _account_ids (string split , $_account_id_arg)
 
-  for _account_id in $_account_ids; then
+  for _account_id in $_account_ids
     set -l _saml_response (env AWS_DEFAULT_REGION=$_aws_region aws sts assume-role-with-saml \
       --role-arn arn:$_aws_prefix:iam::$_account_id:role/$_iam_role_name \
       --saml-assertion file:///tmp/saml.txt \
