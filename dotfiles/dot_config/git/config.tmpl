@@ -14,6 +14,7 @@
   lg = log -p
   hist = log --pretty=format:\"%h %ad | %s%d [%an]\" --graph --date=short
   g = grep --break --heading --line-number
+  bl = blame -w -C -C -C
   type = cat-file -t
   dump = cat-file -p
   gone = ! git fetch -p && git for-each-ref --format '%(refname:short) %(upstream:track)' | awk '$2 == \"[gone]\" {print $1}' | xargs -r git branch -D
@@ -70,12 +71,19 @@
   autoSquash = true
   autoStash = true
 
+[rerere]
+  enabled = true
+
 [help]
   autocorrect = 5
 
 [grep]
   extendRegexp = true
   lineNumber = true
+
+[credential]
+	helper =
+	helper = /usr/local/share/gcm-core/git-credential-manager
 
 [credential "https://github.com"]
   helper =
