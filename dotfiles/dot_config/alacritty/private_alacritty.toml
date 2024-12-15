@@ -11,7 +11,9 @@ style = "Regular"
 [scrolling]
 history = 5000
 
-[shell]
+[terminal]
+
+[terminal.shell]
 args = ["new", "-A", "-s", "main"]
 program = "/usr/bin/tmux"
 
