@@ -89,16 +89,14 @@
 [credential "https://gist.github.com"]
   helper =
   helper = !gh auth git-credential
-
-# azdo handler
+{{ if eq .chezmoi.os "darwin" }}
 [credential]
-	helper =
+  helper =
 	helper = /usr/local/share/gcm-core/git-credential-manager
-
 [credential "https://dev.azure.com"]
-  {{ if ne .chezmoi.os "windows" }}helper =
-  helper = /usr/local/share/gcm-core/git-credential-manager{{ end }}
+  helper =
+  helper = /usr/local/share/gcm-core/git-credential-manager
   useHttpPath = true
-
+{{ end }}
 [includeIf "gitdir:~/sandbox/work/**"]
   path = ~/sandbox/work/.gitconfig
