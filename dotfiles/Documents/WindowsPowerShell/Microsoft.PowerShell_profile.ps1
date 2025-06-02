@@ -12,6 +12,11 @@ function gsf { git submodule foreach }
 # Keymaps
 Set-PSReadLineKeyHandler -Chord ctrl+w -Function BackwardDeleteWord
 
+Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
+
+# Install-Module -Name Terminal-Icons -Repository PSGallery
+Import-Module -Name Terminal-Icons
+
 # Zoxide
 Invoke-Expression (& {
   $hook = if ($PSVersionTable.PSVersion.Major -lt 6) { 'prompt' } else { 'pwd' }
