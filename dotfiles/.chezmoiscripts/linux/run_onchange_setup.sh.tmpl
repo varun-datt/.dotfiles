@@ -14,7 +14,7 @@ if [[ $(command -v pamac) != "" ]]; then
   {{ $archfilePath := "packages/Archfile" }}
   echo "hash: {{ include $archfilePath | sha256sum }}"
 
-  cat "$(chezmoi source-path)/packages/Archfile" | while read line
+  cat "$CHEZMOI_SOURCE_DIR/packages/Archfile" | while read line
   do
     _type=$(echo "$line" | cut -d " " -f 1)
     _package=$(echo "$line" | cut -d " " -f 2 | tr -d '"')

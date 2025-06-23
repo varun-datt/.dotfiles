@@ -10,7 +10,7 @@ fi
 # Install packages
 {{ $brewfilePath := "packages/Brewfile" }}
 echo "hash: {{ include $brewfilePath | sha256sum }}"
-brew bundle --file "$(chezmoi source-path)/packages/Brewfile"
+brew bundle --file "$CHEZMOI_SOURCE_DIR/packages/Brewfile"
 
 # Finder
 defaults write com.apple.finder "AppleShowAllFiles" -bool "true"
