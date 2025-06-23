@@ -16,6 +16,7 @@ Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
 
 # Install-Module -Name Terminal-Icons -Repository PSGallery
 Import-Module -Name Terminal-Icons
+Import-Module posh-git
 
 # Zoxide
 Invoke-Expression (& {

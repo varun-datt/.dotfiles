@@ -1,11 +1,12 @@
 Include config.d/*
 
 Host *
-  UseKeychain yes
   AddKeysToAgent yes
   ForwardAgent no
   ForwardX11 no
   ForwardX11Trusted yes
   ServerAliveInterval 60
   ServerAliveCountMax 30
-
+{{ if eq .chezmoi.os "darwin" }}
+  UseKeychain yes
+{{ end }}
