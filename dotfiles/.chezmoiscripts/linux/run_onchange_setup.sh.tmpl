@@ -14,8 +14,7 @@ if [[ $(command -v pamac) != "" ]]; then
   {{ $archfilePath := "packages/Archfile" }}
   echo "hash: {{ include $archfilePath | sha256sum }}"
 
-  cat "$CHEZMOI_SOURCE_DIR/packages/Archfile" | while read line
-  do
+  while read line; do
     _type=$(echo "$line" | cut -d " " -f 1)
     _package=$(echo "$line" | cut -d " " -f 2 | tr -d '"')
 
@@ -26,19 +25,19 @@ if [[ $(command -v pamac) != "" ]]; then
         _install_aur_packages="${_install_aur_packages} $_package"
       fi
     fi
-  done
+  done <<< $(cat "$CHEZMOI_SOURCE_DIR/packages/Archfile")
 
   if [ -n "${_install_arch_packages}" ]; then
-    pamac install "${_install_arch_packages}"
+    pamac install ${_install_arch_packages} --no-confirm
   fi
 
   if [ -n "${_install_aur_packages}" ]; then
-    pamac build "${_install_aur_packages}"
+    pamac build ${_install_aur_packages} --no-confirm
   fi
 fi
 
 # Gnome settings
-if [[ $(command -v gsettings) != "" ]]; then
+if [[ $(command -v gsettings) != "" && $XDG_CURRENT_DESKTOP == "gnome" ]]; then
   gsettings set org.gnome.shell favorite-apps "['org.gnome.Nautilus.desktop', 'librewolf.desktop', 'Alacritty.desktop', 'bitwarden.desktop', 'obsidian.desktop', 'Mailspring.desktop', 'notion.desktop', 'code.desktop']"
 
   gsettings set org.gnome.nautilus.preferences show-hidden-files true
