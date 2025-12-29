@@ -4,10 +4,10 @@ set -x EDITOR "$VISUAL"
 set -x NODE_OPTIONS "--max_old_space_size=6144"
 set -x NVM_DIR "$HOME/.nvm"
 set -x NVM_SYMLINK_CURRENT true
-set fish_color_command --bold
 
 if status is-interactive
   # Commands to run in interactive sessions can go here
+  fish_config theme choose "Catppuccin Mocha"
 
   if command -v zoxide &> /dev/null
     zoxide init fish | source
