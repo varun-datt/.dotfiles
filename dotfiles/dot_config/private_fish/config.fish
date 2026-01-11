@@ -5,6 +5,9 @@ set -x NODE_OPTIONS "--max_old_space_size=6144"
 set -x NVM_DIR "$HOME/.nvm"
 set -x NVM_SYMLINK_CURRENT true
 
+# Fish variables
+set -U --append __done_exclude '^(man|v|cat|g (?!push|pull|fetch))'
+
 if status is-interactive
   # Commands to run in interactive sessions can go here
   fish_config theme choose "Catppuccin Mocha"
