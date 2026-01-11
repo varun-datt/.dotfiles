@@ -18,4 +18,7 @@ if status is-interactive
   if command -v kubectl &> /dev/null
     kubectl completion fish | source
   end
+  if command -v carapace &> /dev/null
+    carapace _carapace | source
+  end
 end
