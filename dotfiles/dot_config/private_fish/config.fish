@@ -6,7 +6,7 @@ set -x NVM_DIR "$HOME/.nvm"
 set -x NVM_SYMLINK_CURRENT true
 
 # Fish variables
-set -U --append __done_exclude '^(man|v|cat|g (?!push|pull|fetch))'
+set -U __done_exclude '^(man|v|cat|g (?!push|pull|fetch))'
 
 if status is-interactive
   # Commands to run in interactive sessions can go here
