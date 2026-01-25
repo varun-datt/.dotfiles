@@ -19,6 +19,9 @@
   dump = cat-file -p
   gone = ! git fetch -p && git for-each-ref --format '%(refname:short) %(upstream:track)' | awk '$2 == \"[gone]\" {print $1}' | xargs -r git branch -D
 
+[branch]
+  sort = -committerdate
+
 [color]
   ui = auto
 
@@ -54,9 +57,17 @@
 
 [diff]
   colorMoved = default
+  algorithm = histogram
 
 [fetch]
   prune = true
+
+[grep]
+  extendRegexp = true
+  lineNumber = true
+
+[help]
+  autocorrect = 5
 
 [interactive]
   diffFilter = delta --color-only
@@ -74,12 +85,8 @@
 [rerere]
   enabled = true
 
-[help]
-  autocorrect = 5
-
-[grep]
-  extendRegexp = true
-  lineNumber = true
+[tag]
+  sort = -version:refname
 
 # gh handler
 [credential "https://github.com"]
