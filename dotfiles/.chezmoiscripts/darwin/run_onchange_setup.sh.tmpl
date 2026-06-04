@@ -22,10 +22,12 @@ killall Finder
 defaults write NSGlobalDomain "AppleShowAllExtensions" -bool "true"
 defaults write NSGlobalDomain KeyRepeat -int 1
 defaults write NSGlobalDomain InitialKeyRepeat -int 10
+defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
 
 # Menu
 defaults write com.apple.menuextra.clock "DateFormat" -string "\"EEE d MMM HH:mm:ss\""
 defaults write com.apple.menuextra.clock "ShowDayOfWeek" -bool "true"
+defaults write com.apple.Siri StatusMenuVisible -bool false
 
 # Dock
 defaults write com.apple.dock "autohide" -bool "true" && killall Dock

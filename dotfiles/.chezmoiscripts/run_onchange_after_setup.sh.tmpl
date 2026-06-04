@@ -18,6 +18,7 @@ fi
 
 _fish_path=$(which fish)
 if [[ "$SHELL" != "${_fish_path}" ]]; then
+  # TODO: need to add to /etc/shells
   chsh -s $(which fish)
 fi
 
@@ -39,7 +40,7 @@ fish -c "fisher update"
   # # https://help.github.com/en/github/authenticating-to-github/adding-a-new-gpg-key-to-your-github-account
 
   # git config --global user.signingkey "${_key_id}"
-  
+
   # git config commit.gpgsign true
 
 {{ end -}}
