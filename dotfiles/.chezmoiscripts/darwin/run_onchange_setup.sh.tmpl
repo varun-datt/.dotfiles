@@ -1,10 +1,11 @@
 {{ if eq .chezmoi.os "darwin" -}}
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
-if [[ $(command -v brew) == "" ]]; then
+if [ -z "$(command -v brew)" ]; then
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
 # Install packages
@@ -16,20 +17,52 @@ brew bundle --file "$CHEZMOI_SOURCE_DIR/packages/Brewfile"
 defaults write com.apple.finder "AppleShowAllFiles" -bool "true"
 defaults write com.apple.finder "FXDefaultSearchScope" -string "SCcf"
 defaults write com.apple.finder "FXPreferredViewStyle" -string "Nlsv"
-killall Finder
+defaults write com.apple.finder "ShowPathbar" -bool true
+defaults write com.apple.finder "ShowStatusBar" -bool true
+killall Finder || true
 
 # Global
 defaults write NSGlobalDomain "AppleShowAllExtensions" -bool "true"
 defaults write NSGlobalDomain KeyRepeat -int 1
 defaults write NSGlobalDomain InitialKeyRepeat -int 10
+defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
 defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint -bool true
+defaults write NSGlobalDomain PMPrintingExpandedStateForPrint2 -bool true
+defaults write NSGlobalDomain NSDocumentSaveNewDocumentsToCloud -bool false
 
-# Menu
-defaults write com.apple.menuextra.clock "DateFormat" -string "\"EEE d MMM HH:mm:ss\""
-defaults write com.apple.menuextra.clock "ShowDayOfWeek" -bool "true"
+# Don't create .DS_Store on network and USB volumes
+defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
+defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+
+# Screenshots
+mkdir -p "$HOME/Desktop/Screenshots"
+defaults write com.apple.screencapture location -string "$HOME/Desktop/Screenshots"
+defaults write com.apple.screencapture type -string "png"
+defaults write com.apple.screencapture disable-shadow -bool true
+
+# Trackpad — three-finger drag
+defaults write com.apple.AppleMultitouchTrackpad TrackpadThreeFingerDrag -bool true
+defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad TrackpadThreeFingerDrag -bool true
+
+# Menu bar clock — set all keys consistently so macOS doesn't override the format
+defaults write com.apple.menuextra.clock "DateFormat" -string "EEE d MMM h:mm:ss a"
+defaults write com.apple.menuextra.clock "IsAnalog" -bool false
+defaults write com.apple.menuextra.clock "Show24Hour" -bool false
+defaults write com.apple.menuextra.clock "ShowAMPM" -bool true
+defaults write com.apple.menuextra.clock "ShowDayOfWeek" -bool true
+defaults write com.apple.menuextra.clock "ShowDate" -int 1
+defaults write com.apple.menuextra.clock "ShowSeconds" -bool true
+defaults write com.apple.menuextra.clock "FlashDateSeparators" -bool false
 defaults write com.apple.Siri StatusMenuVisible -bool false
+killall ControlCenter || true
 
 # Dock
-defaults write com.apple.dock "autohide" -bool "true" && killall Dock
+defaults write com.apple.dock "autohide" -bool "true"
+defaults write com.apple.dock "autohide-delay" -float 0
+defaults write com.apple.dock "autohide-time-modifier" -float 0.4
+killall Dock || true
 
 {{ end -}}

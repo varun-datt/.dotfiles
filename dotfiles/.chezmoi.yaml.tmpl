@@ -1,5 +1,9 @@
 {{- $name := "Varun Datt" -}}
 {{- $email := "35286616+varun-datt@users.noreply.github.com" -}}
+{{- $sshKey := "~/.ssh/id_ed25519" -}}
+
+diff:
+  pager: "delta"
 
 git:
   autoAdd: true
@@ -8,3 +12,4 @@ git:
 data:
   name: {{ $name | quote }}
   email: {{ $email | quote }}
+  sshKey: {{ $sshKey | quote }}
