@@ -1,46 +1,36 @@
 {{ if ne .chezmoi.os "windows" -}}
-#!/bin/sh
+#!/bin/bash
 
 set -e
 
 mkdir -p "$HOME/sandbox"
 
+# Tmux Plugin Manager
 _tmux_plugins_directory="$HOME/.config/tmux/plugins/tpm"
-_nvim_directory="$HOME/.config/nvim"
-
 if [ ! -d "$_tmux_plugins_directory" ]; then
   git clone https://github.com/tmux-plugins/tpm "$_tmux_plugins_directory"
 fi
 
-if [ ! -d "$_nvim_directory" ]; then
- git clone --depth 1 https://github.com/AstroNvim/AstroNvim "$_nvim_directory"
-fi
-
-_fish_path=$(which fish)
-if [[ "$SHELL" != "${_fish_path}" ]]; then
-  # TODO: need to add to /etc/shells
-  chsh -s $(which fish)
+# Fish shell
+_fish_path="$(command -v fish)"
+if [ -n "$_fish_path" ] && [ "$SHELL" != "$_fish_path" ]; then
+  if ! grep -qxF "$_fish_path" /etc/shells; then
+    echo "$_fish_path" | sudo tee -a /etc/shells >/dev/null
+  fi
+  chsh -s "$_fish_path"
 fi
 
 {{ $fisherfilePath := "dot_config/private_fish/fish_plugins" }}
 echo "hash: {{ include $fisherfilePath | sha256sum }}"
 fish -c "fisher update"
 
-  # echo "RSA and DSA, at least 4096 bits, infinite expiry"
-  # echo "user ID / email: Github email"
-
-  # gpg --full-generate-key
-
-  # gpg --list-secret-keys --keyid-format LONG
-
-  # read -p "Enter key id: " _key_id
-
-  # gpg --armor --export "${_key_id}"
-
-  # # https://help.github.com/en/github/authenticating-to-github/adding-a-new-gpg-key-to-your-github-account
-
-  # git config --global user.signingkey "${_key_id}"
-
-  # git config commit.gpgsign true
+# SSH
+_ssh_key="{{ .sshKey | replace "~" "$HOME" }}"
+if [ ! -f "$_ssh_key" ]; then
+  mkdir -p "$HOME/.ssh"
+  ssh-keygen -t ed25519 -C "$(hostname)" -f "$_ssh_key" -N ""
+  echo "SSH public key (add to GitHub → Settings → SSH and GPG keys):"
+  cat "${_ssh_key}.pub"
+fi
 
 {{ end -}}

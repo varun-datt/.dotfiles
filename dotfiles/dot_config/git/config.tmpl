@@ -1,6 +1,13 @@
 [user]
-  name = Varun Datt
-  email = 35286616+varun-datt@users.noreply.github.com
+  name = {{ .name }}
+  email = {{ .email }}
+  signingkey = {{ .sshKey }}
+
+[commit]
+  gpgsign = true
+
+[gpg]
+  format = ssh
 
 [alias]
   st = status

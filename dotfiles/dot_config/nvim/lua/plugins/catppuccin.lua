@@ -6,4 +6,10 @@ return {
       flavour = "mocha",
     },
   },
+  {
+    "AstroNvim/astroui",
+    opts = {
+      colorscheme = "catppuccin",
+    },
+  },
 }
