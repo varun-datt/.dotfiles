@@ -1,0 +1,42 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!/usr/bin/env pwsh
+
+# hash: {{ printf "mise=node-lts;bat=Catppuccin Mocha;ssh=ed25519" | sha256sum }}
+
+$ErrorActionPreference = 'Stop'
+
+# Node
+if (Get-Command mise -ErrorAction SilentlyContinue) {
+  mise use -g node@lts
+}
+
+# bat Catppuccin Mocha theme
+if (Get-Command bat -ErrorAction SilentlyContinue) {
+  $batThemesDir = Join-Path (bat --config-dir) 'themes'
+  $batTheme = Join-Path $batThemesDir 'Catppuccin Mocha.tmTheme'
+  if (-not (Test-Path $batTheme)) {
+    New-Item -ItemType Directory -Force -Path $batThemesDir | Out-Null
+    Invoke-WebRequest -UseBasicParsing `
+      -Uri 'https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme' `
+      -OutFile $batTheme
+    bat cache --build
+  }
+}
+
+# SSH
+function New-SshKey {
+  param(
+    [Parameter(Mandatory)] [string]$KeyPath,
+    [Parameter(Mandatory)] [string]$Comment
+  )
+  if (-not (Test-Path $KeyPath)) {
+    $keyDir = Split-Path -Parent $KeyPath
+    New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
+    ssh-keygen -t ed25519 -C $Comment -f $KeyPath -N '""'
+    Write-Host "SSH public key ($Comment - add to your Git host):"
+    Get-Content "$KeyPath.pub"
+  }
+}
+
+New-SshKey -KeyPath "{{ .sshKey | replace "~" "$HOME" }}" -Comment $env:COMPUTERNAME
+{{ end -}}

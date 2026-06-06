@@ -1,0 +1,4 @@
+# The theme file is installed and cached by the after-setup script
+# (bat has no built-in Catppuccin theme).
+--theme="Catppuccin Mocha"
+--style="numbers,changes,header"

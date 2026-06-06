@@ -1,0 +1,91 @@
+{{- $c := .catppuccin.palette.mocha -}}
+# Catppuccin Mocha skin for k9s (colors from .chezmoidata/catppuccin.yaml).
+k9s:
+  body:
+    fgColor: "{{ $c.text }}"
+    bgColor: "{{ $c.base }}"
+    logoColor: "{{ $c.mauve }}"
+  prompt:
+    fgColor: "{{ $c.text }}"
+    bgColor: "{{ $c.base }}"
+    suggestColor: "{{ $c.peach }}"
+  info:
+    fgColor: "{{ $c.red }}"
+    sectionColor: "{{ $c.text }}"
+  dialog:
+    fgColor: "{{ $c.text }}"
+    bgColor: "{{ $c.base }}"
+    buttonFgColor: "{{ $c.text }}"
+    buttonBgColor: "{{ $c.mauve }}"
+    buttonFocusFgColor: "{{ $c.crust }}"
+    buttonFocusBgColor: "{{ $c.pink }}"
+    labelFgColor: "{{ $c.peach }}"
+    fieldFgColor: "{{ $c.text }}"
+  frame:
+    border:
+      fgColor: "{{ $c.surface2 }}"
+      focusColor: "{{ $c.surface2 }}"
+    menu:
+      fgColor: "{{ $c.text }}"
+      keyColor: "{{ $c.blue }}"
+      numKeyColor: "{{ $c.blue }}"
+    crumbs:
+      fgColor: "{{ $c.crust }}"
+      bgColor: "{{ $c.surface2 }}"
+      activeColor: "{{ $c.peach }}"
+    status:
+      newColor: "{{ $c.sky }}"
+      modifyColor: "{{ $c.blue }}"
+      addColor: "{{ $c.green }}"
+      pendingColor: "{{ $c.peach }}"
+      errorColor: "{{ $c.red }}"
+      highlightColor: "{{ $c.pink }}"
+      killColor: "{{ $c.subtext1 }}"
+      completedColor: "{{ $c.subtext1 }}"
+    title:
+      fgColor: "{{ $c.text }}"
+      bgColor: "{{ $c.base }}"
+      highlightColor: "{{ $c.peach }}"
+      counterColor: "{{ $c.blue }}"
+      filterColor: "{{ $c.mauve }}"
+  views:
+    charts:
+      bgColor: default
+      defaultDialColors:
+        - "{{ $c.blue }}"
+        - "{{ $c.red }}"
+      defaultChartColors:
+        - "{{ $c.blue }}"
+        - "{{ $c.red }}"
+    table:
+      fgColor: "{{ $c.text }}"
+      bgColor: "{{ $c.base }}"
+      cursorFgColor: "{{ $c.surface0 }}"
+      cursorBgColor: "{{ $c.surface2 }}"
+      header:
+        fgColor: "{{ $c.text }}"
+        bgColor: "{{ $c.base }}"
+        sorterColor: "{{ $c.sky }}"
+    xray:
+      fgColor: "{{ $c.text }}"
+      bgColor: "{{ $c.base }}"
+      cursorColor: "{{ $c.surface2 }}"
+      graphicColor: "{{ $c.blue }}"
+      showIcons: false
+    yaml:
+      keyColor: "{{ $c.blue }}"
+      colonColor: "{{ $c.text }}"
+      valueColor: "{{ $c.text }}"
+    logs:
+      fgColor: "{{ $c.text }}"
+      bgColor: "{{ $c.base }}"
+      indicator:
+        fgColor: "{{ $c.text }}"
+        bgColor: "{{ $c.base }}"
+        toggleOnColor: "{{ $c.green }}"
+        toggleOffColor: "{{ $c.overlay2 }}"
+    help:
+      fgColor: "{{ $c.text }}"
+      bgColor: "{{ $c.base }}"
+      indicator:
+        fgColor: "{{ $c.blue }}"

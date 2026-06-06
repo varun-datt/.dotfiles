@@ -1,3 +1,4 @@
+{{- $workEnabled := index . "workEnabled" | default false -}}
 [user]
   name = {{ .name }}
   email = {{ .email }}
@@ -8,6 +9,9 @@
 
 [gpg]
   format = ssh
+
+[gpg "ssh"]
+  allowedSignersFile = ~/.config/git/allowed_signers
 
 [alias]
   st = status
@@ -32,13 +36,7 @@
 [color]
   ui = auto
 
-; [color]
-;   branch = auto
-;   diff = auto
-;   status = auto
-;   ui = true
-
- [color "branch"]
+[color "branch"]
   current = yellow reverse
   local = yellow
   remote = green
@@ -56,11 +54,24 @@
 
 [core]
   pager = delta
-;  excludesfile = /Users/dattv2/.gitignore_global
-;  longpaths = true
+  excludesfile = ~/.config/git/ignore
+  longpaths = true
 
 [delta]
   navigate = true    # use n and N to move between diff sections
+  features = catppuccin-mocha
+  # Catppuccin needs the matching bat theme; the after-setup script builds it.
+  syntax-theme = "Catppuccin Mocha"
+
+# Catppuccin Mocha palette for delta diffs.
+[include]
+  path = ~/.config/delta/catppuccin.gitconfig
+
+[init]
+  defaultBranch = main
+
+[column]
+  ui = auto
 
 [diff]
   colorMoved = default
@@ -68,6 +79,7 @@
 
 [fetch]
   prune = true
+  pruneTags = true
 
 [grep]
   extendRegexp = true
@@ -80,7 +92,10 @@
   diffFilter = delta --color-only
 
 [merge]
-  conflictstyle = diff3
+  conflictstyle = zdiff3
+
+[pull]
+  ff = only
 
 [push]
   autoSetupRemote = true
@@ -106,11 +121,13 @@
 {{ if eq .chezmoi.os "darwin" }}
 [credential]
   helper =
-	helper = /usr/local/share/gcm-core/git-credential-manager
+  helper = git-credential-manager
 [credential "https://dev.azure.com"]
   helper =
-  helper = /usr/local/share/gcm-core/git-credential-manager
+  helper = git-credential-manager
   useHttpPath = true
 {{ end }}
-[includeIf "gitdir:~/sandbox/work/**"]
-  path = ~/sandbox/work/.gitconfig
+{{ if $workEnabled }}
+[includeIf "gitdir:{{ .work.sandboxWorkDir }}/**"]
+  path = {{ .work.gitconfig }}
+{{ end }}

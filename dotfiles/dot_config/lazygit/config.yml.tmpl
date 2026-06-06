@@ -1,0 +1,30 @@
+{{- $c := .catppuccin.palette.mocha -}}
+gui:
+  nerdFontsVersion: "3"
+  theme:
+    activeBorderColor:
+      - "{{ $c.blue }}"
+      - bold
+    inactiveBorderColor:
+      - "{{ $c.subtext0 }}"
+    optionsTextColor:
+      - "{{ $c.blue }}"
+    selectedLineBgColor:
+      - "{{ $c.surface0 }}"
+    cherryPickedCommitBgColor:
+      - "{{ $c.surface1 }}"
+    cherryPickedCommitFgColor:
+      - "{{ $c.blue }}"
+    unstagedChangesColor:
+      - "{{ $c.red }}"
+    defaultFgColor:
+      - "{{ $c.text }}"
+    searchingActiveBorderColor:
+      - "{{ $c.yellow }}"
+  authorColors:
+    "*": "{{ $c.lavender }}"
+
+git:
+  paging:
+    colorArg: always
+    pager: delta --dark --paging=never

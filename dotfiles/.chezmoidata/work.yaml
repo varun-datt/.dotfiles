@@ -1,0 +1,4 @@
+work:
+  sshKey: "~/.ssh/id_ed25519_work"
+  sandboxWorkDir: "~/sandbox/work"
+  gitconfig: "~/sandbox/work/.gitconfig"

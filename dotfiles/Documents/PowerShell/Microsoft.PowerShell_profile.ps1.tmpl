@@ -1,0 +1,80 @@
+{{- $c := .catppuccin.palette.mocha -}}
+
+if ([Environment]::GetCommandLineArgs() -contains '-NonInteractive') {
+  return
+}
+
+# Catppuccin Mocha PSReadLine colors (from .chezmoidata/catppuccin.yaml)
+Set-PSReadLineOption -Colors @{
+  Command            = '{{ $c.blue }}'
+  Comment            = '{{ $c.overlay0 }}'
+  ContinuationPrompt = '{{ $c.overlay0 }}'
+  Default            = '{{ $c.text }}'
+  Emphasis           = '{{ $c.pink }}'
+  Error              = '{{ $c.red }}'
+  InlinePrediction   = '{{ $c.surface2 }}'
+  Keyword            = '{{ $c.mauve }}'
+  Member             = '{{ $c.sky }}'
+  Number             = '{{ $c.peach }}'
+  Operator           = '{{ $c.teal }}'
+  Parameter          = '{{ $c.teal }}'
+  Selection          = '{{ $c.surface1 }}'
+  String             = '{{ $c.green }}'
+  Type               = '{{ $c.yellow }}'
+}
+
+# Alias
+Set-Alias -Name g -Value git
+Set-Alias -Name kc -Value kubectl
+Set-Alias -Name kns -Value kubens
+Set-Alias -Name v -Value nvim
+
+# Functions
+function ll {
+  if (Get-Command lsd -ErrorAction SilentlyContinue) {
+    lsd -lhrtA @args
+  } else {
+    Get-ChildItem -Force @args
+  }
+}
+function st { git status }
+
+# Keymaps
+Set-PSReadLineKeyHandler -Chord ctrl+w -Function BackwardDeleteWord
+Set-PSReadlineKeyHandler -Key Tab -Function MenuComplete
+
+function Initialize-DeferredProfile {
+  if ($script:DeferredLoaded) { return }
+  $script:DeferredLoaded = $true
+
+  Import-Module posh-git -ErrorAction SilentlyContinue
+
+  # Terminal-Icons requires PS 7+ (Import-PowerShellDataFile); skip on 5.1.
+  if ($PSVersionTable.PSVersion.Major -ge 7) {
+    try {
+      Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
+      Import-Module Terminal-Icons -ErrorAction Stop
+    } catch {
+      # Ignore: module missing or incompatible host (e.g. non-interactive)
+    }
+  }
+
+  $chocoProfile = "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
+  if (Test-Path $chocoProfile) {
+    Import-Module $chocoProfile -ErrorAction SilentlyContinue
+  }
+}
+
+Invoke-Expression (& { (zoxide init --hook pwd powershell | Out-String) })
+
+if (Get-Command mise -ErrorAction SilentlyContinue) {
+  Invoke-Expression (& { (mise activate pwsh | Out-String) })
+}
+
+Invoke-Expression (&starship init powershell)
+
+$starshipPrompt = $function:prompt
+function global:prompt {
+  Initialize-DeferredProfile
+  & $starshipPrompt
+}

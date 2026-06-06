@@ -1,0 +1,27 @@
+{{- $c := .catppuccin.palette.mocha -}}
+[delta "catppuccin-mocha"]
+    blame-palette = "{{ $c.base }} {{ $c.mantle }} {{ $c.crust }} {{ $c.surface0 }} {{ $c.surface1 }}"
+    commit-decoration-style = box ul
+    dark = true
+    file-decoration-style = "{{ $c.text }}"
+    file-style = "{{ $c.text }}"
+    hunk-header-decoration-style = box ul
+    hunk-header-file-style = bold
+    hunk-header-line-number-style = bold "{{ $c.subtext0 }}"
+    hunk-header-style = file line-number syntax
+    line-numbers = true
+    line-numbers-left-style = "{{ $c.overlay0 }}"
+    line-numbers-minus-style = "{{ $c.red }}"
+    line-numbers-plus-style = "{{ $c.green }}"
+    line-numbers-right-style = "{{ $c.overlay0 }}"
+    line-numbers-zero-style = "{{ $c.overlay0 }}"
+    minus-emph-style = bold syntax "#53394c"
+    minus-style = syntax "#3e2e3a"
+    plus-emph-style = bold syntax "#404a3d"
+    plus-style = syntax "#37402f"
+    map-styles = \
+        bold purple => syntax "#494060", \
+        bold blue => syntax "#384361", \
+        bold cyan => syntax "#384d5e", \
+        bold green => syntax "#404a3d"
+    zero-style = syntax

@@ -1,5 +1,6 @@
 {{ if eq .chezmoi.os "linux" -}}
-#!/bin/sh
+#!/bin/bash
+# bash (not sh): uses [[ ]] and <<< here-strings below.
 
 set -e
 
