@@ -4,7 +4,8 @@ Host *
   AddKeysToAgent yes
   ForwardAgent no
   ForwardX11 no
-  ForwardX11Trusted yes
+  IdentitiesOnly yes
+  HashKnownHosts yes
   ServerAliveInterval 60
-  ServerAliveCountMax 30
+  ServerAliveCountMax 3
 {{ if eq .chezmoi.os "darwin" }}  UseKeychain yes{{ end }}

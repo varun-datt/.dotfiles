@@ -1,6 +1,7 @@
 {{- $name := "Varun Datt" -}}
 {{- $email := "35286616+varun-datt@users.noreply.github.com" -}}
 {{- $sshKey := "~/.ssh/id_ed25519" -}}
+{{- $workEnabled := eq .chezmoi.os "darwin" -}}
 
 diff:
   pager: "delta"
@@ -9,7 +10,13 @@ git:
   autoAdd: true
   autoCommit: true
 
+interpreters:
+  ps1:
+    command: "powershell"
+    args: ["-NoProfile", "-NoLogo"]
+
 data:
   name: {{ $name | quote }}
   email: {{ $email | quote }}
   sshKey: {{ $sshKey | quote }}
+  workEnabled: {{ $workEnabled }}

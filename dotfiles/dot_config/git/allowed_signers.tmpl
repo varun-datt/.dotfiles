@@ -1,0 +1,11 @@
+{{- $home := .chezmoi.homeDir -}}
+{{- $pub := printf "%s.pub" (.sshKey | replace "~" $home) -}}
+{{ if stat $pub -}}
+{{ .email }} namespaces="git" {{ template "read-pub-key.tmpl" (merge . (dict "path" $pub)) }}
+{{ end -}}
+{{- if .workEnabled -}}
+{{- $workPub := printf "%s.pub" (.work.sshKey | replace "~" $home) -}}
+{{ if stat $workPub -}}
+* namespaces="git" {{ template "read-pub-key.tmpl" (merge . (dict "path" $workPub)) }}
+{{ end -}}
+{{- end -}}

@@ -1,4 +1,5 @@
 {{ if ne .chezmoi.os "windows" -}}
+{{- $workEnabled := index . "workEnabled" | default false -}}
 #!/bin/bash
 
 set -e
@@ -24,13 +25,44 @@ fi
 echo "hash: {{ include $fisherfilePath | sha256sum }}"
 fish -c "fisher update"
 
-# SSH
-_ssh_key="{{ .sshKey | replace "~" "$HOME" }}"
-if [ ! -f "$_ssh_key" ]; then
-  mkdir -p "$HOME/.ssh"
-  ssh-keygen -t ed25519 -C "$(hostname)" -f "$_ssh_key" -N ""
-  echo "SSH public key (add to GitHub → Settings → SSH and GPG keys):"
-  cat "${_ssh_key}.pub"
+# Node
+if command -v mise >/dev/null 2>&1; then
+  mise use -g node@lts
 fi
+
+# bat Catppuccin Mocha theme
+if command -v bat >/dev/null 2>&1; then
+  _bat_themes_dir="$(bat --config-dir)/themes"
+  if [ ! -f "$_bat_themes_dir/Catppuccin Mocha.tmTheme" ]; then
+    mkdir -p "$_bat_themes_dir"
+    curl -fsSL -o "$_bat_themes_dir/Catppuccin Mocha.tmTheme" \
+      "https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme"
+    bat cache --build
+  fi
+fi
+
+# yazi Catppuccin Mocha flavor
+if command -v ya >/dev/null 2>&1; then
+  ya pkg add yazi-rs/flavors:catppuccin-mocha || true
+fi
+
+# SSH
+_generate_ssh_key() {
+  local _key="$1"
+  local _comment="$2"
+  if [ ! -f "$_key" ]; then
+    mkdir -p "$HOME/.ssh"
+    ssh-keygen -t ed25519 -C "$_comment" -f "$_key" -N ""
+    echo "SSH public key ($_comment — add to your Git host):"
+    cat "${_key}.pub"
+  fi
+}
+
+_generate_ssh_key "{{ .sshKey | replace "~" "$HOME" }}" "$(hostname)"
+
+{{ if $workEnabled -}}
+mkdir -p "{{ .work.sandboxWorkDir | replace "~" "$HOME" }}"
+_generate_ssh_key "{{ .work.sshKey | replace "~" "$HOME" }}" "$(hostname)"
+{{ end -}}
 
 {{ end -}}

@@ -1,4 +1,7 @@
-# Defined in - @ line 1
-function cat --wraps=bat --description 'alias cat=bat'
-  bat  $argv;
+function cat --wraps=bat --description 'bat when viewing in a terminal, cat otherwise'
+  if command -q bat; and isatty stdout
+    bat $argv
+  else
+    command cat $argv
+  end
 end

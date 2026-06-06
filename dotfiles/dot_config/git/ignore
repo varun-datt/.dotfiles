@@ -1,0 +1,21 @@
+# Global gitignore (core.excludesfile)
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+Desktop.ini
+
+# direnv / env
+.envrc.local
+.env.local
+
+# Build / deps caches
+node_modules/
+.venv/
+__pycache__/
+.mypy_cache/
+.ruff_cache/

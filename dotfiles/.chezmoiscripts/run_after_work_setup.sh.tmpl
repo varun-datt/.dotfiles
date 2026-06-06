@@ -1,0 +1,29 @@
+{{- $workEnabled := index . "workEnabled" | default false -}}
+{{- $workGitconfig := .work.gitconfig | replace "~" .chezmoi.homeDir -}}
+{{ if and $workEnabled (not (stat $workGitconfig)) -}}
+#!/bin/bash
+
+cat <<EOF
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ Work profile — setup required
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ Create {{ .work.gitconfig }} with your work identity:
+
+   [user]
+     name = Name
+     email = you@company.com
+     signingkey = {{ .work.sshKey }}
+
+ Repos cloned under {{ .work.sandboxWorkDir }}/ will use this automatically
+ (see includeIf in ~/.config/git/config).
+
+ Register the work SSH public key with your Git host:
+   cat {{ .work.sshKey }}.pub
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EOF
+
+{{ end -}}

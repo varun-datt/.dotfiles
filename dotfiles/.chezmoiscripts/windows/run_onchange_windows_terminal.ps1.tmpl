@@ -1,0 +1,190 @@
+{{ if eq .chezmoi.os "windows" -}}
+{{- $c := .catppuccin.palette.mocha -}}
+#!/usr/bin/env pwsh
+
+# hash: {{ printf "defaultProfile=pwsh-detect;hide-winps=1;elevate=true;scheme=Catppuccin Mocha;fontSize=14;flavor=mocha" | sha256sum }}
+
+$WinPSProfileGuid = '{61c54bbd-c2c6-5271-96e7-009a87ff44bf}'
+$PwshProfileGuidFallback = '{574e775e-1977-4e60-b3fe-2d638b964df6}'
+$ColorSchemeName = 'Catppuccin Mocha'
+$FontFace = 'JetBrainsMono Nerd Font'
+$FontSize = 14
+
+function Get-PwshProfile {
+  param([Parameter(Mandatory)] $Profiles)
+
+  $all = @($Profiles)
+
+  # 1) Auto-detected PowerShell 7 (Store/MSI install).
+  $bySource = $all | Where-Object { $_.source -eq 'Windows.Terminal.PowershellCore' } | Select-Object -First 1
+  if ($bySource) { return $bySource }
+
+  # 2) Well-known Microsoft fallback GUID.
+  $byGuid = $all | Where-Object { $_.guid -eq $PwshProfileGuidFallback } | Select-Object -First 1
+  if ($byGuid) { return $byGuid }
+
+  # 3) Any plain pwsh.exe commandline.
+  $all | Where-Object { $_.commandline -match '(?i)pwsh\.exe' } | Select-Object -First 1
+}
+
+function Get-WinPSProfile {
+  param([Parameter(Mandatory)] $Profiles)
+
+  @($Profiles) | Where-Object {
+    $_.guid -eq $WinPSProfileGuid -or
+    ($_.source -eq 'Windows.Terminal.Powershell' -and $_.commandline -notmatch '(?i)pwsh\.exe') -or
+    ($_.commandline -match '(?i)powershell\.exe' -and $_.commandline -notmatch '(?i)pwsh\.exe')
+  } | Select-Object -First 1
+}
+
+function Set-PwshProfileSettings {
+  param(
+    [Parameter(Mandatory)]
+    $Profile
+  )
+
+  $changed = $false
+
+  if ($Profile.colorScheme -ne $ColorSchemeName) {
+    $Profile | Add-Member -NotePropertyName colorScheme -NotePropertyValue $ColorSchemeName -Force
+    $changed = $true
+  }
+  # Always launch pwsh 7 elevated (Run as administrator).
+  if ($Profile.elevate -ne $true) {
+    $Profile | Add-Member -NotePropertyName elevate -NotePropertyValue $true -Force
+    $changed = $true
+  }
+  if (Set-ProfileFont -Profile $Profile -Face $FontFace -Size $FontSize) {
+    $changed = $true
+  }
+
+  return $changed
+}
+
+$CatppuccinScheme = [ordered]@{
+  name                 = $ColorSchemeName
+  cursorColor          = '{{ $c.rosewater }}'
+  selectionBackground  = '{{ $c.surface2 }}'
+  background           = '{{ $c.base }}'
+  foreground           = '{{ $c.text }}'
+  black                = '{{ $c.surface1 }}'
+  red                  = '{{ $c.red }}'
+  green                = '{{ $c.green }}'
+  yellow               = '{{ $c.yellow }}'
+  blue                 = '{{ $c.blue }}'
+  purple               = '{{ $c.pink }}'
+  cyan                 = '{{ $c.teal }}'
+  white                = '{{ $c.subtext1 }}'
+  brightBlack          = '{{ $c.surface2 }}'
+  brightRed            = '{{ $c.red }}'
+  brightGreen          = '{{ $c.green }}'
+  brightYellow         = '{{ $c.yellow }}'
+  brightBlue           = '{{ $c.blue }}'
+  brightPurple         = '{{ $c.pink }}'
+  brightCyan           = '{{ $c.teal }}'
+  brightWhite          = '{{ $c.subtext0 }}'
+}
+
+function Set-ProfileFont {
+  param(
+    [Parameter(Mandatory)]
+    $Profile,
+    [string]$Face,
+    [int]$Size
+  )
+
+  $changed = $false
+
+  if (-not $Profile.PSObject.Properties['font']) {
+    $Profile | Add-Member -NotePropertyName font -NotePropertyValue ([PSCustomObject]@{
+        face = $Face
+        size = $Size
+      })
+    return $true
+  }
+
+  if ($Profile.font.face -ne $Face) {
+    $Profile.font | Add-Member -NotePropertyName face -NotePropertyValue $Face -Force
+    $changed = $true
+  }
+  if ($Profile.font.size -ne $Size) {
+    $Profile.font | Add-Member -NotePropertyName size -NotePropertyValue $Size -Force
+    $changed = $true
+  }
+
+  return $changed
+}
+
+function Add-ColorSchemeIfMissing {
+  param(
+    [Parameter(Mandatory)]
+    $Settings,
+    [Parameter(Mandatory)]
+    [hashtable]$Scheme
+  )
+
+  if ($null -eq $Settings.schemes) {
+    $Settings | Add-Member -NotePropertyName schemes -NotePropertyValue @() -Force
+  }
+
+  $exists = @($Settings.schemes) | Where-Object { $_.name -eq $Scheme.name }
+  if ($exists.Count -gt 0) { return $false }
+
+  $Settings.schemes = @($Settings.schemes) + [PSCustomObject]$Scheme
+  return $true
+}
+
+$settingsPaths = @(
+  "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json"
+  "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json"
+  "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminalPreview_8wekyb3d8bbwe\LocalState\settings.json"
+)
+
+foreach ($path in $settingsPaths) {
+  if (-not (Test-Path $path)) { continue }
+
+  $settings = Get-Content -Raw -Path $path -Encoding utf8 | ConvertFrom-Json
+  $changed = $false
+  $profileGuids = @($settings.profiles.list | ForEach-Object { $_.guid })
+  $pwshProfile = Get-PwshProfile -Profiles $settings.profiles.list
+  $winPSProfile = Get-WinPSProfile -Profiles $settings.profiles.list
+
+  if ($pwshProfile) {
+    if ($settings.defaultProfile -ne $pwshProfile.guid) {
+      $settings.defaultProfile = $pwshProfile.guid
+      $changed = $true
+    }
+  } elseif ($settings.defaultProfile -and ($profileGuids -notcontains $settings.defaultProfile)) {
+    $settings.PSObject.Properties.Remove('defaultProfile')
+    $changed = $true
+    Write-Warning "Removed invalid defaultProfile from $path (pwsh profile not found)."
+  }
+
+  if (Add-ColorSchemeIfMissing -Settings $settings -Scheme $CatppuccinScheme) {
+    $changed = $true
+  }
+
+  if (-not $settings.profiles.defaults) {
+    $settings.profiles | Add-Member -NotePropertyName defaults -NotePropertyValue ([PSCustomObject]@{}) -Force
+  }
+  if (Set-ProfileFont -Profile $settings.profiles.defaults -Face $FontFace -Size $FontSize) {
+    $changed = $true
+  }
+
+  if ($winPSProfile -and -not $winPSProfile.hidden) {
+    $winPSProfile | Add-Member -NotePropertyName hidden -NotePropertyValue $true -Force
+    $changed = $true
+  }
+
+  if ($pwshProfile -and (Set-PwshProfileSettings -Profile $pwshProfile)) {
+    $changed = $true
+  }
+
+  if ($changed) {
+    $json = $settings | ConvertTo-Json -Depth 100
+    $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($path, $json, $utf8NoBom)
+    Write-Host "Updated Windows Terminal settings: $path"
+  }
+}
+{{ end -}}

@@ -13,9 +13,42 @@ if (-not $chocolateyInstalled)
 echo "hash: {{ include $packageFilePath | sha256sum }}"
 choco install -y "$env:CHEZMOI_SOURCE_DIR/packages/ChocoPackages.config"
 
-if (!(Test-Path -Path $env:LOCALAPPDATA\nvim))
+if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+  pwsh -NoProfile -Command @'
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+if (-not (Get-Module -ListAvailable -Name Terminal-Icons)) {
+  Install-Module -Name Terminal-Icons -Repository PSGallery -Scope CurrentUser -Force
+}
+'@
+}
+
+if (Get-Command pwsh -ErrorAction SilentlyContinue) {
+  $realProfile = pwsh -NoProfile -Command '$PROFILE.CurrentUserCurrentHost'
+  $managedProfile = Join-Path $env:USERPROFILE 'Documents\PowerShell\Microsoft.PowerShell_profile.ps1'
+
+  if ($realProfile -and ($realProfile -ne $managedProfile)) {
+    $stub = @"
+# Managed by chezmoi. Do not edit.
+# Edit dotfiles/Documents/PowerShell/Microsoft.PowerShell_profile.ps1.tmpl instead.
+. '$managedProfile'
+"@
+    $realProfileDir = Split-Path -Parent $realProfile
+    if (-not (Test-Path $realProfileDir)) {
+      New-Item -ItemType Directory -Path $realProfileDir -Force | Out-Null
+    }
+    $current = if (Test-Path $realProfile) { (Get-Content -Raw -Path $realProfile).TrimEnd() } else { '' }
+    if ($current -ne $stub.TrimEnd()) {
+      Set-Content -Path $realProfile -Value $stub -Encoding utf8
+      Write-Host "Wrote pwsh profile stub: $realProfile"
+    }
+  }
+}
+
+$nvimManaged = "$env:USERPROFILE\.config\nvim"
+$nvimLocal = "$env:LOCALAPPDATA\nvim"
+if ((Test-Path -Path $nvimManaged) -and (!(Test-Path -Path $nvimLocal)))
 {
-  git clone --depth 1 https://github.com/AstroNvim/AstroNvim $env:LOCALAPPDATA\nvim
+  New-Item -ItemType Junction -Path $nvimLocal -Target $nvimManaged | Out-Null
 }
 
 {{ end -}}

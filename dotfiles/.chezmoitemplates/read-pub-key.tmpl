@@ -1,0 +1,11 @@
+{{- if eq .chezmoi.os "windows" -}}
+{{- if lookPath "bat" -}}
+{{- output "bat" "--plain" .path | trim -}}
+{{- else if lookPath "cat" -}}
+{{- output "cat" .path | trim -}}
+{{- else -}}
+{{- output "powershell.exe" "-NoProfile" "-Command" (printf "(Get-Content -LiteralPath '%s' -Raw).Trim()" .path) | trim -}}
+{{- end -}}
+{{- else -}}
+{{- output "cat" .path | trim -}}
+{{- end -}}
