@@ -1,0 +1,5 @@
+# Per-host overrides (copy to .chezmoidata.local.yaml and customize).
+# This file is gitignored; only the example is tracked.
+#
+# workEnabled: true   # enable work profile on non-macOS machines
+# workEnabled: false  # disable work profile on macOS

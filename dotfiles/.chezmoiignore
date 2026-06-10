@@ -1,4 +1,5 @@
 packages
+.chezmoidata.local.yaml.example
 
 {{ if ne .chezmoi.os "windows" }}
 Documents

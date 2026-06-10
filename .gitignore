@@ -1,2 +1,4 @@
 .DS_Store
 Brewfile.lock.json
+.chezmoidata.local.yaml
+dotfiles/.chezmoidata.local.yaml

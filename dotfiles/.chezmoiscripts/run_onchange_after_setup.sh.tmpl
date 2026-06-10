@@ -7,9 +7,14 @@ set -e
 mkdir -p "$HOME/sandbox"
 
 # Tmux Plugin Manager
-_tmux_plugins_directory="$HOME/.config/tmux/plugins/tpm"
+_config_home="{{ .xdg.configHome | replace "~" "$HOME" }}"
+_tmux_plugins_directory="$_config_home/tmux/plugins/tpm"
 if [ ! -d "$_tmux_plugins_directory" ]; then
   git clone https://github.com/tmux-plugins/tpm "$_tmux_plugins_directory"
+fi
+
+if command -v tmux >/dev/null 2>&1 && [ -x "$_tmux_plugins_directory/bin/install_plugins" ]; then
+  "$_tmux_plugins_directory/bin/install_plugins" || echo "Warning: TPM plugin auto-install failed"
 fi
 
 # Fish shell
@@ -25,9 +30,10 @@ fi
 echo "hash: {{ include $fisherfilePath | sha256sum }}"
 fish -c "fisher update"
 
-# Node
+# Tools via mise (~/.config/mise/config.toml)
+echo "hash: {{ include "dot_config/mise/config.toml" | sha256sum }}"
 if command -v mise >/dev/null 2>&1; then
-  mise use -g node@lts
+  mise install -y
 fi
 
 # bat Catppuccin Mocha theme
@@ -41,7 +47,7 @@ if command -v bat >/dev/null 2>&1; then
   fi
 fi
 
-# yazi Catppuccin Mocha flavor
+# yazi Catppuccin flavors
 if command -v ya >/dev/null 2>&1; then
   ya pkg add yazi-rs/flavors:catppuccin-mocha || true
 fi

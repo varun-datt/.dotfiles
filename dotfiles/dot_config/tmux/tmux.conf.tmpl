@@ -1,3 +1,5 @@
+{{- $workEnabled := index . "workEnabled" | default false -}}
+{{- $configHome := .xdg.configHome -}}
 # tmux new -As main
 
 # Config
@@ -8,6 +10,9 @@ set -g history-limit 50000
 set -g focus-events on
 set -g set-clipboard on
 set -g @fingers-key v
+{{ if $workEnabled }}
+set -g @fingers-alt-action 'xargs open -a "Brave Browser"'
+{{ end }}
 
 # Color / Theme
 set -g default-terminal "tmux-256color"
@@ -37,4 +42,4 @@ set -g @plugin 'tmux-plugins/tmux-yank'
 
 # One-time Setup: https://github.com/tmux-plugins/tpm (install plugins `prefix + I`)
 # Initialize TMUX plugin manager (keep this line at the very bottom of tmux.conf)
-run -b '~/.config/tmux/plugins/tpm/tpm'
+run -b '{{ $configHome }}/tmux/plugins/tpm/tpm'

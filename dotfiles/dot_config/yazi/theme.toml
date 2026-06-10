@@ -1,4 +1,4 @@
 # Flavors are fetched by the after-setup script via `ya pkg add`.
 [flavor]
 dark = "catppuccin-mocha"
-light = "catppuccin-latte"
+light = "catppuccin-mocha"
