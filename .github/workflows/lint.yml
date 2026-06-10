@@ -42,3 +42,4 @@ jobs:
           ln -sf "$GITHUB_WORKSPACE" "$HOME/.local/share/chezmoi"
           chezmoi init --apply=false
           chezmoi apply --dry-run
+          chezmoi doctor

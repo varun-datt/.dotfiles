@@ -3,7 +3,6 @@ fish_add_path -g "$HOME/.local/bin"
 set -x VISUAL nvim
 set -x EDITOR "$VISUAL"
 set -x NODE_OPTIONS "--max_old_space_size=6144"
-set -x XDG_CONFIG_HOME "$HOME/.config"
 
 # Fish variables
 set -U __done_exclude '^(man|v|cat|g (?!push|pull|fetch))'
@@ -26,5 +25,8 @@ if status is-interactive
   end
   if command -v carapace &> /dev/null
     carapace _carapace | source
+  end
+  if command -v chezmoi &> /dev/null
+    chezmoi completion fish | source
   end
 end

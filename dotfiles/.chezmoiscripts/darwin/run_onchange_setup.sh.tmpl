@@ -17,6 +17,8 @@ HOMEBREW_ACCEPT_EULA=Y brew bundle --file "$CHEZMOI_SOURCE_DIR/packages/Brewfile
 defaults write com.apple.finder "AppleShowAllFiles" -bool "true"
 defaults write com.apple.finder "FXDefaultSearchScope" -string "SCcf"
 defaults write com.apple.finder "FXPreferredViewStyle" -string "Nlsv"
+defaults write com.apple.finder "NewWindowTarget" -string "PfHm"
+defaults write com.apple.finder "NewWindowTargetPath" -string "file://$HOME/"
 defaults write com.apple.finder "ShowPathbar" -bool true
 defaults write com.apple.finder "ShowStatusBar" -bool true
 killall Finder || true

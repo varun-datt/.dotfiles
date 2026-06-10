@@ -1,5 +1,9 @@
 {{- $workEnabled := index . "workEnabled" | default false -}}
 {{- $workGitconfig := .work.gitconfig | replace "~" .chezmoi.homeDir -}}
+{{- $configHome := .xdg.configHome -}}
+{{- $home := .chezmoi.homeDir -}}
+{{- $sshPub := printf "%s.pub" (.sshKey | replace "~" $home) -}}
+{{- $workPub := printf "%s.pub" (.work.sshKey | replace "~" $home) -}}
 {{ if and $workEnabled (not (stat $workGitconfig)) -}}
 #!/bin/bash
 
@@ -17,13 +21,23 @@ cat <<EOF
      signingkey = {{ .work.sshKey }}
 
  Repos cloned under {{ .work.sandboxWorkDir }}/ will use this automatically
- (see includeIf in ~/.config/git/config).
+ (see includeIf in {{ $configHome }}/git/config).
 
- Register the work SSH public key with your Git host:
-   cat {{ .work.sshKey }}.pub
+ Register the SSH public keys below with your Git host.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 EOF
+
+{{ if stat $sshPub -}}
+echo "Personal SSH public key:"
+cat "{{ $sshPub }}"
+
+echo
+{{ end -}}
+{{ if stat $workPub -}}
+echo "Work SSH public key:"
+cat "{{ $workPub }}"
+{{ end -}}
 
 {{ end -}}

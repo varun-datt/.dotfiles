@@ -1,13 +1,13 @@
 {{ if eq .chezmoi.os "windows" -}}
 #!/usr/bin/env pwsh
 
-# hash: {{ printf "mise=node-lts;bat=Catppuccin Mocha;ssh=ed25519" | sha256sum }}
+# hash: {{ printf "mise=%s;bat=Catppuccin Mocha;ssh=ed25519" (include "dot_config/mise/config.toml" | sha256sum) | sha256sum }}
 
 $ErrorActionPreference = 'Stop'
 
-# Node
+# Tools via mise (~/.config/mise/config.toml)
 if (Get-Command mise -ErrorAction SilentlyContinue) {
-  mise use -g node@lts
+  mise install -y
 }
 
 # bat Catppuccin Mocha theme

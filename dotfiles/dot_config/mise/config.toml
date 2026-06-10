@@ -1,0 +1,8 @@
+# Installed by the run_onchange_after_* scripts via `mise install`.
+#
+# Edit this file to add/remove global tools; do NOT use `mise use -g`
+# (chezmoi manages this file and would revert manual writes on the next apply).
+[tools]
+node = "lts"
+python = "latest"
+uv = "latest"

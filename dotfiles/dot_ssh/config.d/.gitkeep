@@ -1,0 +1,2 @@
+# Placeholder for local SSH host overrides.
+# Add files here (e.g. work.conf) — they are included via ~/.ssh/config.
