@@ -20,6 +20,9 @@ cat <<EOF
      email = you@company.com
      signingkey = {{ .work.sshKey }}
 
+   [credential "https://github.com"]
+     username = your-work-github-username
+
  Repos cloned under {{ .work.sandboxWorkDir }}/ will use this automatically
  (see includeIf in {{ $configHome }}/git/config).
 

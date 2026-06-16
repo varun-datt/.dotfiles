@@ -14,6 +14,13 @@ set -g @fingers-key v
 set -g @fingers-alt-action 'xargs open -a "Brave Browser"'
 {{ end }}
 
+# Shell — run fish for interactive panes; the login shell stays POSIX.
+{{ $fishPath := lookPath "fish" -}}
+{{ if $fishPath -}}
+set -g default-shell "{{ $fishPath }}"
+set -g default-command "{{ $fishPath }}"
+{{ end -}}
+
 # Color / Theme
 set -g default-terminal "tmux-256color"
 set -as terminal-features ",*:RGB"

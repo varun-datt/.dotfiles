@@ -1,0 +1,49 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!/usr/bin/env pwsh
+
+# hash: {{ includeTemplate "skills-install.tmpl" . | sha256sum }}
+
+$ErrorActionPreference = 'Stop'
+
+if (Get-Command mise -ErrorAction SilentlyContinue) {
+   & {
+    $ErrorActionPreference = 'Continue'
+    mise install -y 2>&1 | Out-Null
+  }
+  if ($LASTEXITCODE -ne 0) { Write-Warning "'mise install' failed (exit $LASTEXITCODE)." }
+  $miseData = $env:MISE_DATA_DIR
+  if (-not $miseData) { $miseData = Join-Path $env:LOCALAPPDATA 'mise' }
+  $miseShims = Join-Path $miseData 'shims'
+  if (Test-Path $miseShims) { $env:PATH = "$miseShims;$env:PATH" }
+}
+
+if (-not (Get-Command npx -ErrorAction SilentlyContinue)) {
+  Write-Warning 'npx not found (need Node, e.g. via mise); skipping Agent Skills.'
+  return
+}
+
+$manifest = @'
+{{ includeTemplate "skills-install.tmpl" . | trim }}
+'@
+
+foreach ($entry in ($manifest -split "`r?`n")) {
+  $entry = $entry.Trim()
+  if (-not $entry) { continue }
+  $skillArgs = $entry -split '\s+'
+
+  # Symlink by default; fall back to --copy if symlink creation fails
+  # (Windows without Developer Mode or admin rights).
+  npx skills add @skillArgs -g -y
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Symlink install failed for '$entry'; retrying with --copy."
+    npx skills add @skillArgs -g -y --copy
+    if ($LASTEXITCODE -ne 0) {
+      Write-Warning "Failed to install skills for: $entry"
+    }
+  }
+}
+
+# Pull latest for everything already installed.
+npx skills update -g -y
+if ($LASTEXITCODE -ne 0) { Write-Warning "'npx skills update' failed." }
+{{ end -}}

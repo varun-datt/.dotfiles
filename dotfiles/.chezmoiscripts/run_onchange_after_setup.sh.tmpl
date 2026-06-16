@@ -17,21 +17,18 @@ if command -v tmux >/dev/null 2>&1 && [ -x "$_tmux_plugins_directory/bin/install
   "$_tmux_plugins_directory/bin/install_plugins" || echo "Warning: TPM plugin auto-install failed"
 fi
 
-# Fish shell
-_fish_path="$(command -v fish)"
-if [ -n "$_fish_path" ] && [ "$SHELL" != "$_fish_path" ]; then
-  if ! grep -qxF "$_fish_path" /etc/shells; then
-    echo "$_fish_path" | sudo tee -a /etc/shells >/dev/null
-  fi
-  chsh -s "$_fish_path"
+# Shell — fish runs interactively via tmux/terminal; the login shell stays POSIX.
+_fish_path="$(command -v fish || true)"
+if [ -n "$_fish_path" ] && ! grep -qxF "$_fish_path" /etc/shells; then
+  echo "$_fish_path" | sudo tee -a /etc/shells >/dev/null
 fi
 
 {{ $fisherfilePath := "dot_config/private_fish/fish_plugins" }}
-echo "hash: {{ include $fisherfilePath | sha256sum }}"
+# hash: {{ include $fisherfilePath | sha256sum }}
 fish -c "fisher update"
 
 # Tools via mise (~/.config/mise/config.toml)
-echo "hash: {{ include "dot_config/mise/config.toml" | sha256sum }}"
+# hash: {{ include "dot_config/mise/config.toml" | sha256sum }}
 if command -v mise >/dev/null 2>&1; then
   mise install -y
 fi

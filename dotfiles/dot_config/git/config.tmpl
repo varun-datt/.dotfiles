@@ -1,5 +1,6 @@
 {{- $workEnabled := index . "workEnabled" | default false -}}
 {{- $configHome := .xdg.configHome -}}
+{{- $c := .catppuccin.palette.mocha -}}
 [user]
   name = {{ .name }}
   email = {{ .email }}
@@ -34,24 +35,85 @@
 [branch]
   sort = -committerdate
 
+# Native git colors (status, branch, log --decorate, grep, etc.). Diffs use delta.
 [color]
   ui = auto
 
 [color "branch"]
-  current = yellow reverse
-  local = yellow
-  remote = green
-
-[color "diff"]
-  meta = yellow bold
-  frag = magenta bold
-  old = red bold
-  new = green bold
+  current = "{{ $c.green }}" bold
+  local = "{{ $c.text }}"
+  remote = "{{ $c.sapphire }}"
+  upstream = "{{ $c.mauve }}"
+  plain = "{{ $c.subtext0 }}"
 
 [color "status"]
-  added = yellow
-  changed = green
-  untracked = cyan
+  header = "{{ $c.subtext0 }}"
+  added = "{{ $c.green }}"
+  updated = "{{ $c.green }}" bold
+  changed = "{{ $c.yellow }}"
+  untracked = "{{ $c.red }}"
+  branch = "{{ $c.blue }}" bold
+  nobranch = "{{ $c.peach }}" bold ul
+  localBranch = "{{ $c.blue }}"
+  remoteBranch = "{{ $c.sapphire }}"
+  unmerged = "{{ $c.mauve }}" bold reverse
+
+[color "diff"]
+  meta = "{{ $c.overlay0 }}"
+  frag = "{{ $c.mauve }}" bold
+  func = "{{ $c.blue }}"
+  context = "{{ $c.text }}"
+  old = "{{ $c.red }}" bold
+  new = "{{ $c.green }}" bold
+  commit = "{{ $c.yellow }}"
+  whitespace = "{{ $c.red }}" reverse
+  oldMoved = "{{ $c.maroon }}"
+  newMoved = "{{ $c.teal }}"
+
+[color "decorate"]
+  branch = "{{ $c.green }}" bold
+  remoteBranch = "{{ $c.sapphire }}" bold
+  tag = "{{ $c.yellow }}" bold
+  stash = "{{ $c.mauve }}" bold
+  HEAD = "{{ $c.blue }}" bold
+  grafted = "{{ $c.overlay1 }}"
+
+[color "grep"]
+  filename = "{{ $c.mauve }}"
+  function = "{{ $c.blue }}"
+  lineNumber = "{{ $c.overlay0 }}"
+  column = "{{ $c.overlay0 }}"
+  match = "{{ $c.red }}" bold
+  matchContext = "{{ $c.peach }}"
+  matchSelected = "{{ $c.red }}" bold
+  context = "{{ $c.subtext0 }}"
+  selected = "{{ $c.text }}"
+  separator = "{{ $c.overlay0 }}"
+
+[color "interactive"]
+  prompt = "{{ $c.blue }}"
+  header = "{{ $c.text }}" bold
+  help = "{{ $c.subtext0 }}"
+  error = "{{ $c.red }}" bold
+
+[color "blame"]
+  highlightRecent = "{{ $c.overlay0 }},12 month ago,{{ $c.text }},1 month ago,{{ $c.red }}"
+  repeatedLines = "{{ $c.overlay0 }}"
+
+[color "advice"]
+  hint = "{{ $c.sky }}"
+
+[color "remote"]
+  hint = "{{ $c.sky }}"
+  warning = "{{ $c.yellow }}"
+  success = "{{ $c.green }}"
+  error = "{{ $c.red }}"
+
+[color "push"]
+  error = "{{ $c.red }}"
+
+[color "transport"]
+  rejected = "{{ $c.red }}"
 
 [core]
   pager = delta
@@ -81,10 +143,6 @@
 [fetch]
   prune = true
   pruneTags = true
-
-# clobber tags on fetch
-[remote "origin"]
-  fetch = +refs/tags/*:refs/tags/*
 
 [grep]
   extendRegexp = true
@@ -119,10 +177,12 @@
 [credential "https://github.com"]
   helper =
   helper = !gh auth git-credential
+  username = varun-datt
 
 [credential "https://gist.github.com"]
   helper =
   helper = !gh auth git-credential
+  username = varun-datt
 {{ if eq .chezmoi.os "darwin" }}
 [credential]
   helper =

@@ -1,0 +1,16 @@
+# --- PATH: user bins + mise shims (exposes node/npx/python/uv/tvly/...) ----------
+typeset -U path PATH                       # keep entries unique
+# Homebrew (so non-interactive/default-shell agents get gh, jq, rg, fd, kubectl, …).
+for _b in /opt/homebrew/bin /opt/homebrew/sbin /usr/local/bin /usr/local/sbin; do
+  [ -d "$_b" ] && path=("$_b" $path)
+done
+unset _b
+[ -d "$HOME/.local/bin" ] && path=("$HOME/.local/bin" $path)
+_mise_shims="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims"
+[ -d "$_mise_shims" ] && path=("$_mise_shims" $path)
+unset _mise_shims
+export PATH
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  export NODE_USE_SYSTEM_CA=1
+fi

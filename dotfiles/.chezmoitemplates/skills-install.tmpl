@@ -1,0 +1,12 @@
+{{- /*
+  Renders one line per skill source from .chezmoidata/skills.yaml:
+
+      <repo> -s <skill> [-s <skill>...] [-a <agent>...]
+
+  The run_onchange_after_skills.* scripts read each line and run
+  `npx skills add <line> -g -y`. Globbing is disabled in those scripts
+  so a bare `*` (install all skills) is passed through literally.
+*/ -}}
+{{- range .skills.sources -}}
+{{- .repo }}{{ range .skills }} -s {{ . }}{{ end }}{{ if hasKey $.skills "agents" }}{{ range $.skills.agents }} -a {{ . }}{{ end }}{{ end }}
+{{ end -}}

@@ -1,0 +1,46 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/bin/bash
+
+set -e
+
+# hash: {{ includeTemplate "skills-install.tmpl" . | sha256sum }}
+
+if command -v mise >/dev/null 2>&1; then
+  mise install -y >/dev/null 2>&1 || true
+  _mise_shims="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims"
+  if [ -d "$_mise_shims" ]; then
+    PATH="$_mise_shims:$PATH"
+  fi
+fi
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  export NODE_USE_SYSTEM_CA=1
+fi
+
+if ! command -v npx >/dev/null 2>&1; then
+  echo "Warning: npx not found (need Node, e.g. via mise); skipping Agent Skills." >&2
+  exit 0
+fi
+
+# Install / refresh each source from the manifest. Disable globbing first so a
+# bare `*` (install all skills in a repo) is passed through literally.
+_skills_manifest="$(cat <<'SKILLS_MANIFEST'
+{{ includeTemplate "skills-install.tmpl" . | trim }}
+SKILLS_MANIFEST
+)"
+
+set -f
+while IFS= read -r _entry; do
+  [ -z "$_entry" ] && continue
+  # shellcheck disable=SC2086
+  # Redirect stdin from /dev/null so `npx skills add` cannot consume the
+  # remaining heredoc lines (which would stop the loop after one source).
+  npx skills add $_entry -g -y </dev/null || echo "Warning: failed to install skills for: $_entry" >&2
+done <<EOF
+$_skills_manifest
+EOF
+set +f
+
+# Pull latest for everything already installed.
+npx skills update -g -y || echo "Warning: 'npx skills update' failed" >&2
+{{ end -}}

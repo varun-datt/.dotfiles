@@ -1,0 +1,176 @@
+# Agent Skills manifest — single source of truth for `npx skills` installs.
+#
+# Consumed by .chezmoitemplates/skills-install.tmpl, which the
+# run_onchange_after_skills.* scripts render into `npx skills add` commands.
+#
+# Each source entry becomes:
+#   npx skills add <repo> -s <skill> [-s <skill>...] -g -y
+# Use  skills: ["*"]  to install every skill in a repo.
+#
+# Canonical store is ~/.agents/skills/ (symlinked into each detected agent).
+# Skills are NOT vendored into chezmoi — only this manifest is tracked.
+
+skills:
+  # Pin target agents instead of auto-detecting installed ones.
+  # Auto-detection also picks up "PromptScript" (it claims the shared
+  # .agents/skills/ path but is project-only), which then fails every
+  # global install with "PromptScript does not support global skill
+  # installation". Pinning the agents we actually use avoids that noise.
+  agents:
+    - github-copilot
+    - cursor
+  #   - claude-code
+
+  sources:
+    # --- Skill authoring & theming ---
+    - repo: anthropics/skills
+      skills: [frontend-design, skill-creator, theme-factory, pptx]
+
+    # --- Frontend / design / writing ---
+    - repo: vercel-labs/agent-skills
+      skills: [web-design-guidelines, writing-guidelines]
+    - repo: pbakaus/impeccable
+      skills: [impeccable]
+    - repo: emilkowalski/skill
+      skills: [emil-design-eng]
+
+    # --- Skill discovery ---
+    #- repo: vercel-labs/skills
+    #  skills: [find-skills]
+
+    # --- Engineering practice: code review, debugging, verification ---
+    #- repo: obra/superpowers
+    #  skills:
+    #    - brainstorming
+    #    - requesting-code-review
+    #    - receiving-code-review
+    #    - systematic-debugging
+    #    - verification-before-completion
+    #    - writing-plans
+    #    - executing-plans
+
+    #
+    #- repo: addyosmani/agent-skills
+    #  skills: [api-and-interface-design, spec-driven-development]
+
+    # --- Coding-agent guidelines (Karpathy-inspired) ---
+    - repo: forrestchang/andrej-karpathy-skills
+      skills: [karpathy-guidelines]
+
+    # --- Alignment / grilling / handoff (Matt Pocock) ---
+    - repo: mattpocock/skills
+      skills: [grill-with-docs, handoff]
+
+    # --- .NET / architecture / docs / governance (GitHub awesome-copilot) ---
+    #- repo: github/awesome-copilot
+    #  skills:
+    #    - dotnet-best-practices
+    #    - dotnet-design-pattern-review
+    #    - azure-devops-cli
+    #    - cloud-design-patterns
+    #    - architecture-blueprint-generator
+    #    - documentation-writer
+    #    - agent-governance
+    #    - acquire-codebase-knowledge
+    #    - excalidraw-diagram-generator
+    #    - code-tour
+    #    - breakdown-epic-pm
+    #    - breakdown-epic-arch
+
+    # AWS Cloud
+    # - repo: zxkane/aws-skills
+
+    # --- Observability: Dynatrace ---
+    - repo: dynatrace/dynatrace-for-ai
+      skills:
+        - dt-dql-essentials
+        - dt-obs-tracing
+        - dt-obs-services
+        - dt-obs-problems
+        - dt-obs-kubernetes
+        - dt-obs-hosts
+        - dt-obs-predictive-analytics
+        - dt-obs-frontends
+
+    # --- Observability: Elastic ---
+    - repo: elastic/agent-skills
+      skills:
+        - elasticsearch-authn
+        - elasticsearch-esql
+        - observability-service-health
+        - observability-logs-search
+        - observability-manage-slos
+
+    # --- Agent frameworks (full packs) ---
+    #- repo: langchain-ai/langchain-skills
+    #  skills: ["*"]
+    #- repo: crewaiinc/skills
+    #  skills: ["*"]
+
+    # --- Slides / decks (live CLI needs uv/uvx, provided via mise) ---
+    #- repo: mpuig/agent-slides
+    #  skills: [slides-build, slides-edit, slides-critique]
+
+    # --- Diagrams & visual explainers ---
+    - repo: softaworks/agent-toolkit
+      skills: [mermaid-diagrams, c4-architecture]
+    - repo: nicobailon/visual-explainer
+      skills: ["*"]
+    - repo: jimliu/baoyu-skills
+      skills: [baoyu-diagram, baoyu-infographic]
+    - repo: yudong-94/storytelling-viz-skill
+      skills: ["storytelling-viz"]
+    - repo: greensock/gsap-skills
+      skills: [gsap-core, gsap-timeline, gsap-scrolltrigger]
+
+    # --- Product / leadership / communication (Lenny's Podcast) ---
+    - repo: RefoundAI/lenny-skills
+      skills:
+        - giving-presentations
+    #    - running-effective-meetings
+    #    - running-effective-1-1s
+    #    - running-decision-processes
+    #    - stakeholder-alignment
+    #    - managing-up
+    #    - written-communication
+    #    - having-difficult-conversations
+    #    - cross-functional-collaboration
+    #    - problem-definition
+    #    - evaluating-trade-offs
+    #    - managing-tech-debt
+    #    - post-mortems-retrospectives
+    #    - running-design-reviews
+    #    - scoping-cutting
+    #    - systems-thinking
+    #    - planning-under-uncertainty
+    #    - prioritizing-roadmap
+    #    - writing-prds
+    #    - writing-specs-designs
+    #    - technical-roadmaps
+    #    - managing-timelines
+    #    - shipping-products
+    #    - delegating-work
+    #    - engineering-culture
+    #    - personal-productivity
+    #    - building-a-promotion-case
+    #    - career-transitions
+    #    - finding-mentors-sponsors
+    #    - negotiating-offers
+    #    - managing-imposter-syndrome
+    #    - evaluating-new-technology
+
+    # --- Browser automation ---
+    - repo: vercel-labs/agent-browser
+      skills: ["*"]
+    # - repo: microsoft/playwright-cli      # verify exact repo path first
+    #   skills: ["*"]
+    # - repo: browser-use/browser-use       # verify exact repo path first
+    #   skills: ["*"]
+
+    # --- Web search & research ---
+    - repo: tavily-ai/skills
+      skills: [tavily-search, tavily-research, tavily-extract]
+    - repo: firecrawl/cli
+      skills: [firecrawl-search, firecrawl-scrape]
+    - repo: langchain-ai/deepagents
+      skills: [web-research]

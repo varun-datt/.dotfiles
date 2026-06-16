@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+#
+# dotfiles-deps — update every dependency the dotfiles installed, on demand.
+#
+# Covers system packages (brew/pamac), mise tools, fish (fisher) and tmux (tpm)
+# plugins, the bat theme, yazi packages, and Agent Skills (treated as plugins
+# for the AI agents). Pulls latest for everything already installed.
+#
+# Installing NEW deps from the manifests happens on `chezmoi apply` (edit the
+# files under ~/.local/share/chezmoi, then re-apply); this only refreshes.
+
+set -u
+
+_have() { command -v "$1" >/dev/null 2>&1; }
+_step() { printf '\n==> %s\n' "$1"; }
+_warn() { echo "Warning: $1" >&2; }
+
+# Make mise-managed tools (node/npx/ya/...) resolvable in this non-login shell.
+if _have mise; then
+  _mise_shims="${MISE_DATA_DIR:-$HOME/.local/share/mise}/shims"
+  [ -d "$_mise_shims" ] && PATH="$_mise_shims:$PATH"
+fi
+
+_config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+
+# System packages.
+case "$(uname -s)" in
+  Darwin)
+    if _have brew; then
+      _step "Homebrew: update + upgrade"
+      brew update || _warn "brew update failed"
+      brew upgrade || _warn "brew upgrade failed"
+      brew cleanup || true
+    fi
+    ;;
+  Linux)
+    if _have pamac; then
+      _step "pamac: upgrade"
+      pamac upgrade || _warn "pamac upgrade failed"
+    fi
+    ;;
+esac
+
+# mise-managed tools (respects the version ranges pinned in config.toml).
+if _have mise; then
+  _step "mise: install missing + upgrade tools"
+  mise install -y || _warn "mise install failed"
+  mise upgrade || _warn "mise upgrade failed"
+fi
+
+# fish plugins (fisher).
+if _have fish; then
+  _step "fisher: update plugins"
+  fish -c "fisher update" || _warn "fisher update failed"
+fi
+
+# tmux plugins (tpm).
+_tpm_update="$_config_home/tmux/plugins/tpm/bin/update_plugins"
+if [ -x "$_tpm_update" ]; then
+  _step "tmux: update plugins"
+  "$_tpm_update" all || _warn "tpm update failed"
+fi
+
+# yazi flavors/plugins.
+if _have ya; then
+  _step "yazi: upgrade packages"
+  ya pkg upgrade || _warn "ya pkg upgrade failed"
+fi
+
+# bat Catppuccin Mocha theme (refetch latest).
+if _have bat; then
+  _step "bat: refresh Catppuccin Mocha theme"
+  _bat_themes_dir="$(bat --config-dir)/themes"
+  mkdir -p "$_bat_themes_dir"
+  if curl -fsSL -o "$_bat_themes_dir/Catppuccin Mocha.tmTheme" \
+    "https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme"; then
+    bat cache --build || true
+  else
+    _warn "bat theme download failed"
+  fi
+fi
+
+# Agent Skills.
+if _have npx; then
+  _step "Agent Skills: update"
+  npx skills update -g -y || _warn "'npx skills update' failed"
+else
+  _warn "npx not found (need Node via mise); skipping Agent Skills."
+fi
+
+_step "Done."
