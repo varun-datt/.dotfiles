@@ -37,9 +37,22 @@ jobs:
       - name: Validate templates
         run: |
           export PATH="$HOME/.local/bin:$PATH"
-          # init expects source at ~/.local/share/chezmoi; symlink the checkout.
-          mkdir -p "$HOME/.local/share"
-          ln -sf "$GITHUB_WORKSPACE" "$HOME/.local/share/chezmoi"
-          chezmoi init --apply=false
-          chezmoi apply --dry-run
-          chezmoi doctor
+          # .chezmoiroot points at dotfiles/; --source avoids needing a symlink.
+          chezmoi --source "$GITHUB_WORKSPACE" init --apply=false
+          chezmoi --source "$GITHUB_WORKSPACE" apply --dry-run
+          chezmoi --source "$GITHUB_WORKSPACE" doctor
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install chezmoi
+        shell: pwsh
+        run: choco install chezmoi -y --no-progress
+      - name: Validate templates
+        shell: pwsh
+        run: |
+          # .chezmoiroot points at dotfiles/; --source avoids needing a symlink.
+          chezmoi --source "$env:GITHUB_WORKSPACE" init --apply=false
+          chezmoi --source "$env:GITHUB_WORKSPACE" apply --dry-run
+          chezmoi --source "$env:GITHUB_WORKSPACE" doctor

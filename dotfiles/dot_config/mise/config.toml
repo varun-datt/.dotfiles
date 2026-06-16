@@ -5,4 +5,6 @@
 [tools]
 node = "lts"
 python = "latest"
+rust = "latest"
 uv = "latest"
+"pipx:tavily-cli" = { version = "latest", uvx_args = "--with pip-system-certs" }

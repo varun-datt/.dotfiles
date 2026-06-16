@@ -4,6 +4,18 @@ set -x VISUAL nvim
 set -x EDITOR "$VISUAL"
 set -x NODE_OPTIONS "--max_old_space_size=6144"
 
+set -l _mise_shims "$HOME/.local/share/mise/shims"
+if set -q MISE_DATA_DIR
+  set _mise_shims "$MISE_DATA_DIR/shims"
+end
+if test -d "$_mise_shims"
+  fish_add_path -g "$_mise_shims"
+end
+
+if test (uname -s) = Darwin
+  set -gx NODE_USE_SYSTEM_CA 1
+end
+
 # Fish variables
 set -U __done_exclude '^(man|v|cat|g (?!push|pull|fetch))'
 
