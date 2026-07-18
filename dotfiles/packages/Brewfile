@@ -2,6 +2,7 @@ tap "hashicorp/tap", trusted: true
 tap "microsoft/git", trusted: true
 tap "microsoft/mssql-release", "https://github.com/Microsoft/homebrew-mssql-release", trusted: true
 tap "morantron/tmux-fingers", trusted: true
+brew "agent-browser"
 brew "awscli"
 brew "azure-cli"
 brew "bat"
