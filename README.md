@@ -39,7 +39,7 @@ The core CLI set is kept in sync across all three on a best-effort basis.
 
 ## Work profile
 
-Auto-enabled on macOS (`workEnabled`). Override per machine with [`dotfiles/.chezmoidata.local.yaml`](dotfiles/.chezmoidata.local.yaml.example) (copy from the example; gitignored). It provisions a separate work SSH key, a `~/sandbox/work` directory, and a git `includeIf` that loads `~/sandbox/work/.gitconfig` for repos cloned there. On apply you'll see a banner (reprints each apply until done) with SSH public keys until you create that work gitconfig and register them with your git host.
+Auto-enabled on macOS (`workEnabled`, set in the chezmoi config template). It provisions a separate work SSH key, a `~/sandbox/work` directory, and a git `includeIf` that loads `~/sandbox/work/.gitconfig` for repos cloned there. On apply you'll see a banner (reprints each apply until done) with SSH public keys until you create that work gitconfig and register them with your git host.
 
 ## Agent Skills
 
@@ -52,14 +52,25 @@ Personal, global [Agent Skills](https://agentskills.io/) (portable `SKILL.md` wo
 
 ## Shells & tools
 
-- **Default shell (zsh):** [`dotfiles/dot_zshenv`](dotfiles/dot_zshenv) prepends `~/.local/bin` and the mise shims dir to `PATH` for **every** zsh invocation. This is what AI agents and non-interactive scripts use, so mise-managed tools resolve without an interactive `mise activate`. fish gets the same shims outside its interactive guard.
+- **PATH (all shells):** the PATH logic lives in one POSIX snippet, [`dotfiles/dot_config/shell/path.sh`](dotfiles/dot_config/shell/path.sh) (precedence, left wins: mise shims → `~/.local/bin` → Homebrew → inherited). It is sourced by zsh ([`dot_zshenv`](dotfiles/dot_zshenv)), bash login ([`dot_bash_profile`](dotfiles/dot_bash_profile) → [`dot_profile`](dotfiles/dot_profile)) and non-login bash ([`dot_bashrc`](dotfiles/dot_bashrc)), so AI agents and non-interactive scripts resolve mise-managed tools without an interactive `mise activate`. fish gets the same shims outside its interactive guard. `~/.zshenv`/`~/.profile`/`~/.bashrc` must stay in `$HOME` (no XDG location), so keeping the real logic under `~/.config/shell/` is the XDG-friendly split.
 - **Corporate TLS (e.g. Zscaler):** on macOS behind a TLS-intercepting proxy, both runtimes verify against the macOS keychain. **Node** gets `NODE_USE_SYSTEM_CA=1` (Node ≥ 22) exported from the shells, which makes `node`/`npm`/`npx` read the keychain directly — no CA file or custom script. **Python** has no built-in switch, so each pipx CLI that needs it bundles [`pip-system-certs`](https://gitlab.com/alelec/pip-system-certs) into its own venv via mise `uvx_args`. Its `.pth` auto-activates inside the venv (it wraps the same OS-native [`truststore`](https://github.com/sethmlarson/truststore)), so there is **no** custom script, `PYTHONPATH`, or `sitecustomize` glue. This works because a CA bundle alone fails — the Zscaler root has non-critical basic constraints that OpenSSL rejects.
   - **Trade-off (revisit later):** this is **tool-scoped** — it only covers pipx CLIs that explicitly opt in (add the same `--with pip-system-certs` per tool). Arbitrary `python …` / `uv run` scripts behind the proxy are **not** covered. If a future need arises for system-wide Python trust, research the alternatives again: a global `truststore` on `PYTHONPATH` + `sitecustomize.py` (previous approach, machine-local artifact, covers all Python), or Python gaining native system-trust upstream.
+
+## Editors (VS Code / Cursor)
+
+Settings for both editors come from a single source, [`dotfiles/.chezmoidata/editor.yaml`](dotfiles/.chezmoidata/editor.yaml): a shared `common` block plus `code`/`cursor` overrides. The `run_onchange_after_editor-settings` scripts (POSIX `sh` for macOS/Linux, PowerShell for Windows) merge them (editor-specific wins over common) and write `settings.json` into each editor's `User` dir.
+
+- **Paths / XDG:** VS Code and Cursor only honour XDG on Linux (`~/.config/{Code,Cursor}/User`); on macOS they use `~/Library/Application Support/…` and on Windows `%APPDATA%\…`. The scripts branch on OS instead of relying on a single path.
+- **UI edits:** because these are `run_onchange`, settings changed in the editor UI persist until you next edit `editor.yaml`, at which point the canonical values reassert.
+- **Per-machine settings:** anything host-specific or not for git (e.g. the `mssql` server connection) goes in the gitignored `.chezmoidata.yaml` under `editor.codeLocal` / `editor.cursorLocal`, which merge with the highest precedence (see `.chezmoidata.yaml.example`).
+- **Agent execution:** terminal sandboxing is disabled in both editors: VS Code sets `chat.agent.sandbox.enabled` to `off`, while Cursor's [`sandbox.json`](dotfiles/dot_cursor/sandbox.json.tmpl) uses the `insecure_none` policy. Agent commands therefore run with the user's normal filesystem and network permissions; editor approval modes and administrative policies can still require confirmation.
+- **Extensions:** managed by the `vscode "…"` lines in [`dotfiles/packages/Brewfile`](dotfiles/packages/Brewfile) (macOS; `brew bundle` resolves extension dependencies). Not yet automated for Cursor or Linux/Windows.
+- **keybindings.json:** managed the same way but currently empty (`editor.keybindings: []`); populate it to deploy. Snippets are not managed (none in use).
 
 ## Conventions
 
 - **Secrets:** none committed.
-- **Per-machine data:** `dotfiles/.chezmoidata.local.yaml` (gitignored; see `.chezmoidata.local.yaml.example`).
+- **Per-machine data:** `dotfiles/.chezmoidata.yaml` (gitignored; see `.chezmoidata.yaml.example`).
 - **CI:** `.github/workflows/lint.yml` runs shellcheck, stylua, `chezmoi apply --dry-run`, and `chezmoi doctor`.
 
 ## tmux quick reference

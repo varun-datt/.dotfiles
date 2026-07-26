@@ -1,0 +1,2 @@
+[ -f "$HOME/.config/shell/path.sh" ] && . "$HOME/.config/shell/path.sh"
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"

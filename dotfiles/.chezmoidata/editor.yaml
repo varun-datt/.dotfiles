@@ -1,0 +1,41 @@
+# settings.json / keybindings.json for VS Code + Cursor, materialized by
+# .chezmoiscripts/**/run_onchange_after_editor-settings.*
+# Per-machine additions go in .chezmoidata.yaml (editor.codeLocal / editor.cursorLocal).
+editor:
+  common:
+    editor.fontSize: 14
+    editor.tabSize: 2
+    editor.formatOnSave: true
+    debug.console.fontSize: 14
+    terminal.integrated.fontSize: 14
+    terminal.integrated.defaultProfile.osx: zsh
+    workbench.iconTheme: catppuccin-mocha
+    files.trimTrailingWhitespace: true
+    files.insertFinalNewline: true
+    files.trimFinalNewlines: true
+    files.eol: "\n"
+    telemetry.telemetryLevel: "off"
+    "[json]":
+      editor.defaultFormatter: esbenp.prettier-vscode
+  code:
+    workbench.colorTheme: Catppuccin Mocha
+    chat.editor.fontSize: 14
+    chat.fontSize: 14
+    chat.agent.maxRequests: 200
+    chat.editing.explainChanges.enabled: true
+    chat.viewSessions.orientation: stacked
+    github.copilot.chat.agentDebugLog.enabled: true
+    github.copilot.chat.agentDebugLog.fileLogging.enabled: true
+    chat.agent.sandbox.enabled: "off"
+    chat.tools.urls.autoApprove:
+      "https://code.visualstudio.com": true
+      "https://github.com/microsoft/vscode/wiki/*": true
+      "https://github.com/vercel-labs/skills":
+        approveRequest: false
+        approveResponse: true
+      "https://html.duckduckgo.com": true
+      "https://www.google.com/search": true
+  cursor:
+    window.autoDetectColorScheme: true
+    workbench.preferredDarkColorTheme: Catppuccin Mocha
+  keybindings: []

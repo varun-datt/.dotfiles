@@ -1,0 +1,31 @@
+{{ if eq .chezmoi.os "windows" -}}
+#!/usr/bin/env pwsh
+{{ $code := merge (dig "codeLocal" (dict) .editor | deepCopy) .editor.code .editor.common -}}
+{{ $cursor := merge (dig "cursorLocal" (dict) .editor | deepCopy) .editor.cursor .editor.common -}}
+# hash: {{ printf "%s|%s|%s" ($code | toJson) ($cursor | toJson) (.editor.keybindings | toJson) | sha256sum }}
+
+$base = $env:APPDATA
+
+$settings = @{
+  Code = @'
+{{ $code | toPrettyJson }}
+'@
+  Cursor = @'
+{{ $cursor | toPrettyJson }}
+'@
+}
+
+foreach ($app in 'Code', 'Cursor') {
+  $dir = Join-Path $base "$app\User"
+  New-Item -ItemType Directory -Force -Path $dir | Out-Null
+  Set-Content -Path (Join-Path $dir 'settings.json') -Value $settings[$app] -Encoding utf8
+}
+{{ if .editor.keybindings }}
+$keybindings = @'
+{{ .editor.keybindings | toPrettyJson }}
+'@
+foreach ($app in 'Code', 'Cursor') {
+  Set-Content -Path (Join-Path $base "$app\User\keybindings.json") -Value $keybindings -Encoding utf8
+}
+{{ end -}}
+{{ end -}}

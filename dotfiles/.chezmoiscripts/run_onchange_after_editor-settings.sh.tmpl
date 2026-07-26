@@ -1,0 +1,34 @@
+{{ if ne .chezmoi.os "windows" -}}
+#!/bin/sh
+
+set -eu
+
+{{ $code := merge (dig "codeLocal" (dict) .editor | deepCopy) .editor.code .editor.common -}}
+{{ $cursor := merge (dig "cursorLocal" (dict) .editor | deepCopy) .editor.cursor .editor.common -}}
+# hash: {{ printf "%s|%s|%s" ($code | toJson) ($cursor | toJson) (.editor.keybindings | toJson) | sha256sum }}
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  base="$HOME/Library/Application Support"
+else
+  base="${XDG_CONFIG_HOME:-$HOME/.config}"
+fi
+
+for app in Code Cursor; do
+  mkdir -p "$base/$app/User"
+done
+
+cat > "$base/Code/User/settings.json" <<'SETTINGS'
+{{ $code | toPrettyJson }}
+SETTINGS
+
+cat > "$base/Cursor/User/settings.json" <<'SETTINGS'
+{{ $cursor | toPrettyJson }}
+SETTINGS
+{{ if .editor.keybindings }}
+for app in Code Cursor; do
+  cat > "$base/$app/User/keybindings.json" <<'KEYBINDINGS'
+{{ .editor.keybindings | toPrettyJson }}
+KEYBINDINGS
+done
+{{ end -}}
+{{ end -}}
