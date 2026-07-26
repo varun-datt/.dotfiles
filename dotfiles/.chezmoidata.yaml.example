@@ -1,0 +1,7 @@
+# Per-host overrides (copy to .chezmoidata.yaml and customize).
+# This file is gitignored; only the example is tracked. chezmoi deep-merges it
+# over .chezmoidata/*.yaml, so include only the keys you want to change.
+# editor:
+#   codeLocal:                                 # merged into VS Code settings.json
+#     # mssql.connections: [ ... ]            # host-specific setting
+#   cursorLocal: {}                           # merged into Cursor settings.json
