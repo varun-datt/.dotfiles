@@ -1,0 +1,4 @@
+#!/bin/sh
+case "${GIT_REFLOG_ACTION}" in
+  pull*) exec git fetch --prune --prune-tags --force --quiet ;;
+esac
