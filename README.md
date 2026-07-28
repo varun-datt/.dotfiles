@@ -90,6 +90,13 @@ Enter fingers mode with `prefix + v`, then press a hint letter. The modifier you
 
 - `git show :/<search-term>` — show the most recent commit whose message contains `<search-term>` (e.g. `git show :/theme`). The `:/<text>` revision syntax works anywhere a commit is expected (`git log :/fix`, `git diff :/wip`).
 
+### Tag handling (why `fetch.pruneTags` is off)
+
+A tag moved upstream makes any fetch carrying a `refs/tags/*` refspec exit 1, which aborts `git pull` before it merges. `fetch.pruneTags` supplies that refspec, so it stays unset. The `post-merge` hook in `git/template/hooks` force-syncs tags after a pull instead — installed via `init.templateDir`, so `git init` retrofits an existing repo. It deletes local-only tags.
+
+- Repos with their own `post-merge`, or a `core.hooksPath` (husky and similar), never get the hook — run `git fetch --tags --force` by hand there.
+- Setting `remote.origin.fetch = +refs/tags/*:refs/tags/*` globally instead would break `git clone`.
+
 ## Tooling
 
 - [chezmoi](https://www.chezmoi.io/) — dotfiles manager
