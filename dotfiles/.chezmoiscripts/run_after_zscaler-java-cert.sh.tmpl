@@ -1,0 +1,37 @@
+{{- $workEnabled := index . "workEnabled" | default false -}}
+{{ if and $workEnabled (eq .chezmoi.os "darwin") -}}
+#!/bin/bash
+# Import Zscaler Root CA into each mise JDK cacerts (see README Corporate TLS).
+
+set -e
+
+_cert="$(mktemp)"
+trap 'rm -f "$_cert"' EXIT
+
+security find-certificate -a -c "Zscaler Root CA" -p /Library/Keychains/System.keychain >"$_cert" 2>/dev/null || true
+
+if [ ! -s "$_cert" ]; then
+  exit 0
+fi
+
+for _jdk in "$HOME"/.local/share/mise/installs/java/*/; do
+  [ -d "$_jdk" ] || continue
+  [ -L "${_jdk%/}" ] && continue
+
+  _keytool="${_jdk}bin/keytool"
+  _store="${_jdk}lib/security/cacerts"
+  [ -x "$_keytool" ] && [ -f "$_store" ] || continue
+
+  if "$_keytool" -list -keystore "$_store" -storepass changeit -alias zscaler-root-ca >/dev/null 2>&1; then
+    continue
+  fi
+
+  if "$_keytool" -importcert -noprompt -trustcacerts \
+      -alias zscaler-root-ca -file "$_cert" \
+      -keystore "$_store" -storepass changeit >/dev/null 2>&1; then
+    echo "Imported Zscaler root CA into $(basename "${_jdk%/}") truststore"
+  else
+    echo "Warning: could not import Zscaler root CA into ${_store}" >&2
+  fi
+done
+{{ end -}}

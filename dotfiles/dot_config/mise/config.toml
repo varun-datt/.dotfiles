@@ -7,4 +7,6 @@ node = "lts"
 python = "latest"
 rust = "latest"
 uv = "latest"
+java = "temurin-17"
+maven = "3"
 "pipx:tavily-cli" = { version = "latest", uvx_args = "--with pip-system-certs" }

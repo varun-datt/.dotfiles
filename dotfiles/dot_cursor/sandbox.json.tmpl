@@ -1,1 +1,7 @@
-{{ dict "type" "insecure_none" | toPrettyJson }}
+{{ dict
+  "type" "workspace_readwrite"
+  "networkPolicy" (dict
+    "default" "deny"
+    "allow" (list "api.tavily.com" "*.tavily.com")
+  )
+  | toPrettyJson }}
