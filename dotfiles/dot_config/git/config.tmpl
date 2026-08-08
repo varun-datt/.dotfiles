@@ -186,10 +186,10 @@
 {{ if eq .chezmoi.os "darwin" }}
 [credential]
   helper =
-  helper = git-credential-manager
+  helper = manager
 [credential "https://dev.azure.com"]
   helper =
-  helper = git-credential-manager
+  helper = manager
   useHttpPath = true
 {{ end }}
 {{ if $workEnabled }}

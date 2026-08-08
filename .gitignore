@@ -2,3 +2,4 @@
 Brewfile.lock.json
 .chezmoidata.yaml
 dotfiles/.chezmoidata.yaml
+graphify-out/
