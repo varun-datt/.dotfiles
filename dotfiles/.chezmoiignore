@@ -4,3 +4,9 @@ packages
 {{ if ne .chezmoi.os "windows" }}
 Documents
 {{ end }}
+
+# Per-workspace agent session state is machine-local working memory, not config.
+# The template itself stays managed.
+.agents/state/**
+!.agents/state
+!.agents/state/TEMPLATE.md
