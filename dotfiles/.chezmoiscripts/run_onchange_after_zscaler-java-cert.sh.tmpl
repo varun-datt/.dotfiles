@@ -2,6 +2,7 @@
 {{ if and $workEnabled (eq .chezmoi.os "darwin") -}}
 #!/bin/bash
 # Import Zscaler Root CA into each mise JDK cacerts (see README Corporate TLS).
+# mise JDK inventory: {{ glob (printf "%s/.local/share/mise/installs/java/*" .chezmoi.homeDir) | join "," | sha256sum }}
 
 set -e
 
