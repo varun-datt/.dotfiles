@@ -1,0 +1,57 @@
+#!/bin/sh
+# Agent-facing rg wrapper: -r is --replace, not recursive/regex.
+# Bypass: RG_GUARD_OFF=1 rg <args>   (command rg still hits this PATH shim)
+
+_bindir=$(dirname "$0")
+case $_bindir in
+  /*) ;;
+  *) _bindir=$(CDPATH= cd -- "$_bindir" && pwd) || exit 127 ;;
+esac
+
+_newpath=
+_ifs=$IFS
+IFS=:
+for _d in $PATH; do
+  [ "$_d" = "$_bindir" ] && continue
+  _newpath="${_newpath:+$_newpath:}$_d"
+done
+IFS=$_ifs
+PATH=$_newpath
+unset _bindir _d _newpath _ifs
+
+_real=$(command -v rg) || {
+  printf '%s\n' "rg guard: ripgrep not found on PATH" >&2
+  exit 127
+}
+
+if [ -n "$RG_GUARD_OFF" ]; then
+  exec "$_real" "$@"
+fi
+
+_valueflags='tgemfjdABCMT'
+for _a in "$@"; do
+  case "$_a" in
+    --) break ;;
+    --*) continue ;;
+    -?*)
+      _cluster=${_a#-}
+      while [ -n "$_cluster" ]; do
+        _c=${_cluster%"${_cluster#?}"}
+        _cluster=${_cluster#?}
+        if [ "$_c" = r ]; then
+          printf '%s\n' "rg guard: -r is --replace in ripgrep, not recursive/regex  (in '$_a')" >&2
+          printf '%s\n' "  It rewrites matched text and line numbers silently. rg recurses by default." >&2
+          printf '%s\n' "  Fixed string? -F.   Genuinely want replace? spell it --replace." >&2
+          printf '%s\n' "  Bypass once:  RG_GUARD_OFF=1 rg <args>" >&2
+          exit 2
+        fi
+        case "$_valueflags" in
+          *"$_c"*) break ;;
+        esac
+      done
+      ;;
+  esac
+done
+unset _a _c _cluster _valueflags
+
+exec "$_real" "$@"

@@ -15,10 +15,38 @@ $settings = @{
 '@
 }
 
+function Merge-Settings($target, $source) {
+  foreach ($key in @($source.Keys)) {
+    if ($target.Contains($key) -and $target[$key] -is [System.Collections.IDictionary] -and $source[$key] -is [System.Collections.IDictionary]) {
+      Merge-Settings $target[$key] $source[$key]
+    } else {
+      $target[$key] = $source[$key]
+    }
+  }
+}
+
 foreach ($app in 'Code', 'Cursor') {
   $dir = Join-Path $base "$app\User"
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
-  Set-Content -Path (Join-Path $dir 'settings.json') -Value $settings[$app] -Encoding utf8
+  $path = Join-Path $dir 'settings.json'
+
+  $managed = $settings[$app] | ConvertFrom-Json -AsHashtable
+  $merged = $managed
+
+  if (Test-Path $path) {
+    try {
+      $existing = Get-Content -Raw -Path $path | ConvertFrom-Json -AsHashtable
+      if ($existing -is [System.Collections.IDictionary]) {
+        Merge-Settings $existing $managed
+        $merged = $existing
+      }
+    } catch {
+      Copy-Item -Path $path -Destination "$path.bak" -Force
+      Write-Warning "editor-settings: $path is not parseable JSON; backed it up to $path.bak"
+    }
+  }
+
+  $merged | ConvertTo-Json -Depth 32 | Set-Content -Path $path -Encoding utf8
 }
 {{ if .editor.keybindings }}
 $keybindings = @'

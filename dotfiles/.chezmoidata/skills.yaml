@@ -59,7 +59,7 @@ skills:
 
     # --- Alignment / grilling / handoff (Matt Pocock) ---
     - repo: mattpocock/skills
-      skills: [grill-with-docs, handoff]
+      skills: [grill-with-docs, handoff, grilling, wayfinder, domain-modeling]
 
     # --- .NET / architecture / docs / governance (GitHub awesome-copilot) ---
     #- repo: github/awesome-copilot

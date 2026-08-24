@@ -13,17 +13,34 @@ else
   base="${XDG_CONFIG_HOME:-$HOME/.config}"
 fi
 
-for app in Code Cursor; do
-  mkdir -p "$base/$app/User"
-done
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
 
-cat > "$base/Code/User/settings.json" <<'SETTINGS'
+cat > "$tmpdir/Code.json" <<'SETTINGS'
 {{ $code | toPrettyJson }}
 SETTINGS
 
-cat > "$base/Cursor/User/settings.json" <<'SETTINGS'
+cat > "$tmpdir/Cursor.json" <<'SETTINGS'
 {{ $cursor | toPrettyJson }}
 SETTINGS
+
+for app in Code Cursor; do
+  dir="$base/$app/User"
+  target="$dir/settings.json"
+  managed="$tmpdir/$app.json"
+  mkdir -p "$dir"
+
+  if [ ! -s "$target" ]; then
+    cp "$managed" "$target"
+  elif command -v jq >/dev/null 2>&1 && jq -e . "$target" >/dev/null 2>&1; then
+    jq -s '.[0] * .[1]' "$target" "$managed" > "$tmpdir/merged.json"
+    mv "$tmpdir/merged.json" "$target"
+  else
+    cp "$target" "$target.bak"
+    cp "$managed" "$target"
+    echo "editor-settings: $target is not parseable JSON (or jq is missing); backed it up to $target.bak" >&2
+  fi
+done
 {{ if .editor.keybindings }}
 for app in Code Cursor; do
   cat > "$base/$app/User/keybindings.json" <<'KEYBINDINGS'

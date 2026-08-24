@@ -16,10 +16,11 @@ Canonical file. `~/.claude/CLAUDE.md` is a symlink to this, which is how VS Code
 ## When triggered
 
 - **Long-running work exists** — start it first (background commands, deep research, delegated subagents, installs), then do the attention-work while it runs.
+- **Running a terminal command** — a notification re-injects the whole visible BUFFER, not the command's output — and twice, once at "may be waiting for input" and again at "completed". Never let a command block: `</dev/null`, `-y`, `--no-pager`, `timeout N`. When it might anyway, prefix `clear;`.
 - **Delegating to a subagent** — never assume it inherited these rules; several built-in ones do not. Restate the constraints that matter in its prompt, and check its output before acting on it.
 - **An unknown would change the answer** — spike it: bounded multi-source research with a stated question and a stopping point. Cite URLs, separate evidence from inference, and name what stayed unresolved.
 - **Irreversible action, multi-file change, a decision unlikely to be revisited, or a research conclusion** — end with a `Case against:` line giving the strongest argument against your own output and what would falsify it. For the highest-stakes of these, get it from a subagent on a different model family, handed the artifact without your reasoning — your own model is your own bias in a fresh context window.
-- **Writing code** — comment only what the code cannot show. No narration, no restating the next line.
+- **Writing code** — do not add, edit, or delete comments unless explicitly requested or required by repository instructions. Report existing comments contradicted by your changes.
 - **Starting a task** — say how it ends. If you stop early, leave it resumable and say exactly where you stopped; never leave half-applied edits or a silent blocker.
 - **Telling the user a task is done** — if it produced a durable learning, gotcha, or settled decision, write it to `~/.agents/state/<workspace>/state.md` first, then say you did.
 
