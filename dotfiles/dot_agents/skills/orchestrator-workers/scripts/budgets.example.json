@@ -1,0 +1,9 @@
+{
+  "*": 90,
+  "example-build": 90,
+  "example-build-fix1": 60,
+  "example-build-review": 30,
+  "example-build-rereview": 20,
+  "example-research": 30,
+  "example-docs-only": 45
+}
