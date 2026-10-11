@@ -97,9 +97,9 @@ skills:
       skills:
         - elasticsearch-authn
         - elasticsearch-esql
-        - observability-service-health
+        # - observability-service-health
         - observability-logs-search
-        - observability-manage-slos
+        # - observability-manage-slos
 
     # --- Agent frameworks (full packs) ---
     #- repo: langchain-ai/langchain-skills
@@ -120,8 +120,8 @@ skills:
       skills: [baoyu-diagram, baoyu-infographic]
     - repo: yudong-94/storytelling-viz-skill
       skills: ["storytelling-viz"]
-    - repo: greensock/gsap-skills
-      skills: [gsap-core, gsap-timeline, gsap-scrolltrigger]
+    # - repo: greensock/gsap-skills
+    #   skills: [gsap-core, gsap-timeline, gsap-scrolltrigger]
 
     # --- Product / leadership / communication (Lenny's Podcast) ---
     # Never leave this source entry active with an empty skill list — it installs all 76.
