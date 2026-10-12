@@ -54,6 +54,13 @@ GitHub Copilot CLI as the orchestrator instead of VS Code chat?
     - what costs quality.
   - **Status without context cost:** what the orchestrator reports, and whether a dashboard view
     of the run folder replaces polling.
+  - **Model selection per worker:** should the orchestrator pick each worker's model and effort
+    (for example a cheaper model for mechanical rounds, the strongest for design and review)?
+    Needs a discussion with the owner about what that looks like: who decides, the limits, and
+    how a choice is shown and overridden. Today every worker is claude-opus-5.5 (high) and every
+    reviewer gpt-6-astra (max).
+  - **Escalation:** what earns the owner's attention (decisions, steering, blockers, sign-ins,
+    risks), and what goes to a live status view instead. Owner rule, 2026-10-11: escalate only.
   - **Build or rely on the harness:** how much of this to build, against what agent harnesses
     (GitHub Copilot, Cursor, Claude Code, OpenAI Codex and others) already provide or are likely
     to provide soon. Give an educated prediction, labelled INFERRED, with the signals behind it.

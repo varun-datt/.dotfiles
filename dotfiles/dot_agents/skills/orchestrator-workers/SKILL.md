@@ -21,7 +21,8 @@ are separate Copilot CLI sessions, each in its own git worktree. The name follow
 - **What happens next:**
   1. One batch of upfront questions ([Start](#start)), each with a recommendation.
   2. Autonomous work: waves of workers, reviews, merges.
-  3. A status report at every event and every heartbeat.
+  3. Messages to you only when you need to act: a decision, steering, a blocker or a risk. Everything
+     else is in the status table and the end-of-session summary.
   4. Parked questions asked in one batch at the end.
 - **Watch it:** you don't need to. The orchestrator reports at every event and every heartbeat
   (30 minutes by default), and at once on a stall, a death or an overrun; the watchdog below is
@@ -160,11 +161,11 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **At 2.5x budget:** stop it and resume it with a narrower brief, unless its final gates are
   nearly done.
 - **On a stall:** kill it by PID and restart it once.
-- **Status reports to the owner:**
-  - when: at every start, finish, verdict and merge; at every heartbeat; at once on a stall, death
-    or overrun;
-  - what: counts by state; each running worker's elapsed time, idle time and activity; spend; load
-    and power; what waits on the owner; what starts next.
+- **Escalate, don't report** (owner rule, 2026-10-11). Message the owner only when they must act: a
+  decision, a point to steer, a blocker, a sign-in, or a risk such as power. Keep it concise and high
+  level. Starts, finishes, verdicts, merges and overruns the orchestrator can handle go to the run
+  notes, the status table and the end-of-session summary, not to the owner. A heartbeat with nothing
+  to escalate gets at most one line.
 
 ## Gates and mutation controls
 
@@ -217,6 +218,10 @@ Label every claim VERIFIED (read or ran), INFERRED or OPEN.
   beyond itself.
 - **Mid-session:** record the question, park only the part it blocks, and carry on. Ask everything
   at the end, unless it blocks all the work.
+- **Hand off before the context fills.** After a compaction, or when the queue outlives the session,
+  write a handoff (rulings, queue, in-flight workers with resume commands, waiting questions) and
+  start a new orchestrator session. Never archive a chat that owns running worker terminals: that
+  disposes them.
 - **Only the owner decides:** security findings in someone else's system, weakening a check, and
   anything that changes what the owner sees or can do.
 

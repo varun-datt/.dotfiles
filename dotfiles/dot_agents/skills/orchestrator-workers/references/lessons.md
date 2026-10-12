@@ -100,4 +100,8 @@ INFERRED or OPEN. Project names appear only as examples.
   narrower brief. [runbook]
 - Budget from gate cost, not item size. One gate cycle (unit check, browser suite, targeted mutation controls) took about 20-25 min on an idle machine, and a worker needs at least two. A 60-min budget for a small item ran 160 min: 134 min in tools, 77 of them mutation controls, one run 53 min while later runs took 10 (cause OPEN). [ran: event timings of the source run]
 - Finished background terminals are disposed only if never revealed, and no setting closes finished ones. Select the finished tabs and Kill; never "Kill All Terminals", which kills running workers. [VS Code 1.141 docs and workbench source, read by a research worker]
+- A worker that started its gates in a background shell and ended its turn "waiting" lost its report. In `-p` mode the session ends with the turn, and a resumed session cannot read the old shell. Gates now run in the foreground, tee to `.gates/<gate>.log`, and the report is the last message. [ran: event log of the lost run]
+- Asking for a full-label mutation run "to show the output" cost over an hour, because each control starts browser servers. Ask for a few exact labels without browser tests. [notes]
+- Two branches appending to the same test fixture merged cleanly but broke a count assertion in a third test. Run the full browser suite on every merge, not only the merged branches' own specs. [ran]
+- Owner rule: escalate only what needs the owner (decisions, steering, blockers, sign-ins, risks); everything else goes to the run notes and the status view. Event-by-event reports cost the owner's attention. [owner, 2026-10-11]
 
