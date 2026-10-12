@@ -32,7 +32,7 @@ REPORT: your final message, in this order, plain words, no preamble.
 2. Gate results with numbers and the exact commands.
 3. Tests and mutation controls added, with the mutation score: killed of valid (survived and invalid listed by label). A mutation is killed only when a failing assertion catches it; a crash or timeout is invalid.
 4. Choices made inside the plan, for the owner (one line each), and everything ASSUMED.
-5. Known limits.
+5. Known limits, and anything TEMPORARY (a stopgap, placeholder or interim file), named as temporary with what replaces it.
 6. Drafts for orchestrator-owned records: {{RECORD_DRAFTS}}. Findings use placeholder ids F-NEW-1, F-NEW-2 … with evidence tags. Generic lessons carry no project names, numbers or paths.
 7. OPEN questions.
 Mark every claim VERIFIED (you ran or read it), INFERRED or OPEN. A claim about N files needs N files read.

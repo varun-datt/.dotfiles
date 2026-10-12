@@ -166,6 +166,9 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
   level. Starts, finishes, verdicts, merges and overruns the orchestrator can handle go to the run
   notes, the status table and the end-of-session summary, not to the owner. A heartbeat with nothing
   to escalate gets at most one line.
+- **Call temporary things temporary** (owner rule, 2026-10-11). A stopgap, placeholder or interim
+  file in a report to the owner is named as temporary, with what replaces it, so it is not read
+  as the design.
 
 ## Gates and mutation controls
 

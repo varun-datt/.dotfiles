@@ -11,6 +11,6 @@ Your proposal must:
 - end with a phased build plan, each phase small enough for one worker session, with the tests that would prove it;
 - stay under {{WORD_LIMIT}} words, not counting diagrams.
 
-Your final message: a summary of under 400 words listing the decisions the owner must make, each with your recommendation, plus your proposal's path and commit id.
+Your final message: a summary of under 400 words listing the decisions the owner must make, each with your recommendation, plus your proposal's path and commit id. Name anything temporary as temporary, with what replaces it.
 
 {{STANDING_OWNER_RULES}}
