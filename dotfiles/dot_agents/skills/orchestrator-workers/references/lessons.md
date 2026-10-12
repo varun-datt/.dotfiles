@@ -105,3 +105,7 @@ INFERRED or OPEN. Project names appear only as examples.
 - Two branches appending to the same test fixture merged cleanly but broke a count assertion in a third test. Run the full browser suite on every merge, not only the merged branches' own specs. [ran]
 - Owner rule: escalate only what needs the owner (decisions, steering, blockers, sign-ins, risks); everything else goes to the run notes and the status view. Event-by-event reports cost the owner's attention. [owner, 2026-10-11]
 
+- **Re-check before repeating an ask to the owner** (2026-10-11). I asked the owner for a one-click
+  action, never re-read the state it changes, and repeated "still waiting for you" twice after they
+  had done it. A pending owner action is a claim about live state: read that state (a file size, a
+  table row) each time before restating it.
