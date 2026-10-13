@@ -19,6 +19,8 @@ Canonical file. `~/.claude/CLAUDE.md` is a symlink to this, which is how VS Code
 - **Running a terminal command** — a notification re-injects the whole visible BUFFER, not the command's output — and twice, once at "may be waiting for input" and again at "completed". Never let a command block: `</dev/null`, `-y`, `--no-pager`, `timeout N`. When it might anyway, prefix `clear;`.
 - **Delegating to a subagent** — never assume it inherited these rules; several built-in ones do not. Restate the constraints that matter in its prompt, and check its output before acting on it. **Check its tools too:** a subagent can see a skill listed yet lack the tool the skill needs. One had no terminal, so it couldn't run a CLI-backed skill like `tvly`. Run those from the main session, or name the tool in the prompt and confirm it's available.
 - **An unknown would change the answer** — spike it: bounded multi-source research with a stated question and a stopping point. Cite URLs, separate evidence from inference, and name what stayed unresolved.
+- **Reading a web page** — use the built-in browser or `tavily-extract` for simple reads; reserve `agent-browser` for clicking, forms, logins, or pages that need JavaScript to render.
+- **Preparing a deck, visual story, or written update for leadership, or a talk given live** — load `executive-communication` for leadership audiences and `public-speaking` for live delivery, alongside the format skill (`pptx`, `visual-explainer`).
 - **Irreversible action, multi-file change, a decision unlikely to be revisited, or a research conclusion** — end with a `Case against:` line giving the strongest argument against your own output and what would falsify it. For the highest-stakes of these, get it from a subagent on a different model family, handed the artifact without your reasoning — your own model is your own bias in a fresh context window.
 - **Writing code** — do not add, edit, or delete comments unless explicitly requested or required by repository instructions. Report existing comments contradicted by your changes.
 - **Starting a task** — say how it ends. If you stop early, leave it resumable and say exactly where you stopped; never leave half-applied edits or a silent blocker.
@@ -32,3 +34,4 @@ Canonical file. `~/.claude/CLAUDE.md` is a symlink to this, which is how VS Code
 - Default density: compact.
 - Never: neon cyan on dark, gradient mesh, or the violet family (`#8b5cf6`, `#7c3aed`, `#a78bfa`, `#d946ef`).
 - Palette and type hold across genres; layout does not.
+- Check text contrast against its background (WCAG AA) wherever the palette is applied.

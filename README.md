@@ -43,12 +43,15 @@ Auto-enabled on macOS (`workEnabled`, set in the chezmoi config template). It pr
 
 ## Agent Skills
 
-Personal, global [Agent Skills](https://agentskills.io/) (portable `SKILL.md` workflows) managed with the [Vercel `skills` CLI](https://github.com/vercel-labs/skills). Skills are installed to the standard `~/.agents/skills/` store and symlinked into whichever agents are detected (GitHub Copilot, Cursor, Claude Code, …).
+Personal, global [Agent Skills](https://agentskills.io/) (portable `SKILL.md` workflows) managed with the [Vercel `skills` CLI](https://github.com/vercel-labs/skills). Skills are installed to the standard `~/.agents/skills/` store and symlinked into the pinned agents.
 
-- **Manifest:** [`dotfiles/.chezmoidata/skills.yaml`](dotfiles/.chezmoidata/skills.yaml) is the single source of truth — a list of `repo` + `skills` sources. Skill folders are **not** vendored into chezmoi; only the manifest is tracked.
+- **Manifest:** [`dotfiles/.chezmoidata/skills.yaml`](dotfiles/.chezmoidata/skills.yaml) is the single source of truth for third-party skills — a list of `repo` + `skills` sources. Those skill folders are **not** vendored into chezmoi; only the manifest is tracked.
+- **Hand-written skills:** [`dotfiles/dot_agents/skills/`](dotfiles/dot_agents/skills/) holds skills chezmoi deploys directly (`concept-art`, `orchestrator-workers`, `web-research`). `web-research` started as an example in `langchain-ai/deepagents`; it lives here because the upstream copy names that framework's tools (`write_file`, `task`, …), which Cursor and Copilot don't have, and sits in a library repo where it can move without notice.
+- **Removing a skill:** deleting a manifest entry stops future installs but does not uninstall it, and `npx skills update` keeps refreshing the old copy. Also run `npx skills remove <name> -g -y`.
+- **CLI dependencies:** the Elastic skills refuse to query without the `elastic` CLI (mise `npm:@elastic/cli`) and won't fall back to the HTTP API. Telemetry is off via `ELASTIC_CLI_TELEMETRY` in mise's `[env]`, not `~/.elasticrc.yml`: `elastic config context add` rewrites that file and drops a seeded `telemetry: false`. The `dtctl` skill needs `dtctl` (Brewfile cask from `dynatrace-oss/tap`); the other Dynatrace skills are DQL knowledge and run without it.
 - **Apply:** `run_onchange_after_skills.*` renders the manifest (via [`dotfiles/.chezmoitemplates/skills-install.tmpl`](dotfiles/.chezmoitemplates/skills-install.tmpl)) into `npx skills add <repo> -s <skill> -g -y` commands, then runs `npx skills update -g -y` to pull latest. It re-runs whenever the rendered commands change. Node comes from mise.
 - **On demand:** `dotfiles-deps` (in `~/.local/bin`) refreshes every dependency the dotfiles installed — system packages (brew/pamac), mise tools, fish (fisher) and tmux (tpm) plugins, the bat theme, yazi packages, and Agent Skills (`npx skills update -g -y`). To add a skill or package permanently, edit the relevant manifest and `chezmoi apply`.
-- **Agents:** auto-detected by default. Pin specific agents by uncommenting `skills.agents` in the manifest (adds `-a <agent>` to each install).
+- **Agents:** pinned to GitHub Copilot and Cursor in `skills.agents` (adds `-a <agent>` to each install). Auto-detection also picks up PromptScript, which fails every global install.
 
 ## Shells & tools
 

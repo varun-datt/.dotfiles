@@ -1,3 +1,4 @@
+tap "dynatrace-oss/tap", trusted: true
 tap "hashicorp/tap", trusted: true
 tap "microsoft/git", trusted: true
 tap "microsoft/mssql-release", "https://github.com/Microsoft/homebrew-mssql-release", trusted: true
@@ -57,6 +58,7 @@ cask "alfred"
 cask "brave-browser"
 cask "dbeaver-community"
 cask "docker-desktop"
+cask "dynatrace-oss/tap/dtctl"
 # cask "dotnet-sdk"
 cask "font-jetbrains-mono-nerd-font"
 cask "ghostty"
