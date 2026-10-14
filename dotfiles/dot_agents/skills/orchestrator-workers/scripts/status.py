@@ -32,6 +32,35 @@ STALL_MIN = float(os.environ.get('OW_STALL_MIN', '20'))
 BUDGET_DEFAULT = [('-rereview', 20), ('-review', 30), ('-fix', 60), ('-resume', 60), ('-merge', 60),
                   ('-research', 30)]
 ROUND = r'-(fix|resume|review|rereview|merge)\w*$'
+# Only a retry, fix or resume continues a capped round's work; a review of it does not.
+CONTINUE = r'-(fix|resume)\w*$'
+CREDITS = re.compile(r'(\d[\d,]*(?:\.\d+)?)\s*/\s*(\d[\d,]*(?:\.\d+)?)\s*AI credits used')
+
+
+def limit_event(e):
+    """(used, cap, reached) from a --max-ai-credits session.info or session.warning event, else None.
+
+    Matching on the event type keeps tool output that quotes these messages from counting.
+    """
+    if e.get('type') not in ('session.info', 'session.warning'):
+        return None
+    msg = str((e.get('data') or {}).get('message') or '')
+    reached = 'Session limit reached' in msg
+    m = CREDITS.search(msg)
+    if not (m or reached):
+        return None
+    used, cap = (float(m.group(1).replace(',', '')), float(m.group(2).replace(',', ''))) if m else (None, None)
+    return used, cap, reached
+
+
+def cap_state(cap, lim):
+    """Fold one limit_event result into {'used', 'cap', 'capped'}."""
+    cap = dict(cap or {'used': None, 'cap': None, 'capped': False})
+    used, limit, reached = lim
+    if used is not None:
+        cap['used'], cap['cap'] = used, limit
+    cap['capped'] = cap['capped'] or reached
+    return cap
 
 
 def budget(name):
@@ -64,7 +93,7 @@ def procs():
 
 
 def activity(path):
-    open_calls, last_type, usage = {}, None, None
+    open_calls, last_type, usage, cap = {}, None, None, None
     i = last_error = last_progress = 0
     with open(path, encoding='utf-8', errors='replace') as f:
         for line in f:
@@ -91,7 +120,12 @@ def activity(path):
                 open_calls.pop(d.get('toolCallId'), None)
             elif t == 'session.usage_checkpoint':
                 usage = d
-    if last_type == 'result':
+            lim = limit_event(e)
+            if lim:
+                cap = cap_state(cap, lim)
+    if cap and cap['capped']:
+        now_doing = f"CAPPED at {credits(cap)} AI credits; extend or narrow it"
+    elif last_type == 'result':
         now_doing = 'ENDED ON ERROR' if last_error > last_progress else 'finished'
     elif open_calls:
         now_doing = list(open_calls.values())[-1]
@@ -99,7 +133,13 @@ def activity(path):
         now_doing = 'thinking (model call)'
     else:
         now_doing = last_type or 'starting'
-    return last_type, now_doing, usage
+    return last_type, now_doing, usage, cap
+
+
+def credits(cap):
+    used = '?' if cap.get('used') is None else f"{cap['used']:g}"
+    limit = '?' if cap.get('cap') is None else f"{cap['cap']:g}"
+    return f'{used}/{limit}'
 
 
 def rows():
@@ -126,22 +166,28 @@ def rows():
         except (OSError, ValueError):
             start = int(os.path.getmtime(start_file))
         mtime = os.path.getmtime(jl)
-        last_type, doing, usage = activity(jl)
+        last_type, doing, usage, cap = activity(jl)
         alive = any((name == r or name.startswith(r + '-')) and newest.get(r) == name for r in running)
-        if last_type == 'result':
-            state = 'ERRORED' if doing == 'ENDED ON ERROR' else 'done'
+        later = [s for s in starts if os.path.getmtime(s) > os.path.getmtime(start_file)]
+        fam = re.sub(ROUND, '', name)
+        superseded = any(re.sub(ROUND, '', os.path.basename(s)[:-6]) == fam for s in later)
+        continued = any(re.sub(CONTINUE, '', os.path.basename(s)[:-6]) == fam for s in later)
+        # A capped run still ends with a `result` whose exitCode is 0, so the cap is checked first.
+        if cap and cap['capped']:
+            state = 'superseded' if continued and not alive else 'CAPPED'
+        elif last_type == 'result' and doing != 'ENDED ON ERROR':
+            state = 'done'
+        elif last_type == 'result':
+            state = 'superseded' if superseded else 'ERRORED'
         elif alive:
             state = 'STALLED' if now - mtime >= STALL_MIN * 60 else 'running'
         else:
-            later = [s for s in starts if os.path.getmtime(s) > os.path.getmtime(start_file)]
-            fam = re.sub(ROUND, '', name)
-            superseded = any(re.sub(ROUND, '', os.path.basename(s)[:-6]) == fam for s in later)
             state = 'superseded' if superseded else 'DIED (no result)'
         end = now if state in ('running', 'STALLED') else mtime
         prem = usage.get('totalPremiumRequests') if usage else None
         aiu = (usage.get('totalNanoAiu') or 0) / 1e9 if usage else None
         out.append({'name': name, 'state': state, 'elapsed': (end - start) / 60, 'idle': (now - mtime) / 60,
-                    'doing': doing, 'premium': prem, 'aiu': aiu, 'budget': budget(name)})
+                    'doing': doing, 'premium': prem, 'aiu': aiu, 'budget': budget(name), 'cap': cap})
     return out
 
 
@@ -151,6 +197,8 @@ def table(rs, only_active=False):
         if only_active and r['state'] in ('done', 'superseded'):
             continue
         spend = f"{r['premium']}pr/{r['aiu']:.0f}AIU" if r['premium'] is not None else '-'
+        if r.get('cap') and r['cap'].get('cap') is not None:
+            spend = f"{credits(r['cap'])}cr"
         idle = f"{r['idle']:.0f}m" if r['state'] != 'done' else ''
         over = (f" OVER {r['elapsed'] / r['budget']:.1f}x of {r['budget']}m"
                 if r['state'] in ('running', 'STALLED') and r['elapsed'] > r['budget'] else '')
@@ -178,7 +226,8 @@ def main(argv=None):
     load = os.getloadavg()
     print(f"{time.strftime('%H:%M')}  running={sum(r['state'] == 'running' for r in rs)} "
           f"stalled={sum(r['state'] == 'STALLED' for r in rs)} died={sum(r['state'].startswith('DIED') for r in rs)} "
-          f"errored={sum(r['state'] == 'ERRORED' for r in rs)} done={sum(r['state'] == 'done' for r in rs)}  "
+          f"errored={sum(r['state'] == 'ERRORED' for r in rs)} done={sum(r['state'] == 'done' for r in rs)} "
+          f"capped={sum(r['state'] == 'CAPPED' for r in rs)}  "
           f"load={load[0]:.1f}/{os.cpu_count()}cpu  power={power()}")
     if not os.path.isdir(RUN):
         print(f'(run folder {RUN} does not exist yet)')

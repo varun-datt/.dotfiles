@@ -8,6 +8,9 @@ Usage:
 
 The report is the last `assistant.message` content. A run's last event should be `result`; check its
 exitCode and any `session.error` before trusting the report (status.py does this).
+A run launched with --max-ai-credits that hit its cap still ends with exitCode 0; result_exit keeps that raw
+code, while outcome=CAPPED and exit status 3 say it is never done: extend it (resume with a raised cap) or
+narrow it. Other outcomes: ended (exitCode 0), ERRORED (another exitCode), NO RESULT.
 `session.usage_checkpoint` is cumulative across `copilot -r` resumes: subtract the earlier round.
 1 AI credit = totalNanoAiu / 1e9.
 """
@@ -33,7 +36,7 @@ def main(argv=None):
     start_file = path.rsplit('.', 1)[0] + '.start'
     last_msg, usage, models, n = None, None, set(), 0
     tools = collections.Counter()
-    result = None
+    result = cap = None
     with open(path, encoding='utf-8', errors='replace') as f:
         for line in f:
             try:
@@ -51,6 +54,9 @@ def main(argv=None):
                 tools[str(d.get('toolName') or d.get('name') or '?')] += 1
             if t == 'result':
                 result = e.get('exitCode')
+            lim = status.limit_event(e)
+            if lim:
+                cap = status.cap_state(cap, lim)
             if isinstance(d, dict) and isinstance(d.get('model'), str):
                 models.add(d['model'])
     start = None
@@ -61,7 +67,14 @@ def main(argv=None):
         except ValueError:
             pass
     wall = f" wall_min={(os.path.getmtime(path) - start) / 60:.1f}" if start else ''
+    capped = bool(cap and cap['capped'])
+    outcome = ('CAPPED' if capped else 'NO RESULT' if result is None else 'ERRORED' if result != 0 else 'ended')
     print(f"events={n} models={sorted(models)}{wall} result_exit={result if result is not None else 'NONE'}")
+    print(f"outcome={outcome}")
+    if cap and cap['capped']:
+        print(f"CAPPED at {status.credits(cap)} AI credits: not done; extend it with a raised cap or narrow it")
+    elif cap:
+        print(f"cap: {status.credits(cap)} AI credits used")
     if usage:
         print(f"premium_requests={usage.get('totalPremiumRequests')} ai_credits={(usage.get('totalNanoAiu') or 0) / 1e9:.1f}")
     else:
@@ -71,7 +84,7 @@ def main(argv=None):
     print('-' * 20)
     if not args.no_report:
         print(last_msg or 'NO assistant.message')
-    return 0
+    return 3 if capped else 0
 
 
 if __name__ == '__main__':

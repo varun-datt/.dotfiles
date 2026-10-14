@@ -24,13 +24,14 @@ are separate Copilot CLI sessions, each in its own git worktree. The name follow
   3. Messages to you only when you need to act: a decision, steering, a blocker or a risk. Everything
      else is in the status table and the end-of-session summary.
   4. Parked questions asked in one batch at the end.
-- **Watch it:** you don't need to. The orchestrator reports at every event and every heartbeat
-  (30 minutes by default), and at once on a stall, a death or an overrun; the watchdog below is
-  what wakes it. To look yourself, set `OW_RUN_DIR` to the run folder, then:
+- **Watch it:** you don't need to. The orchestrator escalates only what needs you
+  ([Escalate, don't report](#time-budgets-and-monitoring)); the status table holds the rest. The
+  watchdog below is meant to wake it, but on 2026-10-12 its alerts did not wake an idle VS Code
+  chat for four hours ([lessons](references/lessons.md)). To look yourself, set `OW_RUN_DIR` to the run folder, then:
   - `python3 ~/.agents/skills/orchestrator-workers/scripts/status.py [--all]` shows a table of every worker: its state, elapsed and idle
     minutes, spend, current activity, and `OVER 2.2x of 60m`.
-  - `python3 ~/.agents/skills/orchestrator-workers/scripts/watch.py [heartbeat-min]` is the orchestrator's watchdog. It exits with a
-    reason when a worker stalls, dies, runs over budget or finishes, or when the heartbeat is due.
+  - `python3 ~/.agents/skills/orchestrator-workers/scripts/watch.py` is the orchestrator's watchdog
+    ([monitoring](#time-budgets-and-monitoring)); `--help` lists its options.
 - **Stop it:**
   - Tell the orchestrator "stop". It stops launching, reports, and leaves worktrees and commits in
     place.
@@ -48,7 +49,8 @@ which answers you inferred from the repository.
    decision files that settle the details.
 2. **Where:**
    - the repository and its main branch;
-   - the worktree root: a dedicated folder;
+   - the worktree root: a dedicated folder outside `/tmp`, for example
+     `~/worktrees/<repo>/<branch>`, because macOS deletes old files there ([lessons](references/lessons.md));
    - the run folder, `OW_RUN_DIR`: outside `/tmp`, for example
      `~/.local/state/orchestrator-workers/<date>`;
    - the session prefix, `OW_PREFIX`, default `ow-`.
@@ -56,8 +58,7 @@ which answers you inferred from the repository.
    - what each item must pass;
    - how to restart and health-check the owner's running instance after a merge;
    - which ports and instances are off limits.
-4. **Models:** the worker model and its reasoning effort; the reviewer model, which must be from
-   another family and costs about 2.5x per token; the research model. Quality first.
+4. **Models:** settled per kind of round by [references/routing.md](references/routing.md) (owner, 2026-10-13). Ask only which models are today's strongest, mid-tier and other-family reviewer, and which items touch a risk area.
 5. **Order:** proposed waves and dependencies, and the most workers at once (recommended: 3).
    Propose any extra items now.
 6. **Rules:** confirm one review per item; one fixes-only re-review only when blocking findings were
@@ -70,6 +71,8 @@ which answers you inferred from the repository.
 8. **Time and reporting:** time budgets (defaults below); the heartbeat (recommended: 30 min); where
    decisions, findings and lessons are recorded.
 9. **Power:** will the machine stay on AC power and awake? On battery, every worker stalls.
+   For unattended work, check it rather than ask: `pmset -g custom` must show `sleep 0` under
+   AC Power. A Mac with AC `sleep 1` went to idle sleep while plugged in, and every worker froze.
 10. **Anything** the plan leaves unclear.
 
 **After the answers:**
@@ -77,6 +80,7 @@ which answers you inferred from the repository.
 - create the run folder and copy [scripts/budgets.example.json](scripts/budgets.example.json) into it
   as `budgets.json`;
 - start `watch.py` in an async terminal;
+- run `python3 ~/.agents/skills/orchestrator-workers/scripts/state.py init --title "<goal>" --client vscode|cli --session-id <id>`; it writes `<run>/orchestrator.json` and registers the run for the dashboard. Record each item, the queue and every question for the owner only through `state.py item|queue|ask|answered` ([details](references/details.md#state-file));
 - work autonomously.
 
 ## Roles
@@ -102,12 +106,16 @@ task -> worker -> grade report -> ONE review -> fix round (resume the worker)
 - Fixes made after the re-review go to a **post-merge review (commit-then-review)** on main, so
   nothing lands unreviewed. Anything still open is recorded for the owner.
 - **Parallelism** is decided per item, from its dependencies and the files it touches.
+- **Finish before starting** (owner, 2026-10-13). A freed slot goes first to the oldest started
+  item's next step: a fix round, a catch-up with main, then the merge. A new build starts only
+  when no started item is waiting for a slot.
 
 ## Launch recipe
 
 Per item:
 - a worktree: `git worktree add -b <prefix>/<item> <wt-root>/<item> main`;
-- its own test port base (48400, 48500 …) and its own install port;
+- its own test port base, below 49152 where macOS's ephemeral range starts (48400, 48500 …), and
+  its own install port;
 - migration or version numbers reserved in its task body.
 
 ```sh
@@ -115,7 +123,7 @@ date +%s > "$OW_RUN_DIR/<item>.start"
 git -C <wt-root>/<item> rev-parse HEAD > "$OW_RUN_DIR/<item>.base"
 COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 timeout <seconds> \
   copilot -C <wt-root>/<item> -n "${OW_PREFIX:-ow-}<item>" \
-  --model <model> --reasoning-effort high --no-ask-user --allow-all-tools \
+  --model <model> --reasoning-effort <effort> --max-ai-credits <cap> --no-ask-user --allow-all-tools \
   --deny-tool 'shell(git push)' --disable-builtin-mcps --disable-mcp-server <name> \
   [--add-dir <path>] --output-format json -p "$(cat "$OW_RUN_DIR/<item>.prompt.md")" \
   </dev/null > "$OW_RUN_DIR/<item>.jsonl" 2> "$OW_RUN_DIR/<item>.err"
@@ -123,17 +131,18 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 timeout <seconds> \
 
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
   Why each flag is there: [references/details.md](references/details.md#launch-flags).
+- **Model, effort and credit cap:** by the kind of round, from [references/routing.md](references/routing.md); the cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --caps`.
 - **Reviewer:** add `--deny-tool=write --deny-tool=shell --deny-tool=url` and use another model
   family. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
 - **Fix and resume rounds:** `copilot -r ow-<item>` with the same flags. Name the run
-  `<item>-fix1` or `<item>-resume1`.
+  `<item>-fix1` or `<item>-resume1`; for its credit cap see [routing](references/routing.md#credit-caps).
 - **A `result` event is not success.** Check `exitCode` and `session.error`; `scripts/result.py`
-  shows both, plus spend and the report.
+  shows both, plus spend and the report. A round that hit its credit cap also exits 0 ([details](references/details.md#failure-modes-and-recoveries)).
 
 **Prompts** ([assets/](assets/)); placeholders are `{{NAME}}` or `{{NAME|default}}`:
 - **Worker:** [preamble-worker.md](assets/preamble-worker.md) + [task-body.md](assets/task-body.md).
   The preamble carries the shared rules: never push, no secrets, `commit --only`, gates in the
-  foreground, a labelled report.
+  foreground, polls at most every 240 s to keep the cache warm, a labelled report.
 - **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body.
 - **Reviews:** [review.md](assets/review.md) and the fixes-only [rereview.md](assets/rereview.md).
 - **Rounds sent with `-r`:** [fix.md](assets/fix.md) and [resume.md](assets/resume.md). They stay
@@ -147,16 +156,21 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 
 - **Defaults:** build 90 min, fix or resume 60, review 30, re-review 20, research 30. Override them
   per run in `budgets.json`.
-- **Status table:** `status.py`. Its states are running, STALLED, DIED, ERRORED, done and
-  superseded.
+- **Status table:** `status.py`. Its states are running, STALLED, DIED, ERRORED, CAPPED, done and
+  superseded. A capped round shows its credits against the cap. A died or errored round
+  reads superseded once a later round of the same item starts.
 - **Watchdog:** `watch.py`, in an async terminal. It exits on:
   - a stall: 20 awake minutes without output;
   - a death;
+  - a round that hit its credit cap (CAPPED);
   - a budget overrun, once per worker;
   - no worker running;
   - the heartbeat.
 
   Restart it after every report. Sleep resets the stall clock.
+
+  Its output and options: `watch.py --help`. For a wait inside a turn, add `--progress`, and never
+  pipe or filter that wait: a filter silences it ([lessons](references/lessons.md)).
 - **At 1x budget:** read the worker's last calls. Is it progressing, looping or blocked?
 - **At 2.5x budget:** stop it and resume it with a narrower brief, unless its final gates are
   nearly done.
@@ -185,7 +199,8 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 ## Merge discipline
 
 - **Trial merge** while the review runs: `git merge --no-commit`, then `--abort`. It often changes
-  the plan.
+  the plan. Repeat it with `git merge-tree --write-tree main <branch>` before writing the last fix
+  round, and fold any catch-up with main into that round.
 - **Make the `--no-ff` merge in the merge folder**, run the gates there, then fast-forward main to
   that commit. Never push. Large conflicts go back to the worker, which merges main into its own
   branch.
@@ -211,7 +226,8 @@ Only the orchestrator writes records; workers and reviewers send drafts.
   [references/lessons.md](references/lessons.md), dated, with tags.
 - **Running notes** in the run folder: each launch, result, spend, verdict and ruling, with its
   time.
-- **Per item:** wall-clock time, spend, blocking findings and fix cycles.
+- **Per item:** wall-clock time, spend, blocking findings and fix cycles. `python3 scripts/mine.py "$OW_RUN_DIR" --repo <repo>` reads them from the run folder.
+- **End of day:** the [learning loop](references/routing.md#learning-loop).
 
 Label every claim VERIFIED (read or ran), INFERRED or OPEN.
 
@@ -232,5 +248,6 @@ Label every claim VERIFIED (read or ran), INFERRED or OPEN.
 
 - [references/details.md](references/details.md): the flag table, failure modes and recoveries,
   cost.
+- [references/routing.md](references/routing.md): model, effort and credit cap per kind of round; risk areas; the learning loop.
 - [references/lessons.md](references/lessons.md): dated lessons.
 - [references/follow-ups.md](references/follow-ups.md): open research.

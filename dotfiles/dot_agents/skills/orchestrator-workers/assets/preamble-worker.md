@@ -17,6 +17,7 @@ HARD RULES
 - Add a dependency only if your task allows it; record its name, version, licence and audit result.
 - Never truncate output you draw a conclusion from (`head`, `tail`); count instead.
 - Run every long command (test suites, builds, mutation runs) in the FOREGROUND and wait for it; never start a gate as a background shell. When you end your turn the session ends, so a turn that ends "waiting for" anything loses your report.
+- Keep your saved context warm: the provider drops it after 300 idle seconds. Start any command that may take over 4 minutes with `initial_wait` at 240 or less, then wait with `read_bash` `delay` at 240 or less, until it finishes.
 - Tee each gate's full output to `.gates/<gate>.log` at the worktree root (untracked, never committed), so results survive a lost report.
 - Your LAST message is the report, written only after every gate has finished.
 - {{SHELL_TRAPS_OR_DELETE}}

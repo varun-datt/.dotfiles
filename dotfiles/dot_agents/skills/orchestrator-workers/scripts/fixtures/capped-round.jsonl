@@ -1,0 +1,17 @@
+{"type":"session.tools_updated","data":{"model":"claude-opus-5.5"},"ephemeral":true,"timestamp":"2026-10-13T17:00:00.000Z"}
+{"type":"user.message","data":{"content":"Build the item.","responsesReasoning":{"model":"claude-opus-5.5","initialEffort":"high","effort":"high"}},"timestamp":"2026-10-13T17:00:00.000Z"}
+{"type":"model.call_start","data":{"model":"claude-opus-5.5"},"timestamp":"2026-10-13T17:01:00.000Z"}
+{"type":"model.call_finished","data":{"outcome":"success"},"timestamp":"2026-10-13T17:02:00.000Z"}
+{"type":"session.info","data":{"message":"Session limits: 12.4/30 AI credits used."},"timestamp":"2026-10-13T17:02:00.000Z"}
+{"type":"tool.execution_start","data":{"toolCallId":"t1","toolName":"bash","arguments":{"command":"grep -r 'Session limit reached' notes.md"}},"timestamp":"2026-10-13T17:03:00.000Z"}
+{"type":"tool.execution_complete","data":{"toolCallId":"t1","success":true,"result":{"content":"notes.md: session.warning \"Session limit reached (99/30 AI credits used)\""}},"timestamp":"2026-10-13T17:04:00.000Z"}
+{"type":"model.call_start","data":{"model":"claude-opus-5.5"},"timestamp":"2026-10-13T17:05:00.000Z"}
+{"type":"model.call_finished","data":{"outcome":"success"},"timestamp":"2026-10-13T17:06:00.000Z"}
+{"type":"session.info","data":{"message":"Session limits: 27.9/30 AI credits used; the next model call is final; tools will be disabled."},"timestamp":"2026-10-13T17:06:00.000Z"}
+{"type":"model.call_start","data":{"model":"claude-opus-5.5"},"timestamp":"2026-10-13T17:07:00.000Z"}
+{"type":"model.call_finished","data":{"outcome":"success"},"timestamp":"2026-10-13T17:08:00.000Z"}
+{"type":"assistant.message","data":{"content":"Partial report: the build stopped at the credit limit.","model":"claude-opus-5.5"},"timestamp":"2026-10-13T17:08:00.000Z"}
+{"type":"session.info","data":{"message":"Session limit reached."},"timestamp":"2026-10-13T17:08:00.000Z"}
+{"type":"session.warning","data":{"message":"Session limit reached (32.5/30 AI credits used). Raise the limit to continue."},"timestamp":"2026-10-13T17:08:00.000Z"}
+{"type":"session.usage_checkpoint","data":{"totalNanoAiu":32500000000,"totalPremiumRequests":15},"timestamp":"2026-10-13T17:08:00.000Z"}
+{"type":"result","timestamp":"2026-10-13T17:09:00.000Z","sessionId":"00000000-0000-4000-8000-000000000001","exitCode":0,"usage":{"premiumRequests":15}}

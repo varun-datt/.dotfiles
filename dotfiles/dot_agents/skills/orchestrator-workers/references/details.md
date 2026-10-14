@@ -13,7 +13,8 @@ VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
 | `COPILOT_TASK_WAIT_TIMEOUT_SECONDS` | A `-p` run that leaves a background task running is cut off after 600 s. The variable is not listed in `copilot help environment` (OPEN). The real fix is the preamble's rule: gates run in the foreground |
 | `-C <worktree>` | The worker works in its own worktree |
 | `-n <prefix><item>` | `-r` can resume it by name, and `status.py` recognises it as live. Name run files `<item>*` |
-| `--model`, `--reasoning-effort high` | Chosen per task, quality first |
+| `--model`, `--reasoning-effort <effort>` | By the kind of round, from [routing.md](routing.md); never the automatic choice |
+| `--max-ai-credits <cap>` | Ends a runaway round; the cap comes from `mine.py --caps` ([routing](routing.md#credit-caps)). The minimum is 30, and the last model call may overshoot it (VERIFIED, `copilot --help`, CLI 1.0.97) |
 | `--no-ask-user`, `--allow-all-tools` | Headless: nobody is there to answer a question or a permission prompt |
 | `--deny-tool 'shell(git push)'` | Deny rules win over allow-all |
 | `--disable-builtin-mcps`, `--disable-mcp-server <name>` | Allow-all also approves MCP write tools, and the deny rules do not cover them. Check that `session.mcp_servers_loaded` shows `disabled` |
@@ -42,8 +43,18 @@ VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
 | No access outside the worktree | "Permission denied" on a sibling repository | Relaunch with `--add-dir` and a read-only line in the prompt |
 | Shell reads outside the worktree | Reads outside the worktree appear in the tool calls | Name what is off limits, and check the tool calls |
 | False success | `exitCode` 1 or a `session.error`, while the shell exits 0 | `status.py` shows ERRORED |
+| Credit cap reached | A `session.warning` event "Session limit reached (32.5/30 AI credits used)", not tool output quoting it; `result` `exitCode` 0 and the shell exits 0, so it looks done | `status.py` and `result.py` show CAPPED with credits against the cap (`result.py` exits 3), and `watch.py` alerts. Only a later fix or resume of the item supersedes it, never a review. Then extend or narrow it ([routing](routing.md#credit-caps)) |
 | Overclaimed security | "The real keys are masked" | Check it against the real values yourself, printing only true or false |
 | A gate run disturbed | The merge folder was checked out during a run | Re-run the gates; kill any leftover servers; keep the merge folder for gate runs only |
+
+## State file
+
+`<run>/orchestrator.json` holds what only the orchestrator knows: each item's kind and gate commands, the queue, and the questions for the owner. Write it only with `scripts/state.py`, never by hand; each write replaces the file atomically under a lock and prints one line.
+
+Commands and options: `python3 scripts/state.py --help`, and `<command> --help`. `init` also registers the run once in
+`OW_REGISTRY` (default `~/.local/state/orchestrator-workers/registry.jsonl`); an item's `--gate` commands let a status view show its worker as at its gates.
+
+The owner answers in the chat. Record the answer with `answered` as soon as you act on it, or the question stays open on the dashboard.
 
 ## Cost
 
@@ -67,4 +78,11 @@ VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
   - workers commit each step;
   - reviewers read a diff;
   - re-reviews cover the fixes only;
-  - the orchestrator reads summaries, not transcripts.
+  - the orchestrator reads summaries, not transcripts;
+  - routing by kind of round, keep-warm polling and dynamic caps ([routing.md](routing.md)).
+- **Credit caps, probed** (VERIFIED by the orchestrator, CLI 1.0.97, `-p` with `--max-ai-credits 30`):
+  - after model calls the session prints `session.info` "Session limits: X/30 AI credits used." (seen only near a cap: rounds far below theirs print no such line);
+  - near the cap it adds "the next model call is final; tools will be disabled.";
+  - then a `session.info` "Session limit reached..." and a `session.warning` "Session limit reached (32.5/30 AI credits used)...": the last call overshot the cap;
+  - Whether a `-r` resume counts the conversation's earlier credits against the new cap is OPEN; the help says limits "apply across the current conversation".
+- **Mining** (`scripts/mine.py`): per round, credits and premium requests are the difference between consecutive `session.usage_checkpoint` totals of the same session, from its `result` `sessionId`; a session's first round that is not a build, research or review is listed as partial, outside caps and markers, only when an earlier launch of its item (a `<name>.start`) has no events in the folder; a fresh `-p` merge or catch-up counts in full. A capped review or re-review reads `incomplete`, never a verdict; the report's own line is kept as `raw_verdict`. A round that died before any checkpoint has unknown credits, and its spend lands in the next round of its session (INFERRED).

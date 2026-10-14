@@ -109,3 +109,74 @@ INFERRED or OPEN. Project names appear only as examples.
   action, never re-read the state it changes, and repeated "still waiting for you" twice after they
   had done it. A pending owner action is a claim about live state: read that state (a file size, a
   table row) each time before restating it.
+
+## 2026-10-12: second orchestrator stretch
+
+- **An idle chat was not woken by its watchdog.** Over-budget alerts at 03:37 and 04:15 started no
+  turn; they arrived with the owner's next message at 07:05. Two workers ran 2.4-2.9x over budget
+  and a fix round took 4.6 hours, unattended. A heartbeat at 02:56 had started a turn. Cause OPEN.
+  Interim, untested: wait in-turn on the watchdog with a bounded sync call instead of ending the
+  turn. Research: [follow-ups.md](follow-ups.md) (e). [notes]
+- **Finish before starting** (now a rule in [../SKILL.md](../SKILL.md)). Two freed slots went to
+  new builds while two started items were one fix round from merging. All three slots then ran for
+  4.5-5 hours, the last rounds waited, and one branch drifted 23 commits behind main. [notes]
+- **Main moves during a multi-round item.** A branch took three rounds over nine hours while main
+  moved 23 commits, and its verified last round then conflicted in five files. Check with
+  `git merge-tree --write-tree` before writing the last fix round. [notes]
+- **A merge gate counts against the machine.** Three workers plus a merge gate held the load at
+  18-28 on 18 CPUs: browser tests timed out, a check run failed under load and passed alone, and
+  rounds ran 2.4-4.6x their budgets. INFERRED: run two workers while a merge gate runs. [notes]
+- **A merge gate re-runs every control of the label.** 54 controls that each rebuilt a bundle took
+  4.5 hours. Count a label's controls and their cost before planning the merge. [ran]
+- **Test port bases from 49000 to 50900 sat inside macOS's ephemeral range** (49152-65535,
+  `sysctl net.inet.ip.portrange.first`); one port collided on two of three runs. [ran]
+- **Gate a stop or a delete on its check with `&&`.** A `;` let a stop run although its check had
+  found two child processes. [notes]
+- **The last fix rounds skipped their review.** From 2026-10-11 the orchestrator verified each last
+  fix round by reading its diff, where this skill prescribes a post-merge review, and six merged
+  rounds had no reviewer from another family. Changing a review step is the owner's call; the
+  missed reviews were queued. [notes]
+
+## 2026-10-13: third orchestrator stretch
+
+- **macOS deletes files in `/tmp` that have sat untouched for three days.** `/usr/libexec/tmp_cleaner`
+  (launchd `com.apple.tmp_cleaner`, daily at 00:00) deletes files under `/tmp` whose access,
+  modify and change times are all more than 3 days old, then empty folders. One night it removed a
+  merge worktree's `.git` and 530 of its 846 files. The branches survived; the worktree did not.
+  Keep worktrees and run folders outside `/tmp`. [ran: the plist, the script, folder times]
+- **A skill kept in public dotfiles names no project, even in its examples.** The owner did not
+  want an employer project named in his public dotfiles, and five example labels already were.
+  Before the owner pushes, check with `git grep -i <name> @{u}` as well as `HEAD`. [ran]
+- **When asking the owner to act in another system, say which repository, what the action does
+  there, and who will see it.** One ask said only "push main", and its answer was a question. [notes]
+- **A plugged-in Mac still idle-slept.** With AC `sleep 1`, the Mac entered Idle Sleep at 100%
+  charge despite VS Code's sleep assertion, and every worker froze for 51 minutes until the power
+  button. The fix is the owner's setting "Prevent automatic sleeping on power adapter when the
+  display is off" (AC `sleep 0`). Check it before unattended work. [ran: `pmset -g log`, `pmset -g custom`]
+- **An in-turn wait must print, and a filter on it breaks it.** A sync wait that printed a
+  line a minute held the turn for 25 minutes, twice. The same wait piped through `grep -v` and,
+  later, `tail -4` went silent and was moved to the background. The second time, with the rule
+  already written down, was the handoff trigger "a rule broken twice". Give the wait script its
+  own quiet option rather than filtering it at the call. [ran]
+- **Ask early how much checking an item gets; the owner may want pieces sooner than perfect.**
+  How heavy the process is should be the owner's call: ask at the start, not after a day of building. [owner]
+- **A rule broken three times needs a check, not another line.** The in-turn wait rule above was
+  broken a third time while written down. A wait that refuses to run when its output is piped makes
+  the slip impossible. [ran]
+- **A pipe hides the exit code from `&&`.** `python3 -m unittest 2>&1 | tail -2 && install` installed
+  after a failing run, because `&&` reads `tail`'s status. Capture the code first
+  (`cmd > log; rc=$?`), or use `setopt pipefail`. Extends "gate on its check with `&&`" above. [ran]
+- **An exported run variable leaked into the skill's own tests.** With `OW_PREFIX` exported for a
+  marker command, one status test failed 10 of 10 times on two revisions, and 0 of 5 once the
+  variable was unset. Tests must set every variable they read; run them with `env -u`. [ran]
+- **A finished worker went unnoticed for an hour.** It ended between two waits, and each wait
+  reported only a count that dropped while it ran. Have each wait report the rounds that ended
+  since the previous one. [ran]
+- **Copies of the skill's scripts in a run folder go stale silently.** A run folder kept its own
+  `status.py` and `watch.py` from three days earlier: they still showed four long-superseded
+  rounds as errored and knew nothing of capped rounds. Call the installed skill's scripts. [ran]
+- **A credit cap far from its limit prints nothing.** Two resumed rounds and three fresh rounds,
+  each launched with `--max-ai-credits` far above what it spent, printed no `Session limits` line
+  at all. The 30-credit probe printed one after each call only because it was always near its cap.
+  So silence says nothing about whether a cap applies; a resumed session's cap stays OPEN until the
+  probe in [follow-ups](follow-ups.md) (g) runs. [ran: 0 limit events in 5 rounds]
