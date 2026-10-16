@@ -3,6 +3,8 @@
 
 Usage:
     python3 state.py init --title "Docs build" [--client vscode|cli] [--session-id ID] [--repo PATH] [--plan FILE]
+                          [--archive FOLDER]   the project's archive folder, where `timeline.py --export` writes;
+                                               it must exist; init again to set it on a registered run
     python3 state.py item <item> [--title T] [--kind build|research|docs] [--gate "npm test" ...] [--note N]
     python3 state.py queue <item> [--title T] [--after <item> ...]      add or replace a queued item
     python3 state.py queue <item> --remove                              take it off the queue
@@ -14,7 +16,7 @@ Usage:
 
 Environment:
     OW_RUN_DIR    run folder (default: ~/.local/state/orchestrator-workers/run); --run overrides it.
-    OW_PREFIX     session-name prefix given to `copilot -n` (default: "ow-").
+    OW_PREFIX     session-name prefix given to `copilot -n` (default: the run's stored prefix, else "ow-").
     OW_REGISTRY   run registry that `init` appends to (default: ~/.local/state/orchestrator-workers/registry.jsonl).
 
 Every write replaces the file whole (temporary file, fsync, rename) under a lock, and prints one line.
@@ -111,7 +113,7 @@ def load(run):
 
 def fresh():
     return {'schema': SCHEMA, 'updatedAt': None,
-            'orchestrator': {'title': None, 'client': None, 'sessionId': None, 'prefix': os.environ.get('OW_PREFIX', 'ow-'), 'repo': None, 'plan': None},
+            'orchestrator': {'title': None, 'client': None, 'sessionId': None, 'prefix': os.environ.get('OW_PREFIX', 'ow-'), 'repo': None, 'plan': None, 'archive': None},
             'items': {}, 'queue': [], 'asks': [], 'risks': []}
 
 
@@ -167,24 +169,32 @@ def register(run, prefix, title, session_id):
 
 
 def cmd_init(a):
-    prefix = os.environ.get('OW_PREFIX', 'ow-')
-    if not PREFIX.match(prefix):
-        raise Refused(f'OW_PREFIX {prefix!r} must be 1 to 40 letters, digits, dots, dashes or underscores')
+    given = os.environ.get('OW_PREFIX')
+    if given is not None and not PREFIX.match(given):
+        raise Refused(f'OW_PREFIX {given!r} must be 1 to 40 letters, digits, dots, dashes or underscores')
     if a.session_id and not SESSION_ID.match(a.session_id):
         raise Refused('--session-id must be 8 to 64 letters, digits or dashes')
+    archive = None
+    if a.archive is not None:
+        archive = os.path.abspath(os.path.expanduser(a.archive))
+        if not os.path.isdir(archive):
+            raise Refused(f'--archive {archive} is not an existing folder; create it first')
     title = one_line(a.title) if a.title else None
+    kept = {}
 
     def change(doc):
         o = doc.get('orchestrator') if isinstance(doc.get('orchestrator'), dict) else {}
-        o['prefix'] = prefix
-        for key, value in (('title', title), ('client', a.client), ('sessionId', a.session_id), ('repo', a.repo), ('plan', a.plan)):
+        old = o.get('prefix')
+        o['prefix'] = given or (old if isinstance(old, str) and PREFIX.match(old) else 'ow-')
+        kept['prefix'] = o['prefix']
+        for key, value in (('title', title), ('client', a.client), ('sessionId', a.session_id), ('repo', a.repo), ('plan', a.plan), ('archive', archive)):
             if value is not None:
                 o[key] = value
             o.setdefault(key, None)
         doc['orchestrator'] = o
     edit(a.run, change, create=True)
-    added = register(a.run, prefix, title, a.session_id)
-    return f"init: {a.run} {'registered' if added else 'was already registered'}"
+    added = register(a.run, kept['prefix'], title, a.session_id)
+    return f"init: {a.run} {'registered' if added else 'was already registered'}" + (f', archive {archive}' if archive else '')
 
 
 def cmd_item(a):
@@ -318,6 +328,7 @@ def parser():
     p.add_argument('--session-id')
     p.add_argument('--repo')
     p.add_argument('--plan')
+    p.add_argument('--archive', help="the project's archive folder, where `timeline.py --export` writes; it must exist")
     p.set_defaults(fn=cmd_init)
     p = sub.add_parser('item', help='record what an item is')
     p.add_argument('item')

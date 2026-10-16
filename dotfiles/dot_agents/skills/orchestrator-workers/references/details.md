@@ -86,3 +86,14 @@ The owner answers in the chat. Record the answer with `answered` as soon as you 
   - then a `session.info` "Session limit reached..." and a `session.warning` "Session limit reached (32.5/30 AI credits used)...": the last call overshot the cap;
   - Whether a `-r` resume counts the conversation's earlier credits against the new cap is OPEN; the help says limits "apply across the current conversation".
 - **Mining** (`scripts/mine.py`): per round, credits and premium requests are the difference between consecutive `session.usage_checkpoint` totals of the same session, from its `result` `sessionId`; a session's first round that is not a build, research or review is listed as partial, outside caps and markers, only when an earlier launch of its item (a `<name>.start`) has no events in the folder; a fresh `-p` merge or catch-up counts in full. A capped review or re-review reads `incomplete`, never a verdict; the report's own line is kept as `raw_verdict`. A round that died before any checkpoint has unknown credits, and its spend lands in the next round of its session (INFERRED).
+
+## Timeline export
+
+| Flag | What |
+| --- | --- |
+| `--run <dir>` | The run (default `OW_RUN_DIR`) |
+| `--out <file>` | Write this run's timeline page only |
+| `--export` | Into the run's archive folder: `timeline.html` across every registered run naming the same folder, and `spend-by-day.md` (credits from `mine.py --json`, list price at 1 credit = $0.01, newest day first). Rewrites only those two files; exit 2 when no archive folder is set |
+| `--skills <repo>` | Optional: draw that repository's merges as their own row |
+
+The page is self-contained (no network), in the machine's local zone, and follows a host page's theme from a `message` whose data carries `theme` (`light` or `dark`) and optional `tokens`, else `prefers-color-scheme`. Sleep gaps come from `pmset` on macOS; elsewhere the page says they are unknown.

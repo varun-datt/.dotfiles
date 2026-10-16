@@ -227,6 +227,7 @@ Only the orchestrator writes records; workers and reviewers send drafts.
 - **Running notes** in the run folder: each launch, result, spend, verdict and ruling, with its
   time.
 - **Per item:** wall-clock time, spend, blocking findings and fix cycles. `python3 scripts/mine.py "$OW_RUN_DIR" --repo <repo>` reads them from the run folder.
+- **Project timeline:** each run names its project's archive folder with `state.py init --archive <folder>`; `python3 scripts/timeline.py --export` writes `timeline.html` across all the project's runs and `spend-by-day.md` there ([details](references/details.md#timeline-export)).
 - **End of day:** the [learning loop](references/routing.md#learning-loop).
 
 Label every claim VERIFIED (read or ran), INFERRED or OPEN.

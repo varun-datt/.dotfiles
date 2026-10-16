@@ -69,6 +69,32 @@ class StateTest(unittest.TestCase):
         self.assertEqual(d['orchestrator']['title'], 'Docs build')
         self.assertEqual((d['items'], d['queue'], d['asks'], d['risks']), ({}, [], [], []))
 
+    def test_init_without_archive_stores_none_and_with_archive_an_absolute_existing_folder(self):
+        self.cli('init', '--title', 'T')
+        self.assertIsNone(self.doc()['orchestrator']['archive'])
+        self.assertIn('--archive', self.cli('init', '--archive', os.path.join(self.tmp.name, 'missing'), ok=False).stderr)
+        os.makedirs(os.path.join(self.tmp.name, 'arch'))
+        p = subprocess.run([sys.executable, SCRIPT, 'init', '--archive', 'arch'], capture_output=True, text=True, env=self.env, cwd=self.tmp.name)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(self.doc()['orchestrator']['archive'], os.path.join(os.path.realpath(self.tmp.name), 'arch'))
+
+    def test_setting_archive_on_a_registered_run_keeps_its_records_and_prefix(self):
+        self.env['OW_PREFIX'] = 'proj-'
+        self.cli('init', '--title', 'T', '--repo', '/r')
+        self.cli('item', 'a', '--kind', 'build')
+        self.cli('queue', 'b')
+        self.cli('ask', 'q1', '--kind', 'decision', '--question', 'Which?')
+        del self.env['OW_PREFIX']
+        os.makedirs(os.path.join(self.tmp.name, 'arch'))
+        self.assertIn('was already registered', self.cli('init', '--archive', os.path.join(self.tmp.name, 'arch')).stdout)
+        d = self.doc()
+        self.assertEqual(list(d['items']), ['a'])
+        self.assertEqual([q['item'] for q in d['queue']], ['b'])
+        self.assertEqual([x['id'] for x in d['asks']], ['q1'])
+        self.assertEqual((d['orchestrator']['title'], d['orchestrator']['repo'], d['orchestrator']['prefix']), ('T', '/r', 'proj-'))
+        self.assertTrue(d['orchestrator']['archive'].endswith('arch'))
+        self.assertEqual(len(self.registry()), 1)
+
     def test_init_keeps_other_registry_lines_including_bad_ones(self):
         os.makedirs(os.path.dirname(self.reg))
         with open(self.reg, 'w', encoding='utf-8') as f:
