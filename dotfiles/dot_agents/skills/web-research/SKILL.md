@@ -5,33 +5,43 @@ description: Searches multiple web sources, synthesizes findings, and produces c
 
 # Web Research
 
-Plan the question, delegate subtopics to parallel subagents, then synthesize one cited answer.
+Plan the question, gather the sources yourself with `tvly`, have parallel subagents read them, then synthesize one cited answer.
 
 ## 1. Plan
 
-1. Create `research_<topic>/` in the current working directory, unless the user or the active instructions name another location.
+1. Create `research_<topic>/raw/` in the current working directory, unless the user or the active instructions name another location.
 2. Break the question into distinct, non-overlapping subtopics:
    - Simple fact-finding: 1–2
    - Comparison: one per option, max 3
    - Complex investigation: 3–5
 3. Write `research_<topic>/research_plan.md` with the question, the subtopics, what each should return, and how the results will be combined.
 
-## 2. Delegate
+## 2. Gather
 
-Spawn one subagent per subtopic with the agent's subagent or task tool, up to 3 in parallel. Subagents don't see this conversation, so each prompt must stand alone:
+Run every search and extract yourself, one command at a time, and save each result under `research_<topic>/raw/`, named by subtopic:
 
-```text
-Research <specific question, no acronyms>.
-Search with <search tool>; fetch a page with <fetch tool> when a snippet isn't enough.
-Use 3–5 searches. Write key facts, short quotes, and the source URL for each claim to
-<absolute path>/research_<topic>/findings_<subtopic>.md, then return a short summary.
+```bash
+tvly search "<query>" --json -o research_<topic>/raw/<subtopic>-search-<n>.json
+tvly extract "<url>" --json -o research_<topic>/raw/<subtopic>-page-<n>.json
 ```
 
-- Name the search and fetch tools in the prompt and confirm the subagent has them. The Tavily skills (`tavily-search`, `tavily-extract`) need a terminal; if the subagent has none, give it the built-in web search and fetch tools, or run those searches yourself.
-- Give the findings path as an absolute path.
-- If no subagent tool is available, research the subtopics one at a time yourself, with the same budget and files.
+Subagents don't run these: in VS Code they share your shell, so two running commands at once can get each other's output.
 
-## 3. Synthesize
+## 3. Delegate
+
+Spawn one subagent per subtopic with the agent's subagent or task tool, up to 3 in parallel, to read the saved files. Subagents don't see this conversation, so each prompt must stand alone:
+
+```text
+Read the files in <absolute path>/research_<topic>/raw/ whose names start with <subtopic>-.
+Do not search, fetch, or run commands. Write key facts, short quotes, and the source URL for
+each claim to <absolute path>/research_<topic>/findings_<subtopic>.md, list what the files
+could not answer, then return a short summary.
+```
+
+- Give every path as an absolute path.
+- If no subagent tool is available, read the files and write the findings yourself.
+
+## 4. Synthesize
 
 1. List `research_<topic>/` and read every `findings_*.md` file.
 2. Answer the original question directly, integrate the subtopics, cite a URL for each claim, and name gaps or conflicting sources.
@@ -41,5 +51,5 @@ Use 3–5 searches. Write key facts, short quotes, and the source URL for each c
 ## Practices
 
 - Plan before delegating.
-- Keep subtopics distinct so subagents don't repeat each other's searches.
+- Keep subtopics distinct so findings don't overlap.
 - Stop at the budget; 3–5 searches per subtopic is usually enough.
