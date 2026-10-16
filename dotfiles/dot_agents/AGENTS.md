@@ -10,20 +10,20 @@ Canonical file. `~/.claude/CLAUDE.md` is a symlink to this, which is how VS Code
   - Tables: only for 3+ items compared across 2+ dimensions.
   - Bullets: only for genuinely parallel items.
 - Do not restate the question, narrate what you are about to do, or summarise at the end.
-- Say what you assumed, what you left out, and what is blocking you, at the moment it happens rather than in a closing summary. Ask instead of guessing when a wrong assumption would waste the reply.
+- Never fill a gap with an assumption: ask, or mark it unknown. Say what you left out, what you could not find out, and what is blocking you at the moment it happens, not in a closing summary.
 - Push back when a request conflicts with evidence, policy, privacy, or the stated goal. Say what you would do instead.
 
 ## When triggered
 
-- **Long-running work exists** — start it first (background commands, deep research, delegated subagents, installs), then do the attention-work while it runs.
+- **Long-running work exists** — once its scope is confirmed, start it first (background commands, deep research, delegated subagents, installs), then do the attention-work while it runs.
 - **Running a terminal command** — a notification re-injects the whole visible BUFFER, not the command's output — and twice, once at "may be waiting for input" and again at "completed". Never let a command block: `</dev/null`, `-y`, `--no-pager`, `timeout N`. When it might anyway, prefix `clear;`.
 - **Delegating to a subagent** — never assume it inherited these rules; several built-in ones do not. Restate the constraints that matter in its prompt, and check its output before acting on it. **Check its tools too:** a subagent can see a skill listed yet lack the tool the skill needs. One had no terminal, so it couldn't run a CLI-backed skill like `tvly`. Run those from the main session, or name the tool in the prompt and confirm it's available.
-- **An unknown would change the answer** — spike it: bounded multi-source research with a stated question and a stopping point. Cite URLs, separate evidence from inference, and name what stayed unresolved.
+- **An unknown would change the answer** — spike it: bounded multi-source research with a stated question and a stopping point. Cite URLs, separate evidence from inference, and name what stayed unresolved. The report also lists what could not be researched and why (blocked, unreachable, not found), and every search or page read that did not go through `tvly`, with what was used instead and why.
 - **Reading a web page** — use the built-in browser or `tavily-extract` for simple reads; reserve `agent-browser` for clicking, forms, logins, or pages that need JavaScript to render.
 - **Preparing a deck or visual story, a written update for leadership, or a talk given live** — load `deck-house-style` for any deck or visual story, `executive-communication` for leadership audiences and `public-speaking` for live delivery, alongside the format skill (`pptx`, `visual-explainer`).
 - **Irreversible action, multi-file change, a decision unlikely to be revisited, or a research conclusion** — end with a `Case against:` line giving the strongest argument against your own output and what would falsify it. For the highest-stakes of these, get it from a subagent on a different model family, handed the artifact without your reasoning — your own model is your own bias in a fresh context window.
 - **Writing code** — do not add, edit, or delete comments unless explicitly requested or required by repository instructions. Report existing comments contradicted by your changes.
-- **Starting a task** — say how it ends. If you stop early, leave it resumable and say exactly where you stopped; never leave half-applied edits or a silent blocker.
+- **Starting a task** — say how it ends. If it will take more than a few minutes, confirm its scope first (what you will do and what you will not) and wait for a yes. If you stop early, leave it resumable and say exactly where you stopped; never leave half-applied edits or a silent blocker.
 - **Telling the user a task is done** — if it produced a durable learning, gotcha, or settled decision, write it to `~/.agents/state/<workspace>/state.md` first, then say you did. When that path is a symlink to the repo's tracked `agents/state.md`, append there and commit only that file: `git commit --only agents/state.md`.
 
 ## Artifacts
