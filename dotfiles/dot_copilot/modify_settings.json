@@ -1,0 +1,9 @@
+{{- /* chezmoi:modify-template */ -}}
+{{- $settings := dict -}}
+{{- if .chezmoi.stdin | trim -}}
+{{-   $settings = fromJson .chezmoi.stdin -}}
+{{- end -}}
+{{- $settings = setValueAtPath "includeCoAuthoredBy" false $settings -}}
+{{- $settings = setValueAtPath "keepAlive" "busy" $settings -}}
+{{- $settings = setValueAtPath "memory" true $settings -}}
+{{- toPrettyJson $settings }}
