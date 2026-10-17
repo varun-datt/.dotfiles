@@ -22,6 +22,15 @@ skills:
     - cursor
   #   - claude-code
 
+  # Upstream skills that load only when invoked by name (see README).
+  explicitOnly:
+    - dt-obs-problems
+    - find-skills
+    - receiving-code-review
+    - skill-creator
+    - tavily-crawl
+    - tavily-map
+
   sources:
     # --- Skill authoring & theming ---
     - repo: anthropics/skills

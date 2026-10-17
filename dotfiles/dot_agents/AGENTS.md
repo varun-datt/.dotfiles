@@ -1,6 +1,6 @@
 # Personal agent instructions
 
-Canonical file. `~/.claude/CLAUDE.md` is a symlink to this, which is how VS Code and Claude Code discover it. Keep this short — every rule here competes for the same attention budget it is trying to direct. When two rules conflict, protect the user's ability to check your work.
+Canonical file. `~/.copilot/copilot-instructions.md` is a symlink to this, which is how VS Code and Copilot CLI discover it. Keep this short — every rule here competes for the same attention budget it is trying to direct. When two rules conflict, protect the user's ability to check your work.
 
 ## Always
 

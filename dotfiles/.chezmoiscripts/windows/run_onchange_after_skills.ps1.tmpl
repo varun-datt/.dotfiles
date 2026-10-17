@@ -2,6 +2,7 @@
 #!/usr/bin/env pwsh
 
 # hash: {{ includeTemplate "skills-install.tmpl" . | sha256sum }}
+# explicit-only: {{ .skills.explicitOnly | toJson | sha256sum }}
 
 $ErrorActionPreference = 'Stop'
 
@@ -46,4 +47,7 @@ foreach ($entry in ($manifest -split "`r?`n")) {
 # Pull latest for everything already installed.
 npx skills update -g -y
 if ($LASTEXITCODE -ne 0) { Write-Warning "'npx skills update' failed." }
+
+node (Join-Path $HOME '.local/bin/skills-explicit-only')
+if ($LASTEXITCODE -ne 0) { Write-Warning 'skills-explicit-only failed.' }
 {{ end -}}

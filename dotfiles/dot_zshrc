@@ -1,0 +1,1 @@
+copilot() { SKILL_CHAR_BUDGET=30000 command copilot "$@"; }

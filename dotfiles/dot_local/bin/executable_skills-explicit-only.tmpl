@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+
+const names = {{ .skills.explicitOnly | toJson }};
+const root = path.join(os.homedir(), ".agents", "skills");
+
+for (const name of names) {
+  const file = path.join(root, name, "SKILL.md");
+  if (!fs.existsSync(file)) {
+    console.error(`Warning: skills-explicit-only: ${name} is not installed.`);
+    continue;
+  }
+  const text = fs.readFileSync(file, "utf8");
+  const m = text.match(/^---(\r?\n)([\s\S]*?)\r?\n---(?=\r?\n|$)/);
+  if (!m) {
+    console.error(`Warning: skills-explicit-only: ${name} has no frontmatter.`);
+    process.exitCode = 1;
+    continue;
+  }
+  const lines = m[2].split(/\r?\n/);
+  if (lines.includes("disable-model-invocation: true")) continue;
+  const kept = lines.filter((l) => !l.startsWith("disable-model-invocation:"));
+  const eol = m[1];
+  fs.writeFileSync(file, `---${eol}${[...kept, "disable-model-invocation: true"].join(eol)}${eol}---${text.slice(m[0].length)}`);
+}

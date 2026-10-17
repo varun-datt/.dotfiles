@@ -4,6 +4,7 @@
 set -e
 
 # hash: {{ includeTemplate "skills-install.tmpl" . | sha256sum }}
+# explicit-only: {{ .skills.explicitOnly | toJson | sha256sum }}
 
 if command -v mise >/dev/null 2>&1; then
   mise install -y >/dev/null 2>&1 || true
@@ -43,4 +44,6 @@ set +f
 
 # Pull latest for everything already installed.
 npx skills update -g -y || echo "Warning: 'npx skills update' failed" >&2
+
+node "$HOME/.local/bin/skills-explicit-only" || echo "Warning: skills-explicit-only failed" >&2
 {{ end -}}

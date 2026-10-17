@@ -1,6 +1,6 @@
 ---
 name: concept-art
-description: "Generate raster concept illustrations with the agent's image-generation tool (Cursor GenerateImage, or an image extension or MCP server the user has set up) when the user explicitly asks for an image: concept art, metaphor illustrations, hero or OG images, blog graphics, app icons, mascots, posters, or conceptual infographics. Without an image tool, say so and fall back to HTML or SVG. Not for charts, plots, tables, or other data-heavy visuals. Never install an image tool or call an image API through the shell."
+description: "Generate raster concept illustrations with an image tool (Cursor GenerateImage, an image extension or MCP server) when the user explicitly asks for an image: concept art, metaphors, hero or OG images, blog graphics, app icons, mascots, posters. With no image tool, say so and fall back to HTML or SVG. Not for charts or data visuals. Never install an image tool or call an image API from the shell."
 metadata:
   cursor-surfaces: [ide]
 ---

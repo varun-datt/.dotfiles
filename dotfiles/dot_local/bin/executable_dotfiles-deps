@@ -84,6 +84,7 @@ fi
 if _have npx; then
   _step "Agent Skills: update"
   npx skills update -g -y || _warn "'npx skills update' failed"
+  node "$HOME/.local/bin/skills-explicit-only" || _warn "skills-explicit-only failed"
 else
   _warn "npx not found (need Node via mise); skipping Agent Skills."
 fi
