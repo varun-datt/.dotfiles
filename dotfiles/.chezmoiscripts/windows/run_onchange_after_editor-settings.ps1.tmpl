@@ -4,6 +4,7 @@
 {{ $cursor := merge (dig "cursorLocal" (dict) .editor | deepCopy) .editor.cursor .editor.common -}}
 # hash: {{ printf "%s|%s|%s" ($code | toJson) ($cursor | toJson) (.editor.keybindings | toJson) | sha256sum }}
 
+$ErrorActionPreference = 'Stop'
 $base = $env:APPDATA
 
 $settings = @{
@@ -13,6 +14,21 @@ $settings = @{
   Cursor = @'
 {{ $cursor | toPrettyJson }}
 '@
+}
+
+# Windows PowerShell 5.1 has no ConvertFrom-Json -AsHashtable.
+function ConvertTo-Dictionary($node) {
+  if ($node -is [System.Management.Automation.PSCustomObject]) {
+    $dict = [ordered]@{}
+    foreach ($prop in $node.PSObject.Properties) {
+      $dict[$prop.Name] = ConvertTo-Dictionary $prop.Value
+    }
+    return $dict
+  }
+  if ($node -is [System.Collections.IList]) {
+    return , @(foreach ($item in $node) { ConvertTo-Dictionary $item })
+  }
+  return $node
 }
 
 function Merge-Settings($target, $source) {
@@ -30,12 +46,12 @@ foreach ($app in 'Code', 'Cursor') {
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
   $path = Join-Path $dir 'settings.json'
 
-  $managed = $settings[$app] | ConvertFrom-Json -AsHashtable
+  $managed = ConvertTo-Dictionary ($settings[$app] | ConvertFrom-Json)
   $merged = $managed
 
   if (Test-Path $path) {
     try {
-      $existing = Get-Content -Raw -Path $path | ConvertFrom-Json -AsHashtable
+      $existing = ConvertTo-Dictionary (Get-Content -Raw -Path $path | ConvertFrom-Json)
       if ($existing -is [System.Collections.IDictionary]) {
         Merge-Settings $existing $managed
         $merged = $existing
