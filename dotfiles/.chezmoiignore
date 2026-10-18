@@ -10,3 +10,8 @@ Documents
 .agents/state/**
 !.agents/state
 !.agents/state/TEMPLATE.md
+
+# rtk reads its config only from the macOS path, which links to ~/.config/rtk.
+{{ if ne .chezmoi.os "darwin" }}
+Library
+{{ end }}

@@ -1,0 +1,3 @@
+# Leave git push unrewritten so Copilot's --deny-tool 'shell(git push)' still matches it.
+[hooks]
+exclude_commands = ["git push"]
