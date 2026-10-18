@@ -121,7 +121,9 @@ Per item:
 ```sh
 date +%s > "$OW_RUN_DIR/<item>.start"
 git -C <wt-root>/<item> rev-parse HEAD > "$OW_RUN_DIR/<item>.base"
-COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 timeout <seconds> \
+COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
+  GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.blocked-by-orchestrator://.pushInsteadOf GIT_CONFIG_VALUE_0= \
+  timeout <seconds> \
   copilot -C <wt-root>/<item> -n "${OW_PREFIX:-ow-}<item>" \
   --model <model> --reasoning-effort <effort> --max-ai-credits <cap> --no-ask-user --allow-all-tools \
   --deny-tool 'shell(git push)' --disable-builtin-mcps --disable-mcp-server <name> \

@@ -16,7 +16,8 @@ VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
 | `--model`, `--reasoning-effort <effort>` | By the kind of round, from [routing.md](routing.md); never the automatic choice |
 | `--max-ai-credits <cap>` | Ends a runaway round; the cap comes from `mine.py --caps` ([routing](routing.md#credit-caps)). The minimum is 30, and the last model call may overshoot it (VERIFIED, `copilot --help`, CLI 1.0.97) |
 | `--no-ask-user`, `--allow-all-tools` | Headless: nobody is there to answer a question or a permission prompt |
-| `--deny-tool 'shell(git push)'` | Deny rules win over allow-all |
+| `--deny-tool 'shell(git push)'` | Deny rules win over allow-all, but a hook that rewrites the command runs first: rtk turns `git push` into `rtk git push` and the rule misses (VERIFIED 2026-10-17, rtk 0.51.0) |
+| `GIT_CONFIG_COUNT=1`, `GIT_CONFIG_KEY_0=url.blocked-by-orchestrator://.pushInsteadOf`, `GIT_CONFIG_VALUE_0=` | Sends every push to a dead address, whatever form the command takes, so a push fails even past the deny rule; fetch still works. A worker could unset it: a guard, not a boundary (VERIFIED 2026-10-17) |
 | `--disable-builtin-mcps`, `--disable-mcp-server <name>` | Allow-all also approves MCP write tools, and the deny rules do not cover them. Check that `session.mcp_servers_loaded` shows `disabled` |
 | `--add-dir <path>` | `-p` sessions are denied files outside the worktree. This grants access, writing included, so the prompt must say read-only |
 | `--output-format json` | JSONL events for `status.py` and `result.py` |
