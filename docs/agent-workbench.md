@@ -250,7 +250,7 @@ Assign by hand when there are a few tasks with judgement calls between them. Use
   - a general model such as Claude Sonnet 5.5 for well-specified work;
   - Claude Opus 5.5 or GPT-6 Astra for long, autonomous work;
   - GPT-6 Luna or Gemini 3.8 Flash for simple, repetitive tasks.
-- **Checker: a different model family from the author, starting with a clean context.** That is my skill's routing rule. Cognition found its separate review agent caught an average of 2 bugs per PR on PRs written by its own coding agent, about 58% of them severe. It worked best when the reviewer shared no context with the author.
+- **Checker: a different model family from the author, starting with a clean context.** That is my skill's routing rule. Cognition found its separate review agent caught an average of 2 bugs per PR on PRs written by its own coding agent, about 58% of them severe. Cognition credits part of that to the reviewer starting with a completely clean context.
 - **Set the model explicitly.**
   - Orca can't pass a model to Copilot workers, so they run on Copilot's default; name the model in the terminal command instead.
   - App children inherit the coordinator's model, which made every child an Opus session.
