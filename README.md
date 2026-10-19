@@ -15,9 +15,10 @@ This installs chezmoi, then applies configs, installs packages, and runs setup s
 
 - **Manager:** [chezmoi](https://www.chezmoi.io/) ([daily ops](https://www.chezmoi.io/user-guide/daily-operations/)).
   Source root is `dotfiles/` (see `.chezmoiroot`).
-- **Platforms:** macOS (Homebrew), Arch/Manjaro (pamac), Windows (Chocolatey + PowerShell).
+- **Platforms:** macOS (Homebrew), Arch/Manjaro (pamac), Windows (Chocolatey and winget + PowerShell).
 - **Shell:** fish on macOS/Linux, PowerShell on Windows. Prompt is [starship](https://starship.rs/); terminal is [Ghostty](https://ghostty.org/); tmux for multiplexing; nvim (AstroNvim) as editor.
 - **Theme:** Catppuccin **Mocha** everywhere. The palette in `dotfiles/.chezmoidata/catppuccin.yaml` is the single source of truth and is templated into tools if built-in theme is not available.
+- **Agent workbench:** [Orca](https://github.com/stablyai/orca) runs many Copilot CLI sessions side by side, shows which one is waiting on you, and kept a waiting request from running when it quit; the GitHub Copilot app runs coordinated multi-agent work. Why, setup and usage: [docs/agent-workbench.md](docs/agent-workbench.md).
 
 ## Layout
 
@@ -31,11 +32,13 @@ This installs chezmoi, then applies configs, installs packages, and runs setup s
 
 ## Packages
 
-Manifests in `dotfiles/packages/` (`Brewfile`, `Archfile`, `ChocoPackages.config`).
+Manifests in `dotfiles/packages/` (`Brewfile`, `Archfile`, `ChocoPackages.config`, `WingetPackages.json`).
 The core CLI set is kept in sync across all three on a best-effort basis.
 
 - The Arch box omits kubernetes/cloud CLIs; those are macOS/work only.
 - macOS carries redundant tooling to consolidate when convenient: dbeaver-community vs harlequin.
+- winget carries the Windows apps Chocolatey lacks, today Orca and the GitHub Copilot app. The Windows setup script imports `WingetPackages.json` and re-runs when it changes.
+- Package names collide. Homebrew's `orca` cask is plotly's chart tool, Arch's `orca` is the GNOME screen reader, and Chocolatey's `orca` is Microsoft's MSI editor. Stably's Orca is `stablyai/orca/orca` (Homebrew), `onorca-bin` (AUR) and `StablyAI.Orca` (winget).
 
 ## Work profile
 
@@ -81,6 +84,7 @@ Settings for both editors come from a single source, [`dotfiles/.chezmoidata/edi
 - **Secrets:** none committed.
 - **Per-machine data:** `dotfiles/.chezmoidata.yaml` (gitignored; see `.chezmoidata.yaml.example`).
 - **CI:** `.github/workflows/lint.yml` runs shellcheck, stylua, `chezmoi apply --dry-run`, and `chezmoi doctor`.
+- **Docs:** one page per topic in `docs/` at the repo root, for a choice or a how-to too long for this README. It sits outside `.chezmoiroot`, so chezmoi never deploys it.
 
 ## tmux quick reference
 

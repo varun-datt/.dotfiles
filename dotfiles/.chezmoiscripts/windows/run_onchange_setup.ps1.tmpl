@@ -13,6 +13,13 @@ if (-not $chocolateyInstalled)
 echo "hash: {{ include $packageFilePath | sha256sum }}"
 choco install -y "$env:CHEZMOI_SOURCE_DIR/packages/ChocoPackages.config"
 
+# WingetPackages.json hash: {{ include "packages/WingetPackages.json" | sha256sum }}
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+  winget import -i "$env:CHEZMOI_SOURCE_DIR/packages/WingetPackages.json" --accept-package-agreements --accept-source-agreements --disable-interactivity --no-upgrade
+} else {
+  Write-Warning "winget not found: install App Installer from the Microsoft Store, then re-run chezmoi apply"
+}
+
 if (Get-Command pwsh -ErrorAction SilentlyContinue) {
   pwsh -NoProfile -Command @'
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted

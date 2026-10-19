@@ -3,6 +3,7 @@ tap "hashicorp/tap", trusted: true
 tap "microsoft/git", trusted: true
 tap "microsoft/mssql-release", "https://github.com/Microsoft/homebrew-mssql-release", trusted: true
 tap "morantron/tmux-fingers", trusted: true
+tap "stablyai/orca", trusted: true
 brew "agent-browser"
 brew "awscli"
 brew "azure-cli"
@@ -63,6 +64,7 @@ cask "dynatrace-oss/tap/dtctl"
 cask "font-jetbrains-mono-nerd-font"
 cask "ghostty"
 cask "git-credential-manager"
+cask "github-copilot-app"
 cask "insomnia"
 cask "kap"
 cask "miro"
@@ -70,6 +72,7 @@ cask "notion"
 cask "obsidian"
 cask "freelens"
 cask "openshot-video-editor"
+cask "stablyai/orca/orca"
 cask "rectangle"
 cask "thaw"
 cask "cursor"

@@ -2,7 +2,7 @@
 
 ## Comments
 
-Don't over-comment. Keep inline comments minimal and only where the code itself can't make intent clear. If there's an important "why" worth capturing (rationale, trade-offs, non-obvious design decisions), put it in [README.md](README.md) — not scattered across the dotfiles. The code should stay clean; the README is the single place for the reasoning.
+Don't over-comment. Keep inline comments minimal and only where the code itself can't make intent clear. If there's an important "why" worth capturing (rationale, trade-offs, non-obvious design decisions), put it in [README.md](README.md) — not scattered across the dotfiles. The code should stay clean; the README is the single place for the reasoning. A topic too long for the README gets one page in `docs/`, linked from the README in one line ([Conventions](README.md#conventions)).
 
 ## Prose formatting
 
