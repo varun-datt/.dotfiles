@@ -277,3 +277,13 @@ Not research: each is a change with a test.
   without both.
 - **Settle whether a cap applies to a resumed session.** Cheap probe: resume a small session with a
   cap below what it has already spent, and see whether its first call is refused.
+
+## (h) Small fixes, found 2026-10-16
+
+Not research: each is a change with a test.
+- **`scripts/result.py` prints a resumed session's running total as the round's credits.** Print
+  the growth since the previous round of the same session, or label the figure as the session
+  total.
+- **Ship the placeholder check.** A project launcher refuses a prompt that still holds a
+  `{{NAME}}` placeholder; the skill's own assets have no such check, so the next project starts
+  without it.

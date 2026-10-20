@@ -180,3 +180,39 @@ INFERRED or OPEN. Project names appear only as examples.
   at all. The 30-credit probe printed one after each call only because it was always near its cap.
   So silence says nothing about whether a cap applies; a resumed session's cap stays OPEN until the
   probe in [follow-ups](follow-ups.md) (g) runs. [ran: 0 limit events in 5 rounds]
+
+## 2026-10-16: fourth orchestrator stretch
+
+- **A fix prompt that names the failing cases gets those cases fixed, not their class.** Two fix
+  rounds on a keyboard-focus slice each fixed exactly the paths the review had named, and the next
+  review found the same fault on paths nobody named. Name the class, have the worker reproduce each
+  case with real input before changing code, and have it list every member of the class with a
+  test. [notes]
+- **A worker's fakes encode the worker's own assumptions about an outside system.** A tool passed
+  every gate while querying a log field the real store does not have; one zero-row live query
+  (select the field, limit 0) found it in seconds. Before reviewing a worker's tool that reads an
+  outside system, run one cheap live schema read yourself. [ran]
+- **Closing the terminal that launched a worker does not stop the worker.** Three workers started
+  under `timeout` kept running after their editor terminals were killed, and stopped only when
+  killed by process id. `timeout` without `--foreground` runs the command in its own process
+  group, which the terminal's hangup does not reach (INFERRED). Stop workers by pid and assert none
+  remain. Quitting the editor (2026-10-09 above) was not re-tested. [ran: 9 worker processes after
+  3 terminal kills]
+- **Editing a running shell script changes what its running copies execute.** zsh reads a script as
+  it goes, so editing the launcher while launches were in flight made each of them fail at its
+  last line with a parse error, after the worker had finished. Edit a launcher only when no launch
+  runs, or write a new file and move it over the old name. [ran]
+- **Review prompts filled by hand went out unfilled in 6 of 84 launches.** Those reviews ran
+  without their security sentence and word limit, and nothing failed. A launcher check that
+  refuses a prompt still holding a `{{NAME}}` placeholder ended it; see (h) in
+  [follow-ups](follow-ups.md). [ran]
+- **A resumed session reports its running total, not the round's cost.** Copying each round's
+  reported credits into a ledger overstated every fix round by all the earlier rounds of its
+  session. A round costs the growth of the session total across the round; the per-call records
+  alone miss some calls. `F185` (usage records miss calls) [ran]
+- **Local usage logs held about half of what the provider billed for the same month.** Measure an
+  exact window as the difference of two readings of the provider's own counter. `F183` (local
+  logs vs the provider) [ran]
+- **Routing trials: a cheaper shadow reviewer missed a reproduced privacy blocker** that the usual
+  reviewer caught, so the shadow trial stopped. A mid-tier model on two fix rounds saved no credits
+  and finished faster; that trial paused until the owner says whether wall time matters. [notes]
