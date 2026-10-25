@@ -31,6 +31,7 @@ SHELL_ARG = {"run_in_terminal": "command", "bash": "command", "shell": "command"
 READ_ARG = {"read_file": "filePath", "view": "path", "read": "path", "str_replace_editor": "path"}
 IGNORED = {"manage_todo_list", "memory", "vscode_askQuestions", "tool_search", "report_intent", "think", "update_todo"}
 PATH = re.compile(r"(?:[\w.@-]+/)*[\w@-][\w.@-]*\.[A-Za-z]\w{0,5}\b")
+HIT = re.compile(r"^\s*([\w.@-]+):([^\s:]+):\d+", re.M)
 
 
 def parse_args_text(text):
@@ -57,18 +58,42 @@ def opened_paths(name, args):
     return []
 
 
-def score(calls):
+def returned_files(result, root_of):
+    try:
+        v = json.loads(result)
+        pairs = [(h.get("source"), h.get("path")) for h in v if isinstance(h, dict)] if isinstance(v, list) else []
+    except ValueError:
+        pairs = HIT.findall(result)
+    known = {(s, p) for s, p in pairs if s in root_of and isinstance(p, str)}
+    full = {os.path.realpath(os.path.join(root_of[s], p)) for s, p in known}
+    loose = {p for p in PATH.findall(result) if "/" in p or p.endswith(".md")} - {p for _, p in known}
+    return full, loose
+
+
+def resolved(path, folder):
+    if not os.path.isabs(path):
+        if not folder:
+            return None
+        path = os.path.join(folder, path)
+    return os.path.realpath(path)
+
+
+def score(calls, roots=(), folder=None):
     """calls: [(name, args, result_text or None)] in order. Returns the request's facts."""
     calls = [c for c in calls if c[0] not in IGNORED]
     kb_at = [i for i, (n, a, _) in enumerate(calls) if is_kb(n, a)]
     out = {"kb_ran": bool(kb_at), "kb_first": bool(calls) and bool(kb_at) and kb_at[0] == 0,
            "results_seen": False, "opened_kb_file": False}
-    returned = set()
+    root_of = {n: r for r, n in roots}
+    full, returned = set(), set()
     for i, (name, args, result) in enumerate(calls):
         if i in kb_at and isinstance(result, str):
             out["results_seen"] = True
-            returned |= {p for p in PATH.findall(result) if "/" in p or p.endswith(".md")}
-        elif returned and any(p == r or p.endswith("/" + r) or r.endswith("/" + p) for p in opened_paths(name, args) for r in returned):
+            f, loose = returned_files(result, root_of)
+            full |= f
+            returned |= loose
+        elif any(resolved(p, folder) in full or any(p == r or p.endswith("/" + r) or r.endswith("/" + p) for r in returned)
+                 for p in opened_paths(name, args)):
             out["opened_kb_file"] = True
     return out
 
@@ -180,7 +205,7 @@ def main(argv=None):
     for req in (*vscode_requests(), *cli_requests()):
         if since and (req["at"] is None or req["at"] < since):
             continue
-        facts = score([tuple(c) for c in req["calls"]])
+        facts = score([tuple(c) for c in req["calls"]], roots, req["folder"])
         g = groups[(req["app"], space_of(req["folder"], roots))]
         g["requests"] += 1
         g["with_tools"] += bool(req["calls"])

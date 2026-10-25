@@ -157,6 +157,17 @@ class UseMeasure(unittest.TestCase):
                               ("view", {"path": "/x/web.md"}, None)])
         self.assertFalse(facts["opened_kb_file"])
 
+    def test_a_returned_file_from_a_known_source_counts_only_at_its_own_path(self):
+        import kb_use
+        roots = [("/repos/wiki", "wiki")]
+        kb = ("bash", {"command": "kb search readme"}, "wiki:README.md:1  Readme")
+        self.assertFalse(kb_use.score([kb, ("view", {"path": "/repos/app/README.md"}, None)], roots, "/repos/app")["opened_kb_file"])
+        self.assertFalse(kb_use.score([kb, ("bash", {"command": "cat README.md"}, None)], roots, "/repos/app")["opened_kb_file"])
+        self.assertTrue(kb_use.score([kb, ("view", {"path": "/repos/wiki/README.md"}, None)], roots, "/repos/app")["opened_kb_file"])
+        self.assertTrue(kb_use.score([kb, ("bash", {"command": "cat README.md"}, None)], roots, "/repos/wiki")["opened_kb_file"])
+        as_json = ("bash", {"command": "kb search readme --json"}, json.dumps([{"source": "wiki", "path": "README.md"}]))
+        self.assertFalse(kb_use.score([as_json, ("view", {"path": "/repos/app/README.md"}, None)], roots)["opened_kb_file"])
+
     def test_a_folder_that_only_starts_like_a_source_root_is_not_in_it(self):
         import kb_use
         roots = [("/repos/wiki", "wiki")]
