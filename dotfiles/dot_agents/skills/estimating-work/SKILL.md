@@ -55,6 +55,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 - Re-run the forecast after each item, and move the overflow line if it shifts.
 - When a feature turns out to need an enabler (a fix, a spike, some debt), take the enabler next and
   re-forecast; never hold it back to keep the mix.
+- Carry each item to completion or to a blocker (owner, 2026-10-25). Where a case is unclear, let
+  research decide it, say so in the commit and the plan, and keep it for the owner's review.
 - When an item blocks on a decision, write the question down and take the next item.
 - Polish found on the way becomes a backlog item, not work now.
 - When the plan is done, spare time buys depth: more test cases, and at most two second-model review
