@@ -171,6 +171,9 @@ class UseMeasure(unittest.TestCase):
         self.assertTrue(kb_use.score([kb, ("view", {"path": "/repos/wiki/README.md:12"}, None)], roots, "/repos/app")["opened_kb_file"])
         snippet = json.dumps([{"source": "wiki", "path": "README.md", "snippet": "see docs/setup.md"}])
         self.assertFalse(kb_use.score([("bash", {"command": "kb search setup --json"}, snippet), ("view", {"path": "/repos/app/docs/setup.md"}, None)], roots)["opened_kb_file"])
+        unknown = ("bash", {"command": "kb search setup"}, "other:docs/setup.md:1  Setup")
+        self.assertTrue(kb_use.score([unknown, ("view", {"path": "/x/docs/setup.md:12"}, None)], roots)["opened_kb_file"])
+        self.assertTrue(kb_use.score([unknown, ("bash", {"command": "sed -n 1,9p /x/docs/setup.md:3"}, None)], roots)["opened_kb_file"])
 
     def test_a_folder_that_only_starts_like_a_source_root_is_not_in_it(self):
         import kb_use

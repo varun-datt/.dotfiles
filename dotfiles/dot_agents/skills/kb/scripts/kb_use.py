@@ -95,8 +95,8 @@ def score(calls, roots=(), folder=None):
             f, loose = returned_files(result, root_of)
             full |= f
             returned |= loose
-        elif any(resolved(p, folder) in full or any(p == r or p.endswith("/" + r) or r.endswith("/" + p) for r in returned)
-                 for p in opened_paths(name, args)):
+        elif any(resolved(p, folder) in full or any(q == r or q.endswith("/" + r) or r.endswith("/" + q) for r in returned)
+                 for p in opened_paths(name, args) for q in [re.sub(r"(?::\d+){1,2}$", "", p)]):
             out["opened_kb_file"] = True
     return out
 
