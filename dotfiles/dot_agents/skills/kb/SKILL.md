@@ -1,6 +1,6 @@
 ---
 name: kb
-description: "Searches the knowledge and code sources listed in ~/.config/kb/sources.json (a personal wiki, a work knowledge repo, product repos) by pattern or by meaning, through one JSON contract. Use to find notes, decisions, runbooks or code across those sources, or to look something up from a person's question. Inside the folder you are already working in, your own search tools are enough."
+description: "Searches the knowledge and code sources listed in ~/.config/kb/sources.json (a personal wiki, a work knowledge repo, product repos) by pattern or by meaning, through one JSON contract. Use to look something up from a person's question, or to find notes, decisions, runbooks or code by meaning. It searches the source you are working in; name any other with --source."
 argument-hint: "<query> [--source NAME] [--mode auto|regex|lex|sem|hybrid|fused]"
 ---
 
@@ -23,7 +23,10 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
   - up to three words (`DLQ`, `dwell report`, an identifier) runs ripgrep and BM25;
   - a longer question or a person's whole message runs search by meaning.
 - `--mode regex` forces an exact pattern; `lex`, `sem`, `hybrid` and `fused` force one engine.
-- `--source` limits the search; repeat it for more. Names come from the sources file.
+- **Scope:** without `--source`, kb searches only the source you are working in, the one whose
+  folder holds the current directory, so work content does not end up in wiki notes or the
+  reverse. Name any other source with `--source`, repeated for more; `kb.py sources` lists them.
+  Outside every source, kb exits with status 2 and asks for one.
 - **Each hit:** `{source, path, line, end, title, snippet, score, engines}`. `path` is relative to
   the source's root; `line` and `end` bound the matching lines; `engines` says which engines found it.
 

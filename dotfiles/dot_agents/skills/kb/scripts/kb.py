@@ -13,6 +13,8 @@ Usage:
 Sources come from $KB_SOURCES, else ~/.config/kb/sources.json:
     {"sources": [{"name": "wiki", "root": "~/sandbox/wiki"}, {"name": "my-service", "root": "~/src/my-service"}]}
 A source may add "paths": ["docs", "notes"] to search only those parts of its root.
+Without --source, search covers only the sources whose root holds the current folder, so content
+from one space does not leak into another; outside every source, name the ones to search.
 ck keeps one index per folder (the root, or each folder in paths) under $KB_INDEX_DIR, else
 ~/.cache/kb/ck, and writes nothing into the folder. A folder without an index yet, and a file listed
 in paths, are searched by regex instead.
@@ -227,12 +229,17 @@ def pick(sources, names, parser):
     return [s for s in sources if s["name"] in names]
 
 
+def holding(sources, folder):
+    folder = os.path.realpath(folder)
+    return [s for s in sources if os.path.commonpath([folder, s["root"]]) == s["root"]]
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("search")
     s.add_argument("query")
-    s.add_argument("--source", action="append", help="a source name; repeat for more; default all")
+    s.add_argument("--source", action="append", help="a source name; repeat for more; default: the sources holding the current folder")
     s.add_argument("--mode", default="auto", choices=MODES)
     s.add_argument("--limit", type=int, default=10)
     s.add_argument("--json", action="store_true")
@@ -247,12 +254,18 @@ def main(argv=None):
         for src in sources:
             print(f"{src['name']}\t{src['root']}")
         return 0
-    sources = pick(sources, a.source, p)
     if a.cmd == "index":
         ck = ck_binary()
         if not ck:
             p.exit(1, "kb: ck not found, so there is nothing to index\n")
-        return index(sources, ck, sys.stdout)
+        return index(pick(sources, a.source, p), ck, sys.stdout)
+    if a.source:
+        sources = pick(sources, a.source, p)
+    else:
+        names = ", ".join(s["name"] for s in sources)
+        sources = holding(sources, os.getcwd())
+        if not sources:
+            p.exit(2, f"kb: the current folder is in none of the sources; name the ones to search with --source ({names})\n")
     if a.mode != "regex" and not ck_binary():
         print("kb: ck not found, so only regex runs", file=sys.stderr)
     unindexed = plan(a.query, sources, a.mode, ck_binary())[1]

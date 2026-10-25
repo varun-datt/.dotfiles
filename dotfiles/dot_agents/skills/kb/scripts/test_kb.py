@@ -50,6 +50,28 @@ class Contract(unittest.TestCase):
         self.assertIn(("dock-scheduler", "src/scheduler.ts"), [(h["source"], h["path"]) for h in hits])
 
 
+def cli(args, cwd):
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+        json.dump({"sources": SOURCES}, f)
+    try:
+        return subprocess.run([sys.executable, "-B", os.path.join(HERE, "kb.py"), *args, "--sources-file", f.name], cwd=cwd,
+                              capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    finally:
+        os.remove(f.name)
+
+
+class DefaultScope(unittest.TestCase):
+    def test_without_a_source_only_the_source_holding_the_current_folder_is_searched(self):
+        out = cli(["search", "SlotConflictException", "--mode", "regex", "--json"], os.path.join(SOURCES[1]["root"], "src"))
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual({h["source"] for h in json.loads(out.stdout)}, {"dock-scheduler"})
+
+    def test_outside_every_source_kb_asks_which_to_search(self):
+        out = cli(["search", "SlotConflictException", "--mode", "regex"], HERE)
+        self.assertEqual(out.returncode, 2)
+        self.assertIn("--source (work, dock-scheduler)", out.stderr)
+
+
 class Routing(unittest.TestCase):
     def test_auto_sends_each_query_shape_to_the_engines_that_won_for_it(self):
         self.assertEqual(kb.engines_for("RetryPolicy|maxAttempts|backoff", "auto", "ck"), ["regex"])
