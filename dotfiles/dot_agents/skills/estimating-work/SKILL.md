@@ -6,11 +6,13 @@ description: Estimate work in minutes from measured pace, and plan, run and repo
 # estimating-work
 
 A language model estimates in human time: its pre-task estimates "overshoot actual duration by
-4–7×" (arXiv 2604.00010). On 2026-10-25 this agent estimated 49 items at 1,245 minutes and spent
-358; no estimate went below 10 minutes while 40 items took under 10. So never judge minutes. Take
-the outside view: each kind of item's measured pace, corrected by this agent's own history of
-estimate against actual, forecast by Monte Carlo. Evidence and method: the wiki note
-`00-inbox/research-agent-work-planning/findings-estimation.md`.
+4–7×" (arXiv 2604.00010), and an agent's estimate "is often from training data, which is based on
+human speed" (agent-estimate, Show HN). On 2026-10-25 this agent estimated 49 items at 1,245
+minutes and spent 358; no estimate went below 10 minutes while 40 items took under 10. So never
+judge minutes. Estimate from evidence, best first: the kind's logged history (the outside view);
+else a count of rounds, the unit agent-speed estimators use; judged minutes only as a last resort,
+corrected by this agent's judged history. Forecast by Monte Carlo. Evidence and method: the wiki
+note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 `scripts/estimates.py` keeps the history in `~/.agents/state/estimates.jsonl` (or `$ESTIMATES_LOG`).
 
@@ -20,25 +22,39 @@ estimate against actual, forecast by Monte Carlo. Evidence and method: the wiki 
    wrap-up.
 2. Ask the owner, in one question round before they leave:
    - the work mix; the default is about 70% features, 15% bugs and fixes, 10% spikes that unblock a
-     decision, 5% docs ([references/work-mix.md](references/work-mix.md));
+     decision, 5% docs, and it bends to dependencies: an enabler a planned feature needs goes first
+     and counts toward that feature ([references/work-mix.md](references/work-mix.md));
    - every decision the planned items need. A UX decision not taken is built as the recommended
      option, chosen from human-factors research (the `visual-house-style` skill's attention and
      interaction rules), and flagged for review.
 3. Split the work into items that each end in a commit or a finished artifact, not in a question.
    One feature at a time, its tests and doc updates inside it.
-4. Give each item a kind from [references/pace.md](references/pace.md) and take its estimate from
-   the history: `estimates.py estimate --kind fix` gives the P50 and P90. A kind with fewer than 5
-   logged items gets a judged estimate marked as a guess.
-5. Forecast: write the plan as JSON (`[{"id", "kind", "estimate"}]`) and run
-   `estimates.py forecast --plan plan.json --window <minutes to the stop time>`. Fill the plan to
-   the window's P50, then add an overflow tier from the backlog, in the owner's mix, up to what
-   fits at P90. Say what is out of scope.
+4. Give each item a kind from [references/pace.md](references/pace.md) and an estimate with its
+   method, best first:
+   - `history`: `estimates.py estimate --kind fix` gives the P50 and P90 once the kind has 5
+     logged items.
+   - `rounds`: count the think, write, run and verify cycles the item needs with agent-estimation's
+     anchors (1–2 boilerplate, 3–5 moderate, 5–10 exploratory, 8–15 high uncertainty), add 10–20%
+     for joining parts, and run `estimates.py estimate --rounds <n> --risk <1.0 to 2.0>` (3 minutes
+     a round until the log corrects it).
+   - `judged`: a minute figure, only when neither works, flagged as a guess.
+
+   An item a person would need hours for is where agents fail more often (METR: the 80% time
+   horizon is about a fifth of the 50% one), so split it until each piece ends in a commit.
+5. Forecast: write the plan as JSON (`[{"id", "kind", "estimate", "method"}]`) and run
+   `estimates.py forecast --plan plan.json --window <minutes to the stop time>`. It draws `history`
+   items from their kind's logged actuals and corrects the others by their own method's history.
+   Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
+   mix, up to what fits at P90. Say what is out of scope.
 
 ## During
 
-- Stamp every item: `estimates.py start --id <id> --kind <kind> --estimate <min> --run <run>` before
-  it, `estimates.py end --id <id>` after its commit. Never work out minutes by hand.
+- Stamp every item: `estimates.py start --id <id> --kind <kind> --estimate <min> --method <method>
+  --run <run>` before it (an enabler adds `--serves <feature id>`), `estimates.py end --id <id>`
+  after its commit. Never work out minutes by hand.
 - Re-run the forecast after each item, and move the overflow line if it shifts.
+- When a feature turns out to need an enabler (a fix, a spike, some debt), take the enabler next and
+  re-forecast; never hold it back to keep the mix.
 - When an item blocks on a decision, write the question down and take the next item.
 - Polish found on the way becomes a backlog item, not work now.
 - When the plan is done, spare time buys depth: more test cases, and at most two second-model review
@@ -47,7 +63,8 @@ estimate against actual, forecast by Monte Carlo. Evidence and method: the wiki 
 
 ## After
 
-- `estimates.py report --run <run>`: estimate against actual, how many came within 25%, and minutes
-  by kind against the mix asked for. Put it in the final message and the state file.
+- `estimates.py report --run <run>`: estimate against actual, how many came within 25%, minutes by
+  kind, and features with their enablers as one share, against the mix asked for. Put it in the
+  final message and the state file.
 - Regenerate the pace table with `estimates.py kinds` and add the run to its runs table.
 - Run the tests after changing the script: `python3 -B scripts/test_estimates.py`.

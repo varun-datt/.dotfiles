@@ -11,6 +11,21 @@ right split; this one is built from the sources in the wiki note
 | Spikes and research | about 10% | Only those that unblock a decision or a planned feature |
 | Docs and process | about 5% | What the next session or the owner needs |
 
+The mix is a starting point, not a quota. It bends to dependencies (owner, 2026-10-25):
+
+- An enabler goes first: a spike, fix or piece of debt that a planned feature needs, or that makes
+  it clearly faster or safer to build, comes before that feature whatever its kind. "For each
+  desired change, make the change easy (warning: this may be hard), then make the easy change"
+  (Kent Beck, quoted by
+  [taro.codes](https://taro.codes/posts/2019-10-01-make-the-change-easy)). SAFe's enablers "define
+  the work needed to develop and deliver future business requirements" and "must be visible and
+  treated like other backlog items" ([SAFe](https://framework.scaledagile.com/enablers)).
+- An enabler counts toward the feature it serves. Log it with `--serves <feature id>`;
+  `estimates.py report` shows features with their enablers as one share.
+- Work that serves no planned feature is not an enabler, and takes its own kind's share.
+- When a feature turns out to need an enabler mid-run, re-plan the rest of the mix; say in the plan
+  which feature each enabler serves.
+
 - Plan below full capacity: the plan fills the forecast's P50, not every minute
   ("Agile Planning to 100% Capacity? Don't Do It!", Scaled Agile).
 - Polish found on the way becomes backlog items (AMC's light rule 8; Shape Up batches bugs and
