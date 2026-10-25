@@ -67,3 +67,11 @@ is scored the same way.
 
 Usage drifts, so the mix of cases must follow it:
 [`references/refreshing-cases.md`](references/refreshing-cases.md).
+
+## Measure use
+
+`python3 scripts/kb_use.py [--since YYYY-MM-DD] [--json OUT]` counts, per request a person sent
+and per helper task, whether kb ran, whether it ran before any other tool, and whether the agent
+then opened a file kb returned; by app (VS Code, its helpers, Copilot CLI, AMC) and by source.
+It reads the apps' local logs read-only and prints counts only. Keep each run's JSON outside any
+repository, so later runs can be compared with it.

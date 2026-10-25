@@ -123,5 +123,22 @@ class Scenarios(unittest.TestCase):
         self.assertEqual(suite.main(["--check"]), 0)
 
 
+class UseMeasure(unittest.TestCase):
+    def test_kb_first_then_a_returned_file_opened(self):
+        import kb_use
+        hit = "work:runbooks/dock-retry.md:12  Dock retry — when a slot conflicts"
+        facts = kb_use.score([("manage_todo_list", {}, None),
+                              ("run_in_terminal", {"command": "python3 kb.py search \"slot conflict\""}, hit),
+                              ("read_file", {"filePath": "/x/work/runbooks/dock-retry.md"}, None)])
+        self.assertEqual(facts, {"kb_ran": True, "kb_first": True, "results_seen": True, "opened_kb_file": True})
+
+    def test_grep_before_kb_and_no_returned_file_opened(self):
+        import kb_use
+        facts = kb_use.score([("grep", {"pattern": "slot"}, "x"),
+                              ("bash", {"command": "kb search slot"}, "work:a/b.md:1  B — c"),
+                              ("view", {"path": "/x/other.md"}, None)])
+        self.assertEqual(facts, {"kb_ran": True, "kb_first": False, "results_seen": True, "opened_kb_file": False})
+
+
 if __name__ == "__main__":
     unittest.main()
