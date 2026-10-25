@@ -53,3 +53,5 @@ could not answer, then return a short summary.
 - Plan before delegating.
 - Keep subtopics distinct so findings don't overlap.
 - Stop at the budget; 3–5 searches per subtopic is usually enough.
+- A `tvly research` report is a list of leads, not evidence: quote only pages read through `tvly extract` or a search hit's passage, and say where the report was wrong. Of three reports on 2026-10-25, one found nothing on its question, one cited blogs over the primary sources, and one called METR an undefined metric.
+- An extract that returns only page chrome (navigation, sign-in or cookie text) is a failed read: say so and read the page another way. An arXiv `/abs/` page extracts this way; the search hit for its `/html/` version carried the abstract.
