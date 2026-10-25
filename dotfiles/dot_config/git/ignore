@@ -19,3 +19,7 @@ node_modules/
 __pycache__/
 .mypy_cache/
 .ruff_cache/
+
+# Search index that ck (behind the kb skill) writes into each folder it indexes
+.ck/
+.ckignore
