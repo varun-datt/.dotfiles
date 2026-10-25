@@ -1,4 +1,4 @@
-import glob, io, json, os, subprocess, sys, tempfile, unittest
+import glob, io, json, os, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
 sys.dont_write_bytecode = True
@@ -204,10 +204,31 @@ class Hook(unittest.TestCase):
         self.assertEqual(out, {"modifiedTransformedPrompt": "<msg>why</msg>\n\nHITS"})
 
     def test_a_short_reply_or_a_slash_command_is_not_searched(self):
-        with mock.patch("subprocess.run") as run:
+        with mock.patch("subprocess.Popen") as run:
             self.assertEqual(self.hook.kb_hits("yes go ahead", "/tmp"), "")
             self.assertEqual(self.hook.kb_hits("/compact the whole session now", "/tmp"), "")
         run.assert_not_called()
+
+    def test_a_search_that_runs_out_of_time_leaves_no_process_behind(self):
+        with tempfile.TemporaryDirectory() as fake:
+            with open(os.path.join(fake, "kb.py"), "w") as f:
+                f.write("import subprocess, time\np = subprocess.Popen(['sleep', '30'])\n"
+                        "open('child.pid', 'w').write(str(p.pid))\ntime.sleep(30)\n")
+            with mock.patch.object(self.hook, "HERE", fake), mock.patch.dict(os.environ, {"KB_HOOK_TIMEOUT": "1"}):
+                self.assertEqual(self.hook.kb_hits("why does the dock retry fail", fake), "")
+            with open(os.path.join(fake, "child.pid")) as f:
+                child = int(f.read())
+            for _ in range(40):
+                if subprocess.run(["ps", "-p", str(child), "-o", "stat="], capture_output=True, text=True).stdout.strip() in ("", "Z"):
+                    break
+                time.sleep(0.05)
+            else:
+                os.kill(child, 9)
+                self.fail("kb's child process outlived the hook's timeout")
+
+    def test_a_log_that_cannot_be_written_still_gets_the_agent_an_answer(self):
+        with mock.patch.dict(os.environ, {"KB_HOOK_LOG": self.state}):
+            self.assertEqual(self.run_hook("subagentStart", {"agentName": "explore"}), {"additionalContext": self.hook.NOTE})
 
     def test_hits_follow_only_the_first_search_after_a_message(self):
         with mock.patch.dict(os.environ, {"KB_HOOK_HITS": "1"}), mock.patch.object(self.hook, "kb_hits", return_value="HITS"):

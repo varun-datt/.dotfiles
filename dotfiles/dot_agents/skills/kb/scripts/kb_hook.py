@@ -14,7 +14,7 @@ hook_event_name and reads hookSpecificOutput; the Copilot harness reads top-leve
 failure prints {} and exits 0, so the hook never stops the agent. $KB_HOOK_LOG, if set, gets one
 line per call: the event, the input's field names and what was added, never the text.
 """
-import json, os, re, subprocess, sys, time
+import json, os, re, signal, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE = os.path.join(os.environ.get("KB_HOOK_STATE", os.path.expanduser("~/.cache/kb/hook")))
@@ -33,10 +33,17 @@ def kb_hits(query, cwd):
     if len(words) <= 3 or query.lstrip().startswith("/"):
         return ""
     try:
-        run = subprocess.run([sys.executable, "-B", os.path.join(HERE, "kb.py"), "search", query, "--json"],
-                             cwd=cwd or None, capture_output=True, text=True, timeout=float(os.environ.get("KB_HOOK_TIMEOUT", "4")))
-        hits = json.loads(run.stdout)[:3] if run.returncode == 0 else []
-    except (OSError, ValueError, subprocess.TimeoutExpired):
+        with subprocess.Popen([sys.executable, "-B", os.path.join(HERE, "kb.py"), "search", query, "--json"], cwd=cwd or None,
+                              stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                              start_new_session=True) as proc:
+            try:
+                out, _ = proc.communicate(timeout=float(os.environ.get("KB_HOOK_TIMEOUT", "4")))
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL)
+                proc.communicate()
+                return ""
+        hits = json.loads(out)[:3] if proc.returncode == 0 else []
+    except (OSError, ValueError):
         return ""
     if not hits:
         return ""
@@ -105,8 +112,11 @@ def main(argv):
     except Exception:  # a hook must never stop the agent
         data, out, added = {}, {}, "error"
     if os.environ.get("KB_HOOK_LOG"):
-        with open(os.environ["KB_HOOK_LOG"], "a") as log:
-            log.write(json.dumps({"at": time.strftime("%H:%M:%S"), "event": event, "fields": sorted(data), "added": added}) + "\n")
+        try:
+            with open(os.environ["KB_HOOK_LOG"], "a") as log:
+                log.write(json.dumps({"at": time.strftime("%H:%M:%S"), "event": event, "fields": sorted(map(str, data)), "added": added}) + "\n")
+        except Exception:  # a hook must never stop the agent
+            pass
     print(json.dumps(out))
     return 0
 
