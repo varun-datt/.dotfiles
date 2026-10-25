@@ -14,6 +14,7 @@ command and get the same fields back, so the engine behind it can change without
 ```sh
 python3 ~/.agents/skills/kb/scripts/kb.py search "<query>" [--source NAME ...] [--json]
 python3 ~/.agents/skills/kb/scripts/kb.py sources
+python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
 ```
 
 - **Query as you would think it.** `auto`, the default, picks engines by the query's shape, as the
@@ -33,8 +34,13 @@ python3 ~/.agents/skills/kb/scripts/kb.py sources
   source changes no script. Each source is searched in place and its ignore rules are honoured.
   `paths` limits a source to some of its folders, for a root that holds other repositories.
 - **Engines:** `rg` is required. `ck` (BM25 and embeddings) is found on `PATH` or through `KB_CK`;
-  without it every mode falls back to regex and says so. ck writes an index folder, `.ck/`, and a
-  `.ckignore` file into each source's root, so keep both in that repository's ignore rules.
+  without it every mode falls back to regex and says so.
+- **Indexes:** ck keeps one index per folder (the root, or each folder in `paths`) under
+  `~/.cache/kb/ck`, or `KB_INDEX_DIR`, and writes nothing into the folder. `kb.py index` builds or
+  refreshes them; run it after adding a source. Until a folder has one, kb searches it by regex and
+  says so. A single file listed in `paths` is always searched by regex.
+  - Why one ck run per folder: given several folders, ck 0.8.1 indexes their common parent (for a
+    work folder holding product repos, all of them), and `ck --index A B` indexes only `B`.
 
 ## Test it
 

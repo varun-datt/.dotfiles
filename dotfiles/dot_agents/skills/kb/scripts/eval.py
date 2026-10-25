@@ -14,9 +14,10 @@ Engines:
     kb:<mode>     this skill's kb.py in that mode (fused, regex, lex, sem, hybrid)
     cmd:<command> any other tool that speaks kb's contract: run as `<command> QUERY SOURCE[,SOURCE]`
                   with KB_SOURCES set, printing a JSON list of {source, path, line, end, ...}
-The corpus is copied to a temporary folder first, so no engine writes an index into the fixtures.
+The corpus is copied to a temporary folder, which also holds its indexes, so nothing is written into
+the fixtures or ~/.cache.
 """
-import argparse, json, os, re, shlex, shutil, statistics, subprocess, sys, tempfile, time
+import argparse, io, json, os, re, shlex, shutil, statistics, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "fixtures")
@@ -93,6 +94,8 @@ def run(engines):
     with open(os.path.join(FIXTURES, "cases.json")) as f:
         cases = json.load(f)["queries"]
     tmp = tempfile.mkdtemp(prefix="kb-eval-")
+    saved_index_dir = os.environ.get("KB_INDEX_DIR")
+    os.environ["KB_INDEX_DIR"] = os.path.join(tmp, "ck-index")
     try:
         corpus = os.path.join(tmp, "corpus")
         shutil.copytree(os.path.join(FIXTURES, "corpus"), corpus)
@@ -103,8 +106,7 @@ def run(engines):
             json.dump({"sources": sources}, f)
         ck = kb.ck_binary()
         if ck and any(e.startswith("kb:") and e != "kb:regex" for e in engines):
-            for s in sources:
-                subprocess.run([ck, "--index", "--hidden", "."], cwd=s["root"], capture_output=True, stdin=subprocess.DEVNULL)
+            kb.index(sources, ck, io.StringIO())
         results = {}
         for spec in engines:
             go = engine_runner(spec, sources_file, sources)
@@ -118,6 +120,10 @@ def run(engines):
             results[spec] = rows
         return results
     finally:
+        if saved_index_dir is None:
+            os.environ.pop("KB_INDEX_DIR", None)
+        else:
+            os.environ["KB_INDEX_DIR"] = saved_index_dir
         shutil.rmtree(tmp, ignore_errors=True)
 
 
