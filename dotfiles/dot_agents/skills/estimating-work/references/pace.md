@@ -16,12 +16,12 @@ a commit. Update it from each run's estimates against actuals.
 | Large UI feature: a dialog with drag, keyboard and tests | 29 | 2026-10-25 |
 | Model turns per hour | about 300 | 2026-10-24 |
 
-Estimates drawn up before these rows existed ran about 3.7 times long: 2026-10-25's first 12 items
-were estimated at 495 minutes and took 134.
+Estimates drawn up before these rows existed ran about 3.9 times long: 2026-10-25's first 12 items
+were estimated at 525 minutes and took 134.
 
 ## Runs
 
 | Date | Window | Planned minutes | Actual minutes | Items done | Why it stopped |
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-24 | 6 h | none estimated, 12 items | 64 | 12 | Items ran out; half ended in a question for the owner |
-| 2026-10-25 | 6 h | about 600, 13 rows | 134 for rows 1 to 12 | 12 by 05:38 | In progress |
+| 2026-10-25 | 6 h | 535 as planned, 13 rows | 134 for rows 1 to 12 | 12 by 05:38 | In progress |
