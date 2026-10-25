@@ -58,7 +58,8 @@ def space_finder(sources):
 
 def folder_of(ws_dir):
     try:
-        w = json.load(open(os.path.join(ws_dir, "workspace.json")))
+        with open(os.path.join(ws_dir, "workspace.json")) as f:
+            w = json.load(f)
         return unquote(urlparse(w.get("folder") or w.get("workspace") or "").path)
     except (OSError, ValueError):
         return ""
@@ -149,7 +150,8 @@ def main(argv=None):
     out = {k: {f"{s} / {t}": summarise(r) for (s, t), r in sorted(v.items(), key=lambda kv: -len(kv[1])) if r} for k, v in out.items()}
     out["person, messages to agents"] = requests()
     if a.json:
-        json.dump(out, open(a.json, "w"), indent=1)
+        with open(a.json, "w") as f:
+            json.dump(out, f, indent=1)
     for label, groups in out.items():
         print(f"\n{label}")
         if label == "person, messages to agents":

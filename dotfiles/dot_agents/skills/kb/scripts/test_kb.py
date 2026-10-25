@@ -24,6 +24,12 @@ class Contract(unittest.TestCase):
         hits = kb.search("SlotConflictException", SOURCES[1:], "regex")
         self.assertEqual({h["source"] for h in hits}, {"dock-scheduler"})
 
+    def test_a_source_with_paths_searches_only_those_parts_of_its_root(self):
+        product = {"name": "product", "root": os.path.realpath(os.path.join(CORPUS, "product")), "paths": ["dock-scheduler"]}
+        paths = {h["path"] for h in kb.search("carrier", [product], "regex", 50)}
+        self.assertTrue(paths)
+        self.assertTrue(all(p.startswith("dock-scheduler/") for p in paths))
+
     def test_text_that_is_not_a_valid_regex_is_searched_as_written(self):
         hits = kb.search("SlotConflictException(", SOURCES, "regex")
         self.assertIn("src/slots.ts", [h["path"] for h in hits])
@@ -31,7 +37,8 @@ class Contract(unittest.TestCase):
     def test_the_command_line_prints_the_same_contract_as_json(self):
         sources = os.path.join(HERE, "fixtures", "sources-test.json")
         try:
-            json.dump({"sources": SOURCES}, open(sources, "w"))
+            with open(sources, "w") as f:
+                json.dump({"sources": SOURCES}, f)
             out = subprocess.run([sys.executable, "-B", os.path.join(HERE, "kb.py"), "search", "allocateSlot", "--mode", "regex",
                                   "--json", "--sources-file", sources], capture_output=True, text=True, check=True, stdin=subprocess.DEVNULL)
         finally:

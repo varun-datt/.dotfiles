@@ -11,6 +11,8 @@ Usage:
 
 Sources come from $KB_SOURCES, else ~/.config/kb/sources.json:
     {"sources": [{"name": "wiki", "root": "~/sandbox/wiki"}, {"name": "my-service", "root": "~/src/my-service"}]}
+A source may add "paths": ["docs", "notes"] to search only those parts of its root; ck then keeps
+one index inside each of them.
 
 Each hit is {source, path, line, end, title, snippet, score, engines}; path is relative to the source root.
 Modes:
@@ -35,7 +37,8 @@ def load_sources(path=None):
     path = path or os.environ.get("KB_SOURCES") or os.path.expanduser("~/.config/kb/sources.json")
     with open(path) as f:
         data = json.load(f)
-    return [{"name": s["name"], "root": os.path.realpath(os.path.expanduser(s["root"]))} for s in data["sources"]]
+    return [{"name": s["name"], "root": os.path.realpath(os.path.expanduser(s["root"])), "paths": s.get("paths") or ["."]}
+            for s in data["sources"]]
 
 
 def ck_binary():
@@ -55,11 +58,11 @@ def title_of(abs_path):
     return m.group(1).strip() if m else name
 
 
-def run_rg(query, root, limit):
+def run_rg(query, root, limit, paths=(".",)):
     base = ["rg", "--json", "-i", "--hidden", *sum((["-g", g] for g in SKIP), [])]
-    out = subprocess.run([*base, "-e", query, "."], cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    out = subprocess.run([*base, "-e", query, *paths], cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
     if out.returncode == 2 and "regex parse error" in out.stderr:
-        out = subprocess.run([*base, "-F", "-e", query, "."], cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        out = subprocess.run([*base, "-F", "-e", query, *paths], cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
     files = {}
     for line in out.stdout.splitlines():
         r = json.loads(line)
@@ -74,8 +77,8 @@ def run_rg(query, root, limit):
     return [{**h, "score": float(h.pop("count"))} for h in ranked]
 
 
-def run_ck(mode, query, root, limit, ck):
-    cmd = [ck, f"--{mode}", "--jsonl", "--topk", str(limit * 3), "--threshold", "0", "--hidden", query, "."]
+def run_ck(mode, query, root, limit, ck, paths=(".",)):
+    cmd = [ck, f"--{mode}", "--jsonl", "--topk", str(limit * 3), "--threshold", "0", "--hidden", query, *paths]
     out = subprocess.run(cmd, cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
     seen, hits = set(), []
     for line in out.stdout.splitlines():
@@ -135,7 +138,8 @@ def search(query, sources, mode="auto", limit=10):
 
     def one(job):
         src, engine = job
-        found = run_rg(query, src["root"], limit) if engine == "regex" else run_ck(engine, query, src["root"], limit, ck)
+        paths = src.get("paths") or ["."]
+        found = run_rg(query, src["root"], limit, paths) if engine == "regex" else run_ck(engine, query, src["root"], limit, ck, paths)
         return engine, [{**h, "source": src["name"]} for h in found]
 
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(jobs)))) as pool:

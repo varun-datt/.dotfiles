@@ -31,6 +31,7 @@ python3 ~/.agents/skills/kb/scripts/kb.py sources
 - **Sources file:** `~/.config/kb/sources.json`, or the path in `KB_SOURCES`. Shape:
   [`scripts/sources.example.json`](scripts/sources.example.json). It is data, not code: adding a
   source changes no script. Each source is searched in place and its ignore rules are honoured.
+  `paths` limits a source to some of its folders, for a root that holds other repositories.
 - **Engines:** `rg` is required. `ck` (BM25 and embeddings) is found on `PATH` or through `KB_CK`;
   without it every mode falls back to regex and says so. ck writes an index folder, `.ck/`, and a
   `.ckignore` file into each source's root, so keep both in that repository's ignore rules.

@@ -90,7 +90,8 @@ def group(rows, by):
 
 
 def run(engines):
-    cases = json.load(open(os.path.join(FIXTURES, "cases.json")))["queries"]
+    with open(os.path.join(FIXTURES, "cases.json")) as f:
+        cases = json.load(f)["queries"]
     tmp = tempfile.mkdtemp(prefix="kb-eval-")
     try:
         corpus = os.path.join(tmp, "corpus")
@@ -98,7 +99,8 @@ def run(engines):
         prefix = corpus_sources(corpus)
         sources = [{"name": n, "root": os.path.realpath(os.path.join(corpus, p))} for n, p in prefix.items()]
         sources_file = os.path.join(tmp, "sources.json")
-        json.dump({"sources": sources}, open(sources_file, "w"))
+        with open(sources_file, "w") as f:
+            json.dump({"sources": sources}, f)
         ck = kb.ck_binary()
         if ck and any(e.startswith("kb:") and e != "kb:regex" for e in engines):
             for s in sources:
@@ -140,7 +142,10 @@ def main(argv=None):
     p.add_argument("--check", action="store_true")
     p.add_argument("--write-baseline", action="store_true")
     a = p.parse_args(argv)
-    base = json.load(open(BASELINE)) if os.path.exists(BASELINE) else None
+    base = None
+    if os.path.exists(BASELINE):
+        with open(BASELINE) as f:
+            base = json.load(f)
     engines = a.engine or ([base["default"]] if a.check and base else [f"kb:{m}" for m in kb.MODES])
     if not kb.ck_binary():
         engines = [e for e in engines if not e.startswith("kb:") or e == "kb:regex"] or ["kb:regex"]
@@ -152,13 +157,15 @@ def main(argv=None):
         print()
         print_table({e: group(r, "class") for e, r in rows.items()})
     if a.json:
-        json.dump(results, open(a.json, "w"), indent=1)
+        with open(a.json, "w") as f:
+            json.dump(results, f, indent=1)
     if a.write_baseline:
         out = base or {"default": "kb:auto", "engines": {}}
         for e, r in results.items():
             out["engines"][e] = {k: {"hit5": v["hit5"], "hit1": v["hit1"]} for k, v in r["cells"].items()}
         out["recorded"] = time.strftime("%Y-%m-%d")
-        json.dump(out, open(BASELINE, "w"), indent=1)
+        with open(BASELINE, "w") as f:
+            json.dump(out, f, indent=1)
         print(f"baseline written for {', '.join(results)}")
     if a.check:
         if not base:
