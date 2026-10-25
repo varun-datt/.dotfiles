@@ -89,6 +89,18 @@ class Routing(unittest.TestCase):
         b = [{"source": "s", "path": "y"}, {"source": "s", "path": "z"}]
         self.assertEqual([h["path"] for h in kb.fuse([("regex", a), ("sem", b)])], ["y", "x", "z"])
 
+    def test_a_file_that_two_overlapping_folders_both_return_counts_once_per_engine(self):
+        src = {"name": "s", "root": SOURCES[0]["root"]}
+        jobs = [(src, "sem", "a"), (src, "sem", "b"), (src, "regex", None)]
+        sem = {"a": [{"path": "x.md", "score": 0.9}, {"path": "y.md", "score": 0.5}], "b": [{"path": "x.md", "score": 0.8}]}
+        with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
+             mock.patch.object(kb, "run_ck", side_effect=lambda engine, q, root, folder, limit, ck: sem[folder]), \
+             mock.patch.object(kb, "run_rg", return_value=[{"path": "z.md", "score": 1.0}]), \
+             mock.patch.object(kb, "title_of", return_value=""):
+            hits = {h["path"]: h for h in kb.search("q", [src], "fused", 3)}
+        self.assertEqual(set(hits), {"x.md", "y.md", "z.md"})
+        self.assertEqual(hits["x.md"]["score"], hits["z.md"]["score"])
+
     def test_a_folder_without_its_own_index_is_searched_by_regex(self):
         product = {"name": "product", "root": os.path.realpath(os.path.join(CORPUS, "product")), "paths": ["dock-scheduler", "route-planner"]}
         with tempfile.TemporaryDirectory() as empty, mock.patch.dict(os.environ, {"KB_INDEX_DIR": empty}):
