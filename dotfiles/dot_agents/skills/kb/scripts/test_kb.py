@@ -109,9 +109,12 @@ class Indexing(unittest.TestCase):
             jobs, unindexed = kb.plan("which carrier gets a dock door first", [product], "sem", kb.ck_binary())
             self.assertEqual((len(jobs), unindexed), (2, []))
             hits = kb.search("which carrier gets a dock door first", [product], "sem", 20)
+            config = kb.search("devDependencies typescript build script", [product], "lex", 50)
         self.assertTrue(hits)
         self.assertTrue(all(h["path"].split("/")[0] in product["paths"] for h in hits))
         self.assertEqual(glob.glob(os.path.join(root, "**", ".ck*"), recursive=True), [])
+        self.assertFalse([h["path"] for h in config if h["path"].endswith((".json", ".yaml"))])
+        self.assertIn("dock-scheduler/package.json", [h["path"] for h in kb.search("devDependencies", [product], "regex")])
 
 
 @unittest.skipUnless(kb.ck_binary(), "ck is not installed; set KB_CK to run the scenario suite")

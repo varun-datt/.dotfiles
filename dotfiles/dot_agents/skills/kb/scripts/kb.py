@@ -37,6 +37,12 @@ MODES = ("auto", "fused", "regex", "lex", "sem", "hybrid")
 SKIP = ("!.git/", "!.ck/", "!node_modules/")
 REGEX_SHAPE = re.compile(r"\||\\[bdswBDSW.]|\.\*|\.\+|^\^|\$$")
 INDEX_MARKER = "root_path"  # ck 0.8.1 records the indexed folder in this file of a relocated index
+# ck 0.8.1's default .ckignore, plus *.jsonl; passed as --exclude because --no-ckignore drops the file
+CK_EXCLUDES = ("*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.svg", "*.ico", "*.webp", "*.tiff", "*.mp4", "*.avi",
+               "*.mov", "*.mkv", "*.wmv", "*.flv", "*.webm", "*.mp3", "*.wav", "*.flac", "*.aac", "*.ogg", "*.m4a",
+               "*.exe", "*.dll", "*.so", "*.dylib", "*.a", "*.lib", "*.obj", "*.o", "*.zip", "*.tar", "*.tar.gz",
+               "*.tgz", "*.rar", "*.7z", "*.bz2", "*.gz", "*.db", "*.sqlite", "*.sqlite3", "*.parquet", "*.arrow",
+               "*.json", "*.yaml", "*.yml", "*.jsonl")
 
 
 def load_sources(path=None):
@@ -59,7 +65,8 @@ def ck_cmd(ck, opts, folder, query=None):
     """Run ck on exactly one folder: given several, ck indexes their common parent."""
     base = index_base()
     os.makedirs(base, exist_ok=True)
-    cmd = [ck, "--hidden", "--no-ckignore", *opts, "--", *([] if query is None else [query]), folder]
+    cmd = [ck, "--hidden", "--no-ckignore", *sum((["--exclude", p] for p in CK_EXCLUDES), []), *opts, "--",
+           *([] if query is None else [query]), folder]
     return subprocess.run(cmd, cwd=folder, env={**os.environ, "CK_INDEX_DIR": base}, capture_output=True, text=True,
                           stdin=subprocess.DEVNULL)
 

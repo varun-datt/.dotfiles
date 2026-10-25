@@ -42,6 +42,8 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
   `~/.cache/kb/ck`, or `KB_INDEX_DIR`, and writes nothing into the folder. `kb.py index` builds or
   refreshes them; run it after adding a source. Until a folder has one, kb searches it by regex and
   says so. A single file listed in `paths` is always searched by regex.
+  - Media, archives, databases, JSON, YAML and JSONL stay out of the meaning index (ck's own
+    defaults, passed as excludes); regex still searches them.
   - Why one ck run per folder: given several folders, ck 0.8.1 indexes their common parent (for a
     work folder holding product repos, all of them), and `ck --index A B` indexes only `B`.
 
