@@ -205,9 +205,9 @@ def search(query, sources, mode="auto", limit=10):
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(jobs)))) as pool:
         per_job = list(pool.map(one, jobs))
     merged = {}
-    for key, found in per_job:
-        merged.setdefault(key, []).extend(found)
-    rankings = [(engine, sorted(found, key=lambda h: -h["score"])[:limit]) for (_, engine), found in merged.items()]
+    for (_, engine), found in per_job:
+        merged.setdefault(engine, []).extend(found)
+    rankings = [(engine, sorted(found, key=lambda h: -h["score"])[:limit]) for engine, found in merged.items()]
     hits = fuse(rankings)[:limit]
     for h in hits:
         h["title"] = title_of(os.path.join(next(s["root"] for s in sources if s["name"] == h["source"]), h["path"]))

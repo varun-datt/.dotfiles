@@ -26,7 +26,8 @@ be measured again and the cases changed to follow it.
    `engines_for` in `kb.py` only after step 6 agrees.
 6. Check against real usage, in a temporary folder outside every repository: take the person's
    messages from the session store, label each with the knowledge files an agent first read in
-   that turn, copy the sources the labels come from, and score the modes there. Delete the copy
+   that turn, copy the sources the labels come from, and score the modes there, once with each
+   message limited to its own source and once with every source at once. Delete the copy
    afterwards. Real queries and paths never enter the fixtures.
 7. `python3 -B scripts/eval.py --write-baseline`, then update the measurement below with the date.
 
@@ -37,6 +38,16 @@ scored 69 of 75 there, but on 93 real messages it found 11 where embeddings alon
 mock requests were shorter and cleaner than real messages, and prose with a bracket or a `$` was
 routed as a regex. The request cases were lengthened to the measured profile and the regex test
 tightened; both checks then agreed (64 of 75 mock, 27 of 93 real).
+
+On 2026-10-25 the same 93 messages, scored against all three sources at once instead of each
+message's own, found 12 in the top 5 and never put the right file first. Results were merged per
+source, so each source's best hit tied at reciprocal rank 1 and the first source listed always won.
+Merging each engine's hits across sources by score first raised that to 27, with 10 first; scoring
+each message against its own source stayed at 29 (11 first). Step 6 now scores both ways.
+
+Of the 64 misses left, the first 15 read one by one were mostly label noise: the file an agent
+opened first was often a side errand (a message about a tool path labelled with an infographic
+draft). None of the 15 shared a query shape that a routing change would catch.
 
 ## Last measurement, 2026-10-24
 
