@@ -27,6 +27,7 @@ Canonical file. `~/.copilot/copilot-instructions.md` is a symlink to this, which
 - **Implementing** — iterate fast: one small change per turn, show it, and let me react before the next; don't deliberate at length first. Research, analysis, design and other deep work are different: once their scope is confirmed, let them run and reason as long as they need.
 - **Asking me to decide** — number the options and mark the one you recommend, with the reason, so I can answer with numbers.
 - **Starting a task** — say how it ends. If it will take more than a few minutes, confirm its scope first (what you will do and what you will not) and wait for a yes. If you stop early, leave it resumable and say exactly where you stopped; never leave half-applied edits or a silent blocker.
+- **Asked for an estimate, or left to work alone for a set time** — load the `estimating-work` skill. Estimate every item in minutes from its pace table, never by item count. For a window: plan 1.5 to 2 times its length in ordered tiers, take the owner's decisions before they leave, log the time and estimate against actual after each item, and stop only 30 minutes before the end or when every tier is empty. Report estimate against actual at the end.
 - **Telling the user a task is done** — if it produced a durable learning, gotcha, or settled decision, write it to `~/.agents/state/<workspace>/state.md` first, then say you did. When that path is a symlink to the repo's tracked `agents/state.md`, append there and commit only that file: `git commit --only agents/state.md`.
 
 ## Artifacts
