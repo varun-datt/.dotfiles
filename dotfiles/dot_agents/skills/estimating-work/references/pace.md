@@ -24,4 +24,4 @@ were estimated at 525 minutes and took 134.
 | Date | Window | Planned minutes | Actual minutes | Items done | Why it stopped |
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-24 | 6 h | none estimated, 12 items | 64 | 12 | Items ran out; half ended in a question for the owner |
-| 2026-10-25 | 6 h | 535 as planned, 13 rows | 134 for rows 1 to 12 | 12 by 05:38 | In progress |
+| 2026-10-25 | 6 h | 535 for 13 rows; 720 for 38 depth items | 142 for the rows; 219 for the depth items. The two sum past the 323 min elapsed, so logged item times overlap or round up | 13 rows and 38 depth items by 09:05 | Window end, 30 min kept for the wrap-up |
