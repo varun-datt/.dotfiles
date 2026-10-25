@@ -151,6 +151,25 @@ class UseMeasure(unittest.TestCase):
                               ("view", {"path": "/x/other.md"}, None)])
         self.assertEqual(facts, {"kb_ran": True, "kb_first": False, "results_seen": True, "opened_kb_file": False})
 
+    def test_a_file_whose_name_only_ends_like_a_returned_file_is_not_counted_as_opened(self):
+        import kb_use
+        facts = kb_use.score([("bash", {"command": "kb search slot"}, "work:b.md:1  B"),
+                              ("view", {"path": "/x/web.md"}, None)])
+        self.assertFalse(facts["opened_kb_file"])
+
+    def test_a_folder_that_only_starts_like_a_source_root_is_not_in_it(self):
+        import kb_use
+        roots = [("/repos/wiki", "wiki")]
+        self.assertEqual(kb_use.space_of("/repos/wiki/notes", roots), "wiki")
+        self.assertEqual(kb_use.space_of("/repos/wiki-backup", roots), "other")
+
+    def test_a_window_with_no_requests_prints_a_row_of_zeros(self):
+        import kb_use
+        with mock.patch.object(kb_use, "vscode_requests", return_value=iter(())), mock.patch.object(kb_use, "cli_requests", return_value=iter(())), \
+             mock.patch.object(kb_use.kb, "load_sources", return_value=[]), mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.assertEqual(kb_use.main([]), 0)
+        self.assertIn("all", out.getvalue())
+
 
 class Hook(unittest.TestCase):
     def setUp(self):

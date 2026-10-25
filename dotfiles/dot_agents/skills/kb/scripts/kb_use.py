@@ -68,7 +68,7 @@ def score(calls):
         if i in kb_at and isinstance(result, str):
             out["results_seen"] = True
             returned |= {p for p in PATH.findall(result) if "/" in p or p.endswith(".md")}
-        elif returned and any(p.endswith(r) or r.endswith(p) for p in opened_paths(name, args) for r in returned):
+        elif returned and any(p == r or p.endswith("/" + r) or r.endswith("/" + p) for p in opened_paths(name, args) for r in returned):
             out["opened_kb_file"] = True
     return out
 
@@ -156,6 +156,13 @@ def cli_requests():
             yield current
 
 
+def space_of(folder, roots):
+    if not folder:
+        return "other"
+    folder = os.path.realpath(folder)
+    return next((n for r, n in roots if folder == r or folder.startswith(r.rstrip(os.sep) + os.sep)), "other")
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--since", help="only requests on or after this date (YYYY-MM-DD)")
@@ -168,20 +175,19 @@ def main(argv=None):
     except OSError:
         sources = []
     roots = sorted(((os.path.realpath(os.path.expanduser(s["root"])), s["name"]) for s in sources), key=lambda x: -len(x[0]))
-    space_of = lambda folder: next((n for r, n in roots if folder and os.path.realpath(folder).startswith(r)), "other")  # noqa: E731
 
     groups = defaultdict(lambda: defaultdict(int))
     for req in (*vscode_requests(), *cli_requests()):
         if since and (req["at"] is None or req["at"] < since):
             continue
         facts = score([tuple(c) for c in req["calls"]])
-        g = groups[(req["app"], space_of(req["folder"]))]
+        g = groups[(req["app"], space_of(req["folder"], roots))]
         g["requests"] += 1
         g["with_tools"] += bool(req["calls"])
         for k, v in facts.items():
             g[k] += v
     rows = [{"app": app, "space": space, **g} for (app, space), g in sorted(groups.items(), key=lambda kv: -kv[1]["requests"])]
-    total = defaultdict(int)
+    total = defaultdict(int, dict.fromkeys(("requests", "with_tools", "kb_ran", "kb_first", "results_seen", "opened_kb_file"), 0))
     for r in rows:
         for k, v in r.items():
             if isinstance(v, int):
