@@ -1,6 +1,6 @@
 ---
 name: visual-house-style
-description: "House rules for anything visual someone will look at: decks, HTML pages and reports, infographics, diagrams, images and video. Audience approach (plain or metaphor-led), slide versus notes, numbers and baselines, honest charts, one meaning per encoding, neutral option comparisons, checking the render. Use when creating, restructuring or reviewing any of these, alongside the format skill."
+description: "House rules for anything visual someone will look at: decks, HTML pages and reports, infographics, diagrams, images and video, and the screens of apps and dashboards. Audience approach (plain or metaphor-led), slide versus notes, numbers and baselines, honest charts, one meaning per encoding, neutral option comparisons, exception-based attention and interaction patterns, checking the render. Use when creating, restructuring or reviewing any of these, alongside the format skill."
 ---
 
 # Visual house style
@@ -66,6 +66,13 @@ These rules hold for every format. The format skill (`pptx`, `visual-explainer`,
 - When one outlier would dominate a small chart: cap the axis at the normal range, draw break marks on the clipped bar, print its true value, explain it in the notes.
 - When the point is a step change, draw each period's median as a labelled dashed line.
 - A proxy is not the measure: a count of sampled intervals in which something happened is not how long it lasted. Use the measure the claim is about, or name the proxy.
+
+## Screens people work in
+
+- Attention is exception-based: a normal state is quiet or absent, and colour, motion, badges,
+  sound and notifications go only to what needs the person. Where that stops applying (the
+  person's own action, a monitor that may have died, newcomers, supervised automation) and the
+  patterns that go with it: [references/attention-and-interaction.md](references/attention-and-interaction.md).
 
 ## Before calling it done
 

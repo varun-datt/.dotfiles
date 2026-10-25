@@ -55,3 +55,4 @@ Read the repository's `Layout:` line in its `AGENTS.md` first; its own named hom
 - Never: neon cyan on dark, gradient mesh, or the violet family (`#8b5cf6`, `#7c3aed`, `#a78bfa`, `#d946ef`).
 - Palette and type hold across genres; layout does not.
 - Check text contrast against its background (WCAG AA) wherever the palette is applied.
+- Attention is exception-based: a normal state is quiet; colour, motion, badges and sound go only to what needs me. Rules, and where they stop applying: `visual-house-style`, [attention-and-interaction](skills/visual-house-style/references/attention-and-interaction.md).
