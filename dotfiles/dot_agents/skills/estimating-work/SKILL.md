@@ -27,6 +27,11 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    - every decision the planned items need. A UX decision not taken is built as the recommended
      option, chosen from human-factors research (the `visual-house-style` skill's attention and
      interaction rules), and flagged for review.
+   - one budget for paid live runs (a real engine that spends the owner's credits): estimate each
+     item's paid calls (messages, side questions, summaries, workers it starts) and the runs they
+     group into, and ask once. Runs inside the approved budget need no further ask; ask again only
+     to go over it (owner, 2026-10-25: "do not ask before each live Copilot run, ask approximate
+     whatever you need upfront").
 3. Split the work into items that each end in a commit or a finished artifact, not in a question.
    One feature at a time, its tests and doc updates inside it.
 4. Give each item a kind from [references/pace.md](references/pace.md) and an estimate with its
@@ -53,6 +58,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   --run <run>` before it (an enabler adds `--serves <feature id>`), `estimates.py end --id <id>`
   after its commit. Never work out minutes by hand.
 - Re-run the forecast after each item, and move the overflow line if it shifts.
+- Count each live run's paid calls against the approved budget, and ask before a run that would
+  go over it.
 - When a feature turns out to need an enabler (a fix, a spike, some debt), take the enabler next and
   re-forecast; never hold it back to keep the mix.
 - Carry each item to completion or to a blocker (owner, 2026-10-25). Where a case is unclear, let
