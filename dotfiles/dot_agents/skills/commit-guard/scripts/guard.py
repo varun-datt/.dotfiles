@@ -101,16 +101,21 @@ def findings(lines, rules):
 
 
 def gitleaks():
+    run = lambda cmd: subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    cmd = None
     exe = shutil.which("gitleaks")
-    cmd = [exe] if exe else None
-    if not cmd and shutil.which("mise"):
-        v = subprocess.run(["mise", "ls", "--installed", "gitleaks"], capture_output=True, text=True, stdin=subprocess.DEVNULL).stdout.split()
+    if exe and run([exe, "version"]).returncode == 0:
+        cmd = [exe]
+    elif shutil.which("mise"):
+        v = run(["mise", "ls", "--installed", "gitleaks"]).stdout.split()
         cmd = ["mise", "x", f"gitleaks@{v[1]}", "--", "gitleaks"] if len(v) >= 2 else None
     if not cmd:
         return "gitleaks is not installed (mise use -g gitleaks)"
-    r = subprocess.run([*cmd, "git", "--staged", "--redact", "--no-banner", "--log-level", "warn"], capture_output=True, text=True,
-                       stdin=subprocess.DEVNULL)
-    return None if r.returncode == 0 else "gitleaks found a secret in the staged changes (run it with --verbose to see where)"
+    r = run([*cmd, "git", "--staged", "--redact", "--no-banner", "--log-level", "warn"])
+    if r.returncode == 0:
+        return None
+    last = (r.stderr or r.stdout).strip().splitlines()[-1:] or ["no output"]
+    return f"gitleaks refused the staged changes (exit {r.returncode}): {last[0][:200]}"
 
 
 def main(argv=None):
