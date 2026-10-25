@@ -7,17 +7,18 @@ with fewer than 5 items is estimated by counting rounds instead (SKILL.md, step 
 
 | Kind | Items | P50 (min) | P90 (min) | What it covers |
 | --- | --- | --- | --- | --- |
-| feature | 6 | 9 | 29 | A backlog feature with its tests; P90 is a dialog with drag and keyboard |
-| fix | 17 | 5 | 6 | A bug or gap fixed, with a test that fails on the old code |
-| review | 11 | 8 | 12 | One second-model review round and its fixes |
+| feature | 9 | 9 | 29 | A backlog feature with its tests; P90 is a dialog with drag and keyboard |
+| fix | 21 | 5 | 7.1 | A bug or gap fixed, with a test that fails on the old code |
+| review | 14 | 8 | 16 | One second-model review round and its fixes |
 | check | 5 | 4 | 6 | Screenshots, a probe, verification without a change |
 | test | 3 | 5 | 8 | Making existing tests able to fail |
 | tooling | 3 | 6 | 7 | A dotfiles script, config or re-index |
-| research | 2 | 4 | 8 | A short research note |
+| research | 4 | 6.3 | 24 | A short research note or spike |
+| docs | 3 | 0.2 | 1 | A rule or note edited and committed; counts rounds until 5 items |
 | live-check | 1 | 5 | 5 | Live agent runs against a real engine |
 | rerun | 1 | 17 | 17 | A quality rerun over real requests and its fix |
 
-Measured on 2026-10-25 (49 items). Earlier rows from 2026-10-24, not yet in the log: a skill with
+Measured on 2026-10-25 (63 items, regenerated after the 1-hour window). Earlier rows from 2026-10-24, not yet in the log: a skill with
 tests 4 minutes, a spike with 3 live runs 10, a migration rehearsal on a clone 17; about 300 model
 turns an hour.
 
@@ -30,3 +31,4 @@ this table existed, because the table was read but not used as the estimate.
 | --- | --- | --- | --- | --- | --- |
 | 2026-10-24 | 6 h | none estimated, 12 items | 64 | 12 | Items ran out; half ended in a question for the owner |
 | 2026-10-25 | 6 h | 535 for 13 rows; 720 for 38 depth items | 142 for the rows; 219 for the depth items. The two sum past the 323 min elapsed, so logged item times overlap or round up | 13 rows and 38 depth items by 09:05 | Window end, 30 min kept for the wrap-up |
+| 2026-10-25 | 1 h | 41 at P50 (60 at P90) for 6 items, from history and rounds | 37.6 for 7 items (one review round more than planned) | 5 of 6, plus a second review round; the 67 build moved to overflow | Stop time 14:45 with a 10-min wrap-up; the next item's P90 would not fit |
