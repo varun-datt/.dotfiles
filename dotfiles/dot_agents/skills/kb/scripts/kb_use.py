@@ -32,6 +32,7 @@ READ_ARG = {"read_file": "filePath", "view": "path", "read": "path", "str_replac
 IGNORED = {"manage_todo_list", "memory", "vscode_askQuestions", "tool_search", "report_intent", "think", "update_todo"}
 PATH = re.compile(r"(?:[\w.@-]+/)*[\w@-][\w.@-]*\.[A-Za-z]\w{0,5}\b")
 HIT = re.compile(r"^\s*([\w.@-]+):([^\s:]+):\d+", re.M)
+OPENED = re.compile(r"(?:~?/)?" + PATH.pattern + r"(?::\d+){0,2}")
 
 
 def parse_args_text(text):
@@ -54,7 +55,7 @@ def opened_paths(name, args):
         return [args[READ_ARG[name]]]
     command = args.get(SHELL_ARG.get(name, ""), "")
     if isinstance(command, str) and re.search(r"\b(cat|sed|head|tail|less|bat|nl)\b", command):
-        return PATH.findall(command)
+        return OPENED.findall(command)
     return []
 
 
@@ -64,13 +65,15 @@ def returned_files(result, root_of):
         pairs = [(h.get("source"), h.get("path")) for h in v if isinstance(h, dict)] if isinstance(v, list) else []
     except ValueError:
         pairs = HIT.findall(result)
-    known = {(s, p) for s, p in pairs if s in root_of and isinstance(p, str)}
-    full = {os.path.realpath(os.path.join(root_of[s], p)) for s, p in known}
-    loose = {p for p in PATH.findall(result) if "/" in p or p.endswith(".md")} - {p for _, p in known}
-    return full, loose
+    pairs = [(s, p) for s, p in pairs if isinstance(p, str)]
+    full = {os.path.realpath(os.path.join(root_of[s], p)) for s, p in pairs if s in root_of}
+    if pairs:
+        return full, {p for s, p in pairs if s not in root_of}
+    return full, {p for p in PATH.findall(result) if "/" in p or p.endswith(".md")}
 
 
 def resolved(path, folder):
+    path = os.path.expanduser(re.sub(r"(?::\d+){1,2}$", "", path))
     if not os.path.isabs(path):
         if not folder:
             return None
