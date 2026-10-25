@@ -70,6 +70,8 @@ def answer(event, data):
         hits = kb_hits(data.get("prompt") or "", cwd)
         content = data.get("transformedPrompt")
         if hits and isinstance(content, str) and content:
+            if os.path.exists(state_path(data)):
+                os.remove(state_path(data))
             return {"modifiedTransformedPrompt": f"{content}\n\n{hits}"}, "hits"
         return {}, ""
     if event in ("userpromptsubmitted", "userpromptsubmit"):

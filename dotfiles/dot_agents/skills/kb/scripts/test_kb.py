@@ -186,6 +186,14 @@ class Hook(unittest.TestCase):
             second = self.run_hook("postToolUse", {"sessionId": "s1", "toolName": "grep", "toolArgs": {}})
         self.assertEqual((first, second), ({"additionalContext": "HITS"}, {}))
 
+    def test_a_message_that_carried_hits_gets_none_after_its_first_search(self):
+        data = {"sessionId": "s2", "prompt": "why does the dock retry fail", "cwd": "/tmp"}
+        with mock.patch.dict(os.environ, {"KB_HOOK_HITS": "1"}), mock.patch.object(self.hook, "kb_hits", return_value="HITS"):
+            self.run_hook("userPromptSubmitted", data)
+            self.run_hook("userPromptTransformed", {**data, "transformedPrompt": "<msg>why</msg>"})
+            after = self.run_hook("postToolUse", {"sessionId": "s2", "toolName": "grep", "toolArgs": {}})
+        self.assertEqual(after, {})
+
 
 if __name__ == "__main__":
     unittest.main()
