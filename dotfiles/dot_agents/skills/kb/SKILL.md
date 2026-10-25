@@ -1,0 +1,57 @@
+---
+name: kb
+description: "Searches the knowledge and code sources listed in ~/.config/kb/sources.json (a personal wiki, a work knowledge repo, product repos) by pattern or by meaning, through one JSON contract. Use to find notes, decisions, runbooks or code across those sources, or to look something up from a person's question. Inside the folder you are already working in, your own search tools are enough."
+argument-hint: "<query> [--source NAME] [--mode auto|regex|lex|sem|hybrid|fused]"
+---
+
+# kb
+
+One search over every source in the sources file. Agents, scripts and the AMC app call the same
+command and get the same fields back, so the engine behind it can change without changing callers.
+
+## Use it
+
+```sh
+python3 ~/.agents/skills/kb/scripts/kb.py search "<query>" [--source NAME ...] [--json]
+python3 ~/.agents/skills/kb/scripts/kb.py sources
+```
+
+- **Query as you would think it.** `auto`, the default, picks engines by the query's shape, as the
+  scenario suite measured:
+  - a regex (`RetryPolicy|maxAttempts`, `\bDLQ\b`) runs ripgrep;
+  - up to three words (`DLQ`, `dwell report`, an identifier) runs ripgrep and BM25;
+  - a longer question or a person's whole message runs search by meaning.
+- `--mode regex` forces an exact pattern; `lex`, `sem`, `hybrid` and `fused` force one engine.
+- `--source` limits the search; repeat it for more. Names come from the sources file.
+- **Each hit:** `{source, path, line, end, title, snippet, score, engines}`. `path` is relative to
+  the source's root; `line` and `end` bound the matching lines; `engines` says which engines found it.
+
+## Set up
+
+- **Sources file:** `~/.config/kb/sources.json`, or the path in `KB_SOURCES`. Shape:
+  [`scripts/sources.example.json`](scripts/sources.example.json). It is data, not code: adding a
+  source changes no script. Each source is searched in place and its ignore rules are honoured.
+- **Engines:** `rg` is required. `ck` (BM25 and embeddings) is found on `PATH` or through `KB_CK`;
+  without it every mode falls back to regex and says so. ck writes an index folder, `.ck/`, and a
+  `.ckignore` file into each source's root, so keep both in that repository's ignore rules.
+
+## Test it
+
+- `python3 -B scripts/test_kb.py`: the contract, the routing and, when ck is present, the scenario
+  suite against its baseline.
+- `python3 -B scripts/eval.py --by class`: hit@1, hit@5, MRR and latency for every space (wiki,
+  work, product) and caller (palette, agent, request), and for each case class.
+- The cases and corpus in `scripts/fixtures/` are invented (a fictional freight company); their mix
+  copies measured real usage. Never add real content to them.
+
+## Change the engine
+
+Any tool that prints this contract can be scored: `eval.py --engine "cmd:<command>"` runs
+`<command> QUERY SOURCES` with `KB_SOURCES` set. A replacement must hold `baseline.json` in every
+cell (`eval.py --check`) before it becomes the default. When AMC takes the search over, its command
+is scored the same way.
+
+## Keep the cases current
+
+Usage drifts, so the mix of cases must follow it:
+[`references/refreshing-cases.md`](references/refreshing-cases.md).

@@ -1,0 +1,18 @@
+route:
+  plan-deadline-ms: 4000
+  retry:
+    max-attempts: 3
+    base-delay-ms: 200
+    max-delay-ms: 2000
+    jitter: full
+  eta:
+    model-v2: false
+
+carrier:
+  timeout-ms: 1500
+  base-url: https://carrier-gateway.example.internal
+  carriers:
+    - id: northline
+      enabled: true
+    - id: ridgeway
+      enabled: true

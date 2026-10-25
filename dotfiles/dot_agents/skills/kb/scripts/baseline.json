@@ -1,0 +1,234 @@
+{
+ "default": "kb:auto",
+ "engines": {
+  "kb:auto": {
+   "product/agent": {
+    "hit5": 14,
+    "hit1": 8
+   },
+   "product/palette": {
+    "hit5": 4,
+    "hit1": 0
+   },
+   "product/request": {
+    "hit5": 6,
+    "hit1": 2
+   },
+   "wiki/agent": {
+    "hit5": 4,
+    "hit1": 3
+   },
+   "wiki/palette": {
+    "hit5": 2,
+    "hit1": 2
+   },
+   "wiki/request": {
+    "hit5": 3,
+    "hit1": 1
+   },
+   "work/agent": {
+    "hit5": 9,
+    "hit1": 8
+   },
+   "work/palette": {
+    "hit5": 14,
+    "hit1": 8
+   },
+   "work/request": {
+    "hit5": 8,
+    "hit1": 3
+   }
+  },
+  "kb:fused": {
+   "product/agent": {
+    "hit5": 14,
+    "hit1": 8
+   },
+   "product/palette": {
+    "hit5": 5,
+    "hit1": 0
+   },
+   "product/request": {
+    "hit5": 6,
+    "hit1": 2
+   },
+   "wiki/agent": {
+    "hit5": 4,
+    "hit1": 2
+   },
+   "wiki/palette": {
+    "hit5": 2,
+    "hit1": 1
+   },
+   "wiki/request": {
+    "hit5": 3,
+    "hit1": 1
+   },
+   "work/agent": {
+    "hit5": 9,
+    "hit1": 8
+   },
+   "work/palette": {
+    "hit5": 13,
+    "hit1": 10
+   },
+   "work/request": {
+    "hit5": 8,
+    "hit1": 3
+   }
+  },
+  "kb:regex": {
+   "product/agent": {
+    "hit5": 14,
+    "hit1": 8
+   },
+   "product/palette": {
+    "hit5": 4,
+    "hit1": 0
+   },
+   "product/request": {
+    "hit5": 0,
+    "hit1": 0
+   },
+   "wiki/agent": {
+    "hit5": 4,
+    "hit1": 3
+   },
+   "wiki/palette": {
+    "hit5": 1,
+    "hit1": 1
+   },
+   "wiki/request": {
+    "hit5": 0,
+    "hit1": 0
+   },
+   "work/agent": {
+    "hit5": 9,
+    "hit1": 8
+   },
+   "work/palette": {
+    "hit5": 14,
+    "hit1": 11
+   },
+   "work/request": {
+    "hit5": 0,
+    "hit1": 0
+   }
+  },
+  "kb:lex": {
+   "product/agent": {
+    "hit5": 9,
+    "hit1": 6
+   },
+   "product/palette": {
+    "hit5": 4,
+    "hit1": 0
+   },
+   "product/request": {
+    "hit5": 4,
+    "hit1": 1
+   },
+   "wiki/agent": {
+    "hit5": 2,
+    "hit1": 2
+   },
+   "wiki/palette": {
+    "hit5": 1,
+    "hit1": 1
+   },
+   "wiki/request": {
+    "hit5": 2,
+    "hit1": 0
+   },
+   "work/agent": {
+    "hit5": 6,
+    "hit1": 5
+   },
+   "work/palette": {
+    "hit5": 15,
+    "hit1": 6
+   },
+   "work/request": {
+    "hit5": 7,
+    "hit1": 3
+   }
+  },
+  "kb:sem": {
+   "product/agent": {
+    "hit5": 14,
+    "hit1": 9
+   },
+   "product/palette": {
+    "hit5": 3,
+    "hit1": 2
+   },
+   "product/request": {
+    "hit5": 6,
+    "hit1": 2
+   },
+   "wiki/agent": {
+    "hit5": 3,
+    "hit1": 1
+   },
+   "wiki/palette": {
+    "hit5": 2,
+    "hit1": 0
+   },
+   "wiki/request": {
+    "hit5": 3,
+    "hit1": 1
+   },
+   "work/agent": {
+    "hit5": 8,
+    "hit1": 5
+   },
+   "work/palette": {
+    "hit5": 6,
+    "hit1": 0
+   },
+   "work/request": {
+    "hit5": 8,
+    "hit1": 3
+   }
+  },
+  "kb:hybrid": {
+   "product/agent": {
+    "hit5": 14,
+    "hit1": 11
+   },
+   "product/palette": {
+    "hit5": 3,
+    "hit1": 2
+   },
+   "product/request": {
+    "hit5": 6,
+    "hit1": 2
+   },
+   "wiki/agent": {
+    "hit5": 4,
+    "hit1": 2
+   },
+   "wiki/palette": {
+    "hit5": 2,
+    "hit1": 0
+   },
+   "wiki/request": {
+    "hit5": 3,
+    "hit1": 1
+   },
+   "work/agent": {
+    "hit5": 9,
+    "hit1": 7
+   },
+   "work/palette": {
+    "hit5": 10,
+    "hit1": 0
+   },
+   "work/request": {
+    "hit5": 7,
+    "hit1": 5
+   }
+  }
+ },
+ "recorded": "2026-10-24"
+}
