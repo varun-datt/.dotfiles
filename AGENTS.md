@@ -1,5 +1,7 @@
 # Notes for AI agents
 
+**Layout: standalone.** `README.md` says what this is; `docs/` holds one page per topic too long for the README; procedures are skills. Where any kind of knowledge goes: [docs/knowledge-layout.md](docs/knowledge-layout.md).
+
 ## Comments
 
 Don't over-comment. Keep inline comments minimal and only where the code itself can't make intent clear. If there's an important "why" worth capturing (rationale, trade-offs, non-obvious design decisions), put it in [README.md](README.md) — not scattered across the dotfiles. The code should stay clean; the README is the single place for the reasoning. A topic too long for the README gets one page in `docs/`, linked from the README in one line ([Conventions](README.md#conventions)).

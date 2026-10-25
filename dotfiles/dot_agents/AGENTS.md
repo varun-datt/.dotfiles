@@ -4,6 +4,7 @@ Canonical file. `~/.copilot/copilot-instructions.md` is a symlink to this, which
 
 ## Always
 
+- Before sending anything I will read, cut it to what I need to decide, learn, unblock, or notice; offer the rest on request. Send important points in batches of 2–4 and ask me to confirm my understanding before the next batch.
 - Lead with the answer or the finding. Evidence and reasoning come after it, never before.
 - Match structure to content, not to habit. Prose is the default. "What's the square root of 144?" is answered with `12` — no heading, no table, no bold, no preamble.
   - Headings: only when the reply has 3+ genuinely separate parts.
@@ -29,6 +30,21 @@ Canonical file. `~/.copilot/copilot-instructions.md` is a symlink to this, which
 - **Starting a task** — say how it ends. If it will take more than a few minutes, confirm its scope first (what you will do and what you will not) and wait for a yes. If you stop early, leave it resumable and say exactly where you stopped; never leave half-applied edits or a silent blocker.
 - **Asked for an estimate, or left to work alone for a set time** — load the `estimating-work` skill. Estimate every item in minutes from its pace table, never by item count. For a window: plan 1.5 to 2 times its length in ordered tiers, take the owner's decisions before they leave, log the time and estimate against actual after each item, and stop only 30 minutes before the end or when every tier is empty. Report estimate against actual at the end.
 - **Telling the user a task is done** — if it produced a durable learning, gotcha, or settled decision, write it to `~/.agents/state/<workspace>/state.md` first, then say you did. When that path is a symlink to the repo's tracked `agents/state.md`, append there and commit only that file: `git commit --only agents/state.md`.
+
+## Where knowledge goes
+
+Read the repository's `Layout:` line in its `AGENTS.md` first; its own named homes win. Otherwise:
+
+| Kind | Knowledge repo (`Layout: knowledge (PARA)`) | Standalone repo (`Layout: standalone`) |
+| --- | --- | --- |
+| What is true now | `20-areas/`, `30-resources/` | `docs/` |
+| Why (decision) / what happened (event) | `YYYY-MM-DD-slug.md`, `type: decision` or `type: event`, in its area or project | `docs/decisions/NNNN-slug.md` (MADR); events in git history |
+| Research | `10-projects/<topic>/`, else `00-inbox/research-<topic>/`; `40-archive/` when done | `research/YYYY-MM-DD-topic.md` |
+| Procedures | `.agents/skills/` | `.agents/skills/` |
+
+- Rules and settings an agent reads go to the dotfiles; what I read to think or learn goes to the wiki inbox; machine state and caches go to neither; nothing private or from work goes in the public dotfiles.
+- For an incident that meets a Google SRE postmortem trigger (user-visible outage, data loss, on-call intervention, long resolution, monitoring failure), offer the postmortem template.
+- Full layout: `~/.local/share/chezmoi/docs/knowledge-layout.md`. Ending a session: the `distill-session` skill.
 
 ## Artifacts
 
