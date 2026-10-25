@@ -75,3 +75,15 @@ and per helper task, whether kb ran, whether it ran before any other tool, and w
 then opened a file kb returned; by app (VS Code, its helpers, Copilot CLI, AMC) and by source.
 It reads the apps' local logs read-only and prints counts only. Keep each run's JSON outside any
 repository, so later runs can be compared with it.
+
+## Hook
+
+`~/.copilot/hooks/kb-note.json` runs `scripts/kb_hook.py` when a session or a helper agent starts
+(Copilot CLI, the Copilot app and VS Code read that folder) and hands the agent a short note to
+use kb; Copilot CLI's explore helper does not get the personal instructions, so this is how the
+note reaches it. Delete the hook file, and `chezmoi forget` it, to turn the note off.
+
+With `KB_HOOK_HITS=1` in a hook entry's `env`, the same script also hands over kb's top 3 hits for
+the person's message: appended to the message (`userPromptTransformed`), or after the agent's first
+search (`postToolUse`, with `userPromptSubmitted` to remember the message). An experiment; the
+installed hook file does not turn it on.

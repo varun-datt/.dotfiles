@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {"type": "command", "bash": "python3 -B \"$HOME/.agents/skills/kb/scripts/kb_hook.py\" sessionStart", "timeoutSec": 10}
+    ],
+    "subagentStart": [
+      {"type": "command", "bash": "python3 -B \"$HOME/.agents/skills/kb/scripts/kb_hook.py\" subagentStart", "timeoutSec": 10}
+    ]
+  }
+}

@@ -140,5 +140,52 @@ class UseMeasure(unittest.TestCase):
         self.assertEqual(facts, {"kb_ran": True, "kb_first": False, "results_seen": True, "opened_kb_file": False})
 
 
+class Hook(unittest.TestCase):
+    def setUp(self):
+        import kb_hook
+        self.hook = kb_hook
+        self.state = tempfile.mkdtemp()
+        self.env = mock.patch.dict(os.environ, {"KB_HOOK_STATE": self.state}, clear=False)
+        self.env.start()
+        mock.patch.object(kb_hook, "STATE", self.state).start()
+        self.addCleanup(mock.patch.stopall)
+        self.addCleanup(self.env.stop)
+
+    def run_hook(self, event, data):
+        with mock.patch("sys.stdin", io.StringIO(json.dumps(data))), mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.hook.main(["kb_hook.py", event])
+        return json.loads(out.getvalue())
+
+    def test_the_note_in_the_copilot_shape_and_the_local_shape(self):
+        self.assertEqual(self.run_hook("subagentStart", {"agentName": "explore"}), {"additionalContext": self.hook.NOTE})
+        local = self.run_hook("SessionStart", {"hook_event_name": "SessionStart"})
+        self.assertEqual(local["hookSpecificOutput"]["additionalContext"], self.hook.NOTE)
+
+    def test_hits_stay_off_unless_asked_for(self):
+        os.environ.pop("KB_HOOK_HITS", None)
+        with mock.patch.object(self.hook, "kb_hits", return_value="HITS") as hits:
+            self.assertEqual(self.run_hook("userPromptTransformed", {"prompt": "why does the dock retry fail", "transformedPrompt": "x"}), {})
+        hits.assert_not_called()
+
+    def test_hits_are_appended_to_the_message_without_changing_it(self):
+        with mock.patch.dict(os.environ, {"KB_HOOK_HITS": "1"}), mock.patch.object(self.hook, "kb_hits", return_value="HITS"):
+            out = self.run_hook("userPromptTransformed", {"prompt": "p", "transformedPrompt": "<msg>why</msg>"})
+        self.assertEqual(out, {"modifiedTransformedPrompt": "<msg>why</msg>\n\nHITS"})
+
+    def test_a_short_reply_or_a_slash_command_is_not_searched(self):
+        with mock.patch("subprocess.run") as run:
+            self.assertEqual(self.hook.kb_hits("yes go ahead", "/tmp"), "")
+            self.assertEqual(self.hook.kb_hits("/compact the whole session now", "/tmp"), "")
+        run.assert_not_called()
+
+    def test_hits_follow_only_the_first_search_after_a_message(self):
+        with mock.patch.dict(os.environ, {"KB_HOOK_HITS": "1"}), mock.patch.object(self.hook, "kb_hits", return_value="HITS"):
+            self.run_hook("userPromptSubmitted", {"sessionId": "s1", "prompt": "why does the dock retry fail", "cwd": "/tmp"})
+            self.assertEqual(self.run_hook("postToolUse", {"sessionId": "s1", "toolName": "view", "toolArgs": {}}), {})
+            first = self.run_hook("postToolUse", {"sessionId": "s1", "toolName": "bash", "toolArgs": {"command": "rg -n retry src"}})
+            second = self.run_hook("postToolUse", {"sessionId": "s1", "toolName": "grep", "toolArgs": {}})
+        self.assertEqual((first, second), ({"additionalContext": "HITS"}, {}))
+
+
 if __name__ == "__main__":
     unittest.main()
