@@ -49,5 +49,5 @@ A decision note uses MADR's sections: context, decision, why (with the options p
 
 - My personal `AGENTS.md` carries a short routing table: which kind of knowledge goes where, and the rule to read a repository's `Layout:` line first.
 - Each repository's `AGENTS.md` has its `Layout:` line and links its own homes.
-- The `distill-session` skill applies the layout when a session ends ([references/layout.md](../dotfiles/dot_agents/skills/distill-session/references/layout.md)).
+- The `distill` skill applies the layout when a session ends ([references/layout.md](../dotfiles/dot_agents/skills/distill/references/layout.md)).
 - A pre-commit check in this repository blocks secrets and employer identifiers. Agent hooks wait until use shows a need.

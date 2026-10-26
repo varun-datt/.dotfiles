@@ -1,6 +1,6 @@
 # Distillation: what to keep, where it goes
 
-How I turn finished work (an agent session, a research effort, a project) into records that someone, human or agent, will actually use later, and how the `distill-session` skill applies that. Researched on 2026-10-23 from 19 web searches and 21 pages; one page (BetterEvaluation on after-action reviews) could not be read.
+How I turn finished work (an agent session, a research effort, a project) into records that someone, human or agent, will actually use later, and how the `distill` skill (named `distill-session` until 2026-10-25) applies that. Researched on 2026-10-23 from 19 web searches and 21 pages; one page (BetterEvaluation on after-action reviews) could not be read.
 
 How each statement is known: a link means it comes from that source; **(inferred)** means my reasoning from those sources; **OPEN** means not yet settled.
 

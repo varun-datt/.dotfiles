@@ -45,7 +45,7 @@ Read the repository's `Layout:` line in its `AGENTS.md` first; its own named hom
 
 - Rules and settings an agent reads go to the dotfiles; what I read to think or learn goes to the wiki inbox; machine state and caches go to neither; nothing private or from work goes in the public dotfiles.
 - For an incident that meets a Google SRE postmortem trigger (user-visible outage, data loss, on-call intervention, long resolution, monitoring failure), offer the postmortem template.
-- Full layout: `~/.local/share/chezmoi/docs/knowledge-layout.md`. Ending a session: the `distill-session` skill.
+- Full layout: `~/.local/share/chezmoi/docs/knowledge-layout.md`. Ending a session: the `distill` skill.
 
 ## Artifacts
 

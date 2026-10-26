@@ -1,11 +1,23 @@
 ---
-name: distill-session
-description: Distills a finished or paused agent session into lasting records. Workspace knowledge goes into the repository's own homes (or a standard layout it creates), personal and generic knowledge goes to the user's wiki inbox, each item verified first; then it reports what it kept and dropped. Use when the user asks to distill, wrap up, archive or hand off a session, or to save what a session learned.
+name: distill
+description: Distills a source into lasting records, with a mode per source - a finished or paused agent session (the default), a research, spike or scratch folder, or a document. Workspace knowledge goes into the repository's own homes (or a standard layout it creates), personal and generic knowledge goes to the user's wiki inbox, each item verified first; then it reports what it kept and dropped. Use when the user asks to distill, wrap up, archive or hand off a session, to save what a session learned, or to distil, mine, close out or clean up a research folder or a document. Replaces distill-session.
 ---
 
-# Distill the session
+# Distill
 
-Turn what this session learned into records someone will use later, then report. Most sessions yield a few lines; some yield none. Where the workspace's own instructions differ from these steps, follow the workspace.
+Turn what a source holds into records someone will use later, then report. Most sources yield a few lines; some yield none. Where the workspace's own instructions differ from these steps, follow the workspace.
+
+## Mode
+
+Pick the mode from what the user named; with no argument, distill this session.
+
+| Mode | Source | Read also |
+| --- | --- | --- |
+| session | this conversation: its messages, tool results, changed files and commits | nothing more |
+| research | a research, spike, probe or scratch folder | [references/research.md](references/research.md) |
+| document | one document: a design, a plan, a long note, a report | [references/document.md](references/document.md) |
+
+The steps below hold for every mode; a mode's reference adds to steps 2 and 6.
 
 Copy this checklist into your reply and tick it as you go:
 
@@ -24,11 +36,11 @@ Take the first that applies, per kind of record:
 
 ## 2. Gather candidates
 
-1. Look at this session only: its messages, tool results, the files it changed and its commits.
+1. Look at the source only. For a session: its messages, tool results, the files it changed and its commits.
 2. Ask the review questions: what did we expect, what happened, why (ask twice), what will we do next time. Include what went well.
 3. Keep what a future session would otherwise get wrong: corrections the user made, mistakes made twice, facts the code does not show (decisions and their reasons, where outside information lives, tool traps), and open work with what releases it.
-4. Drop what the code, git history or existing instructions already say, the story of the session, and anything the session showed to be wrong. Drop a lesson that only states a fix without the expectation that failed.
-5. Check the session's own claims and outputs for errors; report only the major ones.
+4. Drop what the code, git history or existing instructions already say, the story of the source, and anything the source showed to be wrong. Drop a lesson that only states a fix without the expectation that failed.
+5. Check the source's own claims and outputs for errors; report only the major ones.
 
 ## 3. Sort each candidate
 
@@ -41,7 +53,7 @@ Give it a **destination**:
 | An agent | workspace: `AGENTS.md`, skills, instructions | personal agent layer: propose only (step 6) |
 | The user | workspace: reference, timeline, handoff | wiki inbox (step 5) |
 
-True only for this session: drop. True for this repository but unsafe to commit there (private, employer or personal content in a shared or public repository): treat as personal. Fits two homes: store it once in the narrower one and link from the other. Team or organisation rules: flag, never write.
+True only for this source: drop. True for this repository but unsafe to commit there (private, employer or personal content in a shared or public repository): treat as personal. Fits two homes: store it once in the narrower one and link from the other. Team or organisation rules: flag, never write.
 
 ## 4. Verify and write workspace items
 
@@ -55,25 +67,25 @@ True only for this session: drop. True for this repository but unsafe to commit 
 ## 5. Capture personal and generic items
 
 1. Run the redaction and secret checks the user's instructions name on every line first. A line that fails is dropped and reported, never captured.
-2. Append each line with the wiki's own command: `make -C ~/sandbox/wiki capture M="<line>"`. One line per item: `[distill <session date and time>] <kind>: <claim> (why: <reason>; source: <repository alias>, <path, commit or URL>) #distilled`.
+2. Append each line with the wiki's own command: `make -C ~/sandbox/wiki capture M="<line>"`. One line per item: `[distill <mode> <date and time>] <kind>: <claim> (why: <reason>; source: <repository alias>, <path, commit or URL>) #distilled`.
 3. Write the raw line before any rewording, and report the path the command prints. Do not file into wiki notes, and never commit the wiki; its triage files the inbox later.
 4. If the wiki is missing, append the same lines to `~/.agents/state/<workspace>/distilled-personal.md` and say so.
 
 ## 6. Finish
 
-1. Remove temporary files the session made; ask if you are unsure whether something is temporary.
+1. Remove temporary files this run made; ask if you are unsure whether something is temporary. A research folder or document is removed only as its mode's reference says.
 2. Commit every workspace file you changed, with a message that says what was recorded. Never push.
 3. Personal agent rules (true for this user in every repository) are not written: list them in the report as proposed text for the user's personal instructions.
 4. You are done when every candidate has a home or an explicit "not worth keeping", and every repository you touched is clean.
 
 ## 7. Report
 
-1. What the session did, its result and what it means.
-2. What you recorded and where (count per destination), what you dropped and why, and any major errors you found.
+1. What the source was, what it did or found, and what it means.
+2. What you recorded and where (count per destination), what you dropped and why (batched by reason), and any major errors you found.
 3. Proposed personal agent rules, verbatim.
 4. Learnings for the user, not for yourself.
 5. Any way to improve these instructions, or "none".
 
 ## Handoff
 
-When asked for a handoff, distill first, then end the report with a short prompt that starts the next session: the goal, where the records are, the first step, and anything waiting on the user. Put it last, in a fenced `text` block under the heading "Next session". Do not save it as a file.
+Session mode only. When asked for a handoff, distill first, then end the report with a short prompt that starts the next session: the goal, where the records are, the first step, and anything waiting on the user. Put it last, in a fenced `text` block under the heading "Next session". Do not save it as a file.

@@ -19,7 +19,7 @@ This installs chezmoi, then applies configs, installs packages, and runs setup s
 - **Shell:** fish on macOS/Linux, PowerShell on Windows. Prompt is [starship](https://starship.rs/); terminal is [Ghostty](https://ghostty.org/); tmux for multiplexing; nvim (AstroNvim) as editor.
 - **Theme:** Catppuccin **Mocha** everywhere. The palette in `dotfiles/.chezmoidata/catppuccin.yaml` is the single source of truth and is templated into tools if built-in theme is not available.
 - **Agent workbench:** [Orca](https://github.com/stablyai/orca) runs many Copilot CLI sessions side by side, shows which one is waiting on you, and kept a waiting request from running when it quit; the GitHub Copilot app runs coordinated multi-agent work. Why, setup and usage: [docs/agent-workbench.md](docs/agent-workbench.md).
-- **Agent knowledge:** which folder each kind of knowledge goes in, for knowledge repositories (PARA) and standalone ones, and what the dotfiles own versus the wiki: [docs/knowledge-layout.md](docs/knowledge-layout.md). How a session's learnings are kept: [docs/distillation.md](docs/distillation.md) and the `distill-session` skill.
+- **Agent knowledge:** which folder each kind of knowledge goes in, for knowledge repositories (PARA) and standalone ones, and what the dotfiles own versus the wiki: [docs/knowledge-layout.md](docs/knowledge-layout.md). How a session's learnings are kept: [docs/distillation.md](docs/distillation.md) and the `distill` skill.
 
 ## Layout
 
