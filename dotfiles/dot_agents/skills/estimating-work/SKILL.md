@@ -51,9 +51,13 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    items from their kind's logged actuals and corrects the others by their own method's history.
    Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
    mix, up to what fits at P90. Say what is out of scope.
-6. Arm the run guard: `estimates.py arm --run <run> --until <stop time HH:MM> --plan plan.json`.
-   While it is armed, a Stop hook (`~/.copilot/hooks/run-guard.json`) refuses to let a turn end
-   before the stop time while a planned item has no `end`. Write the plan, the stop time and the
+6. Arm the run guard: `estimates.py arm --run <run> --until <stop time HH:MM> --session <chat id>
+   --plan plan.json`. While it is armed, a Stop hook (`~/.copilot/hooks/run-guard.json`) refuses to
+   let that chat's turn end before the stop time while a planned item has no `end`. The chat id in
+   VS Code is the last folder of the session's debug-log path. Other agent sessions (SDK and CLI
+   runs) load the same hook, so the guard holds only the chat named by `--session` (2026-10-26:
+   unscoped, it held an SDK spike's autopilot session). Each check is logged to
+   `~/.agents/state/run-guard.log`. Write the plan, the stop time and the
    owner's decisions into the session memory too: a compaction or a terminal notification can
    start a turn with all of it out of view (2026-10-26).
 

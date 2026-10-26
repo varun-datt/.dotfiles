@@ -162,9 +162,18 @@ def save_run(run):
     path.write_text(json.dumps(run, indent=1))
 
 
-def guard_decision(run, records, at):
+SESSION_FIELDS = ("sessionId", "session_id", "transcript_path", "transcriptPath")
+
+
+def session_text(payload):
+    return " ".join(str((payload or {}).get(field) or "") for field in SESSION_FIELDS)
+
+
+def guard_decision(run, records, at, payload=None):
     """The reason the agent must keep working, or None to let the turn end; also returns the run to save."""
     if not run or run.get("blocked") or at >= datetime.fromisoformat(run["until"]):
+        return None, run
+    if not run.get("session") or run["session"] not in session_text(payload):
         return None, run
     finished = {r["id"] for r in records if r["event"] in ("end", "done")}
     left = [i for i in run.get("planned") or [] if i not in finished]
@@ -184,12 +193,14 @@ def guard_decision(run, records, at):
     return reason, {**run, "blocks": blocks, "seen": len(records)}
 
 
-def guard():
+def guard(payload=None):
     """The Stop hook: prints a block decision while an armed run has work left; fails open on any error."""
     try:
-        reason, run = guard_decision(load_run(), read(), now())
+        reason, run = guard_decision(load_run(), read(), now(), payload)
         if run is not None:
             save_run(run)
+        with run_path().with_name("run-guard.log").open("a") as log:
+            log.write(json.dumps({"at": now().isoformat(), "fields": sorted(payload or {}), "session": session_text(payload)[-160:], "blocked": reason is not None}) + "\n")
     except Exception as error:  # noqa: BLE001 - a broken guard must never trap the agent
         return {"systemMessage": f"Run guard: not checked ({error})"}
     if reason is None:
@@ -236,6 +247,7 @@ def main(argv=None):
     p = sub.add_parser("arm", help="start the run guard: a Stop hook keeps the agent working until the stop time")
     p.add_argument("--run", required=True)
     p.add_argument("--until", required=True, help="stop time, HH:MM (its next occurrence) or ISO")
+    p.add_argument("--session", required=True, help="the chat's session id; other agent sessions (SDK, CLI) load the same hook and must not be held")
     p.add_argument("--plan", default=None, help="plan JSON; the guard lets the turn end once every item in it is done")
     p = sub.add_parser("block", help="a blocker stops every remaining item: let the turn end until the next start")
     p.add_argument("--reason", required=True)
@@ -279,7 +291,7 @@ def main(argv=None):
     elif args.command == "arm":
         at = now()
         planned = [item["id"] for item in json.loads(Path(args.plan).read_text())] if args.plan else None
-        save_run({"run": args.run, "until": until_time(args.until, at).isoformat(), "planned": planned, "armedAt": at.isoformat()})
+        save_run({"run": args.run, "until": until_time(args.until, at).isoformat(), "session": args.session, "planned": planned, "armedAt": at.isoformat()})
         print(json.dumps(load_run()))
     elif args.command == "block":
         run = load_run()
@@ -290,7 +302,11 @@ def main(argv=None):
     elif args.command == "disarm":
         run_path().unlink(missing_ok=True)
     elif args.command == "guard":
-        output = guard()
+        try:
+            payload = json.loads(sys.stdin.read() or "{}")
+        except ValueError:
+            payload = {}
+        output = guard(payload if isinstance(payload, dict) else {})
         if output:
             print(json.dumps(output))
     return 0
