@@ -150,12 +150,6 @@ class SessionLogTest(unittest.TestCase):
         self.assertIn("↳ Tests: 1 failed | exit=1", text)
         self.assertIn("tool outputs: 4 of 5 calls still on disk", out)
 
-    def test_reasoning_can_be_left_out(self):
-        self.vscode_session()
-        text, _ = self.digest_text("--session", "s1", "--no-reasoning")
-        self.assertNotIn("I expect the tests to pass.", text)
-        self.assertIn("Never push.", text)
-
     def test_small_chunks_hold_every_event_exactly_once(self):
         self.vscode_session()
         whole, _ = self.digest_text("--session", "s1")

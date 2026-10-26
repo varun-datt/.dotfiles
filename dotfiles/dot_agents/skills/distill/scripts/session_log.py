@@ -4,7 +4,7 @@
 Reads VS Code chat transcripts, Copilot CLI session state and Cursor agent transcripts.
 
   session_log.py find [--session ID] [--cwd DIR]
-  session_log.py digest [--session ID] [--cwd DIR] [--out DIR] [--chunk-chars N] [--no-reasoning]
+  session_log.py digest [--session ID] [--cwd DIR] [--out DIR] [--chunk-chars N]
   session_log.py coverage --out DIR --ledger FILE
 """
 
@@ -283,16 +283,16 @@ def chat_store_results(transcript):
     return results
 
 
-def message_events(at, data, reasoning):
+def message_events(at, data):
     events = []
-    if reasoning and (data.get("reasoningText") or "").strip():
+    if (data.get("reasoningText") or "").strip():
         events.append((at, "THINKING", data["reasoningText"]))
     if (data.get("content") or "").strip():
         events.append((at, "AGENT", data["content"]))
     return events
 
 
-def vscode_events(path, reasoning=True):
+def vscode_events(path):
     debug = DebugLog(path.parent.parent / "debug-logs" / path.stem)
     store = chat_store_results(path)
     events, names, calls, joined = [], {}, 0, 0
@@ -301,7 +301,7 @@ def vscode_events(path, reasoning=True):
         if kind == "user.message":
             events.append((at, "USER", data.get("content") or ""))
         elif kind == "assistant.message":
-            events += message_events(at, data, reasoning)
+            events += message_events(at, data)
         elif kind == "tool.execution_start":
             name, args, call = data.get("toolName", "?"), data.get("arguments"), data.get("toolCallId")
             names[call], calls = name, calls + 1
@@ -318,14 +318,14 @@ def vscode_events(path, reasoning=True):
     return events, {"calls": calls, "outputs_joined": joined, "outputs_from": first.isoformat() if first else None}
 
 
-def cli_events(path, reasoning=True):
+def cli_events(path):
     events, names, calls = [], {}, 0
     for o in read_jsonl(path):
         kind, data, at = o.get("type", ""), o.get("data") or {}, when(o.get("timestamp"))
         if kind == "user.message":
             events.append((at, "USER", data.get("content") or ""))
         elif kind == "assistant.message":
-            events += message_events(at, data, reasoning)
+            events += message_events(at, data)
         elif kind == "tool.execution_start":
             name = data.get("toolName", "?")
             names[data.get("toolCallId")], calls = name, calls + 1
@@ -361,7 +361,7 @@ def cursor_subagents(folder):
     return replies
 
 
-def cursor_events(path, reasoning=True):
+def cursor_events(path):
     """Cursor's transcript keeps no timestamps, reasoning or tool outputs, so only the file's own times date it."""
     subagents, events, calls, joined = cursor_subagents(path.parent), [], 0, 0
     for o in read_jsonl(path):
@@ -445,7 +445,7 @@ def cmd_digest(args):
         return 1
     surface, path = logs[0]
     sid = session_id(surface, path)
-    events, meta = {"vscode": vscode_events, "copilot-cli": cli_events, "cursor": cursor_events}[surface](path, not args.no_reasoning)
+    events, meta = {"vscode": vscode_events, "copilot-cli": cli_events, "cursor": cursor_events}[surface](path)
     out = Path(args.out) if args.out else Path.home() / ".cache" / "distill" / sid
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("chunk-*.md"):
@@ -514,7 +514,6 @@ def main(argv=None):
         if name == "digest":
             p.add_argument("--out", help="default: ~/.cache/distill/<session>")
             p.add_argument("--chunk-chars", type=int, default=100_000)
-            p.add_argument("--no-reasoning", action="store_true")
     p = sub.add_parser("coverage")
     p.add_argument("--out", required=True)
     p.add_argument("--ledger", required=True)
