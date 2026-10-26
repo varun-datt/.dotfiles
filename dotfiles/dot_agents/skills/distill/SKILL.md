@@ -1,6 +1,6 @@
 ---
 name: distill
-description: Distills a source into lasting records, with a mode per source - a finished or paused agent session (the default), a research, spike or scratch folder, or a document. Workspace knowledge goes into the repository's own homes (or a standard layout it creates), personal and generic knowledge goes to the user's wiki inbox, each item verified first; then it reports what it kept and dropped. Use when the user asks to distill, wrap up, archive or hand off a session, to save what a session learned, or to distil, mine, close out or clean up a research folder or a document. Replaces distill-session.
+description: Distills a source into lasting records, with a mode per source - a finished or paused agent session (the default, read from its full log on disk rather than the context window), a research, spike or scratch folder, or a document. Workspace knowledge goes into the repository's own homes (or a standard layout it creates), personal and generic knowledge goes to the user's wiki inbox, each item verified first; then it reports what it kept and dropped. Use when the user asks to distill, wrap up, archive or hand off a session, to save what a session learned, or to distil, mine, close out or clean up a research folder or a document. Replaces distill-session.
 ---
 
 # Distill
@@ -13,7 +13,7 @@ Pick the mode from what the user named; with no argument, distill this session.
 
 | Mode | Source | Read also |
 | --- | --- | --- |
-| session | this conversation: its messages, tool results, changed files and commits | nothing more |
+| session | this session's full log on disk, not the context window; the files it changed and its commits | [references/session.md](references/session.md) |
 | research | a research, spike, probe or scratch folder | [references/research.md](references/research.md) |
 | document | one document: a design, a plan, a long note, a report | [references/document.md](references/document.md) |
 
@@ -22,7 +22,7 @@ The steps below hold for every mode; a mode's reference adds to steps 2 and 6.
 Copy this checklist into your reply and tick it as you go:
 
 ```text
-- [ ] 1 homes found   - [ ] 2 candidates gathered   - [ ] 3 each sorted
+- [ ] 1 homes found   - [ ] 2 every part read   - [ ] 3 each judged and sorted
 - [ ] 4 verified and written   - [ ] 5 personal items captured   - [ ] 6 finished   - [ ] 7 reported
 ```
 
@@ -34,17 +34,28 @@ Take the first that applies, per kind of record:
 2. **The parent knowledge repository.** If this repository sits inside another git working tree (`git -C .. rev-parse --show-toplevel`) whose `AGENTS.md` says `Layout: knowledge (PARA)` or whose root has `10-projects/` and `20-areas/`, write workspace items there, in the area or project for this repository.
 3. **The standard layout.** For a standalone repository, create only the folders this run needs, as described in [references/layout.md](references/layout.md), and link each from `AGENTS.md`.
 
-## 2. Gather candidates
+## 2. Gather candidates from all of it
 
-1. Look at the source only. For a session: its messages, tool results, the files it changed and its commits.
-2. Ask the review questions: what did we expect, what happened, why (ask twice), what will we do next time. Include what went well.
-3. Keep what a future session would otherwise get wrong: corrections the user made, mistakes made twice, facts the code does not show (decisions and their reasons, where outside information lives, tool traps), and open work with what releases it.
-4. Drop what the code, git history or existing instructions already say, the story of the source, and anything the source showed to be wrong. Drop a lesson that only states a fix without the expectation that failed.
-5. Check the source's own claims and outputs for errors; report only the major ones.
+1. Read all of the source, not only what is in view. For a session that is its full log on disk: after a compaction the context window holds only a summary. [references/session.md](references/session.md) condenses the log into chunks and checks that every chunk was read.
+2. Ask the review questions of each part: what did we expect, what happened, why (ask twice), what will we do next time. Include what went well.
+3. Write down every candidate: corrections the user made, mistakes made twice, facts the code does not show (decisions and their reasons, where outside information lives, tool traps), open work with what releases it, and what worked. Gather generously; step 3 judges.
+4. Check the source's own claims and outputs for errors; report only the major ones.
 
-## 3. Sort each candidate
+## 3. Judge, then sort each candidate
 
-Give it a **kind**: `fact`, `rule` (always or never), `procedure` (multi-step how-to), `event` (a decision, incident or change, with its date; an incident that meets a postmortem trigger in [references/layout.md](references/layout.md) is offered the postmortem template), or `lesson` (expected, got, why, next time).
+Merge candidates that say the same thing. Keep one only if it passes every test below; otherwise drop it with the reason of the first test it fails.
+
+| Test | Drop reason |
+| --- | --- |
+| Nothing already says it: not the code, git history, instructions or an existing record (search them; fix a record this source proved wrong instead of adding one) | `recorded` |
+| Without it, a future session or the user would act wrongly or lose time; what happened, told as a story, does not count | `story` |
+| It holds beyond this source, or it is open work with what releases it | `one-off` |
+| The source did not later show it wrong | `wrong` |
+| A lesson states the expectation that failed, not only the fix | `fix-only` |
+
+Expect few: most sources leave a handful of records. When more than about ten pass, apply the tests again, harder, and merge before writing; a long list is the bloat this step exists to stop.
+
+Give each kept candidate a **kind**: `fact`, `rule` (always or never), `procedure` (multi-step how-to), `event` (a decision, incident or change, with its date; an incident that meets a postmortem trigger in [references/layout.md](references/layout.md) is offered the postmortem template), or `lesson` (expected, got, why, next time).
 
 Give it a **destination**:
 
@@ -53,7 +64,7 @@ Give it a **destination**:
 | An agent | workspace: `AGENTS.md`, skills, instructions | personal agent layer: propose only (step 6) |
 | The user | workspace: reference, timeline, handoff | wiki inbox (step 5) |
 
-True only for this source: drop. True for this repository but unsafe to commit there (private, employer or personal content in a shared or public repository): treat as personal. Fits two homes: store it once in the narrower one and link from the other. Team or organisation rules: flag, never write.
+True for this repository but unsafe to commit there (private, employer or personal content in a shared or public repository): treat as personal. Fits two homes: store it once in the narrower one and link from the other. Team or organisation rules: flag, never write.
 
 ## 4. Verify and write workspace items
 
@@ -81,7 +92,7 @@ True only for this source: drop. True for this repository but unsafe to commit t
 ## 7. Report
 
 1. What the source was, what it did or found, and what it means.
-2. What you recorded and where (count per destination), what you dropped and why (batched by reason), and any major errors you found.
+2. What you recorded and where (count per destination), what you dropped (count per drop reason, with an example of each), and any major errors you found.
 3. Proposed personal agent rules, verbatim.
 4. Learnings for the user, not for yourself.
 5. Any way to improve these instructions, or "none".
