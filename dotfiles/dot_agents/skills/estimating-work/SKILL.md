@@ -1,6 +1,6 @@
 ---
 name: estimating-work
-description: Estimate work in minutes from measured pace, and plan, run and report a window of unattended work. Use when asked for an estimate or "how long will this take", when planning work for a set time, or when the owner leaves the agent to work alone for some hours. Not for project schedules, story points or other people's work.
+description: Estimate work in minutes from measured pace, and plan, run and report a window of unattended work. Use when asked for an estimate or "how long will this take", when planning work for a set time, when the owner approves a list of items to build, or when the owner leaves the agent to work alone for some hours. Not for project schedules, story points or other people's work.
 ---
 
 # estimating-work
