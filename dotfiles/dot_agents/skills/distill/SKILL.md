@@ -50,7 +50,7 @@ Merge candidates that say the same thing. Keep one only if it passes every test 
 | Nothing already says it: not the code, git history, instructions or an existing record (search them; fix a record this source proved wrong instead of adding one) | `recorded` |
 | Without it, a future session or the user would act wrongly or lose time; what happened, told as a story, does not count | `story` |
 | It holds beyond this source, or it is open work with what releases it | `one-off` |
-| The source did not later show it wrong | `wrong` |
+| The source showed it, rather than guessed it, and did not later show it wrong | `unsupported` |
 | A lesson states the expectation that failed, not only the fix | `fix-only` |
 
 Expect few: most sources leave a handful of records. When more than about ten pass, apply the tests again, harder, and merge before writing; a long list is the bloat this step exists to stop.
