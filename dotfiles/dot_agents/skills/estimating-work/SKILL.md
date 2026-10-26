@@ -51,6 +51,11 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    items from their kind's logged actuals and corrects the others by their own method's history.
    Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
    mix, up to what fits at P90. Say what is out of scope.
+6. Arm the run guard: `estimates.py arm --run <run> --until <stop time HH:MM> --plan plan.json`.
+   While it is armed, a Stop hook (`~/.copilot/hooks/run-guard.json`) refuses to let a turn end
+   before the stop time while a planned item has no `end`. Write the plan, the stop time and the
+   owner's decisions into the session memory too: a compaction or a terminal notification can
+   start a turn with all of it out of view (2026-10-26).
 
 ## During
 
@@ -64,7 +69,15 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   re-forecast; never hold it back to keep the mix.
 - Carry each item to completion or to a blocker (owner, 2026-10-25). Where a case is unclear, let
   research decide it, say so in the commit and the plan, and keep it for the owner's review.
-- When an item blocks on a decision, write the question down and take the next item.
+- When an item blocks on a decision, write the question down and take the next item. A question
+  that blocks nothing never ends a turn: it goes in the session memory for the final report. Only
+  when something blocks every remaining item, `estimates.py block --reason "<what, why>"` lets the
+  turn end; the next `start` re-arms the guard.
+- A turn that starts without the plan in view reads the session memory before anything else: on
+  2026-10-26 a turn begun by a terminal notification lost the plan and ended on a question about
+  an unrelated failing test, mid-run.
+- Keep the todo list current: after a reset it is the one list still in view, and a stale one makes
+  a run look unstarted.
 - Polish found on the way becomes a backlog item, not work now.
 - When the plan is done, spare time buys depth: more test cases, and at most two second-model review
   rounds per run, fixing high severity only; lower findings go to the backlog.
@@ -72,6 +85,7 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 ## After
 
+- `estimates.py disarm` first, so the wrap-up's final message can end the turn.
 - `estimates.py report --run <run>`: estimate against actual, how many came within 25%, minutes by
   kind, and features with their enablers as one share, against the mix asked for. Put it in the
   final message and the state file.

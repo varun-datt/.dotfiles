@@ -97,5 +97,67 @@ class EstimatesTest(unittest.TestCase):
         self.assertEqual(estimates.main(["estimate"]), 2)
 
 
+class RunGuardTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        os.environ["ESTIMATES_LOG"] = str(Path(self.dir.name) / "log.jsonl")
+        os.environ["ESTIMATES_RUN"] = str(Path(self.dir.name) / "run.json")
+        self.at = datetime(2026, 10, 26, 2, 0, tzinfo=timezone.utc)
+        self.run = {"run": "night", "until": (self.at + timedelta(hours=4)).isoformat(), "planned": ["a", "b"]}
+
+    def tearDown(self):
+        self.dir.cleanup()
+        del os.environ["ESTIMATES_LOG"]
+        del os.environ["ESTIMATES_RUN"]
+
+    def test_blocks_the_turn_end_while_planned_items_are_open_before_the_stop_time(self):
+        reason, run = estimates.guard_decision(self.run, [{"event": "end", "id": "a"}], self.at)
+        self.assertIn("1 planned items are not done (next: b)", reason)
+        self.assertIn("put any question that blocks nothing in the session memory", reason)
+        self.assertEqual(run["blocks"], 1)
+
+    def test_lets_the_turn_end_when_unarmed_blocked_past_the_stop_time_or_done(self):
+        records = [{"event": "end", "id": "a"}, {"event": "done", "id": "b"}]
+        self.assertIsNone(estimates.guard_decision(None, [], self.at)[0])
+        self.assertIsNone(estimates.guard_decision({**self.run, "blocked": "needs a secret"}, [], self.at)[0])
+        self.assertIsNone(estimates.guard_decision(self.run, [], self.at + timedelta(hours=4))[0])
+        self.assertIsNone(estimates.guard_decision(self.run, records, self.at)[0])
+
+    def test_gives_up_after_three_refusals_with_no_progress_and_counts_again_after_progress(self):
+        run, reasons = self.run, []
+        for _ in range(4):
+            reason, run = estimates.guard_decision(run, [{"event": "start", "id": "a"}], self.at)
+            reasons.append(reason is not None)
+        self.assertEqual(reasons, [True, True, True, False])
+        reason, run = estimates.guard_decision(run, [{"event": "start", "id": "a"}, {"event": "end", "id": "a"}], self.at)
+        self.assertIsNotNone(reason)
+        self.assertEqual(run["blocks"], 1)
+
+    def test_a_clock_stop_time_is_its_next_occurrence(self):
+        late = datetime(2026, 10, 25, 23, 0, tzinfo=timezone.utc)
+        self.assertEqual(estimates.until_time("06:02", late), datetime(2026, 10, 26, 6, 2, tzinfo=timezone.utc))
+        self.assertEqual(estimates.until_time("23:30", late), datetime(2026, 10, 25, 23, 30, tzinfo=timezone.utc))
+
+    def test_command_line_arms_blocks_restarts_and_disarms(self):
+        plan = Path(self.dir.name) / "plan.json"
+        plan.write_text(json.dumps([{"id": "a"}, {"id": "b"}]))
+        estimates.main(["arm", "--run", "night", "--until", (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(), "--plan", str(plan)])
+        self.assertEqual(estimates.guard()["hookSpecificOutput"]["decision"], "block")
+        estimates.main(["block", "--reason", "waits on a sign-in only the owner can do"])
+        self.assertIsNone(estimates.guard())
+        estimates.main(["start", "--id", "a", "--kind", "fix", "--estimate", "4", "--method", "history"])
+        self.assertNotIn("blocked", estimates.load_run())
+        self.assertEqual(estimates.guard()["decision"], "block")
+        estimates.main(["disarm"])
+        self.assertIsNone(estimates.guard())
+        self.assertEqual(estimates.main(["block", "--reason", "x"]), 1)
+
+    def test_a_broken_run_file_never_traps_the_agent(self):
+        Path(os.environ["ESTIMATES_RUN"]).write_text("{not json")
+        output = estimates.guard()
+        self.assertNotIn("decision", output)
+        self.assertIn("Run guard: not checked", output["systemMessage"])
+
+
 if __name__ == "__main__":
     unittest.main()

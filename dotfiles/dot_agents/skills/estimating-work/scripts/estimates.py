@@ -13,10 +13,16 @@ from pathlib import Path
 MIN_HISTORY = 5
 METHODS = ("history", "rounds", "judged")
 MINUTES_PER_ROUND = 3.0
+# Stop-hook refusals in a row with no new log record before the guard lets the turn end anyway.
+GUARD_LIMIT = 3
 
 
 def log_path():
     return Path(os.environ.get("ESTIMATES_LOG") or Path.home() / ".agents" / "state" / "estimates.jsonl")
+
+
+def run_path():
+    return Path(os.environ.get("ESTIMATES_RUN") or Path.home() / ".agents" / "state" / "active-run.json")
 
 
 def now():
@@ -136,6 +142,61 @@ def kinds_table(items):
     return "\n".join(lines)
 
 
+def until_time(text, at):
+    """An ISO time, or a clock time HH:MM taken as its next occurrence after `at`."""
+    if ":" in text and len(text) <= 5:
+        hour, minute = (int(part) for part in text.split(":"))
+        moment = at.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        return moment if moment > at else moment + timedelta(days=1)
+    return datetime.fromisoformat(text)
+
+
+def load_run():
+    path = run_path()
+    return json.loads(path.read_text()) if path.exists() else None
+
+
+def save_run(run):
+    path = run_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(run, indent=1))
+
+
+def guard_decision(run, records, at):
+    """The reason the agent must keep working, or None to let the turn end; also returns the run to save."""
+    if not run or run.get("blocked") or at >= datetime.fromisoformat(run["until"]):
+        return None, run
+    finished = {r["id"] for r in records if r["event"] in ("end", "done")}
+    left = [i for i in run.get("planned") or [] if i not in finished]
+    if run.get("planned") and not left:
+        return None, run
+    progressed = run.get("seen") != len(records)
+    blocks = 1 if progressed else run.get("blocks", 0) + 1
+    if blocks > GUARD_LIMIT:
+        return None, {**run, "blocks": 0, "seen": len(records)}
+    stop = datetime.fromisoformat(run["until"]).strftime("%H:%M")
+    what = f"{len(left)} planned items are not done (next: {left[0]})" if left else "items may remain"
+    reason = (
+        f"Run {run['run']} is armed until {stop} and {what}. Do not end the turn: put any question that blocks "
+        "nothing in the session memory for the final report, and take the next item. Only if something blocks "
+        "every remaining item, run `estimates.py block --reason \"...\"` first; at the wrap-up, `estimates.py disarm`."
+    )
+    return reason, {**run, "blocks": blocks, "seen": len(records)}
+
+
+def guard():
+    """The Stop hook: prints a block decision while an armed run has work left; fails open on any error."""
+    try:
+        reason, run = guard_decision(load_run(), read(), now())
+        if run is not None:
+            save_run(run)
+    except Exception as error:  # noqa: BLE001 - a broken guard must never trap the agent
+        return {"systemMessage": f"Run guard: not checked ({error})"}
+    if reason is None:
+        return None
+    return {"decision": "block", "reason": reason, "hookSpecificOutput": {"hookEventName": "Stop", "decision": "block", "reason": reason}}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -172,10 +233,21 @@ def main(argv=None):
     p.add_argument("--run", default=None)
     p = sub.add_parser("kinds", help="markdown table of measured pace per kind")
     p.add_argument("--days", type=int, default=180)
+    p = sub.add_parser("arm", help="start the run guard: a Stop hook keeps the agent working until the stop time")
+    p.add_argument("--run", required=True)
+    p.add_argument("--until", required=True, help="stop time, HH:MM (its next occurrence) or ISO")
+    p.add_argument("--plan", default=None, help="plan JSON; the guard lets the turn end once every item in it is done")
+    p = sub.add_parser("block", help="a blocker stops every remaining item: let the turn end until the next start")
+    p.add_argument("--reason", required=True)
+    sub.add_parser("disarm", help="end the run guard at the wrap-up")
+    sub.add_parser("guard", help="the Stop hook's check; reads the hook's JSON on stdin")
     args = parser.parse_args(argv)
 
     if args.command == "start":
         append({"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "at": now().isoformat()})
+        run = load_run()
+        if run and run.get("blocked"):
+            save_run({k: v for k, v in run.items() if k not in ("blocked", "blockedAt")})
     elif args.command == "end":
         append({"event": "end", "id": args.id, "at": now().isoformat()})
         done = [i for i in completed(read()) if i["id"] == args.id]
@@ -204,6 +276,23 @@ def main(argv=None):
         print(json.dumps(report(items), indent=2))
     elif args.command == "kinds":
         print(kinds_table(recent(completed(read()), args.days)))
+    elif args.command == "arm":
+        at = now()
+        planned = [item["id"] for item in json.loads(Path(args.plan).read_text())] if args.plan else None
+        save_run({"run": args.run, "until": until_time(args.until, at).isoformat(), "planned": planned, "armedAt": at.isoformat()})
+        print(json.dumps(load_run()))
+    elif args.command == "block":
+        run = load_run()
+        if not run:
+            print("no armed run", file=sys.stderr)
+            return 1
+        save_run({**run, "blocked": args.reason, "blockedAt": now().isoformat()})
+    elif args.command == "disarm":
+        run_path().unlink(missing_ok=True)
+    elif args.command == "guard":
+        output = guard()
+        if output:
+            print(json.dumps(output))
     return 0
 
 
