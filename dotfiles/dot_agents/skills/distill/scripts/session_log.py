@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Find an agent session's full log on disk and condense it into chunks a reader can cover.
 
+Reads VS Code chat transcripts, Copilot CLI session state and Cursor agent transcripts.
+
   session_log.py find [--session ID] [--cwd DIR]
   session_log.py digest [--session ID] [--cwd DIR] [--out DIR] [--chunk-chars N] [--no-reasoning]
   session_log.py coverage --out DIR --ledger FILE
@@ -21,10 +23,11 @@ ERROR = re.compile(
     re.I,
 )
 NOT_ERROR = re.compile(r"\b0 (failed|failures|errors?)\b", re.I)
-SHELL_TOOLS = {"run_in_terminal", "get_terminal_output", "send_to_terminal", "bash", "shell", "powershell"}
-ASK_TOOLS = {"vscode_askQuestions", "ask_user"}
+SHELL_TOOLS = {"run_in_terminal", "get_terminal_output", "send_to_terminal", "bash", "shell", "powershell", "Shell"}
+ASK_TOOLS = {"vscode_askQuestions", "ask_user", "AskQuestion"}
 SUBAGENT_TOOLS = {"runSubagent", "execution_subagent"}
 KEY_ARGS = ("command", "filePath", "path", "file_path", "query", "pattern", "description", "url")
+USER_QUERY = re.compile(r"</?user_query>")
 
 
 def vscode_roots():
@@ -39,6 +42,15 @@ def vscode_roots():
 
 def copilot_state():
     return Path(os.environ.get("DISTILL_COPILOT_HOME") or Path.home() / ".copilot") / "session-state"
+
+
+def cursor_projects():
+    return Path(os.environ.get("DISTILL_CURSOR_HOME") or Path.home() / ".cursor") / "projects"
+
+
+def cursor_project(cwd):
+    # Cursor names a project's folder after its path: /Users/me/.local/x becomes Users-me-local-x.
+    return re.sub(r"[^A-Za-z0-9]+", "-", str(Path(cwd).resolve())).strip("-")
 
 
 def same_dir(a, b):
@@ -84,11 +96,21 @@ def find_logs(session=None, cwd=None):
                 continue
             if session or cwd is None or same_dir(cli_cwd(folder), cwd):
                 found.append(("copilot-cli", log))
+    projects = cursor_projects()
+    if projects.is_dir():
+        wanted = None if session or cwd is None else cursor_project(cwd)
+        for project in projects.iterdir():
+            transcripts = project / "agent-transcripts"
+            if not transcripts.is_dir() or (wanted and project.name != wanted):
+                continue
+            for log in transcripts.glob(f"{session or '*'}/*.jsonl"):
+                if log.stem == log.parent.name:
+                    found.append(("cursor", log))
     return sorted(found, key=lambda f: f[1].stat().st_mtime, reverse=True)
 
 
 def session_id(surface, path):
-    return path.stem if surface == "vscode" else path.parent.name
+    return path.parent.name if surface == "copilot-cli" else path.stem
 
 
 def read_jsonl(path, keep=None):
@@ -144,7 +166,7 @@ def tool_line(name, args):
     if name == "memory":
         return f"{name} {args.get('command', '')} {args.get('path', '')}".rstrip()
     if name in ASK_TOOLS and isinstance(args.get("questions"), list):
-        asked = [q.get("question", "") for q in args["questions"] if isinstance(q, dict)]
+        asked = [q.get("question") or q.get("prompt", "") for q in args["questions"] if isinstance(q, dict)]
         return f"{name} {one_line(' | '.join(asked), 1000)}"
     for key in KEY_ARGS:
         if args.get(key):
@@ -321,6 +343,52 @@ def cli_events(path, reasoning=True):
     return events, {"calls": calls, "outputs_joined": calls, "outputs_from": None}
 
 
+def cursor_text(o):
+    message = o.get("message") if isinstance(o.get("message"), dict) else {}
+    parts = [c.get("text") for c in message.get("content") or [] if isinstance(c, dict) and c.get("type") == "text"]
+    return USER_QUERY.sub("", "\n".join(p for p in parts if isinstance(p, str))).strip()
+
+
+def cursor_subagents(folder):
+    """Each subagent's last reply, keyed by the prompt it was given: the transcript holds no call ids."""
+    replies = {}
+    for log in sorted((folder / "subagents").glob("*.jsonl")):
+        rows = list(read_jsonl(log))
+        asked = next((cursor_text(o) for o in rows if o.get("role") == "user"), "")
+        said = [t for t in (cursor_text(o) for o in rows if o.get("role") == "assistant") if t]
+        if asked and said:
+            replies[asked] = said[-1]
+    return replies
+
+
+def cursor_events(path, reasoning=True):
+    """Cursor's transcript keeps no timestamps, reasoning or tool outputs, so only the file's own times date it."""
+    subagents, events, calls, joined = cursor_subagents(path.parent), [], 0, 0
+    for o in read_jsonl(path):
+        if o.get("role") == "user":
+            events.append((None, "USER", cursor_text(o)))
+        elif o.get("role") == "assistant" and isinstance(o.get("message"), dict):
+            for item in o["message"].get("content") or []:
+                if not isinstance(item, dict):
+                    continue
+                if item.get("type") == "text" and (item.get("text") or "").strip():
+                    events.append((None, "AGENT", item["text"]))
+                elif item.get("type") == "tool_use":
+                    name, args, calls = item.get("name", "?"), item.get("input"), calls + 1
+                    events.append((None, "TOOL", tool_line(name, args)))
+                    prompt = USER_QUERY.sub("", args.get("prompt") or "").strip() if isinstance(args, dict) else ""
+                    reply = next((r for asked, r in subagents.items() if prompt and (prompt in asked or asked in prompt)), None)
+                    if reply:
+                        joined += 1
+                        events.append((None, "OUTPUT", clip(reply, 4000)))
+        elif o.get("type") == "turn_ended" and o.get("status") != "success":
+            events.append((None, "FAILED", f"turn: {one_line(o.get('error') or o.get('status') or '?', 400)}"))
+    stat = path.stat()
+    start = datetime.fromtimestamp(getattr(stat, "st_birthtime", stat.st_mtime), timezone.utc)
+    end = datetime.fromtimestamp(stat.st_mtime, timezone.utc)
+    return events, {"calls": calls, "outputs_joined": joined, "outputs_from": None, "period": [start.isoformat(), end.isoformat()]}
+
+
 def local(at, fmt):
     return at.astimezone().strftime(fmt) if at else "?"
 
@@ -331,13 +399,13 @@ def render(events):
         if at and at.astimezone().date() != day:
             day = at.astimezone().date()
             blocks.append((at, f"--- {day.isoformat()} ---"))
-        stamp = local(at, "%H:%M:%S")
+        stamp = local(at, "%H:%M:%S") + " " if at else ""
         if kind == "OUTPUT":
-            blocks.append((at, f"{stamp}   ↳ {text}"))
+            blocks.append((at, f"{stamp}  ↳ {text}"))
         elif kind in ("USER", "AGENT", "THINKING"):
-            blocks.append((at, f"{stamp} {kind}\n{text.strip()}\n"))
+            blocks.append((at, f"{stamp}{kind}\n{text.strip()}\n"))
         else:
-            blocks.append((at, f"{stamp} {kind} {text}"))
+            blocks.append((at, f"{stamp}{kind} {text}"))
     return blocks
 
 
@@ -377,7 +445,7 @@ def cmd_digest(args):
         return 1
     surface, path = logs[0]
     sid = session_id(surface, path)
-    events, meta = (vscode_events if surface == "vscode" else cli_events)(path, not args.no_reasoning)
+    events, meta = {"vscode": vscode_events, "copilot-cli": cli_events, "cursor": cursor_events}[surface](path, not args.no_reasoning)
     out = Path(args.out) if args.out else Path.home() / ".cache" / "distill" / sid
     out.mkdir(parents=True, exist_ok=True)
     for old in out.glob("chunk-*.md"):
@@ -388,7 +456,8 @@ def cmd_digest(args):
         cid, times = f"chunk-{number:02d}", [at for at, _ in chunk if at]
         start, end = (times[0], times[-1]) if times else (None, None)
         text = "\n".join(block for _, block in chunk)
-        header = f"# {cid} of {len(chunks):02d}: {surface} session {sid}, {local(start, '%Y-%m-%d %H:%M')} to {local(end, '%Y-%m-%d %H:%M')}\n\n"
+        span = f"{local(start, '%Y-%m-%d %H:%M')} to {local(end, '%Y-%m-%d %H:%M')}" if times else "no timestamps"
+        header = f"# {cid} of {len(chunks):02d}: {surface} session {sid}, {span}\n\n"
         (out / f"{cid}.md").write_text(header + text + "\n", encoding="utf-8")
         index["chunks"].append({"id": cid, "file": str(out / f"{cid}.md"), "chars": len(text)})
     (out / "index.json").write_text(json.dumps(index, indent=2), encoding="utf-8")
@@ -402,11 +471,16 @@ def cmd_digest(args):
         print(f"chose the newest of {len(logs)} logs for this folder; pass --session to choose another")
     if times:
         print(f"period: {local(times[0], '%Y-%m-%d %H:%M')} to {local(times[-1], '%Y-%m-%d %H:%M')}")
+    elif meta.get("period"):
+        first, last = (when(t) for t in meta["period"])
+        print(f"period: {local(first, '%Y-%m-%d %H:%M')} to {local(last, '%Y-%m-%d %H:%M')} (the file's own times: the transcript keeps none)")
     print("events: " + ", ".join(f"{k} {v}" for k, v in sorted(counts.items())))
     if surface == "vscode":
         since = local(when(meta["outputs_from"]), "%Y-%m-%d %H:%M") if meta["outputs_from"] else "nowhere"
         print(f"tool outputs: {meta['outputs_joined']} of {meta['calls']} calls still on disk "
               f"(chat store: finished requests; debug log: from {since})")
+    if surface == "cursor":
+        print(f"tool outputs: none kept by Cursor; {meta['outputs_joined']} subagent replies joined to their calls")
     print(f"chunks: {len(chunks)} in {out}, {total} characters (about {total // 4000}k tokens)")
     return 0
 

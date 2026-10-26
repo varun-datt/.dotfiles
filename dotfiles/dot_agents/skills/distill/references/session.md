@@ -8,7 +8,7 @@ The context window is not the session. After a compaction it holds a summary, so
 | --- | --- | --- |
 | VS Code chat | `<workspaceStorage>/<hash>/GitHub.copilot-chat/transcripts/<session>.jsonl`: every user message, every reply and its reasoning, every tool call with its arguments | Not in the transcript. `<hash>/chatSessions/<session>.jsonl` keeps them for each finished request, and `debug-logs/<session>/main.jsonl` keeps its newest ~100 MB (`github.copilot.chat.agentDebugLog.fileLogging.maxSessionLogSizeMB`). Neither is complete: in a 6.5-hour session, 245 of 1,654 calls had no output in either. Subagent replies: `debug-logs/<session>/*-<call id>.jsonl` |
 | Copilot CLI and SDK | `~/.copilot/session-state/<session>/events.jsonl` | In the log |
-| Cursor | Not read yet: `~/.cursor/projects/<folder>/agent-transcripts/` exists, its format is unchecked | |
+| Cursor | `~/.cursor/projects/<folder>/agent-transcripts/<session>/<session>.jsonl`, the folder named after the path with each run of other characters as `-` (`/Users/me/.local/x` is `Users-me-local-x`): the user's messages, the replies, every tool call with its arguments, and failed turns. No timestamps (the digest dates it by the file's own times), no reasoning. Subagents: `<session>/subagents/<id>.jsonl`, joined to their `Task` call by the prompt (checked 2026-10-26 on 270 transcripts, one format) | Not kept anywhere |
 
 The VS Code transcript marks a terminal command as succeeded even when it exited non-zero; a failure shows only in its output.
 

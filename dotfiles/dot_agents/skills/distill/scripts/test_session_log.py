@@ -38,11 +38,13 @@ class SessionLogTest(unittest.TestCase):
         self.out = self.root / "out"
         os.environ["DISTILL_VSCODE_STORAGE"] = str(self.root / "storage")
         os.environ["DISTILL_COPILOT_HOME"] = str(self.root / "copilot")
+        os.environ["DISTILL_CURSOR_HOME"] = str(self.root / "cursor")
 
     def tearDown(self):
         self.tmp.cleanup()
         del os.environ["DISTILL_VSCODE_STORAGE"]
         del os.environ["DISTILL_COPILOT_HOME"]
+        del os.environ["DISTILL_CURSOR_HOME"]
 
     def vscode_session(self, sid="s1"):
         workspace = self.root / "storage" / "abc"
@@ -95,6 +97,28 @@ class SessionLogTest(unittest.TestCase):
             event("session.compaction_complete", "2026-10-26T03:10:00Z", {}),
         ])
 
+    def cursor_session(self, sid="u1"):
+        project = self.root / "cursor" / "projects" / session_log.cursor_project(self.repo) / "agent-transcripts" / sid
+        said = lambda role, *items: {"role": role, "message": {"content": list(items)}}
+        text = lambda t: {"type": "text", "text": t}
+        tool = lambda name, args: {"type": "tool_use", "name": name, "input": args}
+        write_jsonl(project / f"{sid}.jsonl", [
+            said("user", text("<user_query>\nAdd a login page.\nNo new packages.\n</user_query>")),
+            said("assistant", text("Reading the routes first."), tool("Read", {"path": "/repo/routes.ts"})),
+            said("assistant", tool("Shell", {"command": "npm test", "description": "run tests"})),
+            said("assistant", tool("Task", {"description": "Review", "prompt": "Review the login page.", "subagent_type": "explore"})),
+            said("assistant", tool("AskQuestion", {"title": "Style", "questions": [{"id": "q", "prompt": "Which form library?", "options": []}]})),
+            {"type": "turn_ended", "status": "error", "error": "Connection lost"},
+            said("user", text("<user_query>Try again.</user_query>")),
+            said("assistant", text("Done: the page is in.")),
+            {"type": "turn_ended", "status": "success"},
+        ])
+        write_jsonl(project / "subagents" / "v1.jsonl", [
+            said("user", text("<user_query>Review the login page.</user_query>")),
+            said("assistant", text("Looking."), tool("Read", {"path": "/repo/login.ts"})),
+            said("assistant", text("Finding: the form has no label.")),
+        ])
+
     def run_script(self, *args):
         return subprocess.run([sys.executable, str(SCRIPT), *args], capture_output=True, text=True, cwd=self.repo)
 
@@ -145,9 +169,39 @@ class SessionLogTest(unittest.TestCase):
     def test_find_matches_the_session_folder(self):
         self.vscode_session()
         self.cli_session()
+        self.cursor_session()
         found = session_log.find_logs(cwd=self.repo)
-        self.assertEqual(sorted(s for s, _ in found), ["copilot-cli", "vscode"])
+        self.assertEqual(sorted(s for s, _ in found), ["copilot-cli", "cursor", "vscode"])
         self.assertEqual(session_log.find_logs(cwd=self.root), [])
+
+    def test_cursor_project_folder_is_named_after_the_path(self):
+        self.assertEqual(session_log.cursor_project("/Users/me/.local/share/chezmoi"), "Users-me-local-share-chezmoi")
+        self.assertEqual(session_log.cursor_project("/Users/me/sandbox/agent-mission-control"), "Users-me-sandbox-agent-mission-control")
+
+    def test_cursor_digest_keeps_the_user_text_tool_lines_failed_turns_and_subagent_replies(self):
+        self.cursor_session()
+        text, out = self.digest_text("--session", "u1")
+        self.assertIn("USER\nAdd a login page.\nNo new packages.\n", text)
+        self.assertNotIn("user_query", text)
+        self.assertIn("AGENT\nReading the routes first.", text)
+        self.assertEqual(sum(line.startswith("TOOL ") for line in text.splitlines()), 4)
+        self.assertIn("TOOL Read /repo/routes.ts", text)
+        self.assertIn("TOOL Shell npm test", text)
+        self.assertIn("TOOL AskQuestion Which form library?", text)
+        self.assertIn("↳ Finding: the form has no label.", text)
+        self.assertNotIn("/repo/login.ts", text)
+        self.assertIn("FAILED turn: Connection lost", text)
+        self.assertIn("Done: the page is in.", text)
+        self.assertIn("no timestamps", text.splitlines()[0])
+        self.assertIn("source: cursor", out)
+        self.assertIn("the file's own times", out)
+        self.assertIn("1 subagent replies joined", out)
+
+    def test_cursor_subagent_transcripts_are_not_sessions_of_their_own(self):
+        self.cursor_session()
+        found = session_log.find_logs(cwd=self.repo)
+        self.assertEqual([p.name for _, p in found], ["u1.jsonl"])
+        self.assertEqual(session_log.find_logs(session="v1"), [])
 
     def test_cli_digest_shows_failures_exit_codes_and_compactions(self):
         self.cli_session()
