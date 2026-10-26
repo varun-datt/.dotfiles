@@ -18,9 +18,9 @@ Neither the log's size nor this chat's is a reason to skip a step or to distill 
 
 1. Find the log. `python3 ~/.agents/skills/distill/scripts/session_log.py find` lists the logs for the current folder, newest first. Pass `--session <id>` when the id is known; in VS Code it is the last folder of the session's debug-log path.
 2. Condense it. `session_log.py digest [--session <id>]` writes `~/.cache/distill/<session>/chunk-NN.md` and prints what it read. A chunk holds the user's messages verbatim, the agent's replies and reasoning, one line per tool call, and, where the output is still on disk, a shell call's error lines, the answers to questions and subagents' replies.
-3. Read every chunk, start to end. Up to two chunks, read them yourself. Beyond that, give each chunk to its own subagent with the chunk prompt below, all in one batch; each writes its part of the ledger to `ledger-NN.md` beside its chunk.
-4. Keep a ledger at `~/.cache/distill/<session>/ledger.md`: a `## chunk-NN` heading for each chunk, with its candidates under it, or `none`. Subagents' parts join with `cat ledger-*.md > ledger.md` in that folder. Then run `session_log.py coverage --out ~/.cache/distill/<session> --ledger <ledger>`; it fails while any chunk has no heading or nothing under it. Do not judge candidates before it passes.
-5. Up to two chunks, merge the ledger's candidates and judge them yourself in step 3 of SKILL.md. Beyond that, give steps 3 to 7 to one subagent with the judge prompt below, show the user its report, and write a rule, procedure or skill it proposes only after the user's yes. Either way, a candidate whose quote is not in its chunk is dropped as `unsupported`, and a record cites the live source re-checked in step 4, never the digest.
+3. Read every chunk, start to end. Up to two chunks, read them yourself. Beyond that, give each chunk to its own subagent that can write files, with the chunk prompt below, all in one batch: VS Code's default agent, or the `general-purpose` type in Copilot CLI and SDK sessions, never a read-only one such as VS Code's Explore or the CLI's `explore`. Each writes its part of the ledger to `ledger-NN.md` beside its chunk.
+4. Keep a ledger at `~/.cache/distill/<session>/ledger.md`: a `## chunk-NN` heading for each chunk, with its candidates under it, or `none`. Once every subagent has replied, their parts join with `cat ledger-*.md > ledger.md` in that folder; a chunk whose part is missing goes to a new subagent. Then run `session_log.py coverage --out ~/.cache/distill/<session> --ledger <ledger>`; it fails while any chunk has no heading or nothing under it. Do not judge candidates before it passes.
+5. Up to two chunks, merge the ledger's candidates and judge them yourself in step 3 of SKILL.md. Beyond that, give steps 3 to 7 to one subagent of the same kind with the judge prompt below, show the user its report, and write a rule, procedure or skill it proposes only after the user's yes. Either way, a candidate whose quote is not in its chunk is dropped as `unsupported`, and a record cites the live source re-checked in step 4, never the digest.
 6. Delete `~/.cache/distill/<session>/` in step 6. It holds everything the session saw, including private and work content.
 
 If no log is found, distill from the context window and say so at the top of the report, with how much it covers (for example, "context only: a summary up to 03:20, then the full turns").
@@ -30,7 +30,7 @@ If no log is found, distill from the context window and say so at the top of the
 Fill in the paths and send it as is. A subagent does not inherit the user's rules, so the prompt restates them.
 
 ```text
-Read all of <chunk path>, start to end: one slice of an agent session's log. Read only: change nothing and run nothing that changes state, except writing your answer to <ledger part path>.
+Read all of <chunk path>, start to end: one slice of an agent session's log. Change nothing and run nothing that changes state, except writing your answer to <ledger part path>.
 
 List candidates for lasting records, not a summary. A candidate is any of: a correction or ruling by the user, a decision and its reason, a failure or surprise and what was expected instead, a trap in a tool or command, open work and what would release it, something that worked and should be repeated.
 
