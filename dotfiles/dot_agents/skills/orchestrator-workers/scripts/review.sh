@@ -50,10 +50,19 @@ EOF
 fi
 
 date +%s > "$run/$name.start"
+nomcp=()
+while IFS= read -r s; do [ -n "$s" ] && nomcp+=(--disable-mcp-server "$s"); done < <(python3 - <<'EOF'
+import json, os
+try:
+    print('\n'.join(json.load(open(os.path.expanduser('~/.copilot/mcp-config.json'))).get('mcpServers', {})))
+except (OSError, ValueError):
+    pass
+EOF
+)
 echo "start: $(date '+%Y-%m-%d %H:%M:%S')  $name  model=$model cap=$cap timeout=${secs}s"
 timeout "$secs" copilot -C "$wt" -n "${OW_PREFIX:-ow-}$name" --model "$model" --max-ai-credits "$cap" \
   --no-ask-user --allow-all-tools --deny-tool 'shell(git push)' --deny-tool 'shell(git commit)' \
-  --deny-tool 'shell(npm)' --deny-tool=url --disable-builtin-mcps --output-format json \
+  --deny-tool 'shell(npm)' --deny-tool=url --disable-builtin-mcps ${nomcp[@]+"${nomcp[@]}"} --output-format json \
   -p "$(cat "$prompt")" </dev/null > "$run/$name.jsonl" 2> "$run/$name.err"
 rc=$?
 echo "end:   $(date '+%Y-%m-%d %H:%M:%S')  exit $rc$([ "$rc" -eq 124 ] && echo ' TIMED OUT')"
