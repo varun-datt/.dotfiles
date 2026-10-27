@@ -31,6 +31,25 @@ class EstimatesTest(unittest.TestCase):
         estimates.append({"event": "end", "id": "b", "at": datetime.now(timezone.utc).isoformat()})
         self.assertEqual(estimates.completed(estimates.read()), [])
 
+    def test_a_dropped_item_counts_in_no_history_whether_open_or_finished(self):
+        start = datetime(2026, 10, 26, 18, 0, tzinfo=timezone.utc)
+        at = lambda minutes: (start + timedelta(minutes=minutes)).isoformat()
+        estimates.append({"event": "start", "id": "a", "kind": "fix", "estimate": 4, "run": "r", "at": at(0)})
+        estimates.append({"event": "end", "id": "a", "at": at(0)})
+        estimates.append({"event": "drop", "id": "a", "reason": "covered by b", "at": at(1)})
+        estimates.append({"event": "start", "id": "c", "kind": "fix", "estimate": 4, "run": "r", "at": at(1)})
+        estimates.append({"event": "drop", "id": "c", "reason": "covered by b", "at": at(2)})
+        estimates.append({"event": "start", "id": "a", "kind": "fix", "estimate": 4, "run": "r2", "at": at(3)})
+        estimates.append({"event": "end", "id": "a", "at": at(9)})
+        estimates.append({"event": "drop", "id": "never-started", "reason": "covered by b", "at": at(9)})
+        self.assertEqual([(i["id"], i["run"], i["actual"]) for i in estimates.completed(estimates.read())], [("a", "r2", 6.0)])
+
+    def test_command_line_drop_closes_an_item(self):
+        estimates.main(["start", "--id", "x", "--kind", "check", "--estimate", "4", "--method", "history"])
+        self.assertEqual(estimates.main(["drop", "--id", "x", "--reason", "covered by y"]), 0)
+        self.assertEqual(estimates.completed(estimates.read()), [])
+        self.assertEqual(estimates.main(["end", "--id", "x"]), 1)
+
     def test_kind_estimate_needs_five_items(self):
         items = [{"kind": "fix", "actual": a} for a in (2, 4, 4, 5)]
         self.assertTrue(estimates.kind_estimate(items, "fix")["guess"])
@@ -123,6 +142,7 @@ class RunGuardTest(unittest.TestCase):
         self.assertIsNone(estimates.guard_decision({**self.run, "blocked": "needs a secret"}, [], self.at)[0])
         self.assertIsNone(estimates.guard_decision(self.run, [], self.at + timedelta(hours=4))[0])
         self.assertIsNone(estimates.guard_decision(self.run, records, self.at)[0])
+        self.assertIsNone(estimates.guard_decision(self.run, [{"event": "end", "id": "a"}, {"event": "drop", "id": "b"}], self.at, self.chat)[0])
 
     def test_gives_up_after_three_refusals_with_no_progress_and_counts_again_after_progress(self):
         run, reasons = self.run, []

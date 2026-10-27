@@ -46,7 +46,9 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
    An item a person would need hours for is where agents fail more often (METR: the 80% time
    horizon is about a fifth of the 50% one), so split it until each piece ends in a commit.
-5. Forecast: write the plan as JSON (`[{"id", "kind", "estimate", "method"}]`) and run
+5. Forecast: write the plan as JSON (`[{"id", "what", "kind", "estimate", "method"}]`, where
+   `what` is one line saying what the item is: after a compaction, ids alone lost what four items
+   meant, 2026-10-26) and run
    `estimates.py forecast --plan plan.json --window <minutes to the stop time>`. It draws `history`
    items from their kind's logged actuals and corrects the others by their own method's history.
    Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
@@ -65,7 +67,9 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 - Stamp every item: `estimates.py start --id <id> --kind <kind> --estimate <min> --method <method>
   --run <run>` before it (an enabler adds `--serves <feature id>`), `estimates.py end --id <id>`
-  after its commit. Never work out minutes by hand.
+  after its commit. Never work out minutes by hand. An item another item covered, or one logged by
+  mistake, is closed with `estimates.py drop --id <id> --reason "covered by <id>"` instead of
+  `end`, so no history or report counts it (2026-10-26: two covered items logged 0 minutes).
 - Re-run the forecast after each item, and move the overflow line if it shifts.
 - Count each live run's paid calls against the approved budget, and ask before a run that would
   go over it.

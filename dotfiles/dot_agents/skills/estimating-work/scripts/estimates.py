@@ -54,6 +54,11 @@ def completed(records):
             s = starts.pop(r["id"])
             minutes = (datetime.fromisoformat(r["at"]) - datetime.fromisoformat(s["at"])).total_seconds() / 60
             items.append({**s, "event": "done", "actual": round(minutes, 1), "at": r["at"]})
+        elif r["event"] == "drop":
+            if starts.pop(r["id"], None) is None:
+                last = next((n for n in range(len(items) - 1, -1, -1) if items[n]["id"] == r["id"]), None)
+                if last is not None:
+                    del items[last]
     return items
 
 
@@ -175,7 +180,7 @@ def guard_decision(run, records, at, payload=None):
         return None, run
     if not run.get("session") or run["session"] not in session_text(payload):
         return None, run
-    finished = {r["id"] for r in records if r["event"] in ("end", "done")}
+    finished = {r["id"] for r in records if r["event"] in ("end", "done", "drop")}
     left = [i for i in run.get("planned") or [] if i not in finished]
     if run.get("planned") and not left:
         return None, run
@@ -220,6 +225,9 @@ def main(argv=None):
     p.add_argument("--run", default="")
     p = sub.add_parser("end", help="stamp the end of an item")
     p.add_argument("--id", required=True)
+    p = sub.add_parser("drop", help="close an item another item covered, or one logged by mistake, so no history counts it")
+    p.add_argument("--id", required=True)
+    p.add_argument("--reason", required=True, help="for example: covered by <id>")
     p = sub.add_parser("add", help="record a finished item whose actual is already known")
     p.add_argument("--id", required=True)
     p.add_argument("--kind", required=True)
@@ -235,7 +243,7 @@ def main(argv=None):
     p.add_argument("--risk", type=float, default=1.0, help="1.0 known ground to 2.0 many unknowns")
     p.add_argument("--days", type=int, default=180)
     p = sub.add_parser("forecast", help="Monte Carlo forecast of a plan against a window")
-    p.add_argument("--plan", required=True, help="JSON list of {id, kind, estimate, method}")
+    p.add_argument("--plan", required=True, help="JSON list of {id, what, kind, estimate, method}; what = one line saying what the item is")
     p.add_argument("--window", type=float, required=True, help="minutes until the stop time")
     p.add_argument("--runs", type=int, default=1000)
     p.add_argument("--days", type=int, default=180)
@@ -267,6 +275,9 @@ def main(argv=None):
             print(f"no open start for {args.id}", file=sys.stderr)
             return 1
         print(json.dumps({k: done[-1][k] for k in ("id", "kind", "estimate", "actual")}))
+    elif args.command == "drop":
+        append({"event": "drop", "id": args.id, "reason": args.reason, "at": now().isoformat()})
+        print(json.dumps({"id": args.id, "dropped": args.reason}))
     elif args.command == "add":
         append({"event": "done", "id": args.id, "kind": args.kind, "estimate": args.estimate, "actual": args.actual, "method": args.method, "serves": args.serves, "run": args.run, "at": args.at or now().isoformat()})
     elif args.command == "estimate":
