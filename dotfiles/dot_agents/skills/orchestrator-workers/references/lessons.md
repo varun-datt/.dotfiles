@@ -216,3 +216,19 @@ INFERRED or OPEN. Project names appear only as examples.
 - **Routing trials: a cheaper shadow reviewer missed a reproduced privacy blocker** that the usual
   reviewer caught, so the shadow trial stopped. A mid-tier model on two fix rounds saved no credits
   and finished faster; that trial paused until the owner says whether wall time matters. [notes]
+
+## 2026-10-27: a subagent review blocked the run
+
+- **An in-chat subagent review blocked the orchestrator for 3 h 11 min.** In an approved run with
+  three `copilot -p` workers, the VS Code orchestrator ran one code review through `runSubagent`
+  instead of a CLI reviewer. Its model request never returned, and `runSubagent` has no timeout,
+  so the chat was blocked from 15:03 to 18:14. The workers finished at 15:40 and nothing launched
+  the next items, because only the chat launched. About 500 of 834 slot-minutes were lost, and the
+  owner noticed only by asking. [notes]
+- **The second stall with one cause: every alert went to a chat that could not act.** On
+  2026-10-12 the watchdog's alerts did not wake an idle chat either. The skill already said
+  reviewers run as CLI processes, but nothing stopped a subagent. Now a rule in
+  [../SKILL.md](../SKILL.md) bans in-chat subagents for anything later work waits on in an
+  unattended run; `scripts/review.sh` runs each review under `timeout`; and `scripts/queue.py run`
+  launches the next item when a slot frees, and notifies the owner, not the chat, when the chat
+  has been idle 20 minutes while something waits on it. [notes]

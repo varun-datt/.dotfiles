@@ -27,7 +27,10 @@ are separate Copilot CLI sessions, each in its own git worktree. The name follow
 - **Watch it:** you don't need to. The orchestrator escalates only what needs you
   ([Escalate, don't report](#time-budgets-and-monitoring)); the status table holds the rest. The
   watchdog below is meant to wake it, but on 2026-10-12 its alerts did not wake an idle VS Code
-  chat for four hours ([lessons](references/lessons.md)). To look yourself, set `OW_RUN_DIR` to the run folder, then:
+  chat for four hours ([lessons](references/lessons.md)), and on 2026-10-27 an in-chat review
+  blocked the chat for three ([lessons](references/lessons.md#2026-10-27-a-subagent-review-blocked-the-run)).
+  The [queue runner](#queue-runner) now launches the next item, and alerts you, not the chat, when
+  the chat goes idle. To look yourself, set `OW_RUN_DIR` to the run folder, then:
   - `python3 ~/.agents/skills/orchestrator-workers/scripts/status.py [--all]` shows a table of every worker: its state, elapsed and idle
     minutes, spend, current activity, and `OVER 2.2x of 60m`.
   - `python3 ~/.agents/skills/orchestrator-workers/scripts/watch.py` is the orchestrator's watchdog
@@ -38,6 +41,7 @@ are separate Copilot CLI sessions, each in its own git worktree. The name follow
   - To stop a worker yourself: find its PID with `ps -axww -o pid=,args= | grep -- '-n ow-'`, then
     `kill <PID>`.
   - To stop the watchdog: `kill $(cat "$OW_RUN_DIR/watch.pid")`.
+  - To stop the queue runner: `kill $(cat "$OW_RUN_DIR/queue.pid")`. Items it launched keep running.
   - Resume a stopped worker later with `copilot -r ow-<item>` and a [resume prompt](assets/resume.md).
 
 ## Start
@@ -79,7 +83,7 @@ which answers you inferred from the repository.
 - record the rulings, dated;
 - create the run folder and copy [scripts/budgets.example.json](scripts/budgets.example.json) into it
   as `budgets.json`;
-- start `watch.py` in an async terminal;
+- start `watch.py` in an async terminal, and `queue.py run` in another ([queue runner](#queue-runner));
 - run `python3 ~/.agents/skills/orchestrator-workers/scripts/state.py init --title "<goal>" --client vscode|cli --session-id <id>`; it writes `<run>/orchestrator.json` and registers the run for the dashboard. Record each item, the queue and every question for the owner only through `state.py item|queue|ask|answered` ([details](references/details.md#state-file));
 - work autonomously.
 
@@ -91,6 +95,11 @@ which answers you inferred from the repository.
 | **Worker** (`copilot -p`, own worktree and branch) | One item; commits each step with explicit paths; runs every gate; reports with labels | Pushes; edits the orchestrator's records; touches the owner's instance |
 | **Reviewer** (read-only, another model family) | One review of the diff against the task; at most one fixes-only re-review | Writes, runs a shell, fetches URLs |
 | **Research worker** | A proposal with options and a recommendation; commits only its proposal files | Changes product code |
+
+**No in-chat subagents in an unattended run.** Never use an in-chat subagent tool (VS Code
+`runSubagent`, Copilot CLI `task`) for anything a later item waits on, reviews included. It has no
+timeout and blocks the orchestrator until it returns. Run that work as a CLI process under
+`timeout`. Subagents are fine only for work nothing waits on, and only while the owner is watching.
 
 ## Lifecycle
 
@@ -134,8 +143,10 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
   Why each flag is there: [references/details.md](references/details.md#launch-flags).
 - **Model, effort and credit cap:** by the kind of round, from [references/routing.md](references/routing.md); the cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --caps`.
-- **Reviewer:** add `--deny-tool=write --deny-tool=shell --deny-tool=url` and use another model
-  family. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
+- **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
+  runs it under `timeout` (`--help` lists the model, cap and timeout overrides). Use another model
+  family. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
+  shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
 - **Fix and resume rounds:** `copilot -r ow-<item>` with the same flags. Name the run
   `<item>-fix1` or `<item>-resume1`; for its credit cap see [routing](references/routing.md#credit-caps).
 - **A `result` event is not success.** Check `exitCode` and `session.error`; `scripts/result.py`
@@ -151,6 +162,22 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
   short, because the session keeps its context.
 
 Standing owner rules are appended to the preambles as soon as they are made.
+
+## Queue runner
+
+`scripts/queue.py` launches the next approved item when a slot frees, so a stalled chat no longer
+stops the run.
+
+- **Start it** in an async terminal alongside `watch.py`:
+  `timeout 172800 python3 scripts/queue.py run --slots 3`. When the client is VS Code, add
+  `--chat-log <session transcript>`; the transcript grows on every tool call.
+- **Queue every approved item** with `queue.py add <id> --cmd "<launch command>" [--after <ids>]`
+  instead of launching it by hand. Queue reviews with `--no-slot` and a `review.sh` command.
+- **After each merge,** call `queue.py done <id>`. Items that wait on it become ready.
+- **`queue.py status`** shows each item: waiting, ready, running, exited N or done.
+- **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
+  (default 20) and something waits on it, the runner posts a macOS notification and appends the
+  line to `ALERT.log`. Nothing is sent while the chat is active or nothing waits on it.
 
 ## Time budgets and monitoring
 

@@ -1,0 +1,132 @@
+import importlib.util, io, json, os, tempfile, threading, time, unittest
+from unittest import mock
+
+# Loaded by path under another name: `import queue` would be the standard library's module.
+_spec = importlib.util.spec_from_file_location('ow_queue', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'queue.py'))
+q = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(q)
+
+
+def wait_until(pred, timeout=10):
+    end = time.time() + timeout
+    while time.time() < end:
+        if pred():
+            return True
+        time.sleep(0.02)
+    return False
+
+
+class QueueTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.rd = os.path.join(self.tmp.name, 'run')
+        self.notes = []
+        p = mock.patch.object(q, 'notify', self.notes.append)
+        p.start()
+        self.addCleanup(p.stop)
+
+    def cli(self, *args):
+        return q.main([*args, '--run-dir', self.rd])
+
+    def items(self):
+        return {it['id']: it for it in q.load(self.rd)['items']}
+
+    def start(self, **kw):
+        kw = {'slots': 3, 'poll': 0.05, 'idle_alert': 0, **kw}
+        t = threading.Thread(target=q.run, args=(self.rd,), kwargs=kw, daemon=True)
+        t.start()
+        return t
+
+    def finish(self, t, ids):
+        self.assertTrue(wait_until(lambda: all(self.items()[i]['end'] is not None for i in ids)), self.items())
+        for i in ids:
+            self.cli('done', i)
+        t.join(5)
+        self.assertFalse(t.is_alive())
+
+    def test_slots_respected_and_no_slot_items_do_not_count(self):
+        for i in ('a', 'b', 'c'):
+            self.cli('add', i, '--cmd', 'sleep 0.3')
+        self.cli('add', 'r', '--cmd', 'sleep 0.3', '--no-slot')
+        t = self.start(slots=1)
+        self.finish(t, ['a', 'b', 'c', 'r'])
+        it = self.items()
+        self.assertLess(it['r']['start'], it['a']['end'])
+        self.assertGreaterEqual(it['b']['start'], it['a']['end'])
+        self.assertGreaterEqual(it['c']['start'], it['b']['end'])
+
+    def test_after_waits_for_done_not_for_exit(self):
+        self.cli('add', 'a', '--cmd', 'true')
+        self.cli('add', 'b', '--cmd', 'true', '--after', 'a')
+        t = self.start()
+        self.assertTrue(wait_until(lambda: self.items()['a']['end'] is not None))
+        time.sleep(0.2)
+        self.assertIsNone(self.items()['b']['start'])
+        self.assertEqual(q.state(self.items()['b'], self.items()), 'waiting')
+        self.cli('done', 'a')
+        self.finish(t, ['b'])
+        self.assertGreater(self.items()['b']['start'], self.items()['a']['end'])
+
+    def test_exit_codes_recorded_and_status_lines(self):
+        self.cli('add', 'bad', '--cmd', 'sleep 0.2; exit 3')
+        t = self.start()
+        self.assertTrue(wait_until(lambda: self.items()['bad']['end'] is not None))
+        self.assertEqual(self.items()['bad']['exit'], 3)
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as out:
+            self.cli('status')
+        self.assertRegex(out.getvalue(), r'^bad  exited 3  \d+m$')
+        self.finish(t, ['bad'])
+
+    def test_concurrent_add_during_run_is_not_lost(self):
+        self.cli('add', 'first', '--cmd', 'sleep 0.5')
+        t = self.start(slots=20)
+        adders = [threading.Thread(target=self.cli, args=('add', f'x{n}', '--cmd', 'true')) for n in range(15)]
+        for a in adders:
+            a.start()
+        for a in adders:
+            a.join()
+        ids = ['first'] + [f'x{n}' for n in range(15)]
+        self.assertEqual(set(self.items()), set(ids))
+        self.finish(t, ids)
+
+    def test_priority_then_insertion_order(self):
+        log = os.path.join(self.tmp.name, 'order')
+        for i, p in (('low', '0'), ('high', '5'), ('mid', '1'), ('mid2', '1')):
+            self.cli('add', i, '--cmd', f'echo {i} >> {log}', '--priority', p)
+        t = self.start(slots=1)
+        self.finish(t, ['low', 'high', 'mid', 'mid2'])
+        with open(log) as f:
+            self.assertEqual(f.read().split(), ['high', 'mid', 'mid2', 'low'])
+
+    def test_idle_chat_alerts_the_owner_once_and_quiet_while_active(self):
+        self.cli('add', 'a', '--cmd', 'true')
+        old = time.time() - 3600
+        os.utime(os.path.join(self.rd, 'heartbeat'), (old, old))
+        t = self.start(idle_alert=0.5)
+        self.assertTrue(wait_until(lambda: self.notes))
+        time.sleep(0.3)
+        self.assertEqual(len(self.notes), 1)
+        self.assertIn('a exited 0', self.notes[0])
+        with open(os.path.join(self.rd, 'ALERT.log')) as f:
+            self.assertIn(self.notes[0], f.read())
+        self.cli('done', 'a')
+        t.join(5)
+
+        self.notes.clear()
+        self.cli('add', 'b', '--cmd', 'true')
+        t = self.start(idle_alert=0.5)
+        self.finish(t, ['b'])
+        self.assertEqual(self.notes, [])
+
+    def test_add_rejects_duplicates_and_unknown_after(self):
+        self.assertEqual(self.cli('add', 'a', '--cmd', 'true'), 0)
+        with mock.patch('sys.stderr'):
+            self.assertEqual(self.cli('add', 'a', '--cmd', 'true'), 2)
+            self.assertEqual(self.cli('add', 'b', '--cmd', 'true', '--after', 'nope'), 2)
+        with open(os.path.join(self.rd, 'queue.json')) as f:
+            self.assertEqual([it['id'] for it in json.load(f)['items']], ['a'])
+
+
+if __name__ == '__main__':
+    unittest.main()

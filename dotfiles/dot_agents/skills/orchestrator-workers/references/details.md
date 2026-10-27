@@ -22,7 +22,7 @@ VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
 | `--add-dir <path>` | `-p` sessions are denied files outside the worktree. This grants access, writing included, so the prompt must say read-only |
 | `--output-format json` | JSONL events for `status.py` and `result.py` |
 | `</dev/null`, `2> <item>.err` | No stdin to wait on; stderr carries CLI-wide failures |
-| Reviewer: `--deny-tool=write --deny-tool=shell --deny-tool=url` | Read-only. Use a model from another family |
+| Reviewer (`scripts/review.sh`): `--deny-tool 'shell(git push)'`, `'shell(git commit)'`, `'shell(npm)'`, `--deny-tool=url` | No pushes, commits, installs or fetches; the shell stays for `git diff`. Use a model from another family |
 
 **Reading a result.**
 - The last `assistant.message` holds the report.
