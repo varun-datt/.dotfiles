@@ -15,6 +15,8 @@ These rules hold for every format. The format skill (`pptx`, `visual-explainer`,
   2. **Metaphor-led:** a metaphor carries the mechanism, with one mapping fixed in a legend and used
      on every panel, and the plain system diagram beneath each picture. Prose still names system
      parts plainly.
+- For instructions people will follow, recommend plain: titles name the real thing (the skill, the
+  repository, "user story"), and a metaphor stays in the hook if anywhere.
 - For a mixed audience (non-technical people and architects), give each panel two layers: the
   picture with a one-line takeaway, then a small "For architects" strip of boxes and arrows.
 - Prefer a metaphor the field already uses; a vendor drawing the same picture is evidence it
@@ -30,6 +32,24 @@ These rules hold for every format. The format skill (`pptx`, `visual-explainer`,
 
 - Problem-first or answer-first are both fine; the one-line answer must be reachable from the first slide, in its title or its notes.
 - A supporting metric goes on the slide whose claim it supports, never wherever there is space.
+
+## How-to and launch pieces
+
+- Show only what the reader installs, types or decides. Parts they never invoke, optional modes,
+  definitions and background notes go behind the link, on the architects' version too.
+- Open each phase with a highlighted box holding the exact command or prompt, and put prerequisites
+  in a small highlighted box at the top right. That colour means "do this" and nothing else.
+- Parallel panels have the same parts in the same order and share one grid, so their rows line up.
+- The headline says what to do in plain words and names the product; the name is its only emphasis.
+- The colour key is one small line under the title.
+- Steps name who acts and use the imperative for what the reader types. They say what results
+  ("records the plan you approve"), not how ("as a Task"). A prompt shown must read like speech.
+- Use the organisation's names for roles and things: SME, user story, the repository's real name.
+- Technical pieces are pictures first: an icon per piece, labels of one to three words.
+- For a piece meant to excite, render two or three bold palettes on the real piece, side by side,
+  and let the user pick by number.
+- The post that carries the image: bullets with bold lead-ins, each command in code and each link
+  in full, the same commands as the image, no general notes.
 
 ## Encodings
 
@@ -79,6 +99,8 @@ These rules hold for every format. The format skill (`pptx`, `visual-explainer`,
 - [ ] Rendered and looked at: a full-page screenshot, then a crop of each panel at the target size
       ([references/render-check.md](references/render-check.md)). No text clipped at a figure's edge.
 - [ ] Every legend mapping holds on every panel; no visual variable means two things.
+- [ ] Every command and prompt in the image matches the post exactly.
+- [ ] Parallel panels line up row for row.
 - [ ] Every slide fits without scrolling at the smallest target screen, and in dark mode if the host has one.
 - [ ] Every number traces to a source named in the notes.
 - [ ] Nothing on a slide needs the notes to be understood.
