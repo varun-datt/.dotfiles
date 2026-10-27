@@ -26,3 +26,7 @@ Look at the rendered result before calling it done. Commands are for macOS.
   nothing about the rest.
 - SVG text with `text-anchor="middle"` near a figure's edge spills past the `viewBox` and is clipped
   without warning. Move it inward, or anchor it at `start` or `end`.
+- A page height measured by an inline script comes out short when images have not loaded yet (one
+  page measured 206 px). Give every image an `aspect-ratio`, or a width and height.
+- Chrome can break a long command at a hyphen, between `--` and the flag name. Set
+  `white-space: nowrap` on commands and put a `<br>` where a break is wanted.
