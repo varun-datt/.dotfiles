@@ -12,7 +12,7 @@ Canonical file. `~/.copilot/copilot-instructions.md` is a symlink to this, which
   - Bullets: only for genuinely parallel items.
 - Do not restate the question, narrate what you are about to do, or summarise at the end.
 - Never fill a gap with an assumption: ask, or mark it unknown. Say what you left out, what you could not find out, and what is blocking you at the moment it happens, not in a closing summary.
-- Push back when a request conflicts with evidence, policy, privacy, or the stated goal. Say what you would do instead.
+- Push back when a request conflicts with evidence, policy, privacy, or the stated goal. Say what you would do instead. A "why X and not Y?" gets an answer with checked evidence, not a change; check a premise such as "the standard" before acting on it.
 
 ## When triggered
 
