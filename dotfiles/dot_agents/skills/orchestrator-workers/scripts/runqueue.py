@@ -3,11 +3,11 @@
 stalled orchestrator chat no longer stops the run, and alerts the owner when the chat goes idle.
 
 Usage:
-    python3 queue.py add <id> --cmd "<shell command>" [--after id1,id2] [--no-slot] [--priority N]
-    python3 queue.py done <id>        # merged or closed; items waiting on it become ready
-    python3 queue.py status           # one line per item
-    timeout 172800 python3 queue.py run [--slots 3] [--poll 30] [--idle-alert 20] [--chat-log PATH]
-    python3 queue.py --help
+    python3 runqueue.py add <id> --cmd "<shell command>" [--after id1,id2] [--no-slot] [--priority N]
+    python3 runqueue.py done <id>        # merged or closed; items waiting on it become ready
+    python3 runqueue.py status           # one line per item
+    timeout 172800 python3 runqueue.py run [--slots 3] [--poll 30] [--idle-alert 20] [--chat-log PATH]
+    python3 runqueue.py --help
 
 Every subcommand works on <run>/queue.json (OW_RUN_DIR, or --run-dir) under <run>/queue.lock.
 `add`, `done` and `status` touch <run>/heartbeat: they are the chat's sign of life.

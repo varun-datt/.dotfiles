@@ -229,6 +229,6 @@ INFERRED or OPEN. Project names appear only as examples.
   2026-10-12 the watchdog's alerts did not wake an idle chat either. The skill already said
   reviewers run as CLI processes, but nothing stopped a subagent. Now a rule in
   [../SKILL.md](../SKILL.md) bans in-chat subagents for anything later work waits on in an
-  unattended run; `scripts/review.sh` runs each review under `timeout`; and `scripts/queue.py run`
+  unattended run; `scripts/review.sh` runs each review under `timeout`; and `scripts/runqueue.py run`
   launches the next item when a slot frees, and notifies the owner, not the chat, when the chat
   has been idle 20 minutes while something waits on it. [notes]

@@ -1,10 +1,8 @@
-import importlib.util, io, json, os, tempfile, threading, time, unittest
+import io, json, os, sys, tempfile, threading, time, unittest
 from unittest import mock
 
-# Loaded by path under another name: `import queue` would be the standard library's module.
-_spec = importlib.util.spec_from_file_location('ow_queue', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'queue.py'))
-q = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(q)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import runqueue as q  # noqa: E402
 
 
 def wait_until(pred, timeout=10):

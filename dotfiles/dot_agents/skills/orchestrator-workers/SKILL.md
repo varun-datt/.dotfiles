@@ -83,7 +83,7 @@ which answers you inferred from the repository.
 - record the rulings, dated;
 - create the run folder and copy [scripts/budgets.example.json](scripts/budgets.example.json) into it
   as `budgets.json`;
-- start `watch.py` in an async terminal, and `queue.py run` in another ([queue runner](#queue-runner));
+- start `watch.py` in an async terminal, and `runqueue.py run` in another ([queue runner](#queue-runner));
 - run `python3 ~/.agents/skills/orchestrator-workers/scripts/state.py init --title "<goal>" --client vscode|cli --session-id <id>`; it writes `<run>/orchestrator.json` and registers the run for the dashboard. Record each item, the queue and every question for the owner only through `state.py item|queue|ask|answered` ([details](references/details.md#state-file));
 - work autonomously.
 
@@ -165,16 +165,18 @@ Standing owner rules are appended to the preambles as soon as they are made.
 
 ## Queue runner
 
-`scripts/queue.py` launches the next approved item when a slot frees, so a stalled chat no longer
-stops the run.
+`scripts/runqueue.py` launches the next approved item when a slot frees, so a stalled chat no
+longer stops the run. (It is not `queue.py`, which would hide Python's own `queue` module from
+every script in the folder.)
 
 - **Start it** in an async terminal alongside `watch.py`:
-  `timeout 172800 python3 scripts/queue.py run --slots 3`. When the client is VS Code, add
+  `timeout 172800 python3 scripts/runqueue.py run --slots 3`. When the client is VS Code, add
   `--chat-log <session transcript>`; the transcript grows on every tool call.
-- **Queue every approved item** with `queue.py add <id> --cmd "<launch command>" [--after <ids>]`
-  instead of launching it by hand. Queue reviews with `--no-slot` and a `review.sh` command.
-- **After each merge,** call `queue.py done <id>`. Items that wait on it become ready.
-- **`queue.py status`** shows each item: waiting, ready, running, exited N or done.
+- **Queue every approved item** with `runqueue.py add <id> --cmd "<launch command>" [--after <ids>]`
+  instead of launching it by hand. `--after` names only queued ids, so queue an item that waits on
+  one started by hand after that one merges. Queue reviews with `--no-slot` and a `review.sh` command.
+- **After each merge,** call `runqueue.py done <id>`. Items that wait on it become ready.
+- **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
   line to `ALERT.log`. Nothing is sent while the chat is active or nothing waits on it.
