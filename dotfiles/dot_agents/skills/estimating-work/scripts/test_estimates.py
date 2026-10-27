@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import os
 import sys
@@ -108,6 +110,14 @@ class EstimatesTest(unittest.TestCase):
         lines = [json.loads(line) for line in Path(os.environ["ESTIMATES_LOG"]).read_text().splitlines()]
         self.assertEqual([r["event"] for r in lines], ["start", "end", "end"])
         self.assertEqual(lines[0]["method"], "history")
+
+    def test_command_line_start_prints_a_confirmation(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            estimates.main(["start", "--id", "x", "--kind", "check", "--estimate", "4", "--method", "history"])
+        printed = json.loads(out.getvalue())
+        self.assertEqual({k: printed[k] for k in ("id", "kind", "estimate", "method")}, {"id": "x", "kind": "check", "estimate": 4.0, "method": "history"})
+        self.assertIn("started", printed)
 
     def test_command_line_refuses_a_plan_item_without_a_method(self):
         plan = Path(self.dir.name) / "plan.json"

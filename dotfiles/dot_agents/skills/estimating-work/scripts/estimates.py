@@ -264,10 +264,12 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "start":
-        append({"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "at": now().isoformat()})
+        record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "at": now().isoformat()}
+        append(record)
         run = load_run()
         if run and run.get("blocked"):
             save_run({k: v for k, v in run.items() if k not in ("blocked", "blockedAt")})
+        print(json.dumps({k: record[k] for k in ("id", "kind", "estimate", "method")} | {"started": record["at"]}))
     elif args.command == "end":
         append({"event": "end", "id": args.id, "at": now().isoformat()})
         done = [i for i in completed(read()) if i["id"] == args.id]
