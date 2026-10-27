@@ -84,10 +84,11 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 - A turn that starts without the plan in view reads the session memory before anything else: on
   2026-10-26 a turn begun by a terminal notification lost the plan and ended on a question about
   an unrelated failing test, mid-run.
-- Keep the run's own chat small: every step resends the whole chat. Do each item in a subagent
-  with no agent name, which in VS Code inherits the personal instructions, skills and memory
-  (checked 2026-10-26), briefed with the item's `what`, the owner's rulings and the files; read its
-  diff and look at its renders before the next item.
+- Keep the run's own chat small: every step resends the whole chat. Do each item in the `worker`
+  subagent (`runSubagent` with agent name `worker`), which in VS Code inherits the personal
+  instructions, skills and memory without the MCP servers' tools, so each call starts at about 49k
+  tokens against the default subagent's 125k (checked 2026-10-27). Brief it with the item's `what`,
+  the owner's rulings and the files; read its diff and look at its renders before the next item.
 - Keep the todo list current: after a reset it is the one list still in view, and a stale one makes
   a run look unstarted.
 - Polish found on the way becomes a backlog item, not work now.
