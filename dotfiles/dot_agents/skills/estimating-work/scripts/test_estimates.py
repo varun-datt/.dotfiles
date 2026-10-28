@@ -2,25 +2,240 @@ import contextlib
 import io
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).parent))
 import estimates  # noqa: E402
 
+FAKE_GH = """#!{python}
+import json, os, sys, time
+with open(os.environ["FAKE_GH_CALLS"], "a") as calls:
+    calls.write(json.dumps({{"args": sys.argv[1:], "env": {{k: os.environ.get(k) for k in ("GH_PROMPT_DISABLED", "GH_NO_UPDATE_NOTIFIER", "NO_COLOR")}}, "stdin": sys.stdin.read()}}) + "\\n")
+mode = os.environ.get("FAKE_GH_MODE", "used")
+if mode == "fail":
+    print("HTTP 401: login secret-login-marker, org secret-org-marker", file=sys.stderr)
+    sys.exit(4)
+if mode == "not_utf8":
+    sys.stdout.buffer.write(b"\\xff\\xfe{{")
+    sys.exit(0)
+if mode == "slow":
+    time.sleep(5)
+premium = {{"used": {{"has_quota": True, "credits_used": float(os.environ.get("FAKE_GH_USED", "10"))}},
+           "missing": {{"has_quota": True, "entitlement": 300, "quota_remaining": 288.5}},
+           "no_quota": {{"has_quota": False, "credits_used": 3}},
+           "slow": {{"has_quota": True, "credits_used": 1}}}}[mode]
+print(json.dumps({{"quota_snapshots": {{"premium_interactions": premium}}}}))
+"""
 
-class EstimatesTest(unittest.TestCase):
+
+def setUpModule():
+    global STUB, SAVED_ENV
+    SAVED_ENV = dict(os.environ)
+    STUB = tempfile.TemporaryDirectory()
+    gh = Path(STUB.name) / "gh"
+    gh.write_text(FAKE_GH.format(python=sys.executable))
+    gh.chmod(0o755)
+    os.environ["PATH"] = STUB.name + os.pathsep + os.environ["PATH"]
+    os.environ["FAKE_GH_CALLS"] = str(Path(STUB.name) / "calls.jsonl")
+    os.environ["ESTIMATES_LOG"] = str(Path(STUB.name) / "log.jsonl")
+    os.environ["ESTIMATES_RUN"] = str(Path(STUB.name) / "run.json")
+
+
+def tearDownModule():
+    STUB.cleanup()
+    os.environ.clear()
+    os.environ.update(SAVED_ENV)
+
+
+class Isolated(unittest.TestCase):
+    """Every state file in a temporary folder, and the environment restored after each test."""
+
     def setUp(self):
+        self.saved_env = dict(os.environ)
         self.dir = tempfile.TemporaryDirectory()
         os.environ["ESTIMATES_LOG"] = str(Path(self.dir.name) / "log.jsonl")
+        os.environ["ESTIMATES_RUN"] = str(Path(self.dir.name) / "run.json")
+        os.environ["FAKE_GH_MODE"] = "used"
+        Path(os.environ["FAKE_GH_CALLS"]).unlink(missing_ok=True)
 
     def tearDown(self):
         self.dir.cleanup()
-        del os.environ["ESTIMATES_LOG"]
+        os.environ.clear()
+        os.environ.update(self.saved_env)
 
+
+class CreditsTest(Isolated):
+    def test_a_normal_read_takes_credits_used(self):
+        self.assertEqual(estimates.read_credits(), (10.0, None))
+
+    def test_gh_gets_exact_arguments_no_prompt_env_no_shell_and_closed_stdin(self):
+        real_run = estimates.subprocess.run
+        seen = []
+        with mock.patch.object(estimates.subprocess, "run", side_effect=lambda *a, **k: seen.append((a, k)) or real_run(*a, **k)):
+            estimates.read_credits()
+        [(args, kwargs)] = seen
+        self.assertEqual(args[0], ["gh", "api", "/copilot_internal/user"])
+        self.assertFalse(kwargs.get("shell", False))
+        self.assertEqual(kwargs["stdin"], subprocess.DEVNULL)
+        [call] = [json.loads(line) for line in Path(os.environ["FAKE_GH_CALLS"]).read_text().splitlines()]
+        self.assertEqual(call, {"args": ["api", "/copilot_internal/user"], "env": {"GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1", "NO_COLOR": "1"}, "stdin": ""})
+
+    def test_a_missing_credits_used_is_unknown_never_derived_from_entitlement(self):
+        os.environ["FAKE_GH_MODE"] = "missing"
+        self.assertEqual(estimates.read_credits(), (None, "no-figure"))
+
+    def test_parse_refuses_no_quota_and_a_bad_figure(self):
+        premium = lambda p: {"quota_snapshots": {"premium_interactions": p}}
+        self.assertEqual(estimates.parse_credits(premium({"has_quota": True, "credits_used": -1})), (None, "no-figure"))
+        self.assertEqual(estimates.parse_credits(premium({"credits_used": float("inf"), "entitlement": 5, "quota_remaining": 2})), (None, "no-figure"))
+        self.assertEqual(estimates.parse_credits(premium({"has_quota": True, "credits_used": True})), (None, "no-figure"))
+        self.assertEqual(estimates.parse_credits({}), (None, "no-quota"))
+        self.assertEqual(estimates.parse_credits(premium({"credits_used": 0})), (0, None))
+
+    def test_has_quota_false_is_unknown(self):
+        os.environ["FAKE_GH_MODE"] = "no_quota"
+        self.assertEqual(estimates.read_credits(), (None, "no-quota"))
+
+    def test_a_non_zero_exit_is_a_code_and_never_stores_or_prints_gh_stderr(self):
+        os.environ["FAKE_GH_MODE"] = "fail"
+        self.assertEqual(estimates.read_credits(), (None, "gh-exit-4"))
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            estimates.main(["start", "--id", "s", "--kind", "fix", "--estimate", "4", "--method", "rounds"])
+            estimates.main(["end", "--id", "s"])
+            estimates.main(["report"])
+        everything = out.getvalue() + err.getvalue() + Path(os.environ["ESTIMATES_LOG"]).read_text()
+        self.assertNotIn("marker", everything)
+        self.assertEqual(estimates.completed(estimates.read())[0]["credits_unknown"], "start:gh-exit-4 end:gh-exit-4")
+
+    def test_output_that_is_not_utf8_is_bad_json_and_never_stops_end(self):
+        os.environ["FAKE_GH_MODE"] = "not_utf8"
+        self.assertEqual(estimates.read_credits(), (None, "bad-json"))
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["start", "--id", "b", "--kind", "fix", "--estimate", "4", "--method", "rounds"])
+            self.assertEqual(estimates.main(["end", "--id", "b"]), 0)
+        self.assertEqual(estimates.completed(estimates.read())[0]["credits_unknown"], "start:bad-json end:bad-json")
+
+    def test_gh_missing_from_path_is_unknown(self):
+        os.environ["PATH"] = self.dir.name
+        self.assertEqual(estimates.read_credits(), (None, "gh-missing"))
+
+    def test_a_timeout_is_unknown_and_never_blocks_start_or_end(self):
+        os.environ["FAKE_GH_MODE"] = "slow"
+        saved, estimates.CREDITS_TIMEOUT = estimates.CREDITS_TIMEOUT, 0.5
+        try:
+            self.assertEqual(estimates.read_credits(), (None, "timeout"))
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(estimates.main(["start", "--id", "t", "--kind", "fix", "--estimate", "4", "--method", "rounds", "--credits", "2"]), 0)
+                self.assertEqual(estimates.main(["end", "--id", "t"]), 0)
+        finally:
+            estimates.CREDITS_TIMEOUT = saved
+        [item] = estimates.completed(estimates.read())
+        self.assertIsNone(item["credits_actual"])
+        self.assertEqual(item["credits_unknown"], "start:timeout end:timeout")
+
+    def test_start_and_end_read_the_figure_and_store_the_delta(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["start", "--id", "c", "--kind", "fix", "--estimate", "4", "--method", "rounds", "--credits", "3"])
+            os.environ["FAKE_GH_USED"] = "12.5"
+            estimates.main(["end", "--id", "c"])
+        start, end = estimates.read()
+        self.assertEqual((start["credits_estimate"], start["credits_at_start"], end["credits_at_end"], end["credits_actual"]), (3.0, 10.0, 12.5, 2.5))
+        [item] = estimates.completed(estimates.read())
+        self.assertEqual((item["credits_estimate"], item["credits_actual"]), (3.0, 2.5))
+        self.assertNotIn("credits_unknown", item)
+
+    def test_a_failed_read_at_start_marks_the_item_unknown_but_stamps_it(self):
+        os.environ["FAKE_GH_MODE"] = "fail"
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["start", "--id", "u", "--kind", "fix", "--estimate", "4", "--method", "rounds"])
+        os.environ["FAKE_GH_MODE"] = "used"
+        with contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(estimates.main(["end", "--id", "u"]), 0)
+        [item] = estimates.completed(estimates.read())
+        self.assertEqual((item["actual"] >= 0, item["credits_actual"]), (True, None))
+        self.assertEqual(item["credits_unknown"], "start:gh-exit-4")
+
+    def test_a_second_end_appends_a_record_and_exits_zero_as_before(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["start", "--id", "d", "--kind", "fix", "--estimate", "4", "--method", "rounds"])
+            self.assertEqual(estimates.main(["end", "--id", "d"]), 0)
+            self.assertEqual(estimates.main(["end", "--id", "d"]), 0)
+        self.assertEqual([r["event"] for r in estimates.read()], ["start", "end", "end"])
+        self.assertNotIn("credits_at_end", estimates.read()[2])
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(estimates.main(["end", "--id", "never-started"]), 1)
+
+    def test_free_text_in_a_start_record_never_reaches_the_end_record_or_the_report(self):
+        estimates.append({"event": "start", "id": "f", "kind": "fix", "estimate": 4, "run": "r", "credits_at_start": None, "credits_unknown": "at start: gh exited 4: login secret-login-marker", "at": datetime.now(timezone.utc).isoformat()})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(estimates.main(["end", "--id", "f"]), 0)
+            estimates.main(["report", "--run", "r"])
+        self.assertEqual(estimates.read()[1]["credits_unknown"], "start:unknown")
+        self.assertNotIn("marker", out.getvalue())
+        self.assertEqual(estimates.known_reasons("start:timeout end:gh-exit-4"), "start:timeout end:gh-exit-4")
+        self.assertEqual(estimates.known_reasons("end: secret-org-marker"), "unknown")
+
+    def test_an_item_overlapping_one_still_open_is_marked(self):
+        start = datetime.now(timezone.utc) - timedelta(minutes=10)
+        at = lambda minutes: (start + timedelta(minutes=minutes)).isoformat()
+        for r in [
+            {"event": "start", "id": "a", "kind": "fix", "estimate": 5, "run": "r1", "at": at(0)},
+            {"event": "start", "id": "b", "kind": "fix", "estimate": 5, "run": "r1", "at": at(2)},
+            {"event": "end", "id": "a", "credits_actual": 1, "at": at(5)},
+        ]:
+            estimates.append(r)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            estimates.main(["report", "--run", "r1"])
+        credits = json.loads(out.getvalue())["credits"]
+        self.assertEqual([(r["id"], r.get("overlaps")) for r in credits["items"]], [("a", ["b"])])
+
+    def test_report_for_one_run_marks_an_overlap_with_another_runs_item(self):
+        at = lambda minutes: datetime(2026, 10, 28, 9, minutes, tzinfo=timezone.utc).isoformat()
+        for r in [
+            {"event": "start", "id": "mine", "kind": "fix", "estimate": 5, "run": "r1", "at": at(0)},
+            {"event": "start", "id": "theirs", "kind": "fix", "estimate": 5, "run": "r2", "at": at(2)},
+            {"event": "end", "id": "mine", "credits_actual": 1, "at": at(5)},
+            {"event": "end", "id": "theirs", "credits_actual": 1, "at": at(7)},
+        ]:
+            estimates.append(r)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            estimates.main(["report", "--run", "r1"])
+        credits = json.loads(out.getvalue())["credits"]
+        self.assertEqual([(r["id"], r["overlaps"]) for r in credits["items"]], [("mine", ["theirs"])])
+        self.assertEqual(credits["items_overlapping"], 1)
+
+    def test_report_shows_credits_beside_minutes_and_marks_overlapping_items(self):
+        at = lambda minutes: datetime(2026, 10, 28, 9, minutes, tzinfo=timezone.utc).isoformat()
+        records = [
+            {"event": "start", "id": "a", "kind": "fix", "estimate": 5, "credits_estimate": 2, "credits_at_start": 10, "at": at(0)},
+            {"event": "start", "id": "b", "kind": "fix", "estimate": 5, "credits_estimate": 1, "credits_at_start": 11, "at": at(4)},
+            {"event": "end", "id": "a", "credits_at_end": 14, "credits_actual": 4, "at": at(6)},
+            {"event": "end", "id": "b", "credits_at_end": 15, "credits_actual": 4, "at": at(8)},
+            {"event": "start", "id": "c", "kind": "feature", "estimate": 5, "credits_estimate": 3, "credits_at_start": 15, "at": at(8)},
+            {"event": "end", "id": "c", "credits_actual": None, "credits_unknown": "end:gh-missing", "at": at(10)},
+        ]
+        for r in records:
+            estimates.append(r)
+        credits = estimates.report(estimates.completed(estimates.read()))["credits"]
+        rows = {r["id"]: r for r in credits["items"]}
+        self.assertEqual((rows["a"]["overlaps"], rows["b"]["overlaps"]), (["b"], ["a"]))
+        self.assertNotIn("overlaps", rows["c"])
+        self.assertEqual((rows["a"]["minutes_actual"], rows["a"]["credits_estimate"], rows["a"]["credits_actual"]), (6.0, 2, 4))
+        self.assertEqual(rows["c"]["credits_unknown"], "end:gh-missing")
+        self.assertEqual({k: credits[k] for k in ("estimated", "actual", "items_estimated", "items_measured", "items_overlapping")}, {"estimated": 6, "actual": 8, "items_estimated": 3, "items_measured": 2, "items_overlapping": 2})
+
+
+class EstimatesTest(Isolated):
     def test_start_and_end_pair_into_an_actual(self):
         start = datetime(2026, 10, 25, 9, 0, tzinfo=timezone.utc)
         estimates.append({"event": "start", "id": "a", "kind": "fix", "estimate": 5, "run": "r", "at": start.isoformat()})
@@ -133,19 +348,12 @@ class EstimatesTest(unittest.TestCase):
         self.assertEqual(estimates.main(["estimate"]), 2)
 
 
-class RunGuardTest(unittest.TestCase):
+class RunGuardTest(Isolated):
     def setUp(self):
-        self.dir = tempfile.TemporaryDirectory()
-        os.environ["ESTIMATES_LOG"] = str(Path(self.dir.name) / "log.jsonl")
-        os.environ["ESTIMATES_RUN"] = str(Path(self.dir.name) / "run.json")
+        super().setUp()
         self.at = datetime(2026, 10, 26, 2, 0, tzinfo=timezone.utc)
         self.run = {"run": "night", "until": (self.at + timedelta(hours=4)).isoformat(), "session": "chat-1", "planned": ["a", "b"]}
         self.chat = {"sessionId": "chat-1"}
-
-    def tearDown(self):
-        self.dir.cleanup()
-        del os.environ["ESTIMATES_LOG"]
-        del os.environ["ESTIMATES_RUN"]
 
     def test_blocks_the_turn_end_while_planned_items_are_open_before_the_stop_time(self):
         reason, run = estimates.guard_decision(self.run, [{"event": "end", "id": "a"}], self.at, self.chat)
