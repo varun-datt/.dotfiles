@@ -38,7 +38,7 @@ Every round runs with `--max-ai-credits <cap>`, where the cap is 3 x the rolling
 - **A round that hit its cap** reads CAPPED ([details](details.md#failure-modes-and-recoveries)). Read its last calls:
   - **extend it if it was progressing:** resume it as `<item>-resumeN` with a raised cap, usually the same cap again on top of what it used;
   - **narrow it if it was looping,** as with time budgets: resume it with a narrower brief and the normal cap.
-- **Resumed rounds** (`-r`). The cap counts across the conversation, so pass the session's credits so far (the AIU of the round it resumes, in `status.py`) plus the cap. ASSUMED, for the owner: whether a resume carries the earlier credits is OPEN; if it does not, this cap is loose but never cuts a round short. A round far below its cap prints no `Session limits` line, fresh or resumed ([lessons](lessons.md)), so silence settles nothing; the probe in follow-ups (g) does.
+- **Resumed rounds** (`-r`). The cap counts only the resumed round, not the conversation's earlier credits (VERIFIED 2026-10-27, one observation: a build used 530.96 of a 700 cap; its resumed fix round, capped at 700 again, printed `Session limits: 350.42/700` while the session's total reached 959.6). Pass the round's own cap, and track the session's total yourself. A round far below its cap prints no `Session limits` line, fresh or resumed ([lessons](lessons.md)).
 
 ## Learning loop
 

@@ -10,6 +10,8 @@ REJECTED by the orchestrator, do not change: {{REJECTED_WITH_ONE_LINE_REASON_OR_
 
 ALSO: {{MERGE_MAIN_INTO_BRANCH_OR_INSTALL_STEP_OR_DELETE}}
 
+YOUR PORTS for this round: {{PORTS}}. They replace the ports in your first prompt.
+
 Corrections to your report from the review: {{REPORT_CORRECTIONS_OR_NONE}}
 
 Mark every claim VERIFIED, INFERRED or OPEN.
