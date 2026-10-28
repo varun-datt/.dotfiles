@@ -63,7 +63,7 @@ echo "start: $(date '+%Y-%m-%d %H:%M:%S')  $name  model=$model cap=$cap timeout=
 timeout "$secs" copilot -C "$wt" -n "${OW_PREFIX:-ow-}$name" --model "$model" --max-ai-credits "$cap" \
   --no-ask-user --allow-all-tools --deny-tool 'shell(git push)' --deny-tool 'shell(git commit)' \
   --deny-tool 'shell(npm)' --deny-tool=url --disable-builtin-mcps ${nomcp[@]+"${nomcp[@]}"} --output-format json \
-  -p "$(cat "$prompt")" </dev/null > "$run/$name.jsonl" 2> "$run/$name.err"
+  -p "$(cat "$prompt"; printf '\n\nYour LAST message is the only one read: repeat every finding in it in full, even ones an earlier message gave.\n')" </dev/null > "$run/$name.jsonl" 2> "$run/$name.err"
 rc=$?
 echo "end:   $(date '+%Y-%m-%d %H:%M:%S')  exit $rc$([ "$rc" -eq 124 ] && echo ' TIMED OUT')"
 python3 "$here/result.py" "$run/$name.jsonl"
