@@ -50,7 +50,9 @@ Before any work, ask these in **one batch**. Give options and a recommendation f
 which answers you inferred from the repository.
 
 1. **Goal and items:** the deliverable; each item with its acceptance criteria; the plan and
-   decision files that settle the details.
+   decision files that settle the details. For a complex item: what was surveyed for reuse
+   (products, libraries, patterns), or a research step first, and which dependencies it may add
+   (owner, 2026-10-27: skipping that research is "a vary big miss").
 2. **Where:**
    - the repository and its main branch;
    - the worktree root: a dedicated folder outside `/tmp`, for example
@@ -128,6 +130,7 @@ Per item:
 - migration or version numbers reserved in its task body.
 
 ```sh
+python3 ~/.agents/skills/orchestrator-workers/scripts/brief.py check "$OW_RUN_DIR/<item>.prompt.md" || exit 5
 date +%s > "$OW_RUN_DIR/<item>.start"
 git -C <wt-root>/<item> rev-parse HEAD > "$OW_RUN_DIR/<item>.base"
 COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
@@ -142,6 +145,10 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
 
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
   Why each flag is there: [references/details.md](references/details.md#launch-flags).
+- **The brief check** (`scripts/brief.py`) refuses a prompt with an unfilled `{{PLACEHOLDER}}`,
+  or a worker prompt without a filled REUSE CHECK and ALLOWED DEPENDENCIES line: on 2026-10-27 one
+  brief had no research step and another's "use a library if one fits" lost to the preamble's
+  dependency rule, so both features were hand-written.
 - **Model, effort and credit cap:** by the kind of round, from [references/routing.md](references/routing.md); the cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --caps`.
 - **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
   runs it under `timeout` (`--help` lists the model, cap and timeout overrides). Use another model

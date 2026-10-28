@@ -275,8 +275,8 @@ Not research: each is a change with a test.
 - **Ship the in-turn wait in `scripts/`.** The run folder's wait script refuses a pipe and reports
   rounds that ended since the previous wait; neither exists in the skill, so the next run starts
   without both.
-- **Settle whether a cap applies to a resumed session.** Cheap probe: resume a small session with a
-  cap below what it has already spent, and see whether its first call is refused.
+- **Settled 2026-10-27:** a cap on a resumed session counts only that round
+  ([routing](routing.md#credit-caps)).
 
 ## (h) Small fixes, found 2026-10-16
 
@@ -284,6 +284,5 @@ Not research: each is a change with a test.
 - **`scripts/result.py` prints a resumed session's running total as the round's credits.** Print
   the growth since the previous round of the same session, or label the figure as the session
   total.
-- **Ship the placeholder check.** A project launcher refuses a prompt that still holds a
-  `{{NAME}}` placeholder; the skill's own assets have no such check, so the next project starts
-  without it.
+- **Shipped 2026-10-27:** `scripts/brief.py` refuses a prompt that still holds a placeholder, and
+  a worker prompt without its reuse check and allowed dependencies.
