@@ -29,6 +29,12 @@ def now():
     return datetime.now(timezone.utc).astimezone()
 
 
+def parse_time(text):
+    """An ISO time; one with no zone is taken as local time, so naive and aware records compare."""
+    moment = datetime.fromisoformat(text)
+    return moment if moment.tzinfo else moment.astimezone()
+
+
 def append(record):
     path = log_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -52,7 +58,7 @@ def completed(records):
             starts[r["id"]] = r
         elif r["event"] == "end" and r["id"] in starts:
             s = starts.pop(r["id"])
-            minutes = (datetime.fromisoformat(r["at"]) - datetime.fromisoformat(s["at"])).total_seconds() / 60
+            minutes = (parse_time(r["at"]) - parse_time(s["at"])).total_seconds() / 60
             items.append({**s, "event": "done", "actual": round(minutes, 1), "at": r["at"]})
         elif r["event"] == "drop":
             if starts.pop(r["id"], None) is None:
@@ -69,7 +75,7 @@ def percentile(values, p):
 
 def recent(items, days):
     cutoff = now() - timedelta(days=days)
-    return [i for i in items if datetime.fromisoformat(i["at"]) >= cutoff]
+    return [i for i in items if parse_time(i["at"]) >= cutoff]
 
 
 def velocities(items, method):
@@ -153,7 +159,7 @@ def until_time(text, at):
         hour, minute = (int(part) for part in text.split(":"))
         moment = at.replace(hour=hour, minute=minute, second=0, microsecond=0)
         return moment if moment > at else moment + timedelta(days=1)
-    return datetime.fromisoformat(text)
+    return parse_time(text)
 
 
 def load_run():
@@ -176,7 +182,7 @@ def session_text(payload):
 
 def guard_decision(run, records, at, payload=None):
     """The reason the agent must keep working, or None to let the turn end; also returns the run to save."""
-    if not run or run.get("blocked") or at >= datetime.fromisoformat(run["until"]):
+    if not run or run.get("blocked") or at >= parse_time(run["until"]):
         return None, run
     if not run.get("session") or run["session"] not in session_text(payload):
         return None, run
@@ -188,7 +194,7 @@ def guard_decision(run, records, at, payload=None):
     blocks = 1 if progressed else run.get("blocks", 0) + 1
     if blocks > GUARD_LIMIT:
         return None, {**run, "blocks": 0, "seen": len(records)}
-    stop = datetime.fromisoformat(run["until"]).strftime("%H:%M")
+    stop = parse_time(run["until"]).strftime("%H:%M")
     what = f"{len(left)} planned items are not done (next: {left[0]})" if left else "items may remain"
     reason = (
         f"Run {run['run']} is armed until {stop} and {what}. Do not end the turn: put any question that blocks "
@@ -281,7 +287,7 @@ def main(argv=None):
         append({"event": "drop", "id": args.id, "reason": args.reason, "at": now().isoformat()})
         print(json.dumps({"id": args.id, "dropped": args.reason}))
     elif args.command == "add":
-        append({"event": "done", "id": args.id, "kind": args.kind, "estimate": args.estimate, "actual": args.actual, "method": args.method, "serves": args.serves, "run": args.run, "at": args.at or now().isoformat()})
+        append({"event": "done", "id": args.id, "kind": args.kind, "estimate": args.estimate, "actual": args.actual, "method": args.method, "serves": args.serves, "run": args.run, "at": (parse_time(args.at) if args.at else now()).isoformat()})
     elif args.command == "estimate":
         if args.rounds is not None:
             print(json.dumps(rounds_estimate(args.rounds, args.risk)))

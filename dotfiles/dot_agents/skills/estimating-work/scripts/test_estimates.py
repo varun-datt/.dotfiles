@@ -52,6 +52,13 @@ class EstimatesTest(unittest.TestCase):
         self.assertEqual(estimates.completed(estimates.read()), [])
         self.assertEqual(estimates.main(["end", "--id", "x"]), 1)
 
+    def test_a_time_with_no_zone_is_local_and_compares_with_zoned_ones(self):
+        estimates.main(["add", "--id", "n", "--kind", "fix", "--estimate", "4", "--actual", "5", "--method", "history", "--at", "2026-10-27T13:06:00"])
+        estimates.append({"event": "done", "id": "m", "kind": "fix", "estimate": 4, "actual": 6, "method": "history", "at": "2026-10-27T13:25:00"})
+        estimates.append({"event": "done", "id": "z", "kind": "fix", "estimate": 4, "actual": 7, "method": "history", "at": datetime.now(timezone.utc).isoformat()})
+        self.assertIsNotNone(datetime.fromisoformat(estimates.read()[0]["at"]).tzinfo)
+        self.assertEqual(len(estimates.recent(estimates.completed(estimates.read()), 100000)), 3)
+
     def test_kind_estimate_needs_five_items(self):
         items = [{"kind": "fix", "actual": a} for a in (2, 4, 4, 5)]
         self.assertTrue(estimates.kind_estimate(items, "fix")["guess"])
