@@ -6,6 +6,8 @@ import json
 import math
 import os
 import random
+import re
+import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -15,6 +17,9 @@ METHODS = ("history", "rounds", "judged")
 MINUTES_PER_ROUND = 3.0
 # Stop-hook refusals in a row with no new log record before the guard lets the turn end anyway.
 GUARD_LIMIT = 3
+CREDITS_TIMEOUT = 20
+GH_ENV = {"GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1", "NO_COLOR": "1"}
+REASON = re.compile(r"(start|end):(gh-missing|gh-exit-\d{1,3}|timeout|gh-error|bad-json|no-quota|no-figure|not-read|unknown)")
 
 
 def log_path():
@@ -49,6 +54,77 @@ def read():
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
+def is_number(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+
+
+def parse_credits(payload):
+    """Credits used from `gh api /copilot_internal/user`, as (value, None) or (None, reason)."""
+    snapshots = payload.get("quota_snapshots") if isinstance(payload, dict) else None
+    premium = snapshots.get("premium_interactions") if isinstance(snapshots, dict) else None
+    if not isinstance(premium, dict) or premium.get("has_quota") is False:
+        return None, "no-quota"
+    used = premium.get("credits_used")
+    if is_number(used) and used >= 0:
+        return used, None
+    return None, "no-figure"
+
+
+def read_credits():
+    """The account's credits-used figure, as (value, None) or (None, reason code); never raises."""
+    try:
+        done = subprocess.run(["gh", "api", "/copilot_internal/user"], capture_output=True, timeout=CREDITS_TIMEOUT, env={**os.environ, **GH_ENV}, stdin=subprocess.DEVNULL)
+    except FileNotFoundError:
+        return None, "gh-missing"
+    except subprocess.TimeoutExpired:
+        return None, "timeout"
+    except Exception:  # noqa: BLE001 - a failed read must never stop a stamp
+        return None, "gh-error"
+    if done.returncode != 0:
+        return None, f"gh-exit-{done.returncode}"
+    try:
+        payload = json.loads(done.stdout.decode("utf-8"))
+    except ValueError:
+        return None, "bad-json"
+    return parse_credits(payload)
+
+
+def credits_fields(prefix):
+    value, reason = read_credits()
+    return {f"credits_at_{prefix}": value} | ({"credits_unknown": f"{prefix}:{reason}"} if reason else {})
+
+
+def open_start(records, item_id):
+    start = None
+    for r in records:
+        if r.get("id") != item_id:
+            continue
+        if r["event"] == "start":
+            start = r
+        elif r["event"] in ("end", "drop"):
+            start = None
+    return start
+
+
+def known_reasons(text, fallback="unknown"):
+    """The text when it is only reason codes, else the fallback, so no free text reaches the log or the report."""
+    tokens = str(text).split()
+    return " ".join(tokens) if tokens and all(REASON.fullmatch(t) for t in tokens) else fallback
+
+
+def end_credits(start):
+    fields = credits_fields("end")
+    before, after = start.get("credits_at_start"), fields["credits_at_end"]
+    if is_number(before) and is_number(after):
+        return fields | {"credits_actual": round(after - before, 2)}
+    started = start.get("credits_unknown")
+    started = known_reasons(started, "start:unknown") if started else ("" if is_number(before) else "start:not-read")
+    if started and not started.startswith("start:"):
+        started = "start:unknown"
+    reasons = [started, fields.get("credits_unknown", "")]
+    return {"credits_at_end": after, "credits_actual": None, "credits_unknown": " ".join(r for r in reasons if r)}
+
+
 def completed(records):
     items, starts = [], {}
     for r in records:
@@ -59,7 +135,10 @@ def completed(records):
         elif r["event"] == "end" and r["id"] in starts:
             s = starts.pop(r["id"])
             minutes = (parse_time(r["at"]) - parse_time(s["at"])).total_seconds() / 60
-            items.append({**s, "event": "done", "actual": round(minutes, 1), "at": r["at"]})
+            item = {k: v for k, v in s.items() if k != "credits_unknown"}
+            item |= {"event": "done", "actual": round(minutes, 1), "started": s["at"], "at": r["at"]}
+            item |= {k: r[k] for k in ("credits_actual", "credits_unknown") if k in r}
+            items.append(item)
         elif r["event"] == "drop":
             if starts.pop(r["id"], None) is None:
                 last = next((n for n in range(len(items) - 1, -1, -1) if items[n]["id"] == r["id"]), None)
@@ -124,7 +203,7 @@ def forecast(plan, window, items, runs=1000, seed=None):
     }
 
 
-def report(items):
+def report(items, logged=None):
     if not items:
         return {"n": 0}
     est = sum(i["estimate"] for i in items)
@@ -142,6 +221,53 @@ def report(items):
         "within_25_percent": within,
         "features_with_enablers_share": round(features / act, 2) if act else None,
         "minutes_by_kind": {k: {"minutes": v, "share": round(v / act, 2) if act else None} for k, v in sorted(by_kind.items(), key=lambda kv: -kv[1])},
+        "credits": credits_report(items, logged),
+    }
+
+
+def running(records, at):
+    """Items started and not yet ended or dropped, as windows that run until `at`."""
+    starts = {}
+    for r in records:
+        if r["event"] == "start":
+            starts[r["id"]] = r
+        elif r["event"] in ("end", "drop"):
+            starts.pop(r["id"], None)
+    return [{**s, "started": s["at"], "at": at.isoformat()} for s in starts.values()]
+
+
+def window(item):
+    return (parse_time(item["started"]), parse_time(item["at"])) if item.get("started") else None
+
+
+def overlaps(items, logged):
+    """For each item, the ids of other logged items, from any run, whose start-to-end window overlaps its own."""
+    found = []
+    for item in items:
+        mine = window(item)
+        others = [(o, window(o)) for o in logged if o is not item and not (o.get("id") == item.get("id") and o.get("started") == item.get("started"))]
+        found.append([o.get("id") for o, theirs in others if mine and theirs and mine[0] < theirs[1] and theirs[0] < mine[1]])
+    return found
+
+
+def credits_report(items, logged=None):
+    rows, crossed = [], overlaps(items, items if logged is None else logged)
+    for i, others in zip(items, crossed):
+        row = {"id": i.get("id"), "kind": i.get("kind"), "minutes_estimate": i["estimate"], "minutes_actual": i["actual"], "credits_estimate": i.get("credits_estimate"), "credits_actual": i.get("credits_actual")}
+        if i.get("credits_unknown"):
+            row["credits_unknown"] = known_reasons(i["credits_unknown"])
+        if others:
+            row["overlaps"] = others
+        rows.append(row)
+    estimated = [r["credits_estimate"] for r in rows if is_number(r["credits_estimate"])]
+    actual = [r["credits_actual"] for r in rows if is_number(r["credits_actual"])]
+    return {
+        "items": rows,
+        "estimated": round(sum(estimated), 2) if estimated else None,
+        "actual": round(sum(actual), 2) if actual else None,
+        "items_estimated": len(estimated),
+        "items_measured": len(actual),
+        "items_overlapping": sum(bool(o) for o in crossed),
     }
 
 
@@ -229,6 +355,7 @@ def main(argv=None):
     p.add_argument("--method", required=True, choices=METHODS, help="how the estimate was made")
     p.add_argument("--serves", default="", help="id of the planned feature this enabler makes possible or faster")
     p.add_argument("--run", default="")
+    p.add_argument("--credits", type=float, default=None, help="estimated credits the item spends")
     p = sub.add_parser("end", help="stamp the end of an item")
     p.add_argument("--id", required=True)
     p = sub.add_parser("drop", help="close an item another item covered, or one logged by mistake, so no history counts it")
@@ -270,19 +397,23 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "start":
-        record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "at": now().isoformat()}
+        credits = credits_fields("start")
+        record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "credits_estimate": args.credits} | credits | {"at": now().isoformat()}
         append(record)
         run = load_run()
         if run and run.get("blocked"):
             save_run({k: v for k, v in run.items() if k not in ("blocked", "blockedAt")})
-        print(json.dumps({k: record[k] for k in ("id", "kind", "estimate", "method")} | {"started": record["at"]}))
+        shown = ("id", "kind", "estimate", "method", "credits_estimate", "credits_at_start", "credits_unknown")
+        print(json.dumps({k: record[k] for k in shown if k in record} | {"started": record["at"]}))
     elif args.command == "end":
-        append({"event": "end", "id": args.id, "at": now().isoformat()})
+        start = open_start(read(), args.id)
+        append({"event": "end", "id": args.id} | (end_credits(start) if start else {}) | {"at": now().isoformat()})
         done = [i for i in completed(read()) if i["id"] == args.id]
         if not done:
             print(f"no open start for {args.id}", file=sys.stderr)
             return 1
-        print(json.dumps({k: done[-1][k] for k in ("id", "kind", "estimate", "actual")}))
+        shown = ("id", "kind", "estimate", "actual", "credits_estimate", "credits_actual", "credits_unknown")
+        print(json.dumps({k: done[-1][k] for k in shown if k in done[-1]}))
     elif args.command == "drop":
         append({"event": "drop", "id": args.id, "reason": args.reason, "at": now().isoformat()})
         print(json.dumps({"id": args.id, "dropped": args.reason}))
@@ -303,8 +434,11 @@ def main(argv=None):
             return 2
         print(json.dumps(forecast(plan, args.window, recent(completed(read()), args.days), args.runs, args.seed)))
     elif args.command == "report":
-        items = [i for i in completed(read()) if args.run is None or i.get("run") == args.run]
-        print(json.dumps(report(items), indent=2))
+        records = read()
+        logged = completed(records)
+        items = [i for i in logged if args.run is None or i.get("run") == args.run]
+        logged += running(records, now())
+        print(json.dumps(report(items, logged), indent=2))
     elif args.command == "kinds":
         print(kinds_table(recent(completed(read()), args.days)))
     elif args.command == "arm":

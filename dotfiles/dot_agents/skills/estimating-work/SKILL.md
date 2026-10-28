@@ -70,6 +70,14 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   after its commit. Never work out minutes by hand. An item another item covered, or one logged by
   mistake, is closed with `estimates.py drop --id <id> --reason "covered by <id>"` instead of
   `end`, so no history or report counts it (2026-10-26: two covered items logged 0 minutes).
+- Give `start` a credit estimate too, `--credits <n>`. `start` and `end` each read the account's
+  credits-used figure (`gh api /copilot_internal/user`, undocumented) and `end` stores the
+  difference as the item's credit actual. A failed read never blocks a stamp; it marks the
+  item's credits unknown, with a reason code (`gh-missing`, `gh-exit-<n>`, `timeout`,
+  `gh-error`, `bad-json`, `no-quota`, `no-figure`). On 2026-10-28, 21 reads 15 s apart from 11:16:50 to
+  11:22:06, while this session made paid calls, read 858929 first and 858929 last: it did
+  not move in those five minutes. That shows nothing about how often it moves; the lag after a
+  known spend is not yet measured.
 - Re-run the forecast after each item, and move the overflow line if it shifts.
 - Count each live run's paid calls against the approved budget, and ask before a run that would
   go over it.
@@ -100,7 +108,10 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 - `estimates.py disarm` first, so the wrap-up's final message can end the turn.
 - `estimates.py report --run <run>`: estimate against actual, how many came within 25%, minutes by
-  kind, and features with their enablers as one share, against the mix asked for. Put it in the
-  final message and the state file.
+  kind, and features with their enablers as one share, against the mix asked for. Its `credits`
+  part lists each item's minutes and credits, estimate beside actual, and the run's totals. The
+  figure counts every session's spend on the account, so an item whose window overlaps another's
+  is marked `overlaps`: their actuals double count the shared spend. Put it in the final message
+  and the state file.
 - Regenerate the pace table with `estimates.py kinds` and add the run to its runs table.
 - Run the tests after changing the script: `python3 -B scripts/test_estimates.py`.
