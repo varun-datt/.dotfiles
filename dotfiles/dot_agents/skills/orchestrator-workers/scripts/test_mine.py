@@ -350,3 +350,108 @@ class CappedTest(Base):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+PRICES = {'big': {'inputPrice': 400, 'outputPrice': 2000, 'cacheReadPrice': 20, 'cacheWritePrice': 500},
+          'small': {'inputPrice': 200, 'outputPrice': 1000, 'cacheReadPrice': 10, 'cacheWritePrice': 250}}
+
+
+def metric_round(run, name, at, model, cum, calls, gaps=(), session='s'):
+    """A round whose usage checkpoint carries running token totals; gaps are seconds between model calls."""
+    ev, t = [{'type': 'user.message', 'data': {'responsesReasoning': {'model': model, 'effort': 'medium'}},
+              'timestamp': stamp(at)}], at
+    for g in (0, *gaps):
+        t += g
+        ev.append({'type': 'model.call_start', 'data': {'model': model}, 'timestamp': stamp(t)})
+    usage = {'inputTokens': cum[0] + cum[2] + cum[3], 'outputTokens': cum[1], 'cacheReadTokens': cum[2],
+             'cacheWriteTokens': cum[3], 'reasoningTokens': 0}
+    snap = {'modelMetrics': {model: {'usage': usage, 'requests': {'count': calls}}}}
+    price = PRICES[model]
+    credits = sum(n * price[k] for n, k in zip(cum, ('inputPrice', 'outputPrice', 'cacheReadPrice', 'cacheWritePrice'))) / 1e6
+    ev.append({'type': 'session.usage_checkpoint', 'data': {'totalNanoAiu': int(credits * 1e9), 'accountingSnapshot': snap},
+               'timestamp': stamp(t + 1)})
+    ev.append({'type': 'result', 'exitCode': 0, 'sessionId': session, 'timestamp': stamp(t + 2)})
+    with open(os.path.join(run.dir, name + '.jsonl'), 'w') as f:
+        f.write(''.join(json.dumps(e) + '\n' for e in ev))
+    with open(os.path.join(run.dir, name + '.start'), 'w') as f:
+        f.write(f'{at}\n')
+
+
+class MetricsTest(Base):
+    def test_usage_is_decumulated_with_calls_and_cold_calls(self):
+        metric_round(self.run, 'a', T0, 'big', (10, 20, 1000, 100), 3, gaps=(10, 400))
+        metric_round(self.run, 'a-fix1', T0 + 1000, 'big', (15, 50, 3000, 150), 5, gaps=(20,))
+        rs = self.run.rounds()
+        self.assertEqual((rs['a']['usage']['calls'], rs['a']['cold_calls']), (3, 1))
+        self.assertEqual(rs['a-fix1']['usage'], {'input': 5, 'output': 30, 'cache_read': 2000, 'cache_write': 50,
+                                                 'reasoning': 0, 'calls': 2})
+        self.assertEqual(rs['a-fix1']['cold_calls'], 0)
+
+    def test_prices_split_credits_by_class(self):
+        metric_round(self.run, 'a', T0, 'big', (1_000_000, 500_000, 2_000_000, 100_000), 1)
+        rs = mine.load_rounds(self.run.dir)
+        mine.add_costs(rs, PRICES)
+        self.assertEqual(rs[0]['priced'], {'input': 400, 'output': 1000, 'cache_read': 40, 'cache_write': 50})
+
+    def test_prices_file_default_and_override(self):
+        self.assertEqual(mine.load_prices(self.run.dir)['claude-opus-5.5']['inputPrice'], 400)
+        custom = os.path.join(self.tmp, 'p.json')
+        with open(custom, 'w') as f:
+            json.dump({'x': {'inputPrice': 1}}, f)
+        self.assertEqual(mine.load_prices(self.run.dir, custom), {'x': {'inputPrice': 1}})
+
+    def test_history_rounds_widen_the_caps_window(self):
+        old = Run(os.path.join(self.tmp, 'old'))
+        for i in range(5):
+            old.round(f'i{i}-fix1', at=T0 + i, credits=100, premium=1)
+        self.run.round('n-fix1', at=T0 + 9999, credits=100, premium=1)
+        out = self.cli(self.run.dir, '--caps', '--history', old.dir).stdout
+        self.assertIn('3 x median: median 100, n=6', out)
+
+    def test_derived_cap_uses_the_price_ratio(self):
+        rs = []
+        for i in range(5):
+            r = fake('fix', 'big', 400, i)
+            r['usage'] = {'input': 0, 'output': 0, 'cache_read': 1_000_000, 'cache_write': 0}
+            rs.append(r)
+        rs.append(fake('fix', 'small', 10, 9))
+        c = {x['model']: x for x in mine.caps(rs, prices=PRICES)}
+        self.assertEqual((c['small']['cap'], c['small']['from']), (600, 'derived from big by price (x0.50)'))
+        self.assertEqual(mine.caps(rs)[1]['from'], 'floor (n < 5)')
+        self.assertEqual(mine.caps([r for r in rs if r['model'] == 'small'], prices=PRICES)[0]['cap'], 3000)
+
+    def write_chat(self):
+        d = os.path.join(self.tmp, 'chat')
+        os.makedirs(d)
+        with open(os.path.join(d, 'main.jsonl'), 'w') as f:
+            for i, o in ((1_000_000, 100_000), (500_000, 0)):
+                f.write(json.dumps({'type': 'llm_request', 'attrs': {'model': 'big', 'inputTokens': i, 'cachedTokens': 400_000,
+                                                                      'outputTokens': o}}) + '\n')
+            f.write('not json\n{"type":"other"}\n')
+        return d
+
+    def test_chat_is_priced_as_an_upper_bound(self):
+        chat = mine.chat_spend(self.write_chat(), PRICES)
+        self.assertEqual((chat['credits'], chat['upper_bound'], chat['models'][0]['calls']), (566.0, True, 2))
+
+    def test_budget_counts_rounds_and_chat_and_how_many_more_fit(self):
+        for i in range(5):
+            self.run.round(f'i{i}-fix1', at=T0 + i, model='small', credits=100, premium=1)
+        p = os.path.join(self.tmp, 'p.json')
+        with open(p, 'w') as f:
+            json.dump(PRICES, f)
+        out = self.cli(self.run.dir, '--caps', '--prices', p, '--chat', self.write_chat(), '--budget', '10000').stdout
+        self.assertIn('spend: 1,066 of 10,000 credits (rounds 500 + chat 566 (upper bound)), 8,934 left', out)
+        self.assertIn('fix small 89', out)
+
+    def test_cap_evidence_counts_rounds_over_each_candidate(self):
+        rs = [fake('fix', 'm', c, i) for i, c in enumerate([100] * 8 + [250, 500])]
+        ev = mine.cap_evidence(rs)
+        self.assertEqual((ev['rounds'], ev['hit']), (10, {'2x': 2, '3x': 1, '4x': 1, 'p90x1.2': 1}))
+
+    def test_json_and_text_carry_the_usage(self):
+        metric_round(self.run, 'a', T0, 'big', (10, 20, 1000, 100), 3, gaps=(400, 5))
+        j = json.loads(self.cli(self.run.dir, '--json').stdout)
+        self.assertEqual(j['usage'][0]['cold_calls'], 1)
+        self.assertEqual(j['rounds'][0]['usage']['calls'], 3)
+        self.assertIn('usage by kind and model', self.cli(self.run.dir).stdout)

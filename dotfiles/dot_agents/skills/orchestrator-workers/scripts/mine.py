@@ -5,6 +5,7 @@ Usage:
     python3 mine.py [RUN] [--since DATE] [--repo PATH]          text summary
     python3 mine.py [RUN] --json                                 everything, for tools
     python3 mine.py [RUN] --caps                                 --max-ai-credits per kind and model
+    options: --history RUN...  earlier runs join the caps' window; --prices FILE; --chat DEBUG_LOG_DIR; --budget N
     python3 mine.py --help
 
 RUN defaults to OW_RUN_DIR. Every <name>.jsonl there is one round (markers.jsonl excepted):
@@ -39,7 +40,13 @@ FACTOR, WINDOW, MIN_ROUNDS = 3, 20, 5
 # ASSUMED, for the owner: above the largest single round measured in the source project (3,213).
 FLOOR = 3000
 CLI_MIN_CAP = 30
-NEEDED = ('user.message', 'session.usage_checkpoint', 'result', 'session.info', 'session.warning',
+COLD_AFTER = 300
+CLASSES = ('input', 'output', 'cache_read', 'cache_write')
+USAGE_KEYS = CLASSES + ('reasoning', 'calls')
+PRICE_KEYS = {'input': 'inputPrice', 'output': 'outputPrice', 'cache_read': 'cacheReadPrice',
+              'cache_write': 'cacheWritePrice'}
+HERE = os.path.dirname(os.path.abspath(__file__))
+NEEDED = ('model.call_start', 'user.message', 'session.usage_checkpoint', 'result', 'session.info', 'session.warning',
           'session.tools_updated', 'session.error')
 TYPE_PREFIX = '{"type":"'
 TIMESTAMP = re.compile(r'"timestamp"\s*:\s*"([^"]+)"')
@@ -90,7 +97,9 @@ def verdict(path):
 def read_round(path):
     """One run file's facts, or None when it holds no copilot events."""
     r = {'session': None, 'cum_credits': None, 'cum_premium': None, 'model': None, 'effort': None,
-         'exit': None, 'error': False, 'cap': None, 'first': None, 'last': None}
+         'exit': None, 'error': False, 'cap': None, 'first': None, 'last': None,
+         'usage_cum': None}
+    calls = []
     fallback_model = fallback_effort = None
     typed = False
     last_line = None
@@ -118,11 +127,16 @@ def read_round(path):
             if t == 'user.message' and r['model'] is None:
                 rr = d.get('responsesReasoning') if isinstance(d.get('responsesReasoning'), dict) else {}
                 r['model'], r['effort'] = rr.get('model'), rr.get('effort')
+            elif t == 'model.call_start':
+                at = parse_time(e.get('timestamp'))
+                if at:
+                    calls.append(at)
             elif t == 'session.tools_updated' and fallback_model is None:
                 fallback_model = d.get('model')
             elif t == 'session.usage_checkpoint':
                 r['cum_credits'] = (d.get('totalNanoAiu') or 0) / 1e9
                 r['cum_premium'] = d.get('totalPremiumRequests')
+                r['usage_cum'] = cumulative_usage(d, r['model']) or r['usage_cum']
                 for state in d.get('promptCacheBreakState') or []:
                     for m in ((state or {}).get('models') or {}).values():
                         fallback_effort = fallback_effort or (m or {}).get('reasoning_effort')
@@ -139,9 +153,26 @@ def read_round(path):
     if not typed:
         return None
     r['last'] = stamp(last_line) if last_line else None
+    calls.sort()
+    r['call_starts'] = len(calls)
+    r['cold_calls'] = sum((b - a).total_seconds() > COLD_AFTER for a, b in zip(calls, calls[1:]))
     r['model'] = r['model'] or fallback_model
     r['effort'] = r['effort'] or fallback_effort
     return r
+
+
+def cumulative_usage(checkpoint, model):
+    """The session's running token classes and call count for the round's model, from a usage checkpoint."""
+    snap = checkpoint.get('accountingSnapshot')
+    metrics = snap.get('modelMetrics') if isinstance(snap, dict) else None
+    if not isinstance(metrics, dict) or not metrics:
+        return None
+    m = metrics.get(model) or next(iter(metrics.values())) or {}
+    u = m.get('usage') or {}
+    cache_read, cache_write = u.get('cacheReadTokens') or 0, u.get('cacheWriteTokens') or 0
+    return {'input': max(0, (u.get('inputTokens') or 0) - cache_read - cache_write), 'output': u.get('outputTokens') or 0,
+            'cache_read': cache_read, 'cache_write': cache_write, 'reasoning': u.get('reasoningTokens') or 0,
+            'calls': (m.get('requests') or {}).get('count') or 0}
 
 
 def load_rounds(run):
@@ -168,6 +199,7 @@ def load_rounds(run):
                        'start': start, 'wall_min': max(0.0, (end - start).total_seconds() / 60),
                        'session': r['session'], 'cum_credits': r['cum_credits'], 'cum_premium': r['cum_premium'],
                        'capped': bool(cap.get('capped')), 'cap': cap.get('cap'), 'cap_used': cap.get('used'),
+                       'usage_cum': r['usage_cum'], 'cold_calls': r['cold_calls'], 'call_starts': r['call_starts'],
                        'exit': r['exit'], 'error': r['error'], 'ended': r['exit'] is not None,
                        'verdict': None, 'blocking': None, 'raw_verdict': None})
         if kind in REVIEW_KINDS:
@@ -212,13 +244,20 @@ def decumulate(rounds, lost=()):
     for rs in sessions.values():
         first = rs[0]
         prev_c = prev_p = 0
+        prev_u = dict.fromkeys(USAGE_KEYS, 0)
         for i, r in enumerate(rs):
             if i and r['kind'] == 'build':
                 r['kind'], r['item'] = 'other', first['item']
             # A fresh launch (a -p catch-up merge, say) is whole; it is partial only when an earlier launch of its item lost its events.
             r['partial'] = i == 0 and r['kind'] not in FIRST_KINDS and any(
                 item == r['item'] and at <= r['start'] for item, at in lost)
-            r['credits'] = r['premium'] = None
+            r['credits'] = r['premium'] = r['usage'] = None
+            cum = r['usage_cum']
+            if cum:
+                if cum['calls'] < prev_u['calls']:
+                    prev_u = dict.fromkeys(USAGE_KEYS, 0)
+                r['usage'] = {k: cum[k] - prev_u[k] for k in USAGE_KEYS}
+                prev_u = cum
             if r['cum_credits'] is None:
                 continue
             # A fall in the running total means a fresh session joined by name, not a resume.
@@ -272,11 +311,43 @@ def items(rounds, merge_rows=None):
     return out
 
 
+def load_prices(run=None, path=None):
+    """Credits per 1M tokens by model: --prices, else <run>/prices.json, else the prices.json beside this script."""
+    for p in (path, run and os.path.join(run, 'prices.json'), os.path.join(HERE, 'prices.json')):
+        if p and os.path.isfile(p):
+            with open(p, encoding='utf-8') as f:
+                data = json.load(f)
+            return {k: v for k, v in data.items() if isinstance(v, dict)}
+    return {}
+
+
+def price_tokens(tokens, price):
+    return {c: (tokens.get(c) or 0) * (price or {}).get(PRICE_KEYS[c], 0) / 1e6 for c in CLASSES}
+
+
+def add_costs(rounds, prices):
+    for r in rounds:
+        price = prices.get(r['model'])
+        r['priced'] = price_tokens(r['usage'], price) if r.get('usage') and price else None
+
+
 def usable(r):
     return r['credits'] is not None and not r['partial'] and r['kind'] != 'other'
 
 
-def caps(rounds, factor=FACTOR, window=WINDOW, min_rounds=MIN_ROUNDS, floor=FLOOR):
+def price_ratio(rs, source, target, prices):
+    mix = dict.fromkeys(CLASSES, 0)
+    for r in rs:
+        for c in CLASSES:
+            mix[c] += (r.get('usage') or {}).get(c) or 0
+    have = sum(price_tokens(mix, prices.get(source)).values())
+    if not have or target not in prices:
+        return None
+    return sum(price_tokens(mix, prices[target]).values()) / have
+
+
+def caps(rounds, factor=FACTOR, window=WINDOW, min_rounds=MIN_ROUNDS, floor=FLOOR, prices=None):
+    prices = prices or {}
     groups = collections.defaultdict(list)
     for r in rounds:
         if usable(r):
@@ -286,10 +357,103 @@ def caps(rounds, factor=FACTOR, window=WINDOW, min_rounds=MIN_ROUNDS, floor=FLOO
         last = [r['credits'] for r in sorted(rs, key=lambda x: x['start'])[-window:]]
         med = statistics.median(last)
         enough = len(last) >= min_rounds
-        out.append({'kind': kind, 'model': model, 'n': len(last), 'median': round(med, 1),
-                    'cap': max(CLI_MIN_CAP, round(factor * med) if enough else floor),
-                    'from': f'{factor} x median' if enough else f'floor (n < {min_rounds})'})
+        row = {'kind': kind, 'model': model, 'n': len(last), 'median': round(med, 1),
+               'cap': max(CLI_MIN_CAP, round(factor * med) if enough else floor),
+               'from': f'{factor} x median' if enough else f'floor (n < {min_rounds})'}
+        if not enough:
+            donors = sorted(((len(g), m) for (k, m), g in groups.items()
+                             if k == kind and m != model and len(g) >= min_rounds), reverse=True)
+            for _, donor in donors:
+                dr = sorted(groups[(kind, donor)], key=lambda x: x['start'])[-window:]
+                ratio = price_ratio(dr, donor, model, prices)
+                if ratio:
+                    dmed = statistics.median(r['credits'] for r in dr) * ratio
+                    row.update(median=round(dmed, 1), cap=max(CLI_MIN_CAP, round(factor * dmed)),
+                               **{'from': f'derived from {donor} by price (x{ratio:.2f})'})
+                    break
+        out.append(row)
     return out
+
+
+def cap_evidence(rounds, min_rounds=MIN_ROUNDS):
+    """Rounds that would have hit each candidate cap, from each kind and model's own median and P90 (in-sample)."""
+    groups = collections.defaultdict(list)
+    for r in rounds:
+        if usable(r):
+            groups[(r['kind'], r['model'] or '?')].append(r['credits'])
+    names = ('2x', '3x', '4x', 'p90x1.2')
+    total, n_all = dict.fromkeys(names, 0), 0
+    for cs in groups.values():
+        if len(cs) < min_rounds:
+            continue
+        med = statistics.median(cs)
+        p90 = statistics.quantiles(cs, n=10, method='inclusive')[-1]
+        limits = {'2x': 2 * med, '3x': 3 * med, '4x': 4 * med, 'p90x1.2': 1.2 * p90}
+        n_all += len(cs)
+        for k in names:
+            total[k] += sum(c > limits[k] for c in cs)
+    return {'rounds': n_all, 'hit': total}
+
+
+def usage_by_kind(rounds):
+    by = collections.defaultdict(list)
+    for r in rounds:
+        by[(r['kind'], r['model'] or '?')].append(r)
+    out = []
+    for (kind, model), rs in sorted(by.items()):
+        out.append({'kind': kind, 'model': model, 'rounds': len(rs), 'wall_min': round(sum(r['wall_min'] for r in rs), 1),
+                    'calls': sum((r.get('usage') or {}).get('calls', r.get('call_starts', 0)) for r in rs),
+                    'cold_calls': sum(r.get('cold_calls', 0) for r in rs),
+                    'efforts': sorted({r['effort'] or '?' for r in rs}),
+                    'tokens': {c: sum((r.get('usage') or {}).get(c, 0) for r in rs) for c in CLASSES + ('reasoning',)},
+                    'credits_by_class': {c: round(sum((r.get('priced') or {}).get(c, 0) for r in rs), 1) for c in CLASSES}})
+    return out
+
+
+def chat_spend(path, prices):
+    """Price an orchestrator chat's llm_request records; uncached input is priced as cache writes (an upper bound)."""
+    files = [path] if os.path.isfile(path) else [os.path.join(path, f) for f in sorted(os.listdir(path))
+                                                 if f.endswith('.jsonl')]
+    by = collections.defaultdict(lambda: {**dict.fromkeys(CLASSES, 0), 'calls': 0})
+    for fp in files:
+        with open(fp, encoding='utf-8', errors='replace') as f:
+            for line in f:
+                if '"llm_request"' not in line:
+                    continue
+                try:
+                    e = json.loads(line)
+                except ValueError:
+                    continue
+                a = e.get('attrs') if isinstance(e, dict) else None
+                if not isinstance(a, dict) or e.get('type') != 'llm_request':
+                    continue
+                cached = a.get('cachedTokens') or 0
+                m = by[a.get('model') or '?']
+                m['calls'] += 1
+                m['cache_read'] += cached
+                m['cache_write'] += max(0, (a.get('inputTokens') or 0) - cached)
+                m['output'] += a.get('outputTokens') or 0
+    models, total, unpriced = [], 0.0, []
+    for model, t in sorted(by.items()):
+        price = prices.get(model)
+        credits = sum(price_tokens(t, price).values()) if price else None
+        if credits is None:
+            unpriced.append(model)
+        else:
+            total += credits
+        models.append({'model': model, 'calls': t['calls'], 'tokens': {c: t[c] for c in CLASSES},
+                       'credits': None if credits is None else round(credits, 1)})
+    return {'credits': round(total, 1), 'upper_bound': True, 'models': models, 'unpriced': unpriced}
+
+
+def budget_report(budget, rounds, chat, cap_rows):
+    spent_rounds = sum(r['credits'] or 0 for r in rounds)
+    spent = spent_rounds + (chat['credits'] if chat else 0)
+    left = budget - spent
+    fit = [{'kind': c['kind'], 'model': c['model'], 'median': c['median'],
+            'rounds': int(left // c['median']) if left > 0 and c['median'] > 0 else 0} for c in cap_rows]
+    return {'budget': budget, 'rounds_credits': round(spent_rounds, 1), 'chat_credits': chat['credits'] if chat else None,
+            'spent': round(spent, 1), 'left': round(left, 1), 'fit': fit}
 
 
 def load_markers(run):
@@ -373,6 +537,23 @@ def text(report):
     for k in report['kinds']:
         med = '-' if k['median'] is None else f"{k['median']:,.0f}"
         lines.append(f"  {k['kind']:<9} {k['model']:<22} {k['rounds']:>4} {k['credits']:>9,.0f} {med:>7} {k['capped']:>3}")
+    lines.append('usage by kind and model: calls, cold calls (after a wait over 300 s), wall min, effort; '
+                 'tokens in/out/cache read/cache write (k); credits in/out/cache read/cache write')
+    for u in report['usage']:
+        t, c = u['tokens'], u['credits_by_class']
+        lines.append(f"  {u['kind']:<9} {u['model']:<22} {u['calls']:>5} {u['cold_calls']:>4} {u['wall_min']:>7,.0f} "
+                     f"{','.join(u['efforts']):<8} " + '/'.join(f"{t[k] / 1000:,.0f}" for k in CLASSES) + '  '
+                     + '/'.join(f"{c[k]:,.0f}" for k in CLASSES))
+    ev = report['cap_evidence']
+    if ev['rounds']:
+        lines.append(f"rounds over a candidate cap ({ev['rounds']} rounds, kinds and models with 5 or more): "
+                     + ', '.join(f"{k} {v}" for k, v in ev['hit'].items()))
+    if report.get('chat'):
+        ch = report['chat']
+        lines.append(f"orchestrator chat: {ch['credits']:,.0f} credits, upper bound (uncached input priced as cache writes)"
+                     + (f"; unpriced models: {', '.join(ch['unpriced'])}" if ch['unpriced'] else ''))
+    if report.get('budget'):
+        lines.append(spend_line(report['budget']))
     lines.append('by day: rounds, credits, capped')
     for d in report['days']:
         lines.append(f"  {d['day']} {d['rounds']:>4} {d['credits']:>9,.0f} {d['capped']:>3}")
@@ -397,6 +578,13 @@ def text(report):
     return '\n'.join(lines)
 
 
+def spend_line(b):
+    chat = '' if b['chat_credits'] is None else f" + chat {b['chat_credits']:,.0f} (upper bound)"
+    return (f"spend: {b['spent']:,.0f} of {b['budget']:,.0f} credits (rounds {b['rounds_credits']:,.0f}{chat}), "
+            f"{b['left']:,.0f} left; more rounds at their medians: "
+            + ', '.join(f"{f['kind']} {f['model']} {f['rounds']}" for f in b['fit']))
+
+
 def fmt(x):
     return '-' if x is None else f'{x:,.0f}'
 
@@ -409,6 +597,10 @@ def main(argv=None):
     out = ap.add_mutually_exclusive_group()
     out.add_argument('--json', action='store_true', help='print everything as JSON')
     out.add_argument('--caps', action='store_true', help='print the --max-ai-credits cap per kind and model')
+    ap.add_argument('--history', nargs='+', default=[], metavar='RUN', help="earlier run folders whose rounds join the caps' window")
+    ap.add_argument('--prices', help='prices.json (default: <run>/prices.json, else the one beside this script)')
+    ap.add_argument('--chat', help='VS Code debug-log folder (or main.jsonl) of the orchestrator chat to price')
+    ap.add_argument('--budget', type=float, help="the run's credit ceiling: print spend against it")
     ap.add_argument('--floor', type=int, default=FLOOR, help=f'cap while a kind and model has fewer than {MIN_ROUNDS} rounds (default {FLOOR})')
     a = ap.parse_args(argv)
 
@@ -429,22 +621,47 @@ def main(argv=None):
         except (OSError, RuntimeError) as e:
             print(f'mine.py: --repo: {e}', file=sys.stderr)
             return 2
+    prices = load_prices(run, a.prices and os.path.expanduser(a.prices))
+    history = []
+    for h in a.history:
+        h = os.path.abspath(os.path.expanduser(h))
+        if not os.path.isdir(h):
+            print(f'mine.py: no history folder at {h}', file=sys.stderr)
+            return 2
+        history += load_rounds(h)
+    chat = None
+    if a.chat:
+        c = os.path.abspath(os.path.expanduser(a.chat))
+        if not os.path.exists(c):
+            print(f'mine.py: no chat log at {c}', file=sys.stderr)
+            return 2
+        chat = chat_spend(c, prices)
     rounds = load_rounds(run)
     if since:
         rounds = [r for r in rounds if r['start'] >= since]
-    cap_rows = caps(rounds, floor=a.floor)
+    add_costs(rounds, prices)
+    add_costs(history, prices)
+    window = history + rounds
+    cap_rows = caps(window, floor=a.floor, prices=prices)
+    budget = budget_report(a.budget, rounds, chat, cap_rows) if a.budget is not None else None
     if a.caps:
         for c in cap_rows:
             print(f"{c['kind']:<9} {c['model']:<22} --max-ai-credits {c['cap']:<6} {c['from']}: median {c['median']:,.0f}, n={c['n']}")
         print(f"any other kind or model: --max-ai-credits {a.floor} floor (n < {MIN_ROUNDS})")
+        if budget:
+            print(spend_line(budget))
+        elif chat:
+            print(f"chat: {chat['credits']:,.0f} credits, upper bound")
         return 0
     report = {'run': run, 'since': a.since, 'rounds': rounds, 'items': items(rounds, merge_rows),
               'kinds': kinds(rounds), 'days': days(rounds), 'caps': cap_rows,
-              'markers': measure(load_markers(run), rounds)}
+              'markers': measure(load_markers(run), rounds), 'usage': usage_by_kind(rounds),
+              'cap_evidence': cap_evidence(window), 'prices': prices, 'chat': chat, 'budget': budget}
     if a.json:
         for r in rounds:
             r['start'] = iso(r['start'])
             r['wall_min'] = round(r['wall_min'], 1)
+            r.pop('usage_cum', None)
             for k in ('credits', 'cum_credits'):
                 if r[k] is not None:
                     r[k] = round(r[k], 1)
