@@ -178,7 +178,8 @@ def recent(items, days):
 
 
 def velocities(items, method):
-    return [i["estimate"] / i["actual"] for i in items if i["actual"] > 0 and i.get("method", "judged") == method]
+    return [i["estimate"] / i["actual"] for i in items
+            if i.get("estimate") and i["actual"] > 0 and i.get("method", "judged") == method]
 
 
 def kind_estimate(items, kind):
