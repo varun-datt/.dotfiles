@@ -6,8 +6,9 @@ Usage:
                           [--author-model M] [--diff FILE] [--budget-left F] [--run-fraction F] [--seed N]
     python3 route.py escalate --run RUN --item ID
     python3 route.py report --run RUN
+    python3 route.py eval-classifier --run RUN [--models a,b,c] [--max-credits N]
 
-pick prints `MODEL=... EFFORT=... CAP=...` (and a `# reason` line) and appends one JSON line to RUN/routes.jsonl.
+pick prints `MODEL=... EFFORT=... CONTEXT=... CAP=...` (and a `# reason` line) and appends one JSON line to RUN/routes.jsonl.
 The policies (categories, floors, targets) and the model mapping live in ../references/routes.json.
 Design and reading guide: ../references/routing.md.
 """
@@ -138,9 +139,9 @@ def parse_classifier(raw, text, kind, cfg):
     return {'source': 'classifier', 'category': cat, 'grades': out}
 
 
-def copilot_classify(text, kind, cfg):
+def copilot_classify(text, kind, cfg, model=None):
     c = cfg['classifier']
-    cmd = ['timeout', str(c['timeout_s']), 'copilot', '-p', classifier_prompt(text, kind, cfg), '-s', '--model', c['model'],
+    cmd = ['timeout', str(c['timeout_s']), 'copilot', '-p', classifier_prompt(text, kind, cfg), '-s', '--model', model or c['model'],
            '--reasoning-effort', 'low', '--available-tools', '', '--disable-builtin-mcps', '--no-custom-instructions',
            '--no-ask-user', '--no-auto-update', '--stream', 'off', '--max-ai-credits', '30', '--output-format', 'json']
     done = subprocess.run(cmd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
@@ -238,7 +239,9 @@ def build_history(rounds_items, decisions=()):
                 continue
             d = logged.get((r['item'], mine_kind(r['kind'])))
             hist.append({'kind': mine_kind(r['kind']), 'category': d and d['category'], 'tier': d and d['tier'],
-                         'model': r['model'], 'item': r['item'], 'ok': round_ok(r, by_item.get(r['item'], {}))})
+                         'model': r['model'], 'effort': r.get('effort'),
+                         'context': (d and d['choice'].get('context')) or 'default',
+                         'item': r['item'], 'ok': round_ok(r, by_item.get(r['item'], {}))})
     return hist
 
 
@@ -282,13 +285,71 @@ def posterior(model, kind, category, tier, hist, cfg):
     return prior[0] + wins, prior[1] + len(used) - wins, len(used), level
 
 
-def target_for(tier, budget_left, run_fraction, cfg):
-    base = cfg['targets'][tier]
+def overspend(budget_left, run_fraction):
     if budget_left is None or run_fraction is None:
-        return base
-    ahead = (1 - budget_left) - run_fraction
+        return 0.0
+    return max(0.0, (1 - budget_left) - run_fraction)
+
+
+def target_for(tier, budget_left, run_fraction, cfg):
     b = cfg['budget']
-    return max(b['min_target'], base - b['gain'] * max(0.0, ahead))
+    return max(b['min_target'], cfg['targets'][tier] - b['gain'] * overspend(budget_left, run_fraction))
+
+
+def arm_posterior(rounds, field, value, kind, category, tier, prior, cfg):
+    """Beta for one arm: the cell's own outcomes plus the kind's other outcomes at a reduced weight (a shared prior)."""
+    mk = mine_kind(kind)
+    mine = [r for r in rounds if r['kind'] == mk and r.get(field) == value]
+    cell = [r for r in mine if r['category'] == category and r['tier'] == tier]
+    rest = [r for r in mine if not (r['category'] == category and r['tier'] == tier)]
+    w = cfg['learning']['kind_share']
+    rest_wins = sum(r['ok'] for r in rest)
+    cell_wins = sum(r['ok'] for r in cell)
+    a = prior[0] + cell_wins + w * rest_wins
+    b = prior[1] + len(cell) - cell_wins + w * (len(rest) - rest_wins)
+    return a, b, len(cell), len(rest)
+
+
+def beta_sd(a, b):
+    return (a * b / ((a + b) ** 2 * (a + b + 1))) ** 0.5
+
+
+def quality_tie(cheap, target, cfg):
+    """Why the stronger arm wins, or None: too few outcomes in the cell, or the cheaper arm not clearly above the target."""
+    q = cfg['quality']
+    if cheap['cell_n'] < q['min_cell_rounds']:
+        return f"quality first: {cheap['arm']} has {cheap['cell_n']} outcomes in the cell < {q['min_cell_rounds']}"
+    low = cheap['mean'] - q['tie_sd'] * beta_sd(cheap['alpha'], cheap['beta'])
+    if low < target:
+        return f"quality first: {cheap['arm']} mean {cheap['mean']:.2f} - {q['tie_sd']} sd = {low:.2f} < target {target:.2f}"
+    return None
+
+
+def choose(arms, target, rng, quality_on, cfg):
+    """arms ordered cheapest first; Thompson-sample, take the cheapest clearing the target, then apply the quality rule."""
+    for s in arms:
+        s['sample'] = round(rng.betavariate(s['alpha'], s['beta']), 3)
+    pick_i = next((i for i, s in enumerate(arms) if s['sample'] >= target), len(arms) - 1)
+    why = (f"cheapest sampled success >= {target:.2f}: {arms[pick_i]['arm']} ({arms[pick_i]['sample']})"
+           if arms[pick_i]['sample'] >= target else f'no arm cleared {target:.2f}; the strongest')
+    if quality_on and pick_i < len(arms) - 1:
+        tie = quality_tie(arms[pick_i], target, cfg)
+        if tie:
+            return arms[-1]['arm'], tie
+    return arms[pick_i]['arm'], why
+
+
+def context_signals(text, grades, cfg):
+    c = cfg['context']
+    hits = [name for name, pat in c['signals'] if re.search(pat, text, re.I)]
+    files = set(re.findall(r'\b[\w./-]+\.(?:ts|tsx|js|py|md|json|css|go|rs|java|cs)\b', text))
+    if len(files) >= c['many_files']:
+        hits.append(f'{len(files)} file paths')
+    if len(text) >= c['long_brief_chars']:
+        hits.append(f'{len(text)} chars of brief')
+    if grades['breadth']['grade'] >= c['breadth_grade']:
+        hits.append(f"breadth {grades['breadth']['grade']}")
+    return hits
 
 
 def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None, run_fraction=None, rng=None,
@@ -317,9 +378,29 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
     if kind == 'review' and not pool:
         pool = [strongest(cfg, avoid)]
     scores, target = {}, target_for(tier, budget_left, run_fraction, cfg)
-    effort = cfg['effort']['calm'] if all(cls['grades'][k]['grade'] <= cfg['effort']['calm_max_grade']
-                                          for k in ('ambiguity', 'verification')) else cfg['effort']['else']
+    quality_on = overspend(budget_left, run_fraction) <= 0
+    rule_effort = cfg['effort']['calm'] if all(cls['grades'][k]['grade'] <= cfg['effort']['calm_max_grade']
+                                               for k in ('ambiguity', 'verification')) else cfg['effort']['else']
+    lc = cfg['learning']
+    ladder = lc['effort_arms']
+    i = ladder.index(rule_effort) if rule_effort in ladder else len(ladder) - 1
+    effort_scores = []
+    for e in ladder[i:i + 2]:
+        a, b, cn, rn = arm_posterior(history['rounds'], 'effort', e, kind, category, tier,
+                                     lc['rule_prior'] if e == rule_effort else lc['other_prior'], cfg)
+        effort_scores.append({'arm': e, 'alpha': a, 'beta': b, 'cell_n': cn, 'kind_n': rn, 'mean': round(a / (a + b), 3)})
+    effort, effort_why = choose(effort_scores, target, rng, quality_on, cfg)
     effort = higher(effort, cfg['kind_min_effort'].get(kind, 'low'))
+    ctx_hits = context_signals(text, cls['grades'], cfg)
+    context_scores, cc = [], cfg['context']
+    if len(ctx_hits) >= cc['min_signals']:
+        for x in ('default', 'long_context'):
+            a, b, cn, rn = arm_posterior(history['rounds'], 'context', x, kind, category, tier, cc['prior'][x], cfg)
+            context_scores.append({'arm': x, 'alpha': a, 'beta': b, 'cell_n': cn, 'kind_n': rn, 'mean': round(a / (a + b), 3)})
+        context, context_why = choose(context_scores, target, rng, False, cfg)
+        context_why += f" (signals: {', '.join(ctx_hits)})"
+    else:
+        context, context_why = 'default', f"{len(ctx_hits)} long-context signal(s) < {cc['min_signals']}"
     if floor:
         model = resolve(floor['model'], cfg, avoid)
         effort = higher(effort, floor['effort'])
@@ -329,17 +410,22 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
     elif kind == 'resume' and same:
         model, reason = same, 'resume keeps the model of the round it continues'
     else:
+        arms, mk = [], mine_kind(kind)
         for m in pool:
             a, b, n, level = posterior(m, kind, category, tier, history['rounds'], cfg)
-            scores[m] = {'alpha': a, 'beta': b, 'n': n, 'level': level, 'mean': round(a / (a + b), 3),
-                         'sample': round(rng.betavariate(a, b), 3)}
-        model = next((m for m in pool if scores[m]['sample'] >= target), pool[-1])
-        reason = (f"cheapest sampled success >= {target:.2f}: {model} ({scores[model]['sample']}, "
-                  f"{scores[model]['level']} n={scores[model]['n']})" if scores[model]['sample'] >= target
-                  else f'no model cleared {target:.2f}; strongest of the pool')
+            cell_n = sum(1 for r in history['rounds'] if r['model'] == m and r['kind'] == mk
+                         and r['category'] == category and r['tier'] == tier)
+            arms.append({'arm': m, 'alpha': a, 'beta': b, 'n': n, 'level': level, 'cell_n': cell_n,
+                         'mean': round(a / (a + b), 3)})
+        model, reason = choose(arms, target, rng, quality_on, cfg)
+        scores = {s.pop('arm'): s for s in arms}
+        reason += f" [{scores[model]['level']} n={scores[model]['n']}]"
     if kind == 'review' and avoid and family(model, cfg) == avoid:
         model = strongest(cfg, avoid)
     cap = cap_for(kind, model, history, cfg)
+    if not quality_on:
+        reason += ' | budget: spend ahead of time, quality rule off'
+    reason += f" | effort {effort}: {effort_why} | context {context}: {context_why}"
     reason += f" | {category}/{tier} (score {score:.1f}, {cls['source']})"
     if hits:
         reason += f" | risk: {hits[0]['area']}"
@@ -347,8 +433,10 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
             'inputs': {'prompt_chars': len(text), 'author_model': author, 'budget_left': budget_left,
                        'run_fraction': run_fraction, 'seed': seed, 'diff_chars': len(diff)},
             'classifier': cls, 'category': category, 'tier': tier, 'score': round(score, 2), 'cell': f'{category}/{tier}',
-            'risk_hits': hits, 'scores': scores, 'target': round(target, 3), 'floor': floor and floor['name'],
-            'choice': {'model': model, 'effort': effort, 'cap': cap}, 'static': static,
+            'risk_hits': hits, 'scores': scores, 'effort_scores': effort_scores, 'context_scores': context_scores,
+            'context_signals': ctx_hits, 'quality_rule': quality_on, 'rule_effort': rule_effort,
+            'target': round(target, 3), 'floor': floor and floor['name'],
+            'choice': {'model': model, 'effort': effort, 'context': context, 'cap': cap}, 'static': static,
             'differs': (model, effort) != (static['model'], static['effort']), 'reason': reason}
 
 
@@ -367,7 +455,8 @@ def escalate(item, history, cfg, run):
     reason = f"{cur['model']} at {effort} capped or failed its gate; " + ('already the top of its pool' if top else f'next up the pool: {model}')
     return {'event': 'escalate', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'), 'item': item,
             'kind': kind, 'category': last['category'], 'tier': last['tier'], 'inputs': last['inputs'],
-            'choice': {'model': model, 'effort': effort, 'cap': cap_for(kind, model, history, cfg)}, 'top_of_pool': top,
+            'choice': {'model': model, 'effort': effort, 'context': cur.get('context', 'default'),
+                       'cap': cap_for(kind, model, history, cfg)}, 'top_of_pool': top,
             'reason': reason}
 
 
@@ -378,7 +467,7 @@ def log(run, record):
 
 def emit(rec):
     c = rec['choice']
-    print(f"MODEL={c['model']} EFFORT={c['effort']} CAP={c['cap']}")
+    print(f"MODEL={c['model']} EFFORT={c['effort']} CONTEXT={c.get('context', 'default')} CAP={c['cap']}")
     print(f"# {rec['reason']}")
 
 
@@ -387,7 +476,7 @@ def report(run, rounds=None, items=None):
     if rounds is None:
         rounds, items = load_mine(run)
     by_item = {i['item']: i for i in items}
-    lines = []
+    lines, by_arm = [], collections.defaultdict(lambda: [0, 0])
     for d in decisions:
         c = d['choice']
         match = [r for r in rounds if r['item'] == d['item'] and mine_kind(r['kind']) == mine_kind(d['kind'])]
@@ -395,15 +484,77 @@ def report(run, rounds=None, items=None):
         if r is None:
             outcome = 'no round yet'
         else:
-            ok = 'ok' if round_ok(r, by_item.get(r['item'], {})) else 'FAILED'
+            good = round_ok(r, by_item.get(r['item'], {}))
+            ok = 'ok' if good else 'FAILED'
             outcome = (f"ran {r['model']}/{r['effort']}, {r['credits'] or 0:,.0f} credits"
                        f"{', CAPPED' if r['capped'] else ''}, {ok}")
+            for arm in (f"effort {r['effort']}", f"context {c.get('context', 'default')}"):
+                by_arm[arm][0 if good else 1] += 1
         st = d.get('static')
         diff = ''
         if st:
             diff = 'same as table' if not d.get('differs') else f"table: {st['model']}/{st['effort']}"
-        lines.append(f"{d['item']:<18} {d['event']:<8} {d['kind']:<8} {c['model']}/{c['effort']}/cap {c['cap']}  [{diff}]  {outcome}")
+        lines.append(f"{d['item']:<18} {d['event']:<8} {d['kind']:<8} {c['model']}/{c['effort']}/"
+                     f"{c.get('context', 'default')}/cap {c['cap']}  [{diff}]  {outcome}")
+    for arm, (ok, bad) in sorted(by_arm.items()):
+        lines.append(f"{arm:<26} {ok} ok, {bad} failed")
     return lines
+
+
+def eval_rounds(run, root=None):
+    """(run dir, round, ok) for this run's rounds and the two previous run folders', each with a prompt file."""
+    root = root or STATE_ROOT
+    run = os.path.abspath(run)
+    sibs = sorted(d for d in (os.path.join(root, x) for x in os.listdir(root)) if os.path.isdir(d))
+    before = [d for d in sibs if os.path.basename(d) < os.path.basename(run)][-2:]
+    out = []
+    for d in [run, *reversed(before)]:
+        rounds, items = load_mine(d)
+        by_item = {i['item']: i for i in items}
+        for r in rounds:
+            p = os.path.join(d, f"{r.get('name')}.prompt.md")
+            if r.get('ended') and r['kind'] in KINDS + ('catchup', 'rereview') and os.path.isfile(p):
+                out.append((d, r, p, round_ok(r, by_item.get(r['item'], {}))))
+    return out
+
+
+def eval_classifier(samples, models, cfg, max_credits, call=None):
+    """Grade each brief with each model, brief by brief, until the next brief would pass max_credits."""
+    call = call or (lambda t, k, c, m: copilot_classify(t, k, c, m))
+    res = {m: [] for m in models}
+    spent, per_call = 0.0, {m: None for m in models}
+    for _, r, path, ok in samples:
+        need = sum(per_call[m] or 0 for m in models)
+        if spent + need > max_credits:
+            break
+        with open(path, encoding='utf-8') as f:
+            text = f.read()
+        kind = r['kind'] if r['kind'] in KINDS else mine_kind(r['kind'])
+        for m in models:
+            try:
+                out = call(text, kind, cfg, m)
+                tier = tier_of(out['grades'], cfg)[0]
+            except Exception:
+                out, tier = {'credits': None}, None
+            cr = out.get('credits') or 0.0
+            spent += cr
+            per_call[m] = max(per_call[m] or 0, cr)
+            res[m].append({'round': r.get('name'), 'tier': tier, 'ok': ok, 'credits': cr})
+    rows = []
+    base = res[models[0]]
+    for m in models:
+        rs = [x for x in res[m] if x['tier']]
+        hit = [x for x in rs if (x['tier'] == 'hard') == (not x['ok'])]
+        fails, oks = [x for x in rs if not x['ok']], [x for x in rs if x['ok']]
+        tpr = sum(x['tier'] == 'hard' for x in fails) / len(fails) if fails else None
+        tnr = sum(x['tier'] != 'hard' for x in oks) / len(oks) if oks else None
+        agree = sum(a['tier'] == b['tier'] for a, b in zip(res[m], base) if a['tier']) / len(rs) if rs else 0
+        rows.append({'model': m, 'n': len(rs), 'errors': len(res[m]) - len(rs),
+                     'credits_per_call': round(sum(x['credits'] for x in res[m]) / max(1, len(res[m])), 3),
+                     'agreement': round(agree, 2), 'accuracy': round(len(hit) / len(rs), 2) if rs else None,
+                     'balanced': round((tpr + tnr) / 2, 2) if tpr is not None and tnr is not None else None,
+                     'fails': len(fails)})
+    return rows, res, round(spent, 2)
 
 
 def main(argv=None):
@@ -430,6 +581,12 @@ def main(argv=None):
     e.add_argument('--config')
     r = sub.add_parser('report')
     r.add_argument('--run', required=True)
+    v = sub.add_parser('eval-classifier')
+    v.add_argument('--run', required=True)
+    v.add_argument('--models', help='comma-separated; default: the classifier pool in routes.json')
+    v.add_argument('--max-credits', type=float, default=60)
+    v.add_argument('--history-root', default=STATE_ROOT)
+    v.add_argument('--config')
     a = ap.parse_args(argv)
     run = os.path.abspath(os.path.expanduser(a.run))
     if not os.path.isdir(run):
@@ -439,6 +596,15 @@ def main(argv=None):
         print('\n'.join(report(run)))
         return 0
     cfg = load_config(a.config)
+    if a.cmd == 'eval-classifier':
+        models = a.models.split(',') if a.models else cfg['classifier']['pool']
+        rows, _, spent = eval_classifier(eval_rounds(run, a.history_root), models, cfg, a.max_credits)
+        print(f"{'model':<20} {'briefs':>6} {'errors':>6} {'fails':>5} {'cr/call':>7} {'agree':>5} {'acc':>5} {'bal':>5}")
+        for x in rows:
+            print(f"{x['model']:<20} {x['n']:>6} {x['errors']:>6} {x['fails']:>5} {x['credits_per_call']:>7} "
+                  f"{x['agreement']:>5} {x['accuracy']!s:>5} {x['balanced']!s:>5}")
+        print(f'# {spent} credits; agree = same tier as {models[0]}; acc and bal: hard tier against failed or capped rounds')
+        return 0
     history = load_history(run, a.history_root)
     if a.cmd == 'escalate':
         try:

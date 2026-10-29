@@ -100,10 +100,53 @@ class Pick(unittest.TestCase):
             rec = self.pick(kind, call=stub('review-fix' if kind == 'fix' else 'docs-research' if kind == 'research' else 'new-feature'))
             self.assertEqual((rec['static']['model'], rec['static']['effort']), want)
 
-    def test_effort_from_ambiguity_and_verification(self):
-        self.assertEqual(self.pick(call=stub('change-existing', amb=2, ver=2))['choice']['effort'], 'medium')
+    def test_effort_rule_is_the_prior_and_quality_lifts_it_without_outcomes(self):
+        rec = self.pick(call=stub('change-existing', amb=2, ver=2))
+        self.assertEqual(rec['rule_effort'], 'medium')
+        efforts = {self.pick(call=stub('change-existing', amb=2, ver=2), seed=s)['choice']['effort'] for s in range(20)}
+        self.assertEqual(efforts, {'high'})
         self.assertEqual(self.pick(call=stub('change-existing', amb=3, ver=2))['choice']['effort'], 'high')
         self.assertEqual(self.pick(call=stub('change-existing', amb=2, ver=4))['choice']['effort'], 'high')
+        good = [dict(rnd(SONNET, True, item=str(i)), effort='medium') for i in range(12)]
+        efforts = {self.pick(hist=history(good), seed=s, call=stub('change-existing'))['choice']['effort'] for s in range(20)}
+        self.assertEqual(efforts, {'medium'})
+
+    def test_effort_learned_from_outcomes_shares_the_kind(self):
+        bad = [dict(rnd(SONNET, False, 'docs-research', 'hard', item=str(i)), effort='medium') for i in range(10)]
+        a_bad = route.arm_posterior(bad, 'effort', 'medium', 'build', 'change-existing', 'easy', [3, 1], CFG)
+        a_none = route.arm_posterior([], 'effort', 'medium', 'build', 'change-existing', 'easy', [3, 1], CFG)
+        self.assertLess(a_bad[0] / (a_bad[0] + a_bad[1]), a_none[0] / (a_none[0] + a_none[1]))
+        self.assertEqual((a_bad[2], a_bad[3]), (0, 10))
+
+    def test_floor_effort_wins_over_learned_effort(self):
+        good = [dict(rnd(SONNET, True, item=str(i)), effort='medium') for i in range(12)]
+        rec = self.pick(hist=history(good), text=BRIEF + 'It stores the sign-in token.\n')
+        self.assertEqual(rec['choice']['effort'], 'high')
+
+    def test_quality_rule_picks_stronger_model_with_few_cell_outcomes(self):
+        hist = history([rnd(SONNET, True, 'change-existing', 'hard', item=str(i)) for i in range(5)])
+        picks = {self.pick(hist=hist, seed=s)['choice']['model'] for s in range(20)}
+        self.assertEqual(picks, {OPUS})
+
+    def test_quality_rule_off_only_when_spend_runs_ahead(self):
+        hist = history([rnd(SONNET, i < 4, item=str(i)) for i in range(5)])
+        on = self.pick(hist=hist, call=stub('change-existing', amb=3), budget_left=0.6, run_fraction=0.4)
+        self.assertTrue(on['quality_rule'])
+        off = self.pick(hist=hist, call=stub('change-existing', amb=3), budget_left=0.1, run_fraction=0.2)
+        self.assertFalse(off['quality_rule'])
+        self.assertIn('quality rule off', off['reason'])
+
+    def test_context_default_without_signals_and_considered_with_them(self):
+        rec = self.pick()
+        self.assertEqual((rec['choice']['context'], rec['context_scores']), ('default', []))
+        text = BRIEF + 'Read the full log and search across the whole repository.\n'
+        rec = self.pick(text=text)
+        self.assertEqual(len(rec['context_scores']), 2)
+        self.assertIn(rec['choice']['context'], ('default', 'long_context'))
+        good = [dict(rnd(SONNET, True, item=str(i)), context='long_context') for i in range(12)]
+        bad = [dict(rnd(SONNET, False, item='b' + str(i)), context='default') for i in range(12)]
+        picks = {self.pick(text=text, hist=history(good + bad), seed=s)['choice']['context'] for s in range(20)}
+        self.assertEqual(picks, {'long_context'})
 
     def test_seed_makes_picks_repeatable(self):
         hist = history([rnd(SONNET, i % 2 == 0, item=str(i)) for i in range(6)])
@@ -205,9 +248,40 @@ class Report(unittest.TestCase):
             rounds = [{'item': 'x', 'kind': 'build', 'model': OPUS, 'effort': 'high', 'credits': 900.0, 'capped': False,
                        'error': False, 'exit': 0, 'ended': True}]
             lines = route.report(run, rounds, [{'item': 'x', 'blocking': 0, 'fix_rounds': 0}])
-            self.assertEqual(len(lines), 1)
+            self.assertEqual(len(lines), 3)
             self.assertIn('ran claude-opus-5.5/high, 900 credits, ok', lines[0])
             self.assertIn('same as table', lines[0])
+            self.assertIn('/default/cap', lines[0])
+            self.assertTrue(any(ln.startswith('effort high') and '1 ok, 0 failed' in ln for ln in lines))
+
+
+class EvalClassifier(unittest.TestCase):
+    def test_scores_tier_against_outcomes_and_stops_at_credit_limit(self):
+        with tempfile.TemporaryDirectory() as d:
+            samples = []
+            for i, ok in enumerate((True, False, True, False)):
+                p = os.path.join(d, f'r{i}.prompt.md')
+                with open(p, 'w') as f:
+                    f.write(BRIEF + ('hard\n' if not ok else ''))
+                samples.append((d, {'name': f'r{i}', 'kind': 'build'}, p, ok))
+
+            def call(text, kind, cfg, model):
+                hard = 'hard' in text if model == 'good' else False
+                g = 5 if hard else 2
+                return {'category': 'change-existing', 'credits': 1.0,
+                        'grades': {k: {'grade': g, 'quote': ''} for k in route.GRADES}}
+            rows, res, spent = route.eval_classifier(samples, ['good', 'flat'], CFG, 100, call)
+            by = {r['model']: r for r in rows}
+            self.assertEqual((by['good']['accuracy'], by['good']['balanced']), (1.0, 1.0))
+            self.assertEqual(by['flat']['balanced'], 0.5)
+            self.assertEqual(by['flat']['agreement'], 0.5)
+            self.assertEqual(spent, 8.0)
+            rows, res, spent = route.eval_classifier(samples, ['good', 'flat'], CFG, 5, call)
+            self.assertEqual(spent, 4.0)
+
+    def test_classifier_pool_in_config(self):
+        self.assertIn(CFG['classifier']['model'], CFG['classifier']['pool'])
+        self.assertNotIn('auto', CFG['classifier']['pool'])
 
 
 class Outcome(unittest.TestCase):
