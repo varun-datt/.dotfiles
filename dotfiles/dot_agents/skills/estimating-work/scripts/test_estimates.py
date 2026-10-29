@@ -183,6 +183,20 @@ class CreditsTest(Isolated):
         self.assertEqual(estimates.known_reasons("start:timeout end:gh-exit-4"), "start:timeout end:gh-exit-4")
         self.assertEqual(estimates.known_reasons("end: secret-org-marker"), "unknown")
 
+    def test_an_id_started_then_added_is_not_running_and_marks_no_later_item(self):
+        start = datetime.now(timezone.utc) - timedelta(minutes=30)
+        at = lambda minutes: (start + timedelta(minutes=minutes)).isoformat()
+        estimates.append({"event": "start", "id": "s", "kind": "fix", "estimate": 5, "run": "r1", "at": at(0)})
+        estimates.main(["add", "--id", "s", "--kind", "fix", "--estimate", "5", "--actual", "4", "--method", "rounds", "--run", "r1", "--at", at(4)])
+        estimates.append({"event": "start", "id": "later", "kind": "fix", "estimate": 5, "run": "r1", "at": at(10)})
+        estimates.append({"event": "end", "id": "later", "credits_actual": 1, "at": at(15)})
+        self.assertEqual(estimates.running(estimates.read(), datetime.now(timezone.utc)), [])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            estimates.main(["report", "--run", "r1"])
+        rows = {r["id"]: r for r in json.loads(out.getvalue())["credits"]["items"]}
+        self.assertNotIn("overlaps", rows["later"])
+
     def test_an_item_overlapping_one_still_open_is_marked(self):
         start = datetime.now(timezone.utc) - timedelta(minutes=10)
         at = lambda minutes: (start + timedelta(minutes=minutes)).isoformat()

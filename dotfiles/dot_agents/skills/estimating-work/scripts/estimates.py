@@ -19,6 +19,7 @@ MINUTES_PER_ROUND = 3.0
 GUARD_LIMIT = 3
 CREDITS_TIMEOUT = 20
 GH_ENV = {"GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1", "NO_COLOR": "1"}
+CLOSES = ("end", "drop", "done")
 REASON = re.compile(r"(start|end):(gh-missing|gh-exit-\d{1,3}|timeout|gh-error|bad-json|no-quota|no-figure|not-read|unknown)")
 
 
@@ -101,7 +102,7 @@ def open_start(records, item_id):
             continue
         if r["event"] == "start":
             start = r
-        elif r["event"] in ("end", "drop"):
+        elif r["event"] in CLOSES:
             start = None
     return start
 
@@ -226,12 +227,12 @@ def report(items, logged=None):
 
 
 def running(records, at):
-    """Items started and not yet ended or dropped, as windows that run until `at`."""
+    """Items started and not yet ended, dropped or added, as windows that run until `at`."""
     starts = {}
     for r in records:
         if r["event"] == "start":
             starts[r["id"]] = r
-        elif r["event"] in ("end", "drop"):
+        elif r["event"] in CLOSES:
             starts.pop(r["id"], None)
     return [{**s, "started": s["at"], "at": at.isoformat()} for s in starts.values()]
 
