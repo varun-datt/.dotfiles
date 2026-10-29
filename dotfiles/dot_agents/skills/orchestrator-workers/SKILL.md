@@ -161,6 +161,13 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
   runs it under `timeout` (`--help` lists the model, cap and timeout overrides). Use another model
   family. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
   shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
+  A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"
+  filter on gpt-6.1-sol, or a sub-agent that refuses (2026-10-29: 3 rounds, 131 credits, no
+  verdict). Tell the reviewer to work in its own session, and after one 422 fall back to Opus at
+  max in a fresh session, saying the review is same-family.
+- **An INFERRED vendor fact gets its live check before the merge.** On 2026-10-29 a feature
+  built on Copilot's message ids merged, and the live check after it showed the ids were
+  snapshot positions: a fix round and a second merge undid it.
 - **Fix and resume rounds:** `copilot -r ow-<item>` with the same flags. Name the run
   `<item>-fix1` or `<item>-resume1`; for its credit cap see [routing](references/routing.md#credit-caps).
 - **A `result` event is not success.** Check `exitCode` and `session.error`; `scripts/result.py`
