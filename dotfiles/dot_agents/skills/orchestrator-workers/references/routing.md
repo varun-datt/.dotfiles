@@ -14,6 +14,20 @@ Owner rulings, 2026-10-13. The orchestrator applies them to every round it launc
 
 The 2026-10-29 rulings changed the build, fix, small item, document and research rows. Reviews stay at high, max on risk areas.
 
+## The router
+
+`scripts/route.py` now picks each round's model, effort and cap; the table above is its fallback (when the classifier fails) and its shadow (logged beside every choice). Policies and models are separate: `routes.json` holds plain-language categories, each with a pool of models cheapest first, plus the floors; changing models means editing only its pools and `strongest` entries.
+
+```sh
+python3 scripts/route.py pick --run "$OW_RUN_DIR" --item <id> --kind build|fix|review|research|small|resume|merge --prompt <brief> [--author-model M] [--diff FILE] [--budget-left F] [--run-fraction F] [--seed N]
+python3 scripts/route.py escalate --run "$OW_RUN_DIR" --item <id>
+python3 scripts/route.py report --run "$OW_RUN_DIR"
+```
+
+`pick` prints `MODEL=... EFFORT=... CAP=...` and a `# reason` line. Steps: one `claude-haiku-5.5` call through `copilot -p` (no tools, no MCP servers, under `timeout`, about 0.3 credits) returns the category and 1 to 5 grades with quotes; any failure falls back to keyword rules and the table. The tier (easy, medium, hard) comes from the grades; the cell is category x tier. Each pool model gets a Beta posterior from past rounds in the cell (widened to the category, then the kind, under 3 rounds), is Thompson-sampled, and the cheapest model whose sample clears the tier's target wins. The target falls as spend (`--budget-left`) runs ahead of time (`--run-fraction`). Floors always win: new features, `src/host/sessions.ts` and risk areas get the strongest model at high (risk-area reviews max); a review is never the author's family; never `auto`. Success means: not capped, exit 0, no blocking review finding, at most one fix round. Effort is medium when ambiguity and verification are both 2 or lower, else high. The cap comes from `mine.py --caps`. After a capped round or a failed gate, `escalate` returns the next model up the pool at the same effort.
+
+Reading `<run>/routes.jsonl`, one JSON line per decision: `inputs` (including the seed), `classifier` (`source` is `classifier`, `stub` or `fallback`, with `fallback_reason`; each grade with its quote), `cell`, `scores` (per model: alpha, beta, n, `level` the cell was widened to, the `sample`), `target`, `floor`, `choice`, `static` (the table's choice), `differs`, `reason`. `route.py report` prints each decision against the static choice and its round's outcome. Until `routes.jsonl` has logged decisions, history is read by kind only (the category and tier of past rounds are unknown), so the router leans on the kind-level record.
+
 ## Rules
 
 - **Never the automatic model choice** (`auto`), for workers or reviewers. Always pass `--model` and `--reasoning-effort`, so spend and quality can be compared round by round.
