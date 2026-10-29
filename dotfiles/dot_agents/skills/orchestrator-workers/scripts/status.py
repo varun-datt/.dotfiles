@@ -114,6 +114,8 @@ def activity(path):
                 last_type = t
             if t == 'tool.execution_start':
                 args = d.get('arguments') or {}
+                if not isinstance(args, dict):
+                    args = {'command': args}
                 desc = args.get('command') or args.get('description') or args.get('path') or args.get('skill') or ''
                 open_calls[d.get('toolCallId')] = f"{d.get('toolName')}: {' '.join(str(desc).split())[:70]}"
             elif t == 'tool.execution_complete':
