@@ -145,7 +145,26 @@ def completed(records):
                 last = next((n for n in range(len(items) - 1, -1, -1) if items[n]["id"] == r["id"]), None)
                 if last is not None:
                     del items[last]
-    return items
+    return prefer_imported(items)
+
+
+def prefer_imported(items):
+    """An id with an imported row counts once, as that row; the hand-logged row only lends its estimate and method."""
+    imported = {i["id"] for i in items if i.get("imported")}
+    hand = {}
+    for i in items:
+        if not i.get("imported") and i["id"] in imported:
+            hand[i["id"]] = i
+    out = []
+    for i in items:
+        if i.get("imported"):
+            h = hand.get(i["id"])
+            if h and is_number(h.get("estimate")):
+                i = i | {"estimate": h["estimate"], "method": h.get("method", "judged")}
+            out.append(i)
+        elif i["id"] not in imported:
+            out.append(i)
+    return out
 
 
 def percentile(values, p):
@@ -293,8 +312,9 @@ def worker_records(run_dir, mined, logged):
         if not kind or (run, r["name"]) in seen or not is_number(r.get("wall_min")):
             continue
         started = parse_time(r["start"])
+        active = r["active_min"] if is_number(r.get("active_min")) else r["wall_min"]
         credits = r.get("credits")
-        record = {"event": "done", "id": r["name"], "kind": kind, "estimate": None, "actual": round(r["wall_min"], 1), "method": "history", "serves": "", "run": run, "imported": True, "credits_source": "log", "started": started.isoformat(), "at": (started + timedelta(minutes=r["wall_min"])).isoformat()}
+        record = {"event": "done", "id": r["name"], "kind": kind, "estimate": None, "actual": round(active, 1), "wall_min": round(r["wall_min"], 1), "method": "history", "serves": "", "run": run, "imported": True, "credits_source": "log", "started": started.isoformat(), "at": (started + timedelta(minutes=active)).isoformat()}
         record |= {"credits_actual": round(credits, 2)} if is_number(credits) else {"credits_actual": None, "credits_unknown": "not-read"}
         out.append(record)
     return out

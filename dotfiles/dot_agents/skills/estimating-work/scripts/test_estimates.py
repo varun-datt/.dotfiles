@@ -301,6 +301,23 @@ class WorkerImportTest(Isolated):
             estimates.main(["estimate", "--kind", "fix", "--days", "100000"])
         self.assertEqual(json.loads(out.getvalue())["n"], 1)
 
+    def test_import_logs_active_minutes_as_the_actual_and_keeps_wall_minutes(self):
+        self.ROUNDS = [{"name": "slow", "kind": "build", "start": "2026-10-28T09:00:00+00:00", "wall_min": 500.0, "active_min": 40.0, "credits": 1.0}]
+        run = self.stub_mine()
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["import-run", str(run)])
+        item = estimates.completed(estimates.read())[0]
+        self.assertEqual((item["actual"], item["wall_min"]), (40.0, 500.0))
+
+    def test_an_imported_id_replaces_its_hand_logged_row_but_keeps_its_estimate(self):
+        self.ROUNDS = [{"name": "item1", "kind": "build", "start": "2026-10-28T09:00:00+00:00", "wall_min": 30.0, "active_min": 30.0, "credits": 1.0}]
+        run = self.stub_mine()
+        estimates.append({"event": "done", "id": "item1", "kind": "worker-build", "estimate": 25, "actual": 90, "method": "history", "at": "2026-10-28T12:00:00+00:00"})
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["import-run", str(run)])
+        items = estimates.completed(estimates.read())
+        self.assertEqual([(i["id"], i["actual"], i["estimate"], i.get("imported")) for i in items], [("item1", 30.0, 25, True)])
+
     def test_report_labels_log_credits_and_never_marks_them_overlapping(self):
         run = self.stub_mine()
         with contextlib.redirect_stdout(io.StringIO()):
