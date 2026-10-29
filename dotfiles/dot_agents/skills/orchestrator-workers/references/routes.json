@@ -1,0 +1,76 @@
+{
+  "_note": "Policies (categories, floors, targets) apart from the model mapping (strongest, families, pools). To change models, edit only the pools, strongest and static entries. Pools are ordered cheapest first. Never 'auto'.",
+  "strongest": {"anthropic": "claude-opus-5.5", "openai": "gpt-6.1-sol"},
+  "default_family": "anthropic",
+  "families": {"claude-": "anthropic", "gpt-": "openai"},
+  "classifier": {"model": "claude-haiku-5.5", "timeout_s": 90, "max_brief_chars": 12000},
+  "categories": {
+    "new-feature": {
+      "description": "Builds a new user-visible feature or a new capability, or changes how a turn or conversation is handled.",
+      "kinds": ["build"],
+      "pool": ["claude-sonnet-5.5", "claude-opus-5.5"]
+    },
+    "change-existing": {
+      "description": "Changes code that already exists: a bug fix, a flake, a refactor, a test or tooling change, a small UI adjustment.",
+      "kinds": ["build", "small"],
+      "pool": ["claude-sonnet-5.5", "claude-opus-5.5"]
+    },
+    "docs-research": {
+      "description": "Writes a document, a proposal or a research report, with options and a recommendation; changes no product code.",
+      "kinds": ["research", "small", "build"],
+      "pool": ["claude-sonnet-5.5", "claude-opus-5.5"]
+    },
+    "review-fix": {
+      "description": "Fixes the blocking findings of a review in a fresh session with a short brief.",
+      "kinds": ["fix"],
+      "pool": ["claude-sonnet-5.5", "claude-opus-5.5"]
+    },
+    "resume": {
+      "description": "Continues a round that stopped, was capped or needs a narrower brief.",
+      "kinds": ["resume"],
+      "pool": ["claude-sonnet-5.5", "claude-opus-5.5"]
+    },
+    "merge": {
+      "description": "Merges main into a branch and resolves conflicts.",
+      "kinds": ["merge"],
+      "pool": ["claude-sonnet-5.5", "claude-opus-5.5"]
+    },
+    "review": {
+      "description": "Reads a diff against its task and reports findings; writes no code.",
+      "kinds": ["review"],
+      "pool": ["claude-sonnet-5.5", "gpt-6.1-sol", "claude-opus-5.5"]
+    }
+  },
+  "tier_cutoffs": {"easy": 2.0, "hard": 3.5, "hard_risk": 4},
+  "targets": {"easy": 0.6, "medium": 0.7, "hard": 0.8},
+  "prior": {"easy": [2, 1], "medium": [1, 1], "hard": [1, 2], "strongest": [4, 1]},
+  "min_rounds": 3,
+  "budget": {"gain": 0.5, "min_target": 0.3},
+  "default_cap": 3000,
+  "kind_min_effort": {"resume": "high", "merge": "high"},
+  "effort": {"calm_max_grade": 2, "calm": "medium", "else": "high", "risk_review": "max", "risk": "high"},
+  "risk_patterns": [
+    ["credentials", "\\b(credential|secret|api key|password|oauth|sign-?in|login|bearer|pat token|access token)s?\\b"],
+    ["outside systems", "\\b(azure devops|ado write|webhook|post to|write to (?:the )?(?:remote|server|service)|external system)\\b"],
+    ["privacy", "\\b(redact|mask(?:ed|ing)?|privacy|pii|sent to a model|logged)\\b"],
+    ["durable data", "\\b(migration|schema|backup|delete[sd]? (?:the )?(?:data|files?|rows?)|deletion|git (?:push|commit|reset|write)|force-?push)\\b"],
+    ["processes", "\\b(kill|sigterm|sigkill|spawn(?:s|ed)?|subprocess|child process)\\b"],
+    ["trust boundaries", "\\b(origin check|host check|session check|sandbox(?:ing|ed)?|path traversal|trust boundar(?:y|ies)|allow-?list|shell argument)\\b"],
+    ["the checks themselves", "\\b(test harness|mutation controls?|gate scripts?)\\b"],
+    ["public repository", "\\b(publish(?:ed|ing)? to (?:a )?public|public repo(?:sitory)?)\\b"]
+  ],
+  "floors": [
+    {"name": "owner-2026-10-29-new-features", "when": {"category": "new-feature"}, "model": "strongest", "effort": "high"},
+    {"name": "owner-2026-10-29-sessions-ts", "when": {"text": "src/host/sessions\\.ts", "text_unless": "do not edit|not edit|out of scope|do not touch|don't touch|off limits"}, "model": "strongest", "effort": "high"},
+    {"name": "risk-area", "when": {"risk": true}, "model": "strongest", "effort": "high", "review_effort": "max"}
+  ],
+  "static": {
+    "build": {"model": "strongest", "effort": "high"},
+    "small": {"model": "claude-sonnet-5.5", "effort": "medium", "risk_model": "strongest", "risk_effort": "high"},
+    "fix": {"model": "claude-sonnet-5.5", "effort": "medium"},
+    "resume": {"model": "same", "effort": "high"},
+    "merge": {"model": "claude-sonnet-5.5", "effort": "high", "risk_model": "strongest"},
+    "review": {"model": "strongest-other-family", "effort": "high", "risk_effort": "max"},
+    "research": {"model": "claude-sonnet-5.5", "effort": "medium"}
+  }
+}
