@@ -479,10 +479,13 @@ def report(run, rounds=None, items=None):
     lines, by_arm = [], collections.defaultdict(lambda: [0, 0])
     for d in decisions:
         c = d['choice']
-        match = [r for r in rounds if r['item'] == d['item'] and mine_kind(r['kind']) == mine_kind(d['kind'])]
+        base = re.sub(r'-(re)?(fix|review)\d+$', '', d['item'])
+        match = [r for r in rounds if r['item'] in (d['item'], base) and mine_kind(r['kind']) == mine_kind(d['kind'])]
         r = next((x for x in match if x['model'] == c['model']), match[-1] if match else None)
         if r is None:
             outcome = 'no round yet'
+        elif not r.get('ended'):
+            outcome = f"running {r['model']}/{r['effort']}"
         else:
             good = round_ok(r, by_item.get(r['item'], {}))
             ok = 'ok' if good else 'FAILED'
