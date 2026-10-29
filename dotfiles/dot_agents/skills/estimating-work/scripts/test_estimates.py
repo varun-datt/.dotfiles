@@ -249,6 +249,73 @@ class CreditsTest(Isolated):
         self.assertEqual({k: credits[k] for k in ("estimated", "actual", "items_estimated", "items_measured", "items_overlapping")}, {"estimated": 6, "actual": 8, "items_estimated": 3, "items_measured": 2, "items_overlapping": 2})
 
 
+class WorkerImportTest(Isolated):
+    ROUNDS = [
+        {"name": f"item{n}", "kind": "build", "start": f"2026-10-28T09:{n:02d}:00+00:00", "wall_min": 10.0 + n, "credits": 100.5 + n}
+        for n in range(6)
+    ] + [
+        {"name": "item0-review", "kind": "review", "start": "2026-10-28T10:00:00+00:00", "wall_min": 6.0, "credits": 20.0},
+        {"name": "item0-fix", "kind": "fix", "start": "2026-10-28T10:10:00+00:00", "wall_min": 8.0, "credits": None},
+        {"name": "item0-merge", "kind": "merge", "start": "2026-10-28T10:30:00+00:00", "wall_min": 1.0, "credits": 1.0},
+    ]
+
+    def stub_mine(self):
+        path = Path(self.dir.name) / "mine.py"
+        path.write_text("import json, sys\nprint(json.dumps({'rounds': %r}))\n" % (self.ROUNDS,))
+        os.environ["MINE_PY"] = str(path)
+        return Path(self.dir.name) / "run-a"
+
+    def test_import_logs_worker_kinds_with_credits_from_the_workers_log(self):
+        run = self.stub_mine()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(estimates.main(["import-run", str(run)]), 0)
+        self.assertEqual(json.loads(out.getvalue())["imported"], 8)
+        items = estimates.completed(estimates.read())
+        self.assertEqual({i["kind"] for i in items}, {"worker-build", "worker-review", "worker-fix"})
+        build = next(i for i in items if i["id"] == "item1")
+        self.assertEqual((build["actual"], build["credits_actual"], build["run"]), (11.0, 101.5, "run-a"))
+        fix = next(i for i in items if i["id"] == "item0-fix")
+        self.assertIsNone(fix["credits_actual"])
+        self.assertEqual(fix["credits_unknown"], "not-read")
+
+    def test_importing_twice_adds_nothing(self):
+        run = self.stub_mine()
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["import-run", str(run)])
+            estimates.main(["import-run", str(run)])
+        self.assertEqual(len(estimates.completed(estimates.read())), 8)
+
+    def test_estimate_for_a_worker_kind_answers_from_imported_history_apart_from_in_chat_kinds(self):
+        run = self.stub_mine()
+        estimates.append({"event": "done", "id": "chat", "kind": "fix", "estimate": 5, "actual": 4, "method": "history", "at": "2026-10-28T09:00:00+00:00"})
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["import-run", str(run)])
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            estimates.main(["estimate", "--kind", "worker-build", "--days", "100000"])
+        answer = json.loads(out.getvalue())
+        self.assertEqual((answer["n"], answer["guess"], answer["p50"]), (6, False, 12.0))
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            estimates.main(["estimate", "--kind", "fix", "--days", "100000"])
+        self.assertEqual(json.loads(out.getvalue())["n"], 1)
+
+    def test_report_labels_log_credits_and_never_marks_them_overlapping(self):
+        run = self.stub_mine()
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["import-run", str(run)])
+        items = estimates.completed(estimates.read())
+        credits = estimates.report(items)["credits"]
+        self.assertEqual(credits["items_overlapping"], 0)
+        self.assertEqual({r["credits_source"] for r in credits["items"]}, {"log"})
+
+    def test_account_counter_items_are_labelled_as_such(self):
+        estimates.append({"event": "done", "id": "x", "kind": "fix", "estimate": 5, "actual": 5, "credits_actual": 3, "at": "2026-10-28T09:00:00+00:00"})
+        row = estimates.report(estimates.completed(estimates.read()))["credits"]["items"][0]
+        self.assertEqual(row["credits_source"], "account counter")
+
+
 class EstimatesTest(Isolated):
     def test_start_and_end_pair_into_an_actual(self):
         start = datetime(2026, 10, 25, 9, 0, tzinfo=timezone.utc)

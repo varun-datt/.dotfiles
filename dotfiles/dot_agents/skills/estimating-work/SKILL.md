@@ -70,9 +70,20 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   after its commit. Never work out minutes by hand. An item another item covered, or one logged by
   mistake, is closed with `estimates.py drop --id <id> --reason "covered by <id>"` instead of
   `end`, so no history or report counts it (2026-10-26: two covered items logged 0 minutes).
+- Worker items (`copilot -p` runs of the orchestrator-workers skill) have their own kinds:
+  `worker-build`, `worker-fix`, `worker-review`, `worker-research`. Workers took 7 to 66 minutes
+  per build on 2026-10-28 (median 31, 14 builds) and reviews 2 to 48 (median 6, 11 reviews), against
+  4 to 8 minutes for the in-chat items behind `fix` and `feature`, so never mix them. Import a run
+  folder's history with `estimates.py import-run <run folder>` (it runs the sibling skill's
+  `mine.py --json`, skips items already logged), then `estimates.py estimate --kind worker-build`.
+  Merge and resume rounds are not imported.
+- Per-item credits for workers come from the worker's own log (`mine.py`), not the account
+  counter: the counter's delta double counts when workers overlap and includes the owner's other
+  chats. Imported items carry `credits_source: "log"`; stamped in-chat items show
+  `"account counter"`. The counter stays only as the whole account's total.
 - Give `start` a credit estimate too, `--credits <n>`. `start` and `end` each read the account's
   credits-used figure (`gh api /copilot_internal/user`, undocumented) and `end` stores the
-  difference as the item's credit actual. A failed read never blocks a stamp; it marks the
+  difference as the item's credit actual (in-chat items only). A failed read never blocks a stamp; it marks the
   item's credits unknown, with a reason code (`gh-missing`, `gh-exit-<n>`, `timeout`,
   `gh-error`, `bad-json`, `no-quota`, `no-figure`). On 2026-10-28, 21 reads 15 s apart from 11:16:50 to
   11:22:06, while this session made paid calls, read 858929 first and 858929 last: it did
@@ -92,11 +103,11 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 - A turn that starts without the plan in view reads the session memory before anything else: on
   2026-10-26 a turn begun by a terminal notification lost the plan and ended on a question about
   an unrelated failing test, mid-run.
-- Keep the run's own chat small: every step resends the whole chat. Do each item in the `worker`
-  subagent (`runSubagent` with agent name `worker`), which in VS Code inherits the personal
-  instructions, skills and memory without the MCP servers' tools, so each call starts at about 49k
-  tokens against the default subagent's 125k (checked 2026-10-27). Brief it with the item's `what`,
-  the owner's rulings and the files; read its diff and look at its renders before the next item.
+- Unattended runs send each item to a `copilot -p` worker under `timeout`, through the
+  orchestrator-workers skill: an in-chat sub-agent call has no timeout, and one stalled a run for
+  3 h 11 min (2026-10-27). Keep in-chat sub-agents (`runSubagent`, agent `worker`) for short
+  attended work. Brief a worker with the item's `what`, the owner's rulings and the files; read its
+  diff and look at its renders before the next item.
 - Keep the todo list current: after a reset it is the one list still in view, and a stale one makes
   a run look unstarted.
 - Polish found on the way becomes a backlog item, not work now.
