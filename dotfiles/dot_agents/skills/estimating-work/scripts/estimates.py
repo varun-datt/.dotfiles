@@ -145,7 +145,26 @@ def completed(records):
                 last = next((n for n in range(len(items) - 1, -1, -1) if items[n]["id"] == r["id"]), None)
                 if last is not None:
                     del items[last]
-    return items
+    return prefer_imported(items)
+
+
+def prefer_imported(items):
+    """An id with an imported row counts once, as that row; the hand-logged row only lends its estimate and method."""
+    imported = {i["id"] for i in items if i.get("imported")}
+    hand = {}
+    for i in items:
+        if not i.get("imported") and i["id"] in imported:
+            hand[i["id"]] = i
+    out = []
+    for i in items:
+        if i.get("imported"):
+            h = hand.get(i["id"])
+            if h and is_number(h.get("estimate")):
+                i = i | {"estimate": h["estimate"], "method": h.get("method", "judged")}
+            out.append(i)
+        elif i["id"] not in imported:
+            out.append(i)
+    return out
 
 
 def percentile(values, p):
@@ -207,9 +226,10 @@ def forecast(plan, window, items, runs=1000, seed=None):
 def report(items, logged=None):
     if not items:
         return {"n": 0}
-    est = sum(i["estimate"] for i in items)
+    judged = [i for i in items if is_number(i.get("estimate"))]
+    est = sum(i["estimate"] for i in judged)
     act = sum(i["actual"] for i in items)
-    within = sum(abs(i["actual"] - i["estimate"]) <= 0.25 * i["actual"] for i in items)
+    within = sum(abs(i["actual"] - i["estimate"]) <= 0.25 * i["actual"] for i in judged)
     by_kind = {}
     for i in items:
         by_kind[i["kind"]] = round(by_kind.get(i["kind"], 0) + i["actual"], 1)
@@ -218,7 +238,7 @@ def report(items, logged=None):
         "n": len(items),
         "estimated": round(est, 1),
         "actual": round(act, 1),
-        "estimate_over_actual": round(est / act, 2) if act else None,
+        "estimate_over_actual": round(est / sum(i["actual"] for i in judged), 2) if judged and sum(i["actual"] for i in judged) else None,
         "within_25_percent": within,
         "features_with_enablers_share": round(features / act, 2) if act else None,
         "minutes_by_kind": {k: {"minutes": v, "share": round(v / act, 2) if act else None} for k, v in sorted(by_kind.items(), key=lambda kv: -kv[1])},
@@ -246,6 +266,9 @@ def overlaps(items, logged):
     found = []
     for item in items:
         mine = window(item)
+        if item.get("credits_source") == "log":
+            found.append([])
+            continue
         others = [(o, window(o)) for o in logged if o is not item and not (o.get("id") == item.get("id") and o.get("started") == item.get("started"))]
         found.append([o.get("id") for o, theirs in others if mine and theirs and mine[0] < theirs[1] and theirs[0] < mine[1]])
     return found
@@ -254,7 +277,7 @@ def overlaps(items, logged):
 def credits_report(items, logged=None):
     rows, crossed = [], overlaps(items, items if logged is None else logged)
     for i, others in zip(items, crossed):
-        row = {"id": i.get("id"), "kind": i.get("kind"), "minutes_estimate": i["estimate"], "minutes_actual": i["actual"], "credits_estimate": i.get("credits_estimate"), "credits_actual": i.get("credits_actual")}
+        row = {"id": i.get("id"), "kind": i.get("kind"), "minutes_estimate": i.get("estimate"), "credits_source": i.get("credits_source", "account counter"), "minutes_actual": i["actual"], "credits_estimate": i.get("credits_estimate"), "credits_actual": i.get("credits_actual")}
         if i.get("credits_unknown"):
             row["credits_unknown"] = known_reasons(i["credits_unknown"])
         if others:
@@ -270,6 +293,41 @@ def credits_report(items, logged=None):
         "items_measured": len(actual),
         "items_overlapping": sum(bool(o) for o in crossed),
     }
+
+
+WORKER_KINDS = {"build": "worker-build", "fix": "worker-fix", "review": "worker-review", "rereview": "worker-review", "research": "worker-research"}
+
+
+def mine_path():
+    return Path(os.environ.get("MINE_PY") or Path(__file__).resolve().parents[2] / "orchestrator-workers" / "scripts" / "mine.py")
+
+
+def worker_records(run_dir, mined, logged):
+    """`done` records for a run folder's worker rounds, from mine.py's JSON; credits are the round's own, from its log."""
+    seen = {(r.get("run"), r["id"]) for r in logged}
+    run = Path(run_dir).name
+    out = []
+    for r in mined.get("rounds", []):
+        kind = WORKER_KINDS.get(r.get("kind"))
+        if not kind or (run, r["name"]) in seen or not is_number(r.get("wall_min")):
+            continue
+        started = parse_time(r["start"])
+        active = r["active_min"] if is_number(r.get("active_min")) else r["wall_min"]
+        credits = r.get("credits")
+        record = {"event": "done", "id": r["name"], "kind": kind, "estimate": None, "actual": round(active, 1), "wall_min": round(r["wall_min"], 1), "method": "history", "serves": "", "run": run, "imported": True, "credits_source": "log", "started": started.isoformat(), "at": (started + timedelta(minutes=active)).isoformat()}
+        record |= {"credits_actual": round(credits, 2)} if is_number(credits) else {"credits_actual": None, "credits_unknown": "not-read"}
+        out.append(record)
+    return out
+
+
+def import_run(run_dir):
+    done = subprocess.run([sys.executable, "-B", str(mine_path()), str(run_dir), "--json"], capture_output=True, timeout=120, stdin=subprocess.DEVNULL)
+    if done.returncode != 0:
+        return None
+    records = worker_records(run_dir, json.loads(done.stdout.decode("utf-8")), completed(read()))
+    for record in records:
+        append(record)
+    return records
 
 
 def kinds_table(items):
@@ -371,6 +429,8 @@ def main(argv=None):
     p.add_argument("--serves", default="")
     p.add_argument("--at", default=None, help="ISO time it ended; default now")
     p.add_argument("--run", default="")
+    p = sub.add_parser("import-run", help="log a worker run folder's builds, fixes, reviews and research as worker-* items, with credits from each worker's own log")
+    p.add_argument("run_dir")
     p = sub.add_parser("estimate", help="P50 and P90 for a kind from the log, or minutes for a count of rounds")
     p.add_argument("--kind")
     p.add_argument("--rounds", type=int, help="think-write-run-verify cycles the item needs")
@@ -420,6 +480,12 @@ def main(argv=None):
         print(json.dumps({"id": args.id, "dropped": args.reason}))
     elif args.command == "add":
         append({"event": "done", "id": args.id, "kind": args.kind, "estimate": args.estimate, "actual": args.actual, "method": args.method, "serves": args.serves, "run": args.run, "at": (parse_time(args.at) if args.at else now()).isoformat()})
+    elif args.command == "import-run":
+        records = import_run(args.run_dir)
+        if records is None:
+            print("mine.py failed on that run folder", file=sys.stderr)
+            return 1
+        print(json.dumps({"imported": len(records), "kinds": sorted({r["kind"] for r in records})}))
     elif args.command == "estimate":
         if args.rounds is not None:
             print(json.dumps(rounds_estimate(args.rounds, args.risk)))

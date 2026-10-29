@@ -129,8 +129,16 @@ class DecumulateTest(Base):
     def test_names_split_into_item_and_kind(self):
         cases = {'a': ('a', 'build'), 'a-fix1': ('a', 'fix'), 'a-review2': ('a', 'review'), 'a-rereview': ('a', 'rereview'),
                  'a-1-fix3-resume1': ('a-1', 'resume'), 'a-catchup': ('a', 'catchup'), 'a-merge2': ('a', 'merge'),
-                 'docs-research': ('docs', 'research'), 'review': ('review', 'build')}
+                 'docs-research': ('docs', 'research'), 'review': ('review', 'build'),
+                 'rv-a-b': ('a-b', 'review'), 'rr-a': ('a', 'rereview'), 'pm-a': ('a', 'review'), 'rv-': ('rv-', 'build')}
         self.assertEqual({n: mine.split_name(n) for n in cases}, cases)
+
+    def test_active_minutes_leave_out_gaps_over_ten_minutes(self):
+        self.run.round('x', minutes=60)
+        self.run.round('y', minutes=9, at=T0 + 10000)
+        rs = self.run.rounds()
+        self.assertEqual((round(rs['x']['wall_min']), round(rs['x']['active_min'], 1)), (60, 0.5))
+        self.assertEqual(round(rs['y']['active_min']), 9)
 
 
 class VerdictTest(Base):

@@ -41,6 +41,8 @@ FACTOR, WINDOW, MIN_ROUNDS = 3, 20, 5
 FLOOR = 3000
 CLI_MIN_CAP = 30
 COLD_AFTER = 300
+IDLE_GAP = 10
+REVIEW_PREFIX = {'rv-': 'review', 'rr-': 'rereview', 'pm-': 'review'}
 CLASSES = ('input', 'output', 'cache_read', 'cache_write')
 USAGE_KEYS = CLASSES + ('reasoning', 'calls')
 PRICE_KEYS = {'input': 'inputPrice', 'output': 'outputPrice', 'cache_read': 'cacheReadPrice',
@@ -76,6 +78,10 @@ def split_name(name):
             break
         kinds.append(m.group(1))
         item = item[:m.start()]
+    if not kinds:
+        for prefix, kind in REVIEW_PREFIX.items():
+            if item.startswith(prefix) and len(item) > len(prefix):
+                return item[len(prefix):], kind
     return item, (kinds[0] if kinds else 'build')
 
 
@@ -98,7 +104,8 @@ def read_round(path):
     """One run file's facts, or None when it holds no copilot events."""
     r = {'session': None, 'cum_credits': None, 'cum_premium': None, 'model': None, 'effort': None,
          'exit': None, 'error': False, 'cap': None, 'first': None, 'last': None,
-         'usage_cum': None}
+         'usage_cum': None, 'active': 0.0}
+    prev = None
     calls = []
     fallback_model = fallback_effort = None
     typed = False
@@ -110,6 +117,11 @@ def read_round(path):
                 typed = True
                 if r['first'] is None:
                     r['first'] = stamp(line)
+                at = stamp(line)
+                if at:
+                    if prev is not None and 0 < (at - prev).total_seconds() <= IDLE_GAP * 60:
+                        r['active'] += (at - prev).total_seconds() / 60
+                    prev = at
                 last_line = line
                 if t not in NEEDED:
                     continue
@@ -123,6 +135,12 @@ def read_round(path):
             last_line = line
             if r['first'] is None and e.get('timestamp'):
                 r['first'] = parse_time(e['timestamp'])
+            if not line.startswith(TYPE_PREFIX) and e.get('timestamp'):
+                at = parse_time(e['timestamp'])
+                if at:
+                    if prev is not None and 0 < (at - prev).total_seconds() <= IDLE_GAP * 60:
+                        r['active'] += (at - prev).total_seconds() / 60
+                    prev = at
             t, d = e['type'], e.get('data') if isinstance(e.get('data'), dict) else {}
             if t == 'user.message' and r['model'] is None:
                 rr = d.get('responsesReasoning') if isinstance(d.get('responsesReasoning'), dict) else {}
@@ -197,7 +215,7 @@ def load_rounds(run):
         cap = r['cap'] or {}
         rounds.append({'name': name, 'item': item, 'kind': kind, 'model': r['model'], 'effort': r['effort'],
                        'start': start, 'wall_min': max(0.0, (end - start).total_seconds() / 60),
-                       'session': r['session'], 'cum_credits': r['cum_credits'], 'cum_premium': r['cum_premium'],
+                       'active_min': r['active'], 'session': r['session'], 'cum_credits': r['cum_credits'], 'cum_premium': r['cum_premium'],
                        'capped': bool(cap.get('capped')), 'cap': cap.get('cap'), 'cap_used': cap.get('used'),
                        'usage_cum': r['usage_cum'], 'cold_calls': r['cold_calls'], 'call_starts': r['call_starts'],
                        'exit': r['exit'], 'error': r['error'], 'ended': r['exit'] is not None,
@@ -661,6 +679,7 @@ def main(argv=None):
         for r in rounds:
             r['start'] = iso(r['start'])
             r['wall_min'] = round(r['wall_min'], 1)
+            r['active_min'] = round(r['active_min'], 1)
             r.pop('usage_cum', None)
             for k in ('credits', 'cum_credits'):
                 if r[k] is not None:
