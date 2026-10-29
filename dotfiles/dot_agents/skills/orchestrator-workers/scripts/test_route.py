@@ -39,11 +39,11 @@ class Pick(unittest.TestCase):
         kw.setdefault('seed', 1)
         return route.pick('x', kind, text, hist or history(), CFG, call=call or stub('change-existing'), **kw)
 
-    def test_new_feature_floor_wins_over_a_good_cheap_record(self):
+    def test_new_feature_has_no_floor_and_follows_a_good_cheap_record(self):
         hist = history([rnd(SONNET, True, 'new-feature', 'easy', item=str(i)) for i in range(10)])
         rec = self.pick('build', hist=hist, call=stub('new-feature'))
-        self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (OPUS, 'high'))
-        self.assertEqual(rec['floor'], 'owner-2026-10-29-new-features')
+        self.assertIsNone(rec['floor'])
+        self.assertEqual(rec['choice']['model'], SONNET)
 
     def test_sessions_ts_floor_but_not_when_out_of_scope(self):
         rec = self.pick(text=BRIEF + 'Change turn handling in src/host/sessions.ts.\n')
@@ -165,8 +165,8 @@ class Budget(unittest.TestCase):
         self.assertEqual(rec['choice']['model'], OPUS)
 
     def pick_floor(self):
-        return route.pick('x', 'build', BRIEF, history(), CFG, call=stub('new-feature'), seed=1,
-                          budget_left=0.0, run_fraction=0.0)
+        return route.pick('x', 'build', BRIEF + 'Change turn handling in src/host/sessions.ts.\n', history(), CFG,
+                          call=stub('new-feature'), seed=1, budget_left=0.0, run_fraction=0.0)
 
 
 class Escalate(unittest.TestCase):

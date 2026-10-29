@@ -60,7 +60,6 @@
     ["public repository", "\\b(publish(?:ed|ing)? to (?:a )?public|public repo(?:sitory)?)\\b"]
   ],
   "floors": [
-    {"name": "owner-2026-10-29-new-features", "when": {"category": "new-feature"}, "model": "strongest", "effort": "high"},
     {"name": "owner-2026-10-29-sessions-ts", "when": {"text": "src/host/sessions\\.ts", "text_unless": "do not edit|not edit|out of scope|do not touch|don't touch|off limits"}, "model": "strongest", "effort": "high"},
     {"name": "risk-area", "when": {"risk": true}, "model": "strongest", "effort": "high", "review_effort": "max"}
   ],
