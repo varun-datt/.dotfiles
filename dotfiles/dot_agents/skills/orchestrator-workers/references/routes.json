@@ -3,7 +3,7 @@
   "strongest": {"anthropic": "claude-opus-5.5", "openai": "gpt-6.1-sol"},
   "default_family": "anthropic",
   "families": {"claude-": "anthropic", "gpt-": "openai"},
-  "classifier": {"model": "claude-haiku-5.5", "timeout_s": 90, "max_brief_chars": 12000},
+  "classifier": {"model": "claude-haiku-5.5", "pool": ["claude-haiku-5.5", "claude-sonnet-5.5", "gpt-6.1-sol"], "timeout_s": 90, "max_brief_chars": 12000},
   "categories": {
     "new-feature": {
       "description": "Builds a new user-visible feature or a new capability, or changes how a turn or conversation is handled.",
@@ -46,6 +46,20 @@
   "prior": {"easy": [2, 1], "medium": [1, 1], "hard": [1, 2], "strongest": [4, 1]},
   "min_rounds": 3,
   "budget": {"gain": 0.5, "min_target": 0.3},
+  "quality": {"min_cell_rounds": 3, "tie_sd": 1.0},
+  "learning": {"effort_arms": ["medium", "high"], "rule_prior": [3, 1], "other_prior": [1, 1], "kind_share": 0.3},
+  "context": {
+    "min_signals": 2,
+    "prior": {"default": [3, 1], "long_context": [1, 1]},
+    "many_files": 15,
+    "long_brief_chars": 20000,
+    "breadth_grade": 5,
+    "signals": [
+      ["long logs", "\\b(long|full|large) (?:log|transcript|trace)s?\\b|\\bwhole (?:log|transcript)\\b"],
+      ["whole repository", "\\b(whole|entire|across the) (?:repo(?:sitory)?|codebase)\\b|\\brepo-?wide\\b"],
+      ["large files", "\\b(large|big|huge) files?\\b|\\bover \\d+ ?(?:k|kb|mb|lines)\\b"]
+    ]
+  },
   "default_cap": 3000,
   "kind_min_effort": {"resume": "high", "merge": "high"},
   "effort": {"calm_max_grade": 2, "calm": "medium", "else": "high", "risk_review": "max", "risk": "high"},
