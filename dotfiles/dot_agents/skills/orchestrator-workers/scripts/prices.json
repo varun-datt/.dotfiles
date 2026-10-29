@@ -1,0 +1,7 @@
+{
+  "_note": "AI credits per 1M tokens from the Copilot SDK listModels() billing.tokenPrices; refresh when a model or price changes.",
+  "claude-opus-5.5": {"inputPrice": 400, "outputPrice": 2000, "cacheReadPrice": 20, "cacheWritePrice": 500},
+  "claude-sonnet-5.5": {"inputPrice": 200, "outputPrice": 1000, "cacheReadPrice": 10, "cacheWritePrice": 250},
+  "gpt-6.1-sol": {"inputPrice": 200, "outputPrice": 1000, "cacheReadPrice": 10, "cacheWritePrice": 250},
+  "claude-haiku-5.5": {"inputPrice": 10, "outputPrice": 50, "cacheReadPrice": 1, "cacheWritePrice": 12.5}
+}
