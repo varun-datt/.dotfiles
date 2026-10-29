@@ -7,7 +7,7 @@ READ FIRST: {{READ_FIRST}}, then only the plan, findings and decision sections y
 
 HARD RULES
 - Never `git push`. Never print a secret, token or key to the terminal or into a file; report presence only (`${VAR:+set}`).
-- Commit only on your branch, with explicit paths: `git add <new files>`, then `git commit --only <paths> -m "..."`. Never `git add -A`. After each commit run `git show --stat --format='' HEAD` and check the file list is exactly what you intended. Commit each piece as soon as it passes, so an interrupted run loses little.
+- Commit only on your branch, with explicit paths: `git add <new files>`, then `git commit --only <paths> -m "..."`. Never `git add -A`. After each commit run `git show --stat --format='' HEAD` and check the file list is exactly what you intended. Commit each piece as soon as it passes, so an interrupted run loses little. Never bypass a commit hook (`--no-verify`, `-n`, or a changed `core.hooksPath`); a commit that fails its hook did not happen. If it fails only on known flakes, retry at most three times, then leave the work uncommitted and say so in your report.
 - Do not edit {{ORCHESTRATOR_OWNED_FILES}}. Put drafts for them in your report; the orchestrator writes them.
 - Do not touch the owner's running instance ({{OWNER_INSTANCE}}), the main checkout, or its state. Work only inside this worktree. Paths outside it that you were given with `--add-dir` are READ-ONLY unless your task says otherwise: {{EXTRA_DIRS_OR_NONE}}.
 - Use only your own ports: {{PORTS}}. Never use a default port; other sessions run suites at the same time.
