@@ -17,6 +17,7 @@ HARD RULES
 - Add a dependency only if your task's ALLOWED DEPENDENCIES line names it; record its name, version, licence and audit result. "Use a library if one fits" alone is not permission: report the library you would add instead of writing your own.
 - Never truncate output you draw a conclusion from (`head`, `tail`); count instead.
 - Run every long command (test suites, builds, mutation runs) in the FOREGROUND and wait for it; never start a gate as a background shell. When you end your turn the session ends, so a turn that ends "waiting for" anything loses your report.
+- Background processes you start are yours to stop. Start no load or stress loop while `python3 ~/.agents/skills/orchestrator-workers/scripts/sweep.py load` exits non-zero (the Mac is swapping, or load already runs). Run a script under the shell its first line names, and give a loop an EXIT trap that stops every child (`pkill -P $$`): on 2026-10-29 a zsh loop run by bash stopped 1 of its 8 `yes` processes and the rest ran for 5 hours. Before your report, show `pgrep -x yes | wc -l` = 0 and that nothing you started still runs.
 - Keep your saved context warm: the provider drops it after 300 idle seconds. Start any command that may take over 4 minutes with `initial_wait` at 240 or less, then wait with `read_bash` `delay` at 240 or less, until it finishes.
 - Tee each gate's full output to `.gates/<gate>.log` at the worktree root (untracked, never committed), so results survive a lost report.
 - Your LAST message is the report, written only after every gate has finished.

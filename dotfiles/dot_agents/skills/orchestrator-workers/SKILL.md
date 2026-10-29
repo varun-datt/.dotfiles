@@ -131,6 +131,8 @@ Per item:
 
 ```sh
 python3 ~/.agents/skills/orchestrator-workers/scripts/brief.py check "$OW_RUN_DIR/<item>.prompt.md" || exit 5
+python3 ~/.agents/skills/orchestrator-workers/scripts/sweep.py load --wait 15 || exit 12
+trap 'python3 ~/.agents/skills/orchestrator-workers/scripts/sweep.py leftovers <wt-root>/<item> --kill' EXIT
 date +%s > "$OW_RUN_DIR/<item>.start"
 git -C <wt-root>/<item> rev-parse HEAD > "$OW_RUN_DIR/<item>.base"
 COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
@@ -145,6 +147,11 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
 
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
   Why each flag is there: [references/details.md](references/details.md#launch-flags).
+- **Load and leftovers** (`scripts/sweep.py`): a launch, review or merge gate waits while the Mac
+  swaps or a `yes` stress process runs, and on exit stops orphans (parent 1) whose working folder
+  is in its worktree, plus orphan `yes`, naming each in the log. Never sweep the owner's own
+  checkout. Why: on 2026-10-29 seven leaked `yes` processes ran 5 hours at 5.3 cores while the
+  Mac swapped, and the merge gates in that window failed on load-sensitive tests.
 - **The brief check** (`scripts/brief.py`) refuses a prompt with an unfilled `{{PLACEHOLDER}}`,
   or a worker prompt without a filled REUSE CHECK and ALLOWED DEPENDENCIES line: on 2026-10-27 one
   brief had no research step and another's "use a library if one fits" lost to the preamble's
