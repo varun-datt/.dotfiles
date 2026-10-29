@@ -397,6 +397,12 @@ class EstimatesTest(Isolated):
         result = estimates.forecast(plan, window=60, items=[], runs=10, seed=1)
         self.assertEqual((result["total_p50"], result["fit_p50"], result["history"]), (80.0, 1, 0))
 
+    def test_forecast_skips_logged_items_without_an_estimate(self):
+        history = [{"kind": "fix", "estimate": 20, "actual": 5} for _ in range(5)] + [{"kind": "fix", "estimate": None, "actual": 7}]
+        plan = [{"id": "a", "kind": "fix", "estimate": 20, "method": "judged"}]
+        result = estimates.forecast(plan, window=60, items=history, runs=10, seed=1)
+        self.assertEqual(result["total_p50"], 5.0)
+
     def test_rounds_convert_to_minutes(self):
         self.assertEqual(estimates.rounds_estimate(5, 1.5)["estimate"], 22.5)
 
