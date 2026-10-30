@@ -51,6 +51,10 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    meant, 2026-10-26) and run
    `estimates.py forecast --plan plan.json --window <minutes to the stop time>`. It draws `history`
    items from their kind's logged actuals and corrects the others by their own method's history.
+   When workers run in parallel (the queue runner's `--slots N`), add `--slots N`: `worker-*` kinds
+   share N slots, an item with `"slot": false` runs beside them (a review or research), any other
+   kind runs one at a time in the chat's own lane, and `"after": ["<id>", ...]` holds an item until
+   those earlier items finish. The output adds `slots` and `sequential_p50` (the one-at-a-time sum).
    Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
    mix, up to what fits at P90. Say what is out of scope.
 6. Arm the run guard: `estimates.py arm --run <run> --until <stop time HH:MM> --session <chat id>
