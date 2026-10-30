@@ -31,6 +31,12 @@ class Contract(unittest.TestCase):
         self.assertTrue(paths)
         self.assertTrue(all(p.startswith("dock-scheduler/") for p in paths))
 
+    def test_a_source_with_exclude_skips_those_folders(self):
+        product = {"name": "product", "root": os.path.realpath(os.path.join(CORPUS, "product")), "exclude": ["route-planner"]}
+        paths = {h["path"] for h in kb.search("carrier", [product], "regex", 50)}
+        self.assertTrue(paths)
+        self.assertFalse([p for p in paths if p.startswith("route-planner/")])
+
     def test_text_that_is_not_a_valid_regex_is_searched_as_written(self):
         hits = kb.search("SlotConflictException(", SOURCES, "regex")
         self.assertIn("src/slots.ts", [h["path"] for h in hits])
@@ -94,7 +100,7 @@ class Routing(unittest.TestCase):
         jobs = [(src, "sem", "a"), (src, "sem", "b"), (src, "regex", None)]
         sem = {"a": [{"path": "x.md", "score": 0.9}, {"path": "y.md", "score": 0.5}], "b": [{"path": "x.md", "score": 0.8}]}
         with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
-             mock.patch.object(kb, "run_ck", side_effect=lambda engine, q, root, folder, limit, ck: sem[folder]), \
+             mock.patch.object(kb, "run_ck", side_effect=lambda engine, q, root, folder, limit, ck, exclude: sem[folder]), \
              mock.patch.object(kb, "run_rg", return_value=[{"path": "z.md", "score": 1.0}]), \
              mock.patch.object(kb, "title_of", return_value=""):
             hits = {h["path"]: h for h in kb.search("q", [src], "fused", 3)}
@@ -127,6 +133,16 @@ class Indexing(unittest.TestCase):
         self.assertEqual(glob.glob(os.path.join(root, "**", ".ck*"), recursive=True), [])
         self.assertFalse([h["path"] for h in config if h["path"].endswith((".json", ".yaml"))])
         self.assertIn("dock-scheduler/package.json", [h["path"] for h in kb.search("devDependencies", [product], "regex")])
+
+    def test_an_excluded_folder_is_skipped_by_the_ck_engines_even_in_an_index_built_before_the_exclude(self):
+        root = os.path.realpath(os.path.join(CORPUS, "product"))
+        product = {"name": "product", "root": root}
+        with tempfile.TemporaryDirectory() as base, mock.patch.dict(os.environ, {"KB_INDEX_DIR": base}):
+            self.assertEqual(kb.index([product], kb.ck_binary(), io.StringIO()), 0)
+            product["exclude"] = ["route-planner"]
+            hits = kb.search("carrier", [product], "lex", 50) + kb.search("which carrier gets a dock door first", [product], "sem", 50)
+        self.assertTrue(hits)
+        self.assertFalse([h["path"] for h in hits if h["path"].startswith("route-planner/")])
 
 
 @unittest.skipUnless(kb.ck_binary(), "ck is not installed; set KB_CK to run the scenario suite")

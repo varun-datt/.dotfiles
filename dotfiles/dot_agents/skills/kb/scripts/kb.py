@@ -12,7 +12,8 @@ Usage:
 
 Sources come from $KB_SOURCES, else ~/.config/kb/sources.json:
     {"sources": [{"name": "wiki", "root": "~/sandbox/wiki"}, {"name": "my-service", "root": "~/src/my-service"}]}
-A source may add "paths": ["docs", "notes"] to search only those parts of its root.
+A source may add "paths": ["docs", "notes"] to search only those parts of its root, and
+"exclude": ["tests/fixtures"] to skip folders under its root.
 Without --source, search covers only the sources whose root holds the current folder, so content
 from one space does not leak into another; outside every source, name the ones to search.
 ck keeps one index per folder (the root, or each folder in paths) under $KB_INDEX_DIR, else
@@ -49,7 +50,8 @@ def load_sources(path=None):
     path = path or os.environ.get("KB_SOURCES") or os.path.expanduser("~/.config/kb/sources.json")
     with open(path) as f:
         data = json.load(f)
-    return [{"name": s["name"], "root": os.path.realpath(os.path.expanduser(s["root"])), "paths": s.get("paths") or ["."]}
+    return [{"name": s["name"], "root": os.path.realpath(os.path.expanduser(s["root"])), "paths": s.get("paths") or ["."],
+             "exclude": [os.path.normpath(e).strip("/") for e in s.get("exclude") or []]}
             for s in data["sources"]]
 
 
@@ -61,11 +63,11 @@ def index_base():
     return os.path.realpath(os.path.expanduser(os.environ.get("KB_INDEX_DIR") or "~/.cache/kb/ck"))
 
 
-def ck_cmd(ck, opts, folder, query=None):
+def ck_cmd(ck, opts, folder, query=None, exclude=()):
     """Run ck on exactly one folder: given several, ck indexes their common parent."""
     base = index_base()
     os.makedirs(base, exist_ok=True)
-    cmd = [ck, "--hidden", "--no-ckignore", *sum((["--exclude", p] for p in CK_EXCLUDES), []), *opts, "--",
+    cmd = [ck, "--hidden", "--no-ckignore", *sum((["--exclude", p] for p in (*CK_EXCLUDES, *exclude)), []), *opts, "--",
            *([] if query is None else [query]), folder]
     return subprocess.run(cmd, cwd=folder, env={**os.environ, "CK_INDEX_DIR": base}, capture_output=True, text=True,
                           stdin=subprocess.DEVNULL)
@@ -91,6 +93,16 @@ def folders_and_files(src):
     return dirs, files
 
 
+def ck_excludes(exclude, root, folder):
+    """The root-relative excluded folders that lie inside folder, anchored there, as ck matches them."""
+    rels = (os.path.relpath(os.path.join(root, e), folder) for e in exclude)
+    return ["/" + r for r in rels if r != os.curdir and not r.startswith(os.pardir)]
+
+
+def under(path, folders):
+    return any(path == f or path.startswith(f + os.sep) for f in folders)
+
+
 def title_of(abs_path):
     name = os.path.basename(abs_path)
     if not abs_path.endswith(".md"):
@@ -104,8 +116,8 @@ def title_of(abs_path):
     return m.group(1).strip() if m else name
 
 
-def run_rg(query, root, limit, paths=(".",)):
-    base = ["rg", "--json", "-i", "--hidden", *sum((["-g", g] for g in SKIP), [])]
+def run_rg(query, root, limit, paths=(".",), exclude=()):
+    base = ["rg", "--json", "-i", "--hidden", *sum((["-g", g] for g in (*SKIP, *(f"!/{e}" for e in exclude))), [])]
     out = subprocess.run([*base, "-e", query, *paths], cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
     if out.returncode == 2 and "regex parse error" in out.stderr:
         out = subprocess.run([*base, "-F", "-e", query, *paths], cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
@@ -123,8 +135,9 @@ def run_rg(query, root, limit, paths=(".",)):
     return [{**h, "score": float(h.pop("count"))} for h in ranked]
 
 
-def run_ck(mode, query, root, folder, limit, ck):
-    out = ck_cmd(ck, [f"--{mode}", "--jsonl", "--topk", str(limit * 3), "--threshold", "0"], folder, query)
+def run_ck(mode, query, root, folder, limit, ck, exclude=()):
+    out = ck_cmd(ck, [f"--{mode}", "--jsonl", "--topk", str(limit * 3), "--threshold", "0"], folder, query,
+                 ck_excludes(exclude, root, folder))
     seen, hits = set(), []
     for line in out.stdout.splitlines():
         try:
@@ -132,7 +145,8 @@ def run_ck(mode, query, root, folder, limit, ck):
         except json.JSONDecodeError:
             continue
         rel = os.path.relpath(os.path.realpath(os.path.join(folder, r["path"])), root)
-        if rel in seen:
+        # ck's --exclude keeps files out of an index; one built before the exclude still returns them.
+        if rel in seen or under(rel, exclude):
             continue
         seen.add(rel)
         span = r.get("span") or {}
@@ -199,7 +213,10 @@ def search(query, sources, mode="auto", limit=10):
 
     def one(job):
         src, engine, folder = job
-        found = run_rg(query, src["root"], limit, src.get("paths") or ["."]) if engine == "regex" else run_ck(engine, query, src["root"], folder, limit, ck)
+        if engine == "regex":
+            found = run_rg(query, src["root"], limit, src.get("paths") or ["."], src.get("exclude") or [])
+        else:
+            found = run_ck(engine, query, src["root"], folder, limit, ck, src.get("exclude") or [])
         return (src["name"], engine), [{**h, "source": src["name"]} for h in found]
 
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(jobs)))) as pool:
@@ -223,7 +240,7 @@ def index(sources, ck, out):
     for src in sources:
         for folder in folders_and_files(src)[0]:
             t0 = time.monotonic()
-            r = ck_cmd(ck, ["--index"], folder)
+            r = ck_cmd(ck, ["--index"], folder, exclude=ck_excludes(src.get("exclude") or [], src["root"], folder))
             ok = r.returncode == 0 and index_of(folder) is not None
             failed += not ok
             state = "indexed" if ok else "FAILED " + " ".join(r.stderr.split())[-200:]

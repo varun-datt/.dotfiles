@@ -11,6 +11,15 @@ Documents
 !.agents/state
 !.agents/state/TEMPLATE.md
 
+# Bytecode Python leaves when a script runs from the source.
+**/__pycache__
+
+# kb's regression suite runs from the source.
+.agents/skills/kb/scripts/fixtures
+.agents/skills/kb/scripts/baseline.json
+.agents/skills/kb/scripts/eval.py
+.agents/skills/kb/scripts/test_kb.py
+
 # rtk reads its config only from the macOS path, which links to ~/.config/rtk.
 {{ if ne .chezmoi.os "darwin" }}
 Library

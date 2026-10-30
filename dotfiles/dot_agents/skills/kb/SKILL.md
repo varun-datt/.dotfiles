@@ -35,7 +35,8 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
 - **Sources file:** `~/.config/kb/sources.json`, or the path in `KB_SOURCES`. Shape:
   [`scripts/sources.example.json`](scripts/sources.example.json). It is data, not code: adding a
   source changes no script. Each source is searched in place and its ignore rules are honoured.
-  `paths` limits a source to some of its folders, for a root that holds other repositories.
+  `paths` limits a source to some of its folders, for a root that holds other repositories;
+  `exclude` skips folders under the root, such as test fixtures.
 - **Engines:** `rg` is required. `ck` (BM25 and embeddings) is found on `PATH` or through `KB_CK`;
   without it every mode falls back to regex and says so.
 - **Indexes:** ck keeps one index per folder (the root, or each folder in `paths`) under
@@ -48,6 +49,9 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
     work folder holding product repos, all of them), and `ck --index A B` indexes only `B`.
 
 ## Test it
+
+The tests, `baseline.json` and `scripts/fixtures/` are not installed; run them, and `eval.py`
+below, from the skill's folder in the chezmoi source, `$(chezmoi source-path)/dot_agents/skills/kb`.
 
 - `python3 -B scripts/test_kb.py`: the contract, the routing and, when ck is present, the scenario
   suite against its baseline.

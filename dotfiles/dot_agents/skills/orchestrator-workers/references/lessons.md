@@ -56,8 +56,8 @@ INFERRED or OPEN. Project names appear only as examples.
   [F93 (CLI mass stop)]
 - A worker can read outside its worktree through the shell, even without `--add-dir`. Name what is
   off limits, and check its tool calls. [runbook]
-- Check a security claim against the real values yourself, printing only true or false. One
-  "the real keys are masked" claim was false. [F97 (signing keys)]
+- Check a security claim against the real values yourself, printing only true or false. A worker's
+  claim that the values were masked was false.
 - When two branches raise a cache or redaction version to the same number, raise it once more at the
   merge. [runbook]
 - Mutation controls that break process supervision leak fixtures that ignore TERM, for hours. Check
@@ -213,7 +213,7 @@ INFERRED or OPEN. Project names appear only as examples.
 - **Local usage logs held about half of what the provider billed for the same month.** Measure an
   exact window as the difference of two readings of the provider's own counter. `F183` (local
   logs vs the provider) [ran]
-- **Routing trials: a cheaper shadow reviewer missed a reproduced privacy blocker** that the usual
+- **Routing trials: a cheaper shadow reviewer missed a reproduced blocker** that the usual
   reviewer caught, so the shadow trial stopped. A mid-tier model on two fix rounds saved no credits
   and finished faster; that trial paused until the owner says whether wall time matters. [notes]
 

@@ -1,39 +1,13 @@
 #!/bin/sh
-# Blocks a commit that adds a secret (gitleaks) or an employer identifier (local redaction patterns).
+# Blocks a commit made as anyone but the GitHub noreply address, or one that adds an employer identifier or a secret.
 set -eu
 
-if command -v gitleaks >/dev/null 2>&1 && gitleaks version >/dev/null 2>&1; then
-  set -- gitleaks
-elif command -v mise >/dev/null 2>&1 && v=$(mise ls --installed gitleaks 2>/dev/null | awk 'END { print $2 }') && [ -n "$v" ]; then
-  set -- mise x "gitleaks@$v" -- gitleaks
-else
-  echo "pre-commit: gitleaks not found; install it (mise use -g gitleaks) to commit here." >&2
-  exit 1
-fi
-"$@" git --staged --redact --no-banner --log-level warn || {
-  echo "pre-commit: gitleaks found a secret in the staged changes." >&2
-  exit 1
-}
+noreply="35286616+varun-datt@users.noreply.github.com"
+for ident in GIT_AUTHOR_IDENT GIT_COMMITTER_IDENT; do
+  case "$(git var "$ident")" in
+    *"<$noreply>"*) ;;
+    *) echo "pre-commit: $ident is not <$noreply>; run: git config user.email $noreply" >&2; exit 1 ;;
+  esac
+done
 
-patterns="${REDACTION_PATTERNS:-$HOME/.config/amc/redaction-patterns.json}"
-if [ ! -f "$patterns" ]; then
-  echo "pre-commit: no redaction patterns at $patterns; employer identifiers not checked." >&2
-  exit 0
-fi
-git diff --cached -U0 --no-color --diff-filter=ACMR | python3 -c '
-import json, re, sys
-pats = [re.compile(r"\b" + p[0] + r"\b", re.I) for p in json.load(open(sys.argv[1]))]
-path, line, hits = "?", 0, []
-for raw in sys.stdin:
-    if raw.startswith("+++ "):
-        path = raw[6:].rstrip("\n") if raw.startswith("+++ b/") else raw[4:].rstrip("\n")
-    elif raw.startswith("@@"):
-        line = int(re.search(r"\+(\d+)", raw).group(1))
-    elif raw.startswith("+"):
-        if any(p.search(raw[1:]) for p in pats):
-            hits.append(f"{path}:{line}")
-        line += 1
-if hits:
-    print("pre-commit: redaction pattern matched at " + ", ".join(hits[:20]), file=sys.stderr)
-    sys.exit(1)
-' "$patterns"
+exec python3 dotfiles/dot_agents/skills/commit-guard/scripts/guard.py --staged

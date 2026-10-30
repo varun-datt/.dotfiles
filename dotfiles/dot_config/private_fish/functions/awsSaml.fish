@@ -19,7 +19,8 @@ function awsSaml --description 'aws saml login'
     set -l _aws_secret (echo "$_saml_response" | jq -r '.Credentials.SecretAccessKey')
     set -l _aws_token (echo "$_saml_response" | jq -r '.Credentials.SessionToken')
 
-    sed -ie "/$_iam_role_name-$_friendly_name-$_account_id/,+6d" ~/.aws/config
+    sed -i.bak "/$_iam_role_name-$_friendly_name-$_account_id/,+6d" ~/.aws/config
+    and rm -f ~/.aws/config.bak
 
     echo "[profile $_iam_role_name-$_friendly_name-$_account_id]
 aws_access_key_id=$_aws_access_key
@@ -28,5 +29,6 @@ aws_session_token=$_aws_token
 region=$_aws_region
 output=json
 " >> ~/.aws/config
+    chmod 600 ~/.aws/config
   end
 end

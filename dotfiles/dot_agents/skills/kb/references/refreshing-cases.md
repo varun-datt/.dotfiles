@@ -3,7 +3,8 @@
 The cases in `scripts/fixtures/cases.json` are invented, but their mix copies how search is really
 used: who searches (a person in a palette or search box, an agent's own search call, a person's
 message to an agent), in which space, and with what shape of query. Usage drifts, so the mix must
-be measured again and the cases changed to follow it.
+be measured again and the cases changed to follow it. The cases and the scoring scripts live only in
+the chezmoi source, so the paths below are relative to `$(chezmoi source-path)/dot_agents/skills/kb`.
 
 ## When
 

@@ -2,6 +2,6 @@
   "sources": [
     {"name": "wiki", "root": "~/notes/wiki"},
     {"name": "work-knowledge", "root": "~/src/work-knowledge", "paths": ["docs", "research", "AGENTS.md"]},
-    {"name": "my-service", "root": "~/src/my-service"}
+    {"name": "my-service", "root": "~/src/my-service", "exclude": ["test/fixtures"]}
   ]
 }
