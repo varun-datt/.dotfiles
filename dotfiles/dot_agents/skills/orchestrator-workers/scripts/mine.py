@@ -28,9 +28,9 @@ An item is the run name without its suffixes. --repo reads `git log --merges --f
 repository's HEAD: an item counts as merged when a merge subject names a branch "<prefix>/<item>".
 
 Caps (owner, 2026-10-13): 3 x the median credits of the last 20 rounds of the same kind and model, or a
-fixed floor while there are fewer than 5. --audit joins each round to <run>/routes.jsonl: a decision logged
-under the round's own name, else under its item and kind, the latest one logged no later than 2 minutes
-after the round started, each decision used once. A round is routed, overridden (its decision carries "override") or unrouted, and
+fixed floor while there are fewer than 5. --audit joins each round to <run>/routes.jsonl: a decision of the
+round's item and kind, under the round's own name when the decision names a round, preferring one under
+its own name, else the latest logged no later than 2 minutes after the round started, each decision used once. A round is routed, overridden (its decision carries "override") or unrouted, and
 flagged when its log's model or effort differs from the decision. Markers (`state.py marker`) are measured as the median credits
 per round of each kind they cover, before and after, up to the neighbouring markers.
 """
@@ -102,8 +102,15 @@ def split_name(name):
 def blocking_count(text):
     """Blocking findings from a report's first verdict line, or the items under its first "Blocking" heading; else None."""
     lines = (text or '').splitlines()
+    fenced = False
     for i, raw in enumerate(lines):
-        line = raw.strip().lstrip('*_#> ').strip()
+        bare = raw.strip()
+        if bare.startswith(('```', '~~~')):
+            fenced = not fenced
+            continue
+        if fenced or bare.startswith('>'):
+            continue
+        line = bare.lstrip('*_# ').strip()
         m = VERDICT.match(line)
         if m:
             return int(m.group(1)) if m.group(1) else 0
@@ -635,9 +642,10 @@ def audit(rounds, decisions):
         def fits(d):
             if id(d) in used or (d['_at'] and d['_at'] > r['start'] + AUDIT_SLACK):
                 return False
-            if d['item'] == r['name']:
-                return True
-            return split_name(d['item'])[0] == r['item'] and audit_kind(d['kind']) == audit_kind(r['kind'])
+            base = split_name(d['item'])[0]
+            if base != r['item'] or audit_kind(d['kind']) != audit_kind(r['kind']):
+                return False
+            return base == d['item'] or d['item'] == r['name']
         cands = [d for d in decisions if fits(d)]
         d = max(cands, key=lambda d: (d['item'] == r['name'], d['_at'] or datetime.datetime.min.replace(tzinfo=UTC), d['_line']),
                 default=None)

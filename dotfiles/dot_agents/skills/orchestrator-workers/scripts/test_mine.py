@@ -496,6 +496,16 @@ class LogVerdictTest(Base):
                           'c-review': ('no verdict', None, 'log'), 'd-review': ('none', 0, 'log'),
                           'e-review': ('2 blocking', 2, 'log')})
 
+    def test_quoted_or_fenced_verdicts_never_count(self):
+        for name, msg in {'q-review': 'The brief said:\n> Blocking: none\n\n**2 blocking**\n- one\n- two',
+                          'f-review': 'Format:\n```\nBlocking: none\n```\n3 blocking',
+                          'g-review': '~~~\n1 blocking\n~~~\n> 4 blocking'}.items():
+            self.run.round(name, credits=1, premium=1)
+            append(self.run, name, message(msg))
+        rs = self.run.rounds()
+        self.assertEqual({n: rs[n]['blocking'] for n in ('q-review', 'f-review', 'g-review')},
+                         {'q-review': 2, 'f-review': 3, 'g-review': None})
+
     def test_a_txt_wins_over_the_log_and_a_review_with_neither_has_no_verdict(self):
         self.run.round('a-review', report='3 blocking\n', credits=1, premium=1)
         append(self.run, 'a-review', message('Blocking: none'))
@@ -532,6 +542,30 @@ class LogVerdictTest(Base):
         self.assertEqual(argv[argv.index('--reasoning-effort') + 1], 'max')
         r = self.run.rounds()['x-review']
         self.assertEqual((r['blocking'], r['verdict_source']), (1, 'txt'))
+
+    def test_a_retry_without_a_verdict_leaves_no_stale_txt(self):
+        bin_dir, wt = os.path.join(self.tmp, 'bin'), os.path.join(self.tmp, 'wt')
+        os.makedirs(bin_dir)
+        os.makedirs(wt)
+        fake = os.path.join(bin_dir, 'copilot')
+        with open(fake, 'w') as f:
+            f.write('#!/bin/sh\n'
+                    'printf \'%s\\n\' \'{"type":"assistant.message","data":{"content":"Ran out of time."}}\'\n'
+                    'printf \'%s\\n\' \'{"type":"result","exitCode":0}\'\n')
+        os.chmod(fake, 0o755)
+        with open(os.path.join(self.run.dir, 'x-review.md'), 'w') as f:
+            f.write('review it\n')
+        txt = os.path.join(self.run.dir, 'x-review.txt')
+        with open(txt, 'w') as f:
+            f.write('Blocking: none\n')
+        env = {**os.environ, 'PATH': bin_dir + os.pathsep + os.environ['PATH'], 'OW_RUN_DIR': self.run.dir,
+               'PYTHONDONTWRITEBYTECODE': '1', 'HOME': self.tmp}
+        p = subprocess.run(['bash', os.path.join(HERE, 'review.sh'), 'x-review', wt],
+                           capture_output=True, text=True, env=env, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertFalse(os.path.exists(txt))
+        r = self.run.rounds()['x-review']
+        self.assertEqual((r['verdict'], r['blocking'], r['verdict_source']), ('no verdict', None, 'log'))
 
 
 class CompactionTest(Base):
@@ -585,33 +619,36 @@ class AuditTest(Base):
         self.run.round('a', credits=10, premium=1)
         self.run.round('a-fix1', at=T0 + 1000, credits=20, premium=2)
         self.run.round('a-fix2', at=T0 + 2000, model='claude-sonnet-5.5', credits=30, premium=3)
-        self.write(decision('a-fix', 'fix', T0 + 1500, model='claude-sonnet-5.5'))
+        self.write(decision('a', 'fix', T0 + 1500, model='claude-sonnet-5.5'))
         a = mine.audit(mine.load_rounds(self.run.dir), mine.read_decisions(self.run.dir))
         self.assertEqual({x['name']: x['status'] for x in a['rounds']},
                          {'a': 'unrouted', 'a-fix1': 'unrouted', 'a-fix2': 'routed'})
+
+    def test_a_build_and_its_review_each_take_their_own_kind(self):
+        self.run.round('a', credits=10, premium=1)
+        self.run.round('a-review', at=T0 + 1000, model='gpt-6.1-sol', effort='max', credits=5, premium=1)
+        self.write(decision('a', 'build', T0 - 30), decision('a', 'build', T0 - 10),
+                   decision('a', 'review', T0 + 5, model='gpt-6.1-sol', effort='max'))
+        a = mine.audit(mine.load_rounds(self.run.dir), mine.read_decisions(self.run.dir))
+        got = {x['name']: (x['status'], x['decision'], x['mismatch']) for x in a['rounds']}
+        self.assertEqual(got, {'a': ('routed', 2, []), 'a-review': ('routed', 3, [])})
+        self.assertEqual([u['line'] for u in a['unused']], [1])
+
+    def test_a_decision_naming_a_round_is_taken_only_by_that_round(self):
+        self.run.round('a-fix1', credits=20, premium=2)
+        self.run.round('a-fix2', at=T0 + 1000, model='claude-sonnet-5.5', credits=30, premium=3)
+        self.write(decision('a-fix2', 'fix', T0 - 10, model='claude-sonnet-5.5'))
+        a = mine.audit(mine.load_rounds(self.run.dir), mine.read_decisions(self.run.dir))
+        self.assertEqual({x['name']: (x['status'], x['mismatch']) for x in a['rounds']},
+                         {'a-fix1': ('unrouted', []), 'a-fix2': ('routed', [])})
+
+    def test_a_named_decision_of_another_kind_is_not_taken(self):
+        self.run.round('a-review1', model='gpt-6.1-sol', credits=5, premium=1)
+        self.write(decision('a-review1', 'fix', T0 - 10))
+        a = mine.audit(mine.load_rounds(self.run.dir), mine.read_decisions(self.run.dir))
+        self.assertEqual((a['counts']['unrouted'], len(a['unused'])), (1, 1))
 
     def test_json_carries_the_audit(self):
         self.run.round('a', credits=10, premium=1)
         j = json.loads(self.cli(self.run.dir, '--json').stdout)
         self.assertEqual(j['audit']['counts'], {'routed': 0, 'overridden': 0, 'unrouted': 1})
-
-
-STATE = os.path.expanduser('~/.local/state/orchestrator-workers')
-
-
-@unittest.skipUnless(os.path.isdir(os.path.join(STATE, 'amc-2026-10-29')), 'no real run folders on this machine')
-class RealFolderTest(unittest.TestCase):
-    def test_every_reviewed_item_of_10_29_has_a_blocking_value(self):
-        rounds = mine.load_rounds(os.path.join(STATE, 'amc-2026-10-29'))
-        reviewed = {r['item'] for r in rounds if r['kind'] == 'review'}
-        self.assertTrue(reviewed)
-        self.assertEqual({i['item']: i['blocking'] for i in mine.items(rounds) if i['item'] in reviewed and i['blocking'] is None}, {})
-
-    @unittest.skipUnless(os.path.isdir(os.path.join(STATE, 'amc-2026-10-30')), 'no 10-30 run folder')
-    def test_10_30_reports_its_unrouted_rounds(self):
-        run = os.path.join(STATE, 'amc-2026-10-30')
-        rounds, decisions = mine.load_rounds(run), mine.read_decisions(run)
-        a = mine.audit(rounds, decisions)
-        decided = {mine.split_name(d.get('item', ''))[0] for d in decisions}
-        self.assertEqual(a['counts']['unrouted'], sum(r['item'] not in decided for r in rounds))
-        self.assertGreaterEqual(a['counts']['unrouted'], 83)

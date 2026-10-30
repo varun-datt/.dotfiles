@@ -54,6 +54,7 @@ EOF
 fi
 
 date +%s > "$run/$name.start"
+rm -f "$run/$name.txt"
 nomcp=()
 while IFS= read -r s; do [ -n "$s" ] && nomcp+=(--disable-mcp-server "$s"); done < <(python3 - <<'EOF'
 import json, os
