@@ -275,6 +275,8 @@ Tests that prove it:
 
 ## Decisions for the owner
 
+Ruled 2026-10-30 (owner: "go with recommendations"): D1 option 2, D2 option 2, D3 option 1, D4 option 2, D5 option 2. Build phases 1 to 3 now; phases 4 to 6 after about two runs of clean outcome data.
+
 **D1. What counts as success.** It binds `mine.py` verdict reading, `round_ok`, `report` and every learned arm.
 
 1. Keep routing.md's binary item-level definition; only make the reviewer write `<name>.txt`.
