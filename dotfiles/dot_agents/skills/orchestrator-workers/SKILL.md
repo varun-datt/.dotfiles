@@ -106,7 +106,7 @@ timeout and blocks the orchestrator until it returns. Run that work as a CLI pro
 ## Lifecycle
 
 ```
-task -> worker -> grade report -> ONE review -> fix round (resume the worker)
+task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, short brief)
   -> ONE fixes-only re-review, only if blocking findings were fixed
   -> trial merge -> merge -> gates on main -> restart owner's instance -> records
 ```
@@ -168,8 +168,12 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
 - **An INFERRED vendor fact gets its live check before the merge.** On 2026-10-29 a feature
   built on Copilot's message ids merged, and the live check after it showed the ids were
   snapshot positions: a fix round and a second merge undid it.
-- **Fix and resume rounds:** `copilot -r ow-<item>` with the same flags. Name the run
-  `<item>-fix1` or `<item>-resume1`; for its credit cap see [routing](references/routing.md#credit-caps).
+- **Fix rounds** start a fresh session named `<prefix><item>-fixN` (owner, 2026-10-29: resumed
+  rounds averaged 92k tokens per request against 75k for builds). Its brief carries the accepted
+  findings, the files they name and the branch state, with the item's brief for context. One
+  round per item; a further round goes on the owner's list.
+- **Resume rounds** (`<item>-resumeN`, a stopped worker): `copilot -r ow-<item>` with the same
+  flags. Credit caps for both: [routing](references/routing.md#credit-caps).
 - **A `result` event is not success.** Check `exitCode` and `session.error`; `scripts/result.py`
   shows both, plus spend and the report. A round that hit its credit cap also exits 0 ([details](references/details.md#failure-modes-and-recoveries)).
 
@@ -179,8 +183,10 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
   foreground, polls at most every 240 s to keep the cache warm, a labelled report.
 - **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body.
 - **Reviews:** [review.md](assets/review.md) and the fixes-only [rereview.md](assets/rereview.md).
-- **Rounds sent with `-r`:** [fix.md](assets/fix.md) and [resume.md](assets/resume.md). They stay
-  short, because the session keeps its context.
+- **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
+  fresh session, so it names the branch, worktree, base commit and ports.
+- **Resume round, sent with `-r`:** [resume.md](assets/resume.md); short, because the session
+  keeps its context.
 
 Standing owner rules are appended to the preambles as soon as they are made.
 
@@ -258,6 +264,10 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
   branch.
 - **The merge folder is reserved for gate runs.** Never check out anything else there while a gate
   runs.
+- **Workers may run while a merge gate runs, at most 2 of them** (owner, 2026-10-29: merging one
+  item at a time left the slots idle about 45 minutes; three workers plus a gate once held the
+  load at 18-28 on 18 CPUs). Queue each merge gate as a slot item with a high `--priority`, so
+  with `--slots 3` it takes the next free slot and two workers run beside it.
 - **Docs-only merges** go straight to main.
 - **Append-only lists** (control registries, imports): resolve conflicts as a union, then check for
   duplicates.
