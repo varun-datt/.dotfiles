@@ -448,6 +448,12 @@ class EstimatesTest(Isolated):
         slotted = self.fixed_plan(workers + [("r", "worker-review", {})])
         self.assertEqual(estimates.forecast(slotted, window=15, items=[], runs=10, seed=1, slots=3)["total_p50"], 20.0)
 
+    def test_a_blocked_item_holds_no_slot(self):
+        plan = self.fixed_plan([("a", "worker-build", {"estimate": 100}), ("b", "worker-build", {"after": ["a"]}), ("c", "worker-build", {"estimate": 100})])
+        result = estimates.forecast(plan, window=105, items=[], runs=10, seed=1, slots=2)
+        self.assertEqual((result["total_p50"], result["fit_p50"]), (110.0, 2))
+        self.assertEqual(estimates.forecast(plan, window=100, items=[], runs=10, seed=1, slots=2)["fit_p50"], 2)
+
     def test_the_chat_lane_runs_its_items_one_at_a_time(self):
         plan = self.fixed_plan([("a", "fix", {}), ("b", "check", {}), ("w", "worker-build", {})])
         result = estimates.forecast(plan, window=15, items=[], runs=10, seed=1, slots=3)

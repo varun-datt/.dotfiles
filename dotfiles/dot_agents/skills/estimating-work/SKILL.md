@@ -54,7 +54,9 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    When workers run in parallel (the queue runner's `--slots N`), add `--slots N`: `worker-*` kinds
    share N slots, an item with `"slot": false` runs beside them (a review or research), any other
    kind runs one at a time in the chat's own lane, and `"after": ["<id>", ...]` holds an item until
-   those earlier items finish. The output adds `slots` and `sequential_p50` (the one-at-a-time sum).
+   those earlier items finish; a waiting item holds no slot. The output adds `slots` and
+   `sequential_p50` (the one-at-a-time sum). `--slots 1` reproduces the old numbers only for plans
+   without `slot` or `after` fields: with `slot: false` an item runs beside the single slot.
    Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
    mix, up to what fits at P90. Say what is out of scope.
 6. Arm the run guard: `estimates.py arm --run <run> --until <stop time HH:MM> --session <chat id>

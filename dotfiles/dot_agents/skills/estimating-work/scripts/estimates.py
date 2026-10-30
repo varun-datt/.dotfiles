@@ -203,6 +203,40 @@ def check_after(plan):
         seen.add(item["id"])
 
 
+def schedule(plan, minutes, slots):
+    """Greedy list scheduling: a free lane takes the first ready item in plan order; blocked items hold no lane."""
+    lanes = {"slot": [0.0] * slots, "chat": [0.0]}
+    finished = {}
+    pending = list(range(len(plan)))
+    t = 0.0
+    while pending:
+        started = True
+        while started:
+            started = False
+            for i in pending:
+                item = plan[i]
+                if any(finished.get(d, float("inf")) > t for d in item.get("after", [])):
+                    continue
+                if item.get("slot") is False:
+                    pool = None
+                else:
+                    pool = "slot" if slots == 1 or item["kind"].startswith("worker-") else "chat"
+                lane = None
+                if pool:
+                    lane = next((n for n, free in enumerate(lanes[pool]) if free <= t), None)
+                    if lane is None:
+                        continue
+                finished[item["id"]] = t + minutes[i]
+                if pool:
+                    lanes[pool][lane] = t + minutes[i]
+                pending.remove(i)
+                started = True
+                break
+        if pending:
+            t = min(e for e in finished.values() if e > t)
+    return finished
+
+
 def forecast(plan, window, items, runs=1000, seed=None, slots=1):
     if slots < 1:
         raise ValueError("slots must be at least 1")
@@ -214,10 +248,7 @@ def forecast(plan, window, items, runs=1000, seed=None, slots=1):
     pools = {m: velocities(items, m) for m in METHODS}
     totals, fits, sequentials = [], [], []
     for _ in range(runs):
-        lanes = [0.0] * slots
-        chat = 0.0
-        summed = 0.0
-        finished = {}
+        minutes_by_item = []
         for item in plan:
             kind_actuals = actuals.get(item["kind"], [])
             pool = pools[item["method"]]
@@ -225,17 +256,9 @@ def forecast(plan, window, items, runs=1000, seed=None, slots=1):
                 minutes = rng.choice(kind_actuals)
             else:
                 minutes = item["estimate"] / rng.choice(pool if len(pool) >= MIN_HISTORY else [1.0])
-            summed += minutes
-            ready = max((finished[d] for d in item.get("after", [])), default=0.0)
-            if item.get("slot") is False:
-                end = ready + minutes
-            elif slots == 1 or item["kind"].startswith("worker-"):
-                n = min(range(slots), key=lanes.__getitem__)
-                end = lanes[n] = max(lanes[n], ready) + minutes
-            else:
-                end = chat = max(chat, ready) + minutes
-            finished[item["id"]] = end
-        ends = list(finished.values())
+            minutes_by_item.append(minutes)
+        summed = sum(minutes_by_item)
+        ends = list(schedule(plan, minutes_by_item, slots).values())
         totals.append(max(ends, default=0.0))
         fits.append(sum(e <= window for e in ends))
         sequentials.append(summed)
