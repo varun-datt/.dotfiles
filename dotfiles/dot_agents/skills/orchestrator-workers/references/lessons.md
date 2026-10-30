@@ -1,7 +1,12 @@
 # Lessons: orchestrator-workers
 
 Dated lessons learned, one or two lines each. VERIFIED as read in the source records unless marked
-INFERRED or OPEN. Project names appear only as examples.
+INFERRED or OPEN.
+
+**This file is public.** From a work project, keep a lesson's general point and drop its inside
+detail: no security or privacy finding (what was found, where, or the register ID and short name
+that point at it), and no work product, repository, customer, host or cloud resource names; write
+"the source project". Your own projects and the figures from your own runs are fine.
 
 **Evidence tags**, written `id (short name)`:
 - `Fnn`: a row in the source project's FINDINGS register, for example `F93`.

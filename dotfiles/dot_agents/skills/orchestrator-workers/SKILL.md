@@ -285,7 +285,9 @@ Only the orchestrator writes records; workers and reviewers send drafts.
 - **Findings:** workers draft them as `F-NEW-1`; they are numbered `Fnn` at merge, with evidence
   tags.
 - **Lessons:** generic ones go to the project's blueprint. Lessons about this pattern go to
-  [references/lessons.md](references/lessons.md), dated, with tags.
+  [references/lessons.md](references/lessons.md), dated, with tags. This skill is public, so its
+  lessons and the source-project examples in [references/details.md](references/details.md) follow
+  the rule at the top of lessons.md.
 - **Running notes** in the run folder: each launch, result, spend, verdict and ruling, with its
   time.
 - **Per item:** wall-clock time, spend, blocking findings and fix cycles. `python3 scripts/mine.py "$OW_RUN_DIR" --repo <repo>` reads them from the run folder.
