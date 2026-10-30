@@ -152,7 +152,7 @@ class VerdictTest(Base):
         self.run.round('f-rereview', report=header + 'The review found 2 blocking issues; both are fixed.\nBlocking: none\n', credits=1, premium=1)
         rs = self.run.rounds()
         self.assertEqual({n: (rs[n]['verdict'], rs[n]['blocking']) for n in rs},
-                         {'a-review': ('none', 0), 'b-review': ('2 blocking', 2), 'c-review': ('missing', None),
+                         {'a-review': ('none', 0), 'b-review': ('2 blocking', 2), 'c-review': ('no verdict', None),
                           'd-rereview': ('1 blocking', 1), 'e-review': ('no verdict', None), 'f-rereview': ('none', 0)})
 
     def test_a_capped_review_is_incomplete_not_none(self):
@@ -463,3 +463,155 @@ class MetricsTest(Base):
         self.assertEqual(j['usage'][0]['cold_calls'], 1)
         self.assertEqual(j['rounds'][0]['usage']['calls'], 3)
         self.assertIn('usage by kind and model', self.cli(self.run.dir).stdout)
+
+
+def append(run, name, *evs):
+    with open(os.path.join(run.dir, name + '.jsonl'), 'a', encoding='utf-8') as f:
+        f.writelines(json.dumps(e) + '\n' for e in evs)
+
+
+def message(text, sub=False):
+    return {'type': 'assistant.message', 'data': {'content': text, **({'parentToolCallId': 't9'} if sub else {})}}
+
+
+def tool(cur, limit=200000, sub=False):
+    return {'type': 'tool.execution_complete',
+            'data': {'toolTelemetry': {'metrics': {'context_current_tokens': cur, 'context_token_limit': limit}},
+                     **({'parentToolCallId': 't9'} if sub else {})}}
+
+
+class LogVerdictTest(Base):
+    def test_the_verdict_comes_from_the_last_message_when_no_txt_exists(self):
+        for name, msgs in {'a-review': ['Looking.', '**Blocking: none** - INFERRED.\n\ndetails'],
+                           'b-review': ['Blocking: none', '## Verdict\n2 blocking\n\n| f | non-blocking |'],
+                           'c-review': ['Reading the diff.', 'The diff looks fine.'],
+                           'd-review': ['**Verdict: no blocking findings** in the branch.'],
+                           'e-review': ['**Verdict: request changes**\n\n**Blocking**\n- one\n  more on one\n- two\n\n'
+                                        '**Non-blocking**\n- three']}.items():
+            self.run.round(name, credits=1, premium=1)
+            append(self.run, name, *[message(m) for m in msgs], message('Blocking: none', sub=True))
+        rs = self.run.rounds()
+        self.assertEqual({n: (r['verdict'], r['blocking'], r['verdict_source']) for n, r in rs.items()},
+                         {'a-review': ('none', 0, 'log'), 'b-review': ('2 blocking', 2, 'log'),
+                          'c-review': ('no verdict', None, 'log'), 'd-review': ('none', 0, 'log'),
+                          'e-review': ('2 blocking', 2, 'log')})
+
+    def test_a_txt_wins_over_the_log_and_a_review_with_neither_has_no_verdict(self):
+        self.run.round('a-review', report='3 blocking\n', credits=1, premium=1)
+        append(self.run, 'a-review', message('Blocking: none'))
+        self.run.round('b-review', credits=1, premium=1)
+        rs = self.run.rounds()
+        self.assertEqual((rs['a-review']['verdict'], rs['a-review']['blocking'], rs['a-review']['verdict_source']),
+                         ('3 blocking', 3, 'txt'))
+        self.assertEqual((rs['b-review']['verdict'], rs['b-review']['blocking'], rs['b-review']['verdict_source']),
+                         ('no verdict', None, None))
+        self.assertEqual(mine.items(list(rs.values()))[0]['verdicts'][0]['source'], 'txt')
+
+    def test_review_sh_writes_the_verdict_line_for_mine(self):
+        bin_dir, wt = os.path.join(self.tmp, 'bin'), os.path.join(self.tmp, 'wt')
+        os.makedirs(bin_dir)
+        os.makedirs(wt)
+        args_file = os.path.join(self.tmp, 'args')
+        fake = os.path.join(bin_dir, 'copilot')
+        with open(fake, 'w') as f:
+            f.write('#!/bin/sh\nprintf "%s\\n" "$@" > ' + args_file + '\n'
+                    'printf \'%s\\n\' \'{"type":"assistant.message","data":{"content":"Checked.\\n**1 blocking**: x"}}\'\n'
+                    'printf \'%s\\n\' \'{"type":"result","exitCode":0}\'\n')
+        os.chmod(fake, 0o755)
+        with open(os.path.join(self.run.dir, 'x-review.md'), 'w') as f:
+            f.write('review it\n')
+        env = {**os.environ, 'PATH': bin_dir + os.pathsep + os.environ['PATH'], 'OW_RUN_DIR': self.run.dir,
+               'PYTHONDONTWRITEBYTECODE': '1', 'HOME': self.tmp}
+        p = subprocess.run(['bash', os.path.join(HERE, 'review.sh'), '--effort', 'max', 'x-review', wt],
+                           capture_output=True, text=True, env=env, timeout=60, stdin=subprocess.DEVNULL)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        with open(os.path.join(self.run.dir, 'x-review.txt')) as f:
+            self.assertEqual(f.read(), '1 blocking\n')
+        with open(args_file) as f:
+            argv = f.read().split('\n')
+        self.assertEqual(argv[argv.index('--reasoning-effort') + 1], 'max')
+        r = self.run.rounds()['x-review']
+        self.assertEqual((r['blocking'], r['verdict_source']), (1, 'txt'))
+
+
+class CompactionTest(Base):
+    def test_a_context_drop_reads_as_one_compaction(self):
+        self.run.round('x', credits=10, premium=1)
+        append(self.run, 'x', tool(50000), tool(120000), tool(165000), tool(40000), tool(60000), tool(150000, sub=True),
+               tool(10000, sub=True))
+        self.run.round('y', at=T0 + 100, credits=10, premium=1)
+        append(self.run, 'y', tool(100000), tool(40000), tool(140000), tool(130000))
+        rs = self.run.rounds()
+        self.assertEqual((rs['x']['compactions'], rs['x']['peak_context'], rs['y']['compactions']), (1, 165000, 0))
+        u = {(k['kind'], k['model']): k for k in mine.usage_by_kind(list(rs.values()))}
+        self.assertEqual((u[('build', 'claude-opus-5.5')]['compactions'], u[('build', 'claude-opus-5.5')]['compacted_rounds']), (1, 1))
+        out = self.cli(self.run.dir).stdout
+        self.assertIn('compactions per round: x 1 (peak 165k)', out)
+        self.assertIn('  build     claude-opus-5.5           1    1 of 2', out)
+
+
+def decision(item, kind, at, model='claude-opus-5.5', effort='high', **extra):
+    return {'event': 'pick', 'at': stamp(at), 'item': item, 'kind': kind,
+            'choice': {'model': model, 'effort': effort, 'context': 'default', 'cap': 100}, **extra}
+
+
+class AuditTest(Base):
+    def write(self, *ds):
+        with open(os.path.join(self.run.dir, 'routes.jsonl'), 'w', encoding='utf-8') as f:
+            f.writelines(json.dumps(d) + '\n' for d in ds)
+
+    def test_routed_overridden_unrouted_and_a_mismatch(self):
+        self.run.round('a', credits=10, premium=1)
+        self.run.round('a-review1', at=T0 + 1000, model='gpt-6.1-sol', effort='max', credits=5, premium=1)
+        self.run.round('a-fix1', at=T0 + 2000, model='claude-sonnet-5.5', effort='medium', credits=20, premium=2)
+        self.run.round('b', at=T0 + 3000, model='claude-sonnet-5.5', effort='high', credits=10, premium=1)
+        self.write(decision('a', 'build', T0 - 30),
+                   decision('a-review1', 'review', T0 + 990, model='gpt-6.1-sol', effort='high',
+                            override={'model': 'gpt-6.1-sol', 'effort': 'max', 'reason': 'risk area'}),
+                   decision('a-fix1', 'fix', T0 + 1990, model='claude-sonnet-5.5', effort='high'),
+                   decision('c', 'build', T0 + 5000))
+        a = mine.audit(mine.load_rounds(self.run.dir), mine.read_decisions(self.run.dir))
+        got = {x['name']: (x['status'], x['mismatch']) for x in a['rounds']}
+        self.assertEqual(got, {'a': ('routed', []), 'a-review1': ('overridden', []), 'a-fix1': ('routed', ['effort']),
+                               'b': ('unrouted', [])})
+        self.assertEqual((a['counts'], a['mismatched'], [u['item'] for u in a['unused']]),
+                         ({'routed': 2, 'overridden': 1, 'unrouted': 1}, 1, ['c']))
+        out = self.cli(self.run.dir, '--audit').stdout
+        self.assertIn('4 rounds, 2 routed, 1 overridden, 1 unrouted, 1 differ from their decision', out)
+        self.assertIn('MISMATCH effort', out)
+        self.assertRegex(out, r'unrouted\s+b\s')
+
+    def test_a_decision_is_used_once_and_never_for_an_earlier_round(self):
+        self.run.round('a', credits=10, premium=1)
+        self.run.round('a-fix1', at=T0 + 1000, credits=20, premium=2)
+        self.run.round('a-fix2', at=T0 + 2000, model='claude-sonnet-5.5', credits=30, premium=3)
+        self.write(decision('a-fix', 'fix', T0 + 1500, model='claude-sonnet-5.5'))
+        a = mine.audit(mine.load_rounds(self.run.dir), mine.read_decisions(self.run.dir))
+        self.assertEqual({x['name']: x['status'] for x in a['rounds']},
+                         {'a': 'unrouted', 'a-fix1': 'unrouted', 'a-fix2': 'routed'})
+
+    def test_json_carries_the_audit(self):
+        self.run.round('a', credits=10, premium=1)
+        j = json.loads(self.cli(self.run.dir, '--json').stdout)
+        self.assertEqual(j['audit']['counts'], {'routed': 0, 'overridden': 0, 'unrouted': 1})
+
+
+STATE = os.path.expanduser('~/.local/state/orchestrator-workers')
+
+
+@unittest.skipUnless(os.path.isdir(os.path.join(STATE, 'amc-2026-10-29')), 'no real run folders on this machine')
+class RealFolderTest(unittest.TestCase):
+    def test_every_reviewed_item_of_10_29_has_a_blocking_value(self):
+        rounds = mine.load_rounds(os.path.join(STATE, 'amc-2026-10-29'))
+        reviewed = {r['item'] for r in rounds if r['kind'] == 'review'}
+        self.assertTrue(reviewed)
+        self.assertEqual({i['item']: i['blocking'] for i in mine.items(rounds) if i['item'] in reviewed and i['blocking'] is None}, {})
+
+    @unittest.skipUnless(os.path.isdir(os.path.join(STATE, 'amc-2026-10-30')), 'no 10-30 run folder')
+    def test_10_30_reports_its_unrouted_rounds(self):
+        run = os.path.join(STATE, 'amc-2026-10-30')
+        rounds, decisions = mine.load_rounds(run), mine.read_decisions(run)
+        a = mine.audit(rounds, decisions)
+        decided = {mine.split_name(d.get('item', ''))[0] for d in decisions}
+        self.assertEqual(a['counts']['unrouted'], sum(r['item'] not in decided for r in rounds))
+        self.assertGreaterEqual(a['counts']['unrouted'], 83)

@@ -158,7 +158,8 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
   dependency rule, so both features were hand-written.
 - **Model, effort, context tier and credit cap:** `python3 scripts/route.py pick` chooses them per round and logs why ([router](references/routing.md#the-router)); the static table in [references/routing.md](references/routing.md) is its fallback. The cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --history <earlier run> ... --caps`. A kind with under 5 rounds on a model gets a cap derived from another model's rounds by price (`scripts/prices.json`, refreshed from the SDK's `listModels()`). `--chat <debug-log-dir> --budget N` prints the run's spend, chat included (an upper bound), against N and how many more rounds fit.
 - **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
-  runs it under `timeout` (`--help` lists the model, cap and timeout overrides). Use another model
+  runs it under `timeout` (`--help` lists the model, effort, cap and timeout overrides) and writes
+  the verdict line to `<run>/<name>.txt` for `mine.py`. Use another model
   family. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
   shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
   A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"

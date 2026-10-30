@@ -219,6 +219,15 @@ def power():
     return 'battery ' + (batt.split('\t')[-1].split(';')[0].strip() if '\t' in batt else '?')
 
 
+def unrouted(run=None):
+    """Rounds in the run folder with no routes.jsonl decision, from mine.py --audit; None when it cannot tell."""
+    try:
+        import mine
+        return mine.audit(mine.load_rounds(run or RUN), mine.read_decisions(run or RUN))['counts']['unrouted']
+    except (OSError, ValueError, KeyError):
+        return None
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description='Status table of orchestrator-workers sessions.',
                                  epilog=f'Run folder: {RUN} (set OW_RUN_DIR). Prefix: {PREFIX!r} (set OW_PREFIX).')
@@ -226,10 +235,11 @@ def main(argv=None):
     args = ap.parse_args(argv)
     rs = rows()
     load = os.getloadavg()
+    nr = unrouted() if os.path.isdir(RUN) else None
     print(f"{time.strftime('%H:%M')}  running={sum(r['state'] == 'running' for r in rs)} "
           f"stalled={sum(r['state'] == 'STALLED' for r in rs)} died={sum(r['state'].startswith('DIED') for r in rs)} "
           f"errored={sum(r['state'] == 'ERRORED' for r in rs)} done={sum(r['state'] == 'done' for r in rs)} "
-          f"capped={sum(r['state'] == 'CAPPED' for r in rs)}  "
+          f"capped={sum(r['state'] == 'CAPPED' for r in rs)} unrouted={'?' if nr is None else nr}  "
           f"load={load[0]:.1f}/{os.cpu_count()}cpu  power={power()}")
     if not os.path.isdir(RUN):
         print(f'(run folder {RUN} does not exist yet)')

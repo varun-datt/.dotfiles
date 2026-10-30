@@ -5,6 +5,7 @@ Usage:
     python3 mine.py [RUN] [--since DATE] [--repo PATH]          text summary
     python3 mine.py [RUN] --json                                 everything, for tools
     python3 mine.py [RUN] --caps                                 --max-ai-credits per kind and model
+    python3 mine.py [RUN] --audit                                each round against its routes.jsonl decision
     options: --history RUN...  earlier runs join the caps' window; --prices FILE; --chat DEBUG_LOG_DIR; --budget N
     python3 mine.py --help
 
@@ -17,12 +18,20 @@ RUN defaults to OW_RUN_DIR. Every <name>.jsonl there is one round (markers.jsonl
              resumes, so each round is the difference from the previous round of its session; reviews and
              re-reviews are their own sessions
     CAPPED   the round hit its --max-ai-credits cap (a "Session limit reached" event)
-    verdict  for reviews and re-reviews, from <name>.txt: "Blocking: none" or "N blocking"
+    verdict  for reviews and re-reviews, from <name>.txt when it exists, else from the round's last top-level
+             assistant.message: the first line reading "Blocking: none", "no blocking findings" or "N blocking"
+             (optionally after "Verdict:"), else the list items under a "Blocking" heading; verdict_source says
+             which file it came from (txt or log); a review with neither reads "no verdict"
+    compactions  silent context compactions: the context falls below 60% of the previous tool call's,
+             which stood at 75% or more of the window (the CLI logs no event for them in -p mode)
 An item is the run name without its suffixes. --repo reads `git log --merges --first-parent` of that
 repository's HEAD: an item counts as merged when a merge subject names a branch "<prefix>/<item>".
 
 Caps (owner, 2026-10-13): 3 x the median credits of the last 20 rounds of the same kind and model, or a
-fixed floor while there are fewer than 5. Markers (`state.py marker`) are measured as the median credits
+fixed floor while there are fewer than 5. --audit joins each round to <run>/routes.jsonl: a decision logged
+under the round's own name, else under its item and kind, the latest one logged no later than 2 minutes
+after the round started, each decision used once. A round is routed, overridden (its decision carries "override") or unrouted, and
+flagged when its log's model or effort differs from the decision. Markers (`state.py marker`) are measured as the median credits
 per round of each kind they cover, before and after, up to the neighbouring markers.
 """
 import argparse, collections, datetime, json, os, re, statistics, subprocess, sys
@@ -49,10 +58,15 @@ PRICE_KEYS = {'input': 'inputPrice', 'output': 'outputPrice', 'cache_read': 'cac
               'cache_write': 'cacheWritePrice'}
 HERE = os.path.dirname(os.path.abspath(__file__))
 NEEDED = ('model.call_start', 'user.message', 'session.usage_checkpoint', 'result', 'session.info', 'session.warning',
-          'session.tools_updated', 'session.error')
+          'session.tools_updated', 'session.error', 'assistant.message', 'tool.execution_complete')
+COMPACT_FROM, COMPACT_TO = 0.75, 0.6
+AUDIT_SLACK = datetime.timedelta(minutes=2)
+AUDIT_KIND = {'small': 'build', 'research': 'build', 'catchup': 'merge', 'rereview': 'review'}
 TYPE_PREFIX = '{"type":"'
 TIMESTAMP = re.compile(r'"timestamp"\s*:\s*"([^"]+)"')
-VERDICT = re.compile(r'^(?:blocking\s*:\s*none\b|(\d+)\s+blocking\b)', re.I)
+VERDICT = re.compile(r'^(?:verdict\s*:\s*\**\s*)?(?:blocking\s*:\s*none\b|no\s+blocking\s+(?:findings|issues)\b|(\d+)\s+blocking\b)', re.I)
+HEADING = re.compile(r'^blocking(?:\s+(?:findings|issues))?\s*:?\s*[*_]*\s*:?$', re.I)
+LIST_ITEM = re.compile(r'^(?:[-*+]|\d+[.)])\s')
 UTC = datetime.timezone.utc
 
 
@@ -85,28 +99,64 @@ def split_name(name):
     return item, (kinds[0] if kinds else 'build')
 
 
-def verdict(path):
-    """('none', 0), ('N blocking', N), ('missing', None) or ('no verdict', None) from a review's report."""
+def blocking_count(text):
+    """Blocking findings from a report's first verdict line, or the items under its first "Blocking" heading; else None."""
+    lines = (text or '').splitlines()
+    for i, raw in enumerate(lines):
+        line = raw.strip().lstrip('*_#> ').strip()
+        m = VERDICT.match(line)
+        if m:
+            return int(m.group(1)) if m.group(1) else 0
+        if HEADING.match(line):
+            n = 0
+            for nxt in lines[i + 1:]:
+                if not nxt.strip() or nxt[:1].isspace():
+                    continue
+                if not LIST_ITEM.match(nxt):
+                    break
+                n += 1
+            if n:
+                return n
+    return None
+
+
+def verdict_line(text):
+    """The report's verdict as one line mine.py reads back: "Blocking: none" or "N blocking", else None."""
+    n = blocking_count(text)
+    return None if n is None else ('Blocking: none' if n == 0 else f'{n} blocking')
+
+
+def parse_verdict(text):
+    """('none', 0), ('N blocking', N) or ('no verdict', None)."""
+    n = blocking_count(text)
+    if n is None:
+        return 'no verdict', None
+    return ('none' if n == 0 else f'{n} blocking'), n
+
+
+def verdict(path, message=None):
+    """(verdict, blocking, source): from <name>.txt when it exists, else from the round's last message."""
     try:
         with open(path, encoding='utf-8', errors='replace') as f:
-            lines = f.read().splitlines()
+            return (*parse_verdict(f.read()), 'txt')
     except FileNotFoundError:
-        return 'missing', None
-    for line in lines:
-        m = VERDICT.match(line.strip().lstrip('*_#> ').strip())
-        if m:
-            n = int(m.group(1)) if m.group(1) else 0
-            return ('none' if n == 0 else f'{n} blocking'), n
-    return 'no verdict', None
+        pass
+    return (*parse_verdict(message), 'log' if message else None)
+
+
+def compactions(contexts):
+    """Silent compactions in a round's (current tokens, window) per top-level tool call."""
+    return sum(1 for (a, lim), (b, _) in zip(contexts, contexts[1:])
+               if lim and a >= COMPACT_FROM * lim and b < COMPACT_TO * a)
 
 
 def read_round(path):
     """One run file's facts, or None when it holds no copilot events."""
     r = {'session': None, 'cum_credits': None, 'cum_premium': None, 'model': None, 'effort': None,
          'exit': None, 'error': False, 'cap': None, 'first': None, 'last': None,
-         'usage_cum': None, 'active': 0.0}
+         'usage_cum': None, 'active': 0.0, 'message': None}
     prev = None
-    calls = []
+    calls, contexts = [], []
     fallback_model = fallback_effort = None
     typed = False
     last_line = None
@@ -149,6 +199,15 @@ def read_round(path):
                 at = parse_time(e.get('timestamp'))
                 if at:
                     calls.append(at)
+            elif t == 'assistant.message':
+                if d.get('content') and not d.get('parentToolCallId'):
+                    r['message'] = d['content']
+            elif t == 'tool.execution_complete':
+                tel = d.get('toolTelemetry') if isinstance(d.get('toolTelemetry'), dict) else {}
+                m = tel.get('metrics') if isinstance(tel.get('metrics'), dict) else {}
+                cur, lim = m.get('context_current_tokens'), m.get('context_token_limit')
+                if not d.get('parentToolCallId') and isinstance(cur, (int, float)) and isinstance(lim, (int, float)):
+                    contexts.append((cur, lim))
             elif t == 'session.tools_updated' and fallback_model is None:
                 fallback_model = d.get('model')
             elif t == 'session.usage_checkpoint':
@@ -174,6 +233,8 @@ def read_round(path):
     calls.sort()
     r['call_starts'] = len(calls)
     r['cold_calls'] = sum((b - a).total_seconds() > COLD_AFTER for a, b in zip(calls, calls[1:]))
+    r['compactions'] = compactions(contexts)
+    r['peak_context'] = max((c for c, _ in contexts), default=None)
     r['model'] = r['model'] or fallback_model
     r['effort'] = r['effort'] or fallback_effort
     return r
@@ -218,10 +279,12 @@ def load_rounds(run):
                        'active_min': r['active'], 'session': r['session'], 'cum_credits': r['cum_credits'], 'cum_premium': r['cum_premium'],
                        'capped': bool(cap.get('capped')), 'cap': cap.get('cap'), 'cap_used': cap.get('used'),
                        'usage_cum': r['usage_cum'], 'cold_calls': r['cold_calls'], 'call_starts': r['call_starts'],
+                       'compactions': r['compactions'], 'peak_context': r['peak_context'],
                        'exit': r['exit'], 'error': r['error'], 'ended': r['exit'] is not None,
-                       'verdict': None, 'blocking': None, 'raw_verdict': None})
+                       'verdict': None, 'blocking': None, 'raw_verdict': None, 'verdict_source': None})
         if kind in REVIEW_KINDS:
-            v, b = verdict(os.path.join(run, name + '.txt'))
+            v, b, src = verdict(os.path.join(run, name + '.txt'), r['message'])
+            rounds[-1]['verdict_source'] = src
             if rounds[-1]['capped']:
                 rounds[-1].update(verdict='incomplete', blocking=None, raw_verdict=v)
             else:
@@ -324,7 +387,8 @@ def items(rounds, merge_rows=None):
                     'wall_min': sum(r['wall_min'] for r in rs),
                     'blocking': first['blocking'] if first else None,
                     'verdicts': [{'round': r['name'], 'verdict': r['verdict'], 'blocking': r['blocking'],
-                                  'raw_verdict': r['raw_verdict']} for r in reviews],
+                                  'raw_verdict': r['raw_verdict'], 'source': r['verdict_source']} for r in reviews],
+                    'compactions': sum(r['compactions'] for r in rs),
                     'merged': None if merge_rows is None else when is not None, 'merged_at': when})
     return out
 
@@ -422,6 +486,8 @@ def usage_by_kind(rounds):
         out.append({'kind': kind, 'model': model, 'rounds': len(rs), 'wall_min': round(sum(r['wall_min'] for r in rs), 1),
                     'calls': sum((r.get('usage') or {}).get('calls', r.get('call_starts', 0)) for r in rs),
                     'cold_calls': sum(r.get('cold_calls', 0) for r in rs),
+                    'compactions': sum(r.get('compactions', 0) for r in rs),
+                    'compacted_rounds': sum(r.get('compactions', 0) > 0 for r in rs),
                     'efforts': sorted({r['effort'] or '?' for r in rs}),
                     'tokens': {c: sum((r.get('usage') or {}).get(c, 0) for r in rs) for c in CLASSES + ('reasoning',)},
                     'credits_by_class': {c: round(sum((r.get('priced') or {}).get(c, 0) for r in rs), 1) for c in CLASSES}})
@@ -540,6 +606,83 @@ def kinds(rounds):
     return out
 
 
+def audit_kind(kind):
+    return AUDIT_KIND.get(kind, kind)
+
+
+def read_decisions(run):
+    """The routing decisions in <run>/routes.jsonl that name an item, kind and choice."""
+    out = []
+    try:
+        with open(os.path.join(run, 'routes.jsonl'), encoding='utf-8') as f:
+            lines = f.read().splitlines()
+    except FileNotFoundError:
+        return out
+    for i, line in enumerate(lines):
+        try:
+            d = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(d, dict) and d.get('item') and d.get('kind') and isinstance(d.get('choice'), dict):
+            out.append({**d, '_line': i + 1, '_at': parse_time(d.get('at')) if d.get('at') else None})
+    return out
+
+
+def audit(rounds, decisions):
+    """Each round as routed, overridden or unrouted against the decisions, with model or effort mismatches."""
+    used, out = set(), []
+    for r in sorted(rounds, key=lambda x: (x['start'], x['name'])):
+        def fits(d):
+            if id(d) in used or (d['_at'] and d['_at'] > r['start'] + AUDIT_SLACK):
+                return False
+            if d['item'] == r['name']:
+                return True
+            return split_name(d['item'])[0] == r['item'] and audit_kind(d['kind']) == audit_kind(r['kind'])
+        cands = [d for d in decisions if fits(d)]
+        d = max(cands, key=lambda d: (d['item'] == r['name'], d['_at'] or datetime.datetime.min.replace(tzinfo=UTC), d['_line']),
+                default=None)
+        row = {'name': r['name'], 'item': r['item'], 'kind': r['kind'], 'start': r['start'],
+               'model': r.get('model'), 'effort': r.get('effort'), 'status': 'unrouted', 'decision': None,
+               'expected': None, 'mismatch': []}
+        if d is not None:
+            used.add(id(d))
+            ov = d.get('override')
+            exp = {k: d['choice'].get(k) for k in ('model', 'effort')}
+            if isinstance(ov, dict):
+                exp.update({k: ov[k] for k in ('model', 'effort') if ov.get(k)})
+            row.update(status='overridden' if ov else 'routed', decision=d['_line'], expected=exp,
+                       override=ov or None,
+                       mismatch=[k for k in ('model', 'effort') if r.get(k) and exp.get(k) and r[k] != exp[k]])
+        out.append(row)
+    unused = [{'line': d['_line'], 'item': d['item'], 'kind': d['kind'], 'at': d.get('at')}
+              for d in decisions if id(d) not in used]
+    return {'rounds': out, 'unused': unused,
+            'counts': {s: sum(x['status'] == s for x in out) for s in ('routed', 'overridden', 'unrouted')},
+            'mismatched': sum(bool(x['mismatch']) for x in out)}
+
+
+def audit_text(run, a):
+    c = a['counts']
+    lines = [f"{run}: {len(a['rounds'])} rounds, {c['routed']} routed, {c['overridden']} overridden, "
+             f"{c['unrouted']} unrouted, {a['mismatched']} differ from their decision"]
+    for x in a['rounds']:
+        if x['status'] == 'routed' and not x['mismatch']:
+            continue
+        ran = f"{x['model'] or '?'}/{x['effort'] or '?'}"
+        note = ''
+        if x['decision']:
+            e = x['expected']
+            note = f" decision line {x['decision']}: {e.get('model')}/{e.get('effort')}"
+            if x['mismatch']:
+                note += ' MISMATCH ' + ','.join(x['mismatch'])
+            if x.get('override'):
+                note += f" override {json.dumps(x['override'], ensure_ascii=False)}"
+        lines.append(f"  {x['status']:<10} {x['name']:<30} {x['kind']:<9} ran {ran}{note}")
+    if a['unused']:
+        lines.append('decisions with no round: ' + ', '.join(f"line {u['line']} {u['item']} ({u['kind']})" for u in a['unused']))
+    return '\n'.join(lines)
+
+
 def iso(t):
     return t.astimezone(UTC).isoformat(timespec='seconds').replace('+00:00', 'Z')
 
@@ -562,6 +705,14 @@ def text(report):
         lines.append(f"  {u['kind']:<9} {u['model']:<22} {u['calls']:>5} {u['cold_calls']:>4} {u['wall_min']:>7,.0f} "
                      f"{','.join(u['efforts']):<8} " + '/'.join(f"{t[k] / 1000:,.0f}" for k in CLASSES) + '  '
                      + '/'.join(f"{c[k]:,.0f}" for k in CLASSES))
+    lines.append('compactions by kind and model: compactions, rounds compacted of rounds')
+    for u in report['usage']:
+        if u['compactions']:
+            lines.append(f"  {u['kind']:<9} {u['model']:<22} {u['compactions']:>4} {u['compacted_rounds']:>4} of {u['rounds']}")
+    compacted = [r for r in rs if r['compactions']]
+    if compacted:
+        lines.append('compactions per round: ' + ', '.join(
+            f"{r['name']} {r['compactions']} (peak {r['peak_context'] / 1000:,.0f}k)" for r in compacted))
     ev = report['cap_evidence']
     if ev['rounds']:
         lines.append(f"rounds over a candidate cap ({ev['rounds']} rounds, kinds and models with 5 or more): "
@@ -575,10 +726,11 @@ def text(report):
     lines.append('by day: rounds, credits, capped')
     for d in report['days']:
         lines.append(f"  {d['day']} {d['rounds']:>4} {d['credits']:>9,.0f} {d['capped']:>3}")
-    lines.append('items: rounds, credits, fix rounds, blocking at review -> last verdict, merged')
+    lines.append('items: rounds, credits, fix rounds, blocking at review -> last verdict (source), merged')
     for it in report['items']:
         first = '-' if it['blocking'] is None else str(it['blocking'])
-        last = it['verdicts'][-1]['verdict'] if it['verdicts'] else '-'
+        lv = it['verdicts'][-1] if it['verdicts'] else None
+        last = f"{lv['verdict']} ({lv['source'] or 'none'})" if lv else '-'
         merged = '' if it['merged'] is None else (f" merged {it['merged_at'][:10]}" if it['merged'] else ' not merged')
         unknown = f" (+{it['unknown_credits']} unknown)" if it['unknown_credits'] else ''
         capped = f" capped {it['capped']}" if it['capped'] else ''
@@ -615,6 +767,7 @@ def main(argv=None):
     out = ap.add_mutually_exclusive_group()
     out.add_argument('--json', action='store_true', help='print everything as JSON')
     out.add_argument('--caps', action='store_true', help='print the --max-ai-credits cap per kind and model')
+    out.add_argument('--audit', action='store_true', help='print each round against its routes.jsonl decision')
     ap.add_argument('--history', nargs='+', default=[], metavar='RUN', help="earlier run folders whose rounds join the caps' window")
     ap.add_argument('--prices', help='prices.json (default: <run>/prices.json, else the one beside this script)')
     ap.add_argument('--chat', help='VS Code debug-log folder (or main.jsonl) of the orchestrator chat to price')
@@ -657,6 +810,9 @@ def main(argv=None):
     rounds = load_rounds(run)
     if since:
         rounds = [r for r in rounds if r['start'] >= since]
+    if a.audit:
+        print(audit_text(run, audit(rounds, read_decisions(run))))
+        return 0
     add_costs(rounds, prices)
     add_costs(history, prices)
     window = history + rounds
@@ -676,6 +832,9 @@ def main(argv=None):
               'markers': measure(load_markers(run), rounds), 'usage': usage_by_kind(rounds),
               'cap_evidence': cap_evidence(window), 'prices': prices, 'chat': chat, 'budget': budget}
     if a.json:
+        report['audit'] = audit(rounds, read_decisions(run))
+        for x in report['audit']['rounds']:
+            x['start'] = iso(x['start'])
         for r in rounds:
             r['start'] = iso(r['start'])
             r['wall_min'] = round(r['wall_min'], 1)

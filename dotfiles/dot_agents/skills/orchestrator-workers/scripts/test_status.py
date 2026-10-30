@@ -56,6 +56,16 @@ class RowsTest(unittest.TestCase):
         self.worker('c-review', 1000, [{'type': 'model.call_finished'}, {'type': 'result', 'exitCode': 0}])
         self.assertEqual(self.states(), {'c': 'done', 'c-review': 'done'})
 
+    def test_unrouted_counts_the_rounds_with_no_routing_decision(self):
+        done = [{'type': 'model.call_finished'}, {'type': 'result', 'exitCode': 0}]
+        self.worker('a', 4000, done)
+        self.worker('b', 2000, done)
+        self.worker('b-review', 1000, done)
+        with open(os.path.join(self.run_dir, 'routes.jsonl'), 'w') as f:
+            f.write(json.dumps({'event': 'pick', 'at': '2027-01-15T06:52:00.000Z', 'item': 'a', 'kind': 'build',
+                                'choice': {'model': 'claude-opus-5.5', 'effort': 'high'}}) + '\n')
+        self.assertEqual(status.unrouted(), 2)
+
 
 if __name__ == '__main__':
     unittest.main()
