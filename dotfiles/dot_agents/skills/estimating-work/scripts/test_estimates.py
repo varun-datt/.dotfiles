@@ -403,6 +403,70 @@ class EstimatesTest(Isolated):
         result = estimates.forecast(plan, window=60, items=history, runs=10, seed=1)
         self.assertEqual(result["total_p50"], 5.0)
 
+    def fixed_plan(self, specs):
+        return [{"id": i, "kind": k, "estimate": 10, "method": "rounds"} | extra for i, k, extra in specs]
+
+    def test_one_slot_gives_the_old_sequential_numbers(self):
+        history = [{"kind": k, "estimate": 20, "actual": a} for k in ("worker-build", "fix") for a in (3, 5, 8, 13, 40)]
+        plan = [{"id": str(n), "kind": ("worker-build", "fix")[n % 2], "estimate": 10, "method": ("history", "judged")[n % 3 % 2]} for n in range(8)]
+        result = estimates.forecast(plan, window=60, items=history, runs=200, seed=7)
+        rng = estimates.random.Random(7)
+        actuals = {k: [i["actual"] for i in history if i["kind"] == k] for k in ("worker-build", "fix")}
+        pool = estimates.velocities(history, "judged")
+        totals, fits = [], []
+        for _ in range(200):
+            elapsed, fitted = 0.0, 0
+            for item in plan:
+                if item["method"] == "history":
+                    elapsed += rng.choice(actuals[item["kind"]])
+                else:
+                    elapsed += item["estimate"] / rng.choice(pool)
+                fitted += elapsed <= 60
+            totals.append(elapsed)
+            fits.append(fitted)
+        self.assertEqual(result["slots"], 1)
+        self.assertEqual(result["total_p50"], round(estimates.percentile(totals, 50), 1))
+        self.assertEqual(result["total_p90"], round(estimates.percentile(totals, 90), 1))
+        self.assertEqual((result["fit_p50"], result["fit_p10"]), (estimates.percentile(fits, 50), estimates.percentile(fits, 10)))
+        self.assertEqual(result["sequential_p50"], result["total_p50"])
+
+    def test_three_equal_workers_on_three_slots_take_one_items_time(self):
+        plan = self.fixed_plan([(c, "worker-build", {}) for c in "abc"])
+        result = estimates.forecast(plan, window=15, items=[], runs=10, seed=1, slots=3)
+        self.assertEqual((result["total_p50"], result["sequential_p50"], result["chance_all_fit"]), (10.0, 30.0, 1.0))
+        self.assertEqual(estimates.forecast(plan, window=15, items=[], runs=10, seed=1, slots=2)["total_p50"], 20.0)
+
+    def test_after_holds_an_item_back(self):
+        plan = self.fixed_plan([("a", "worker-build", {}), ("b", "worker-build", {"after": ["a"]}), ("c", "worker-build", {})])
+        result = estimates.forecast(plan, window=15, items=[], runs=10, seed=1, slots=3)
+        self.assertEqual((result["total_p50"], result["fit_p50"]), (20.0, 2))
+
+    def test_an_item_without_a_slot_takes_none(self):
+        workers = [(c, "worker-build", {}) for c in "abc"]
+        plan = self.fixed_plan(workers + [("r", "worker-review", {"slot": False}), ("s", "worker-review", {"slot": False})])
+        self.assertEqual(estimates.forecast(plan, window=15, items=[], runs=10, seed=1, slots=3)["total_p50"], 10.0)
+        slotted = self.fixed_plan(workers + [("r", "worker-review", {})])
+        self.assertEqual(estimates.forecast(slotted, window=15, items=[], runs=10, seed=1, slots=3)["total_p50"], 20.0)
+
+    def test_a_blocked_item_holds_no_slot(self):
+        plan = self.fixed_plan([("a", "worker-build", {"estimate": 100}), ("b", "worker-build", {"after": ["a"]}), ("c", "worker-build", {"estimate": 100})])
+        result = estimates.forecast(plan, window=105, items=[], runs=10, seed=1, slots=2)
+        self.assertEqual((result["total_p50"], result["fit_p50"]), (110.0, 2))
+        self.assertEqual(estimates.forecast(plan, window=100, items=[], runs=10, seed=1, slots=2)["fit_p50"], 2)
+
+    def test_the_chat_lane_runs_its_items_one_at_a_time(self):
+        plan = self.fixed_plan([("a", "fix", {}), ("b", "check", {}), ("w", "worker-build", {})])
+        result = estimates.forecast(plan, window=15, items=[], runs=10, seed=1, slots=3)
+        self.assertEqual((result["total_p50"], result["fit_p50"]), (20.0, 2))
+
+    def test_an_unknown_after_id_fails_and_names_it(self):
+        plan = self.fixed_plan([("a", "worker-build", {"after": ["ghost"]})])
+        with self.assertRaisesRegex(ValueError, "ghost"):
+            estimates.forecast(plan, window=15, items=[], runs=10, seed=1, slots=3)
+        path = Path(self.dir.name) / "plan.json"
+        path.write_text(json.dumps(plan))
+        self.assertEqual(estimates.main(["forecast", "--plan", str(path), "--window", "60", "--slots", "3"]), 2)
+
     def test_rounds_convert_to_minutes(self):
         self.assertEqual(estimates.rounds_estimate(5, 1.5)["estimate"], 22.5)
 

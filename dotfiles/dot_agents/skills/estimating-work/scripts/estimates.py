@@ -193,31 +193,82 @@ def rounds_estimate(rounds, risk):
     return {"rounds": rounds, "risk": risk, "estimate": round(rounds * risk * MINUTES_PER_ROUND, 1), "method": "rounds"}
 
 
-def forecast(plan, window, items, runs=1000, seed=None):
+def check_after(plan):
+    seen = set()
+    for item in plan:
+        for dep in item.get("after", []):
+            if dep not in seen:
+                known = any(other["id"] == dep for other in plan)
+                raise ValueError(f"item {item['id']} waits for {dep}, " + ("which comes later in the plan" if known else "which is not in the plan"))
+        seen.add(item["id"])
+
+
+def schedule(plan, minutes, slots):
+    """Greedy list scheduling: a free lane takes the first ready item in plan order; blocked items hold no lane."""
+    lanes = {"slot": [0.0] * slots, "chat": [0.0]}
+    finished = {}
+    pending = list(range(len(plan)))
+    t = 0.0
+    while pending:
+        started = True
+        while started:
+            started = False
+            for i in pending:
+                item = plan[i]
+                if any(finished.get(d, float("inf")) > t for d in item.get("after", [])):
+                    continue
+                if item.get("slot") is False:
+                    pool = None
+                else:
+                    pool = "slot" if slots == 1 or item["kind"].startswith("worker-") else "chat"
+                lane = None
+                if pool:
+                    lane = next((n for n, free in enumerate(lanes[pool]) if free <= t), None)
+                    if lane is None:
+                        continue
+                finished[item["id"]] = t + minutes[i]
+                if pool:
+                    lanes[pool][lane] = t + minutes[i]
+                pending.remove(i)
+                started = True
+                break
+        if pending:
+            t = min(e for e in finished.values() if e > t)
+    return finished
+
+
+def forecast(plan, window, items, runs=1000, seed=None, slots=1):
+    if slots < 1:
+        raise ValueError("slots must be at least 1")
+    check_after(plan)
     rng = random.Random(seed)
     actuals = {}
     for i in items:
         actuals.setdefault(i["kind"], []).append(i["actual"])
     pools = {m: velocities(items, m) for m in METHODS}
-    totals, fits = [], []
+    totals, fits, sequentials = [], [], []
     for _ in range(runs):
-        elapsed, fitted = 0.0, 0
+        minutes_by_item = []
         for item in plan:
             kind_actuals = actuals.get(item["kind"], [])
             pool = pools[item["method"]]
             if item["method"] == "history" and len(kind_actuals) >= MIN_HISTORY:
-                elapsed += rng.choice(kind_actuals)
+                minutes = rng.choice(kind_actuals)
             else:
-                elapsed += item["estimate"] / rng.choice(pool if len(pool) >= MIN_HISTORY else [1.0])
-            if elapsed <= window:
-                fitted += 1
-        totals.append(elapsed)
-        fits.append(fitted)
+                minutes = item["estimate"] / rng.choice(pool if len(pool) >= MIN_HISTORY else [1.0])
+            minutes_by_item.append(minutes)
+        summed = sum(minutes_by_item)
+        ends = list(schedule(plan, minutes_by_item, slots).values())
+        totals.append(max(ends, default=0.0))
+        fits.append(sum(e <= window for e in ends))
+        sequentials.append(summed)
     return {
         "items": len(plan),
         "history": len(items),
+        "slots": slots,
         "total_p50": round(percentile(totals, 50), 1),
         "total_p90": round(percentile(totals, 90), 1),
+        "sequential_p50": round(percentile(sequentials, 50), 1),
         "fit_p50": percentile(fits, 50),
         "fit_p10": percentile(fits, 10),
         "chance_all_fit": round(sum(t <= window for t in totals) / runs, 2),
@@ -438,11 +489,12 @@ def main(argv=None):
     p.add_argument("--risk", type=float, default=1.0, help="1.0 known ground to 2.0 many unknowns")
     p.add_argument("--days", type=int, default=180)
     p = sub.add_parser("forecast", help="Monte Carlo forecast of a plan against a window")
-    p.add_argument("--plan", required=True, help="JSON list of {id, what, kind, estimate, method}; what = one line saying what the item is")
+    p.add_argument("--plan", required=True, help="JSON list of {id, what, kind, estimate, method[, after, slot]}; what = one line saying what the item is")
     p.add_argument("--window", type=float, required=True, help="minutes until the stop time")
     p.add_argument("--runs", type=int, default=1000)
     p.add_argument("--days", type=int, default=180)
     p.add_argument("--seed", type=int, default=None)
+    p.add_argument("--slots", type=int, default=1, help="worker slots running at once; 1 forecasts every item in sequence")
     p = sub.add_parser("report", help="estimate against actual for one run, or all")
     p.add_argument("--run", default=None)
     p = sub.add_parser("kinds", help="markdown table of measured pace per kind")
@@ -500,7 +552,12 @@ def main(argv=None):
         if any(item.get("method") not in METHODS for item in plan):
             print(f"every plan item needs a method: {', '.join(METHODS)}", file=sys.stderr)
             return 2
-        print(json.dumps(forecast(plan, args.window, recent(completed(read()), args.days), args.runs, args.seed)))
+        try:
+            result = forecast(plan, args.window, recent(completed(read()), args.days), args.runs, args.seed, args.slots)
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            return 2
+        print(json.dumps(result))
     elif args.command == "report":
         records = read()
         logged = completed(records)
