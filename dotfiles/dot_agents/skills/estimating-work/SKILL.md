@@ -114,10 +114,13 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   2026-10-26 a turn begun by a terminal notification lost the plan and ended on a question about
   an unrelated failing test, mid-run.
 - Unattended runs send each item to a `copilot -p` worker under `timeout`, through the
-  orchestrator-workers skill: an in-chat sub-agent call has no timeout, and one stalled a run for
-  3 h 11 min (2026-10-27). Keep in-chat sub-agents (`runSubagent`, agent `worker`) for short
-  attended work. Brief a worker with the item's `what`, the owner's rulings and the files; read its
-  diff and look at its renders before the next item.
+  orchestrator-workers skill and its queue runner, even items small enough for the chat: an
+  in-chat sub-agent call has no timeout, and one stalled a run for 3 h 11 min (2026-10-27); the
+  chat's own model request can hang too, with no first token and no turn end for the Stop hook to
+  see, and one held a run for 4 h 47 min (2026-10-30, owner's ruling the same day). Keep in-chat
+  sub-agents (`runSubagent`, agent `worker`) for short attended work. Brief a worker with the
+  item's `what`, the owner's rulings and the files; read its diff and look at its renders before
+  the next item.
 - Keep the todo list current: after a reset it is the one list still in view, and a stale one makes
   a run look unstarted.
 - Polish found on the way becomes a backlog item, not work now.
