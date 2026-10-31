@@ -12,9 +12,10 @@ Usage:
 
 Every subcommand works on <run>/queue.json (OW_RUN_DIR, or --run-dir) under <run>/queue.lock.
 `add`, `done` and `status` touch <run>/heartbeat: they are the chat's sign of life.
-`add` refuses a command that runs `copilot` without `route.py run` (or review.sh, which calls it) unless
---unrouted-reason says why; the reason is kept with the item. A script that hides copilot is caught by
-`mine.py --audit`, not here.
+`add` refuses a command that runs `copilot` unless route.py or review.sh is the program it invokes: bare, after
+env, timeout, nohup or assignments, inside `sh|bash|zsh -c '...'`, after ; && || or |, or inside a script file it
+runs (read from the current folder; an unreadable script is refused too). --unrouted-reason says why it may run
+anyway and is kept with the item. A copilot call it cannot see is caught afterwards by `mine.py --audit`.
 
 `run` launches ready items (highest priority first, then in the order added) while fewer than
 --slots slot items run; --no-slot items (reviews) do not count. Each item runs in its own process
@@ -30,15 +31,101 @@ minutes while it stays true. --idle-alert 0 turns it off.
 
 States: waiting (on an item not done), ready, running, exited N, done.
 """
-import argparse, contextlib, fcntl, json, os, re, signal, subprocess, sys, tempfile, threading, time
+import argparse, contextlib, fcntl, json, os, re, shlex, signal, subprocess, sys, tempfile, threading, time
 
-COPILOT = re.compile(r'(?:^|[\s;&|(`/])copilot(?=\s|$|[;&|)`])')
-ROUTED = re.compile(r'\broute\.py\s+run\b|\breview\.sh\b')
+SEP = set(';&|()\n')
+WRAPPERS = {'env': {'-u', '-C', '-P'}, 'timeout': {'-s', '-k'}, 'gtimeout': {'-s', '-k'}, 'nohup': set(), 'nice': {'-n'},
+            'caffeinate': {'-t', '-w'}, 'sudo': {'-u', '-g'}, 'setsid': set(), 'stdbuf': set(), 'time': set(),
+            'exec': {'-a'}, 'command': set(), 'builtin': set(), 'xargs': {'-I', '-n', '-P', '-L', '-d'}}
+KEYWORDS = {'{', '}', '!', 'if', 'then', 'else', 'elif', 'do', 'while', 'until', 'fi', 'done'}
+SHELL = re.compile(r'^(?:ba|z|da|k)?sh$')
+PYTHON = re.compile(r'^python[\d.]*$')
+ASSIGN = re.compile(r'^[A-Za-z_]\w*=')
+SUBST = re.compile(r'(?:\$\(|`)\s*(?:\S*/)?copilot\b')
+PY_COPILOT = re.compile(r'''["']copilot["']''')
+EXEMPT = ('route.py', 'review.sh')
 
 
-def unrouted(cmd):
-    """True when a shell command runs `copilot` itself rather than through `route.py run` or review.sh."""
-    return bool(COPILOT.search(cmd)) and not ROUTED.search(cmd)
+def unrouted(cmd, cwd=None, depth=0):
+    """'copilot' when a shell command runs copilot other than through route.py or review.sh as the invoked program,
+    'unreadable' when it runs a script that cannot be read to check, else None."""
+    if depth > 6:
+        return 'unreadable'
+    lex = shlex.shlex(cmd.replace('\\\n', ' '), posix=True, punctuation_chars=';&|()\n')
+    lex.whitespace, lex.whitespace_split = ' \t\r', True
+    try:
+        toks = list(lex)
+    except ValueError:
+        return 'copilot' if re.search(r'\bcopilot\b', cmd) else None
+    cwd, found, seg = cwd or os.getcwd(), None, []
+    for t in toks + [';']:
+        if t and set(t) <= SEP:
+            res, cwd = segment(seg, cwd, depth)
+            if res == 'copilot':
+                return res
+            found, seg = found or res, []
+        else:
+            seg.append(t)
+    return found
+
+
+def segment(seg, cwd, depth):
+    if any(SUBST.search(t) for t in seg):
+        return 'copilot', cwd
+    i = 0
+    while True:
+        while i < len(seg) and (seg[i] in KEYWORDS or ASSIGN.match(seg[i])):
+            i += 1
+        if i >= len(seg):
+            return None, cwd
+        prog = os.path.basename(seg[i])
+        if prog not in WRAPPERS:
+            break
+        i += 1
+        while i < len(seg) and (seg[i].startswith('-') or prog == 'env' and ASSIGN.match(seg[i])):
+            if prog == 'env' and seg[i] == '-S' and i + 1 < len(seg):
+                return unrouted(seg[i + 1], cwd, depth + 1), cwd
+            i += 2 if seg[i] in WRAPPERS[prog] else 1
+        if prog in ('timeout', 'gtimeout'):
+            i += 1
+    args = seg[i + 1:]
+    if prog == 'copilot':
+        return 'copilot', cwd
+    if prog == 'cd':
+        return None, os.path.join(cwd, os.path.expanduser(args[0] if args else '~'))
+    if prog in EXEMPT:
+        return None, cwd
+    sh, py = SHELL.match(prog), PYTHON.match(prog)
+    if sh or py:
+        j = 0
+        while j < len(args) and args[j][:1] in '-+':
+            opt = args[j]
+            if sh and not opt.startswith('--') and 'c' in opt[1:] or py and opt == '-c':
+                code = args[j + 1] if j + 1 < len(args) else ''
+                return (unrouted(code, cwd, depth + 1) if sh else 'copilot' if PY_COPILOT.search(code) else None), cwd
+            if py and opt == '-m':
+                return None, cwd
+            j += 2 if opt in ('-o', '+o', '-W', '-X') else 1
+        return (script(args[j], cwd, depth, bool(py)) if j < len(args) else None), cwd
+    if '/' in seg[i] or re.search(r'\.(?:z|ba)?sh$', prog):
+        return script(seg[i], cwd, depth), cwd
+    return None, cwd
+
+
+def script(path, cwd, depth, python=False):
+    if os.path.basename(path) in EXEMPT:
+        return None
+    try:
+        with open(os.path.join(cwd, os.path.expandvars(os.path.expanduser(path))), 'rb') as f:
+            raw = f.read()
+    except OSError:
+        return 'unreadable'
+    text = raw.decode('utf-8', 'replace')
+    if not (python or raw.startswith(b'#!') or re.search(r'\.(?:z|ba)?sh$|\.py$', path)):
+        return None
+    if python or path.endswith('.py') or 'python' in text.split('\n', 1)[0]:
+        return 'copilot' if PY_COPILOT.search(text) else None
+    return unrouted(text, cwd, depth + 1)
 
 
 def run_dir(arg=None):
@@ -242,8 +329,11 @@ def main(argv=None):
                 print(f"queue: unknown --after id: {', '.join(unknown)}", file=sys.stderr)
                 return 2
             reason = (args.unrouted_reason or '').strip()
-            if unrouted(args.shell) and not reason:
-                print('queue: this command runs copilot without route.py run; launch it with route.py run, '
+            verdict = unrouted(args.shell)
+            if verdict and not reason:
+                why = ('runs copilot without route.py run' if verdict == 'copilot'
+                       else 'runs a script the queue cannot read to check for copilot')
+                print(f'queue: this command {why}; launch it with route.py run, '
                       'or pass --unrouted-reason "<why>"', file=sys.stderr)
                 return 2
             items.append({'id': args.id, 'cmd': args.shell, 'after': after, 'slot': not args.no_slot,

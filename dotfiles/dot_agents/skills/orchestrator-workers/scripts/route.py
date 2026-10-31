@@ -18,7 +18,9 @@ with exactly the logged model, effort, context and cap under a timeout, sweeps l
 non-zero when copilot failed (its code; 124 timed out), the round hit its cap (3) or errored (4).
 pick prints `MODEL=... EFFORT=... CONTEXT=... CAP=...` (and a `# reason` line) and appends one JSON line to RUN/routes.jsonl.
 pick and run reuse a round's logged decision that has not launched yet; --fresh draws again.
-A review without --author-model takes the model of the item's latest author round log.
+A review without --author-model takes the model of the item's latest author round log. A review whose final model
+(picked, overridden or reused) is in the author's family is refused (exit 2, logged as a refuse event) unless the
+override says same_family=yes: the fallback after a 422 refusal, which the audit then shows as overridden.
 The policies (categories, floors, targets) and the model mapping live in ../references/routes.json.
 Design and reading guide: ../references/routing.md.
 """
@@ -521,6 +523,11 @@ def parse_override(spec):
     out = {}
     for part in filter(None, (p.strip() for p in head.split(','))):
         k, eq, v = (x.strip() for x in part.partition('='))
+        if k == 'same_family':
+            if v != 'yes':
+                raise ValueError('same_family takes only yes (the fallback after a 422 refusal)')
+            out[k] = True
+            continue
         if not eq or k not in OVERRIDE_KEYS or not v:
             raise ValueError(f'bad override field {part!r}; use {", ".join(OVERRIDE_KEYS)}')
         if k == 'model' and v == 'auto':
@@ -537,7 +544,7 @@ def parse_override(spec):
             else:
                 v = int(v)
         out[k] = v
-    if not out:
+    if not any(k in out for k in OVERRIDE_KEYS):
         raise ValueError(f'an override sets at least one of {", ".join(OVERRIDE_KEYS)} before reason=')
     out['reason'] = reason
     return out
@@ -550,6 +557,20 @@ def apply_override(rec, ov, rnd):
             'override': ov, 'routed_choice': base, 'choice': choice,
             'reason': f"override: {ov['reason']} | routed: {rec.get('routed_reason', rec['reason'])}",
             'routed_reason': rec.get('routed_reason', rec['reason'])}
+
+
+def same_family_refused(run, rnd, kind, rec, author, cfg):
+    """Log and report a review whose final model shares the author's family without override same_family=yes."""
+    if kind != 'review' or not author or family(rec['choice']['model'], cfg) != family(author, cfg):
+        return False
+    if (rec.get('override') or {}).get('same_family'):
+        return False
+    log(run, {'event': 'refuse', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'), 'round': rnd,
+              'kind': kind, 'model': rec['choice']['model'], 'author_model': author, 'decision_at': rec.get('at'),
+              'reason': 'review in the author\'s model family'})
+    print(f"route.py: refused: review {rnd} would run {rec['choice']['model']}, the family of author {author}; "
+          'only the fallback after a 422 may, with --override "...,same_family=yes,reason=.."', file=sys.stderr)
+    return True
 
 
 def author_from_log(run, rnd):
@@ -664,16 +685,18 @@ def run_round(a, cfg):
         author_src = fn and f'log:{fn}'
     version = cli_version()
     with locked(os.path.join(run, f'.{rnd}.route')):
-        rec = None if a.fresh else pending(run, rnd)
+        rec, new = None if a.fresh else pending(run, rnd), None
         if rec is not None and ov is not None and rec.get('override') != ov:
-            rec = apply_override(rec, ov, rnd)
-            rec.update(cli_version=version, model_id=rec['choice']['model'])
-            log(run, rec)
+            new = apply_override(rec, ov, rnd)
         elif rec is None:
-            rec = draw(a, run, rnd, kind, text, cfg)
-            rec['inputs']['author_source'] = author_src
+            new = draw(a, run, rnd, kind, text, cfg)
+            new['inputs']['author_source'] = author_src
             if ov is not None:
-                rec = apply_override(rec, ov, rnd)
+                new = apply_override(new, ov, rnd)
+        if same_family_refused(run, rnd, kind, new or rec, a.author_model, cfg):
+            return 2
+        if new is not None:
+            rec = new
             rec.update(cli_version=version, model_id=rec['choice']['model'], worktree=wt)
             log(run, rec)
     c = rec['choice']
@@ -902,8 +925,11 @@ def main(argv=None):
         rec = None if a.fresh else pending(run, a.item)
         if rec is None:
             rec = draw(a, run, a.item, a.kind, text, cfg)
+            rec.update(cli_version=cli_version(), model_id=rec['choice']['model'])
             log(run, rec)
         else:
+            if same_family_refused(run, a.item, a.kind, rec, a.author_model, cfg):
+                return 2
             print(f'# reusing the decision logged at {rec["at"]}; --fresh draws again')
     emit(rec)
     return 0

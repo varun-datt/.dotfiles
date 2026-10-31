@@ -136,6 +136,29 @@ class QueueTest(unittest.TestCase):
         self.assertEqual(items['a']['unrouted_reason'], 'owner probe')
         self.assertNotIn('unrouted_reason', items['b'])
 
+    def test_add_looks_through_wrappers_separators_and_scripts(self):
+        launch = os.path.join(self.tmp.name, 'launch.zsh')
+        with open(launch, 'w') as f:
+            f.write('#!/bin/zsh\nMODEL=m\ntimeout 9000 copilot -C wt --model "$MODEL" -p "$(cat brief.md)"\necho done\n')
+        routed = os.path.join(self.tmp.name, 'ok.sh')
+        with open(routed, 'w') as f:
+            f.write('#!/bin/sh\npython3 -B route.py run x --kind build --brief b.md --worktree w\n')
+        refused = ['env A=1 copilot -p x', 'timeout 900 copilot -p x', 'nohup copilot -p x &', 'A=1 B=2 copilot -p x',
+                   "zsh -c 'copilot -p x'", 'bash -c "cd /tmp && copilot -p x"', "sh -c 'copilot -p x'",
+                   'true; copilot -p x', 'true && copilot -p x', 'false || copilot -p x', 'echo hi | copilot -p x',
+                   'echo review.sh; copilot -p x', 'copilot -p "run review.sh then stop"',
+                   f'nohup zsh -c "cd {self.tmp.name} && zsh launch.zsh x >log 2>&1" &', f'zsh {launch}',
+                   'zsh run1030/launch.zsh x', 'echo "$(copilot -p x)"']
+        for n, cmd in enumerate(refused):
+            with mock.patch('sys.stderr'):
+                self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd), 2, cmd)
+            self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe'), 0, cmd)
+        for n, cmd in enumerate([f'sh {routed}', 'timeout 900 python3 -B /x/route.py run a --kind build --brief b --worktree w',
+                                 'cd /tmp && bash /x/review.sh a-review w >a.log 2>&1', 'echo copilot', 'sleep 1']):
+            self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd), 0, cmd)
+        items = self.items()
+        self.assertEqual({items[f'r{n}']['unrouted_reason'] for n in range(len(refused))}, {'owner probe'})
+
 
 if __name__ == '__main__':
     unittest.main()

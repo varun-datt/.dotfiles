@@ -340,7 +340,7 @@ class Launcher(unittest.TestCase):
                            stdin=self.sp.DEVNULL)
 
     def decisions(self):
-        return [d for d in route.read_decisions(self.run_dir) if d.get('event') != 'launch']
+        return [d for d in route.read_decisions(self.run_dir) if d.get('event') not in ('launch', 'refuse')]
 
     def argv(self):
         with open(self.args) as f:
@@ -451,6 +451,83 @@ class Launcher(unittest.TestCase):
             self.assertEqual(json.load(f), {f'r{i}': i + 1 for i in range(30)})
         self.assertEqual(len(route.read_decisions(self.run_dir)), 30)
         self.assertEqual([f for f in os.listdir(self.run_dir) if f.startswith('.budgets')], [])
+
+    def test_a_numeric_cap_override_is_logged_and_passed(self):
+        p = self.launch('x', 'small', '--override', 'cap=77,reason=owner caps this one')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        [d] = self.decisions()
+        self.assertEqual((d['override'], d['choice']['cap']), ({'cap': 77, 'reason': 'owner caps this one'}, 77))
+        argv = self.argv()
+        self.assertEqual(argv[argv.index('--max-ai-credits') + 1], '77')
+
+    def test_each_configured_mcp_server_is_disabled(self):
+        os.makedirs(os.path.join(self.tmp, '.copilot'))
+        with open(os.path.join(self.tmp, '.copilot', 'mcp-config.json'), 'w') as f:
+            json.dump({'mcpServers': {'alpha': {}, 'beta': {}}}, f)
+        self.assertEqual(self.launch().returncode, 0)
+        argv = self.argv()
+        self.assertEqual([argv[i + 1] for i, v in enumerate(argv) if v == '--disable-mcp-server'], ['alpha', 'beta'])
+
+    def test_load_wait_and_leftovers_sweep_are_called(self):
+        from unittest import mock
+        calls = []
+        args = ['run', 'x', '--kind', 'small', '--run', self.run_dir, '--brief', self.brief, '--worktree', self.wt,
+                '--no-classifier', '--seed', '1', '--history-root', self.env['OW_STATE_ROOT']]
+        with mock.patch.dict(os.environ, self.env, clear=True), \
+                mock.patch.object(route, 'sweep', side_effect=lambda *a: calls.append(a) or 0), \
+                mock.patch('sys.stdout'):
+            self.assertEqual(route.main(args), 0)
+        self.assertEqual(calls, [('load', '--wait', '15'), ('leftovers', self.wt, '--kill')])
+        calls.clear()
+        with mock.patch.dict(os.environ, self.env, clear=True), \
+                mock.patch.object(route, 'sweep', side_effect=lambda *a: calls.append(a) or 1), \
+                mock.patch('sys.stdout'), mock.patch('sys.stderr'):
+            self.assertEqual(route.main(args[:1] + ['y'] + args[2:]), 12)
+        self.assertEqual(calls, [('load', '--wait', '15')])
+
+    def author_log(self, model):
+        with open(os.path.join(self.run_dir, 'x.jsonl'), 'w') as f:
+            f.write(json.dumps({'type': 'user.message', 'data': {'responsesReasoning': {'model': model, 'effort': 'high'}}},
+                               separators=(',', ':')) + '\n')
+
+    def refusals(self):
+        return [d for d in route.read_decisions(self.run_dir) if d.get('event') == 'refuse']
+
+    def test_a_same_family_review_override_is_refused_unless_it_is_the_422_fallback(self):
+        self.author_log(OPUS)
+        p = self.launch('x-review', 'review', '--override', f'model={OPUS},effort=max,reason=owner wants opus')
+        self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+        self.assertEqual([(r['round'], r['model'], r['author_model']) for r in self.refusals()], [('x-review', OPUS, OPUS)])
+        self.assertEqual(self.decisions(), [])
+        p = self.launch('x-review', 'review', '--override', f'model={OPUS},effort=max,same_family=yes,reason=422 from gpt')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        [d] = [x for x in self.decisions() if x.get('event') == 'pick']
+        self.assertTrue(d['override']['same_family'])
+        self.assertEqual(self.argv()[self.argv().index('--model') + 1], OPUS)
+        out = self.audit()
+        self.assertIn('0 routed, 1 overridden', out)
+        self.assertIn('"same_family": true', out)
+        for spec in (f'model={OPUS},same_family=no,reason=x', 'same_family=yes,reason=x'):
+            self.assertEqual(self.launch('x-review', 'review', '--override', spec).returncode, 2, spec)
+
+    def test_a_reused_review_decision_is_refused_when_the_author_turns_out_same_family(self):
+        pick = [sys.executable, '-B', os.path.join(HERE, 'route.py'), 'pick', '--run', self.run_dir, '--item', 'x-review',
+                '--kind', 'review', '--prompt', self.brief, '--no-classifier', '--seed', '1']
+        self.assertEqual(self.sp.run(pick, capture_output=True, env=self.env, stdin=self.sp.DEVNULL).returncode, 0)
+        [d] = self.decisions()
+        self.assertEqual((d['cli_version'], d['model_id']), ('9.9.9-fake', d['choice']['model']))
+        self.author_log(d['choice']['model'])
+        p = self.sp.run(pick, capture_output=True, text=True, env=self.env, stdin=self.sp.DEVNULL)
+        self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
+        p = self.launch('x-review', 'review')
+        self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+        self.assertEqual(len(self.refusals()), 2)
+        p = self.launch('x-review', 'review', '--fresh')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertNotEqual(route.family(self.argv()[self.argv().index('--model') + 1], CFG),
+                            route.family(d['choice']['model'], CFG))
 
     def test_rerunning_pick_or_run_reuses_an_unlaunched_decision_and_fresh_draws_again(self):
         pick = [sys.executable, '-B', os.path.join(HERE, 'route.py'), 'pick', '--run', self.run_dir, '--item', 'x',

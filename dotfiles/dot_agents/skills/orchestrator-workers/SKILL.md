@@ -165,7 +165,8 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"
   filter on gpt-6.1-sol, or a sub-agent that refuses (2026-10-29: 3 rounds, 131 credits, no
   verdict). Tell the reviewer to work in its own session, and after one 422 fall back to Opus at
-  max in a fresh session, saying the review is same-family.
+  max in a fresh session, saying the review is same-family: `--override "model=..,effort=max,same_family=yes,reason=422 .."`.
+  Without `same_family=yes` the launcher refuses any review in the author's family.
 - **An INFERRED vendor fact gets its live check before the merge.** On 2026-10-29 a feature
   built on Copilot's message ids merged, and the live check after it showed the ids were
   snapshot positions: a fix round and a second merge undid it.
@@ -203,8 +204,9 @@ every script in the folder.)
 - **Queue every approved item** with `runqueue.py add <id> --cmd "<launch command>" [--after <ids>]`
   instead of launching it by hand. `--after` names only queued ids, so queue an item that waits on
   one started by hand after that one merges. Queue reviews with `--no-slot` and a `review.sh` command.
-  `add` refuses a command that runs `copilot` without `route.py run` or `review.sh`, unless it
-  carries `--unrouted-reason "<text>"`, which is stored with the item.
+  `add` refuses a command that runs `copilot` unless `route.py run` or `review.sh` is the program it
+  invokes (wrappers such as `env`, `timeout`, `nohup`, `zsh -c '...'` and script files are looked
+  through; a mention does not exempt), unless it carries `--unrouted-reason "<text>"`, which is stored with the item.
 - **After each merge,** call `runqueue.py done <id>`. Items that wait on it become ready.
 - **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
