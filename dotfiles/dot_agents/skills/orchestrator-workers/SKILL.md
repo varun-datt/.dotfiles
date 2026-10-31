@@ -117,6 +117,11 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
 - **The blocking rule:** a finding blocks only if it can happen with the owner's data or in normal
   use. Far-fetched findings are recorded and batched into a later item.
 - The orchestrator accepts or rejects each finding, with a reason.
+- **Tech debt** (`scripts/debt.py`, one `docs/tech-debt.md` per repository): the orchestrator adds a
+  row for each Minor finding and each Major the owner merged as a known gap. A brief that touches a
+  listed file names its rows (`debt.py for-files <repo> <paths>`) and fixes those under about 15
+  minutes. A class seen 3 times becomes a planned item; past about 30 open rows, each run plans one
+  debt item; `debt.py stale` lists rows untouched for 3 runs, to close "won't fix" or keep.
 - Fixes made after the re-review go to a **post-merge review (commit-then-review)** on main, so
   nothing lands unreviewed. Anything still open is recorded for the owner.
 - **Parallelism** is decided per item, from its dependencies and the files it touches.
