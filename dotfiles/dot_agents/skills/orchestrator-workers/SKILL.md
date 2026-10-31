@@ -114,8 +114,9 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   -> trial merge -> merge -> gates on main -> restart owner's instance -> records
 ```
 
-- **The blocking rule:** a finding blocks only if it can happen with the owner's data or in normal
-  use. Far-fetched findings are recorded and batched into a later item.
+- **The blocking rule** ([references/rubric.md](references/rubric.md), owner, 2026-10-30): the
+  reviewer grades every finding by likelihood and impact; Blocker and Major block (I1 at L1–L2; I2
+  at L1–L2; I3 at L1). Minor goes to debt: one line on the repository's `docs/tech-debt.md`.
 - The orchestrator accepts or rejects each finding, with a reason.
 - **Tech debt** (`scripts/debt.py`, one `docs/tech-debt.md` per repository): the orchestrator adds a
   row for each Minor finding and each Major the owner merged as a known gap. A brief that touches a
@@ -208,7 +209,9 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   the foreground, polls at most every 240 s to keep the cache warm, a labelled report with an
   impact map and a case table.
 - **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body.
-- **Reviews:** [review.md](assets/review.md) and the fixes-only [rereview.md](assets/rereview.md).
+- **Reviews:** [review.md](assets/review.md) and the fixes-only [rereview.md](assets/rereview.md),
+  which grade on [references/rubric.md](references/rubric.md) (`review.sh` fills `{{RUBRIC}}`) and
+  tag each finding's cause and class; the re-review checks each fix covered its whole class.
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
   fresh session, so it names the branch, worktree, base commit and ports.
 - **Resume round, sent with `-r`:** [resume.md](assets/resume.md); short, because the session
