@@ -680,7 +680,8 @@ def run_round(a, cfg):
         print(f'route.py run: override refused: {ex}', file=sys.stderr)
         return 2
     brief = os.path.abspath(os.path.expanduser(a.brief))
-    if subprocess.run([sys.executable, '-B', os.path.join(HERE, 'brief.py'), 'check', brief], stdin=subprocess.DEVNULL).returncode:
+    if subprocess.run([sys.executable, '-B', os.path.join(HERE, 'brief.py'), 'check', '--repo', wt, brief],
+                      stdin=subprocess.DEVNULL).returncode:
         return 5
     with open(brief, encoding='utf-8') as f:
         text = f.read()
