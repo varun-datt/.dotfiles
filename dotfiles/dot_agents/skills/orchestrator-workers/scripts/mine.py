@@ -625,13 +625,22 @@ def read_decisions(run):
             lines = f.read().splitlines()
     except FileNotFoundError:
         return out
+    launches = {}
     for i, line in enumerate(lines):
         try:
             d = json.loads(line)
         except ValueError:
             continue
-        if isinstance(d, dict) and d.get('item') and d.get('kind') and isinstance(d.get('choice'), dict):
+        if isinstance(d, dict) and d.get('event') == 'launch' and d.get('round'):
+            launches[(d['round'], d.get('decision_at'))] = d
+        elif isinstance(d, dict) and d.get('item') and d.get('kind') and isinstance(d.get('choice'), dict):
             out.append({**d, '_line': i + 1, '_at': parse_time(d.get('at')) if d.get('at') else None})
+    for d in out:
+        ln = launches.get((d['item'], d.get('at')))
+        if ln:
+            d['_launch'] = ln
+            for k in ('cli_version', 'model_id'):
+                d.setdefault(k, ln.get(k))
     return out
 
 
@@ -659,7 +668,8 @@ def audit(rounds, decisions):
             if isinstance(ov, dict):
                 exp.update({k: ov[k] for k in ('model', 'effort') if ov.get(k)})
             row.update(status='overridden' if ov else 'routed', decision=d['_line'], expected=exp,
-                       override=ov or None,
+                       override=ov or None, cli_version=d.get('cli_version'), model_id=d.get('model_id'),
+                       launched=bool(d.get('_launch')),
                        mismatch=[k for k in ('model', 'effort') if r.get(k) and exp.get(k) and r[k] != exp[k]])
         out.append(row)
     unused = [{'line': d['_line'], 'item': d['item'], 'kind': d['kind'], 'at': d.get('at')}

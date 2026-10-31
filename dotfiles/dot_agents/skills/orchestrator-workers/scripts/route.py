@@ -20,7 +20,8 @@ pick prints `MODEL=... EFFORT=... CONTEXT=... CAP=...` (and a `# reason` line) a
 pick and run reuse a round's logged decision that has not launched yet; --fresh draws again.
 A review without --author-model takes the model of the item's latest author round log. A review whose final model
 (picked, overridden or reused) is in the author's family is refused (exit 2, logged as a refuse event) unless the
-override says same_family=yes: the fallback after a 422 refusal, which the audit then shows as overridden.
+override says same_family=yes: the fallback after a 422 refusal, which the audit then shows as overridden. A reused
+decision falls back on the author saved with it; a review whose author is unknown from all three is refused the same way.
 The policies (categories, floors, targets) and the model mapping live in ../references/routes.json.
 Design and reading guide: ../references/routing.md.
 """
@@ -560,16 +561,20 @@ def apply_override(rec, ov, rnd):
 
 
 def same_family_refused(run, rnd, kind, rec, author, cfg):
-    """Log and report a review whose final model shares the author's family without override same_family=yes."""
-    if kind != 'review' or not author or family(rec['choice']['model'], cfg) != family(author, cfg):
+    """Log and report a review whose final model shares the author's family, or whose author is unknown from the
+    argument, the log and the saved decision, without override same_family=yes."""
+    if kind != 'review' or (rec.get('override') or {}).get('same_family'):
         return False
-    if (rec.get('override') or {}).get('same_family'):
+    author = author or (rec.get('inputs') or {}).get('author_model')
+    if author and family(rec['choice']['model'], cfg) != family(author, cfg):
         return False
+    why = 'review in the author\'s model family' if author else 'review whose author model is unknown'
     log(run, {'event': 'refuse', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'), 'round': rnd,
               'kind': kind, 'model': rec['choice']['model'], 'author_model': author, 'decision_at': rec.get('at'),
-              'reason': 'review in the author\'s model family'})
-    print(f"route.py: refused: review {rnd} would run {rec['choice']['model']}, the family of author {author}; "
-          'only the fallback after a 422 may, with --override "...,same_family=yes,reason=.."', file=sys.stderr)
+              'reason': why})
+    print(f"route.py: refused: {why} ({rnd} would run {rec['choice']['model']}, author {author or 'unknown'}); "
+          'pass --author-model, or only for the fallback after a 422, --override "...,same_family=yes,reason=.."',
+          file=sys.stderr)
     return True
 
 
@@ -914,6 +919,7 @@ def main(argv=None):
         except LookupError as ex:
             print(f'route.py: {ex}', file=sys.stderr)
             return 2
+        rec.update(cli_version=cli_version(), model_id=rec['choice']['model'])
         log(run, rec)
         emit(rec)
         return 0
@@ -925,6 +931,8 @@ def main(argv=None):
         rec = None if a.fresh else pending(run, a.item)
         if rec is None:
             rec = draw(a, run, a.item, a.kind, text, cfg)
+            if same_family_refused(run, a.item, a.kind, rec, a.author_model, cfg):
+                return 2
             rec.update(cli_version=cli_version(), model_id=rec['choice']['model'])
             log(run, rec)
         else:

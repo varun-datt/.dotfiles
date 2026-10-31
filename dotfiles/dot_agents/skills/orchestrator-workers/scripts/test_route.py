@@ -511,23 +511,36 @@ class Launcher(unittest.TestCase):
         for spec in (f'model={OPUS},same_family=no,reason=x', 'same_family=yes,reason=x'):
             self.assertEqual(self.launch('x-review', 'review', '--override', spec).returncode, 2, spec)
 
-    def test_a_reused_review_decision_is_refused_when_the_author_turns_out_same_family(self):
+    def test_a_reused_review_decision_keeps_its_saved_author_for_the_family_check(self):
         pick = [sys.executable, '-B', os.path.join(HERE, 'route.py'), 'pick', '--run', self.run_dir, '--item', 'x-review',
-                '--kind', 'review', '--prompt', self.brief, '--no-classifier', '--seed', '1']
+                '--kind', 'review', '--prompt', self.brief, '--no-classifier', '--seed', '1', '--author-model', OPUS]
         self.assertEqual(self.sp.run(pick, capture_output=True, env=self.env, stdin=self.sp.DEVNULL).returncode, 0)
         [d] = self.decisions()
-        self.assertEqual((d['cli_version'], d['model_id']), ('9.9.9-fake', d['choice']['model']))
-        self.author_log(d['choice']['model'])
-        p = self.sp.run(pick, capture_output=True, text=True, env=self.env, stdin=self.sp.DEVNULL)
+        self.assertEqual((d['cli_version'], d['model_id'], d['inputs']['author_model']), ('9.9.9-fake', GPT, OPUS))
+        p = self.launch('x-review', 'review', '--override', f'model={OPUS},effort=max,reason=owner wants opus')
         self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+        self.assertEqual([(r['model'], r['author_model']) for r in self.refusals()], [(OPUS, OPUS)])
+        self.author_log(GPT)
+        p = self.sp.run(pick[:-2], capture_output=True, text=True, env=self.env, stdin=self.sp.DEVNULL)
+        self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
+        p = self.launch('x-review', 'review', '--fresh')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertEqual(route.family(self.argv()[self.argv().index('--model') + 1], CFG), route.family(OPUS, CFG))
+
+    def test_a_review_whose_author_is_unknown_is_refused_without_same_family_yes(self):
         p = self.launch('x-review', 'review')
         self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
         self.assertFalse(os.path.exists(self.args))
-        self.assertEqual(len(self.refusals()), 2)
-        p = self.launch('x-review', 'review', '--fresh')
+        self.assertEqual([(r['author_model'], r['reason']) for r in self.refusals()],
+                         [(None, 'review whose author model is unknown')])
+        self.assertEqual(self.decisions(), [])
+        p = self.launch('x-review', 'review', '--override', f'model={GPT},same_family=yes,reason=author log lost')
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
-        self.assertNotEqual(route.family(self.argv()[self.argv().index('--model') + 1], CFG),
-                            route.family(d['choice']['model'], CFG))
+        self.assertEqual(self.argv()[self.argv().index('--model') + 1], GPT)
+        import mine
+        [d] = [x for x in mine.read_decisions(self.run_dir) if x.get('event') == 'pick']
+        self.assertEqual((d['_launch']['cli_version'], d['_launch']['model_id']), ('9.9.9-fake', GPT))
 
     def test_rerunning_pick_or_run_reuses_an_unlaunched_decision_and_fresh_draws_again(self):
         pick = [sys.executable, '-B', os.path.join(HERE, 'route.py'), 'pick', '--run', self.run_dir, '--item', 'x',
