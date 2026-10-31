@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build quality: why first reviews block</title>
+<style>
+:root {
+  --ink: oklch(0.400 0.110 250.0);
+  --gold: oklch(0.650 0.146 60.0);
+  --count: oklch(0.480 0.030 250.0);
+  --text: oklch(0.250 0.020 250.0);
+  --muted: oklch(0.470 0.020 250.0);
+  --rule: oklch(0.900 0.008 250.0);
+  --bg: oklch(0.990 0.003 250.0);
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+main { max-width: 1080px; margin: 0 auto; padding: 24px 32px 40px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 16px; margin: 0 0 2px; }
+p { margin: 4px 0 8px; max-width: 80ch; }
+.sub { color: var(--muted); }
+section { border-top: 1px solid var(--rule); padding: 14px 0 10px; }
+svg text { font-family: inherit; }
+.lab { font-size: 13px; fill: var(--text); }
+.val { font-size: 12px; fill: var(--text); font-variant-numeric: tabular-nums; }
+.tick { font-size: 11px; fill: var(--muted); }
+.grid { stroke: var(--rule); stroke-width: 1; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 8px 0; }
+.stat { border: 1px solid var(--rule); padding: 8px 10px; }
+.stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 12.5px; }
+table.m { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.m th, table.m td { border-bottom: 1px solid var(--rule); padding: 5px 4px; text-align: center; }
+table.m th.p { text-align: left; font-weight: 600; width: 34%; }
+table.m thead th { font-weight: 600; font-size: 12px; vertical-align: bottom; }
+table.m td { color: var(--text); font-size: 15px; }
+.n { color: var(--muted); font-weight: 400; }
+.first { display: inline-block; margin-left: 6px; padding: 0 5px; border: 1px solid var(--gold); color: oklch(0.450 0.110 60.0); font-size: 11px; font-weight: 600; }
+.notes { font-size: 12.5px; color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+</style>
+</head>
+<body>
+<main>
+<h1>Build quality: why first reviews block</h1>
+<p class="sub">Four unattended runs, 2026-10-27 to 10-30: 37 first reviews, 264 findings, 133 accepted blockers. Companion to <code>research/2026-10-30-build-quality.md</code>; data in <code>research/2026-10-30-build-quality/findings.csv</code>.</p>
+
+<section>
+<h2>Most blockers are cases nobody listed, not briefs that said nothing</h2>
+<p>Missed event orders, adjacent paths and unchecked library facts make half of the accepted blockers; with wrong structures, edge values and failure paths, three quarters. A brief silent on the rule caused 2.</p>
+<svg viewBox="0 0 1000 408" width="100%" role="img" aria-label="Causes of 133 accepted blockers">
+<line x1="300.0" y1="10" x2="300.0" y2="374" class="grid"/><text x="300.0" y="388" class="tick" text-anchor="middle">0</text>
+<line x1="405.0" y1="10" x2="405.0" y2="374" class="grid"/><text x="405.0" y="388" class="tick" text-anchor="middle">5</text>
+<line x1="510.0" y1="10" x2="510.0" y2="374" class="grid"/><text x="510.0" y="388" class="tick" text-anchor="middle">10</text>
+<line x1="615.0" y1="10" x2="615.0" y2="374" class="grid"/><text x="615.0" y="388" class="tick" text-anchor="middle">15</text>
+<line x1="720.0" y1="10" x2="720.0" y2="374" class="grid"/><text x="720.0" y="388" class="tick" text-anchor="middle">20</text>
+<line x1="825.0" y1="10" x2="825.0" y2="374" class="grid"/><text x="825.0" y="388" class="tick" text-anchor="middle">25</text>
+<line x1="930.0" y1="10" x2="930.0" y2="374" class="grid"/><text x="930.0" y="388" class="tick" text-anchor="middle">30</text>
+<text x="290" y="27" class="lab" text-anchor="end">Event order, race or restart</text>
+<rect x="300" y="15" width="525.0" height="16" fill="var(--ink)"/>
+<text x="831.0" y="27" class="val">25 · cumulative 19%</text>
+<text x="290" y="53" class="lab" text-anchor="end">Adjacent path, caller or record format</text>
+<rect x="300" y="41" width="525.0" height="16" fill="var(--ink)"/>
+<text x="831.0" y="53" class="val">25 · cumulative 38%</text>
+<text x="290" y="79" class="lab" text-anchor="end">Library or platform fact</text>
+<rect x="300" y="67" width="420.0" height="16" fill="var(--ink)"/>
+<text x="726.0" y="79" class="val">20 · cumulative 53%</text>
+<text x="290" y="105" class="lab" text-anchor="end">Wrong structure or identity</text>
+<rect x="300" y="93" width="252.0" height="16" fill="var(--ink)"/>
+<text x="558.0" y="105" class="val">12 · cumulative 62%</text>
+<text x="290" y="131" class="lab" text-anchor="end">Edge value or scale</text>
+<rect x="300" y="119" width="231.0" height="16" fill="var(--ink)"/>
+<text x="537.0" y="131" class="val">11 · cumulative 70%</text>
+<text x="290" y="157" class="lab" text-anchor="end">Failure or timeout path</text>
+<rect x="300" y="145" width="189.0" height="16" fill="var(--ink)"/>
+<text x="495.0" y="157" class="val">9 · cumulative 77%</text>
+<text x="290" y="183" class="lab" text-anchor="end">Explicit requirement missed</text>
+<rect x="300" y="171" width="147.0" height="16" fill="var(--ink)"/>
+<text x="453.0" y="183" class="val">7 · cumulative 82%</text>
+<text x="290" y="209" class="lab" text-anchor="end">Outside input or trust boundary</text>
+<rect x="300" y="197" width="147.0" height="16" fill="var(--ink)"/>
+<text x="453.0" y="209" class="val">7 · cumulative 87%</text>
+<text x="290" y="235" class="lab" text-anchor="end">Existing contract not read</text>
+<rect x="300" y="223" width="105.0" height="16" fill="var(--ink)"/>
+<text x="411.0" y="235" class="val">5 · cumulative 91%</text>
+<text x="290" y="261" class="lab" text-anchor="end">Test could not fail</text>
+<rect x="300" y="249" width="105.0" height="16" fill="var(--ink)"/>
+<text x="411.0" y="261" class="val">5 · cumulative 95%</text>
+<text x="290" y="287" class="lab" text-anchor="end">Brief silent</text>
+<rect x="300" y="275" width="42.0" height="16" fill="var(--ink)"/>
+<text x="348.0" y="287" class="val">2 · cumulative 96%</text>
+<text x="290" y="313" class="lab" text-anchor="end">Convention</text>
+<rect x="300" y="301" width="42.0" height="16" fill="var(--ink)"/>
+<text x="348.0" y="313" class="val">2 · cumulative 98%</text>
+<text x="290" y="339" class="lab" text-anchor="end">UI quality</text>
+<rect x="300" y="327" width="42.0" height="16" fill="var(--ink)"/>
+<text x="348.0" y="339" class="val">2 · cumulative 99%</text>
+<text x="290" y="365" class="lab" text-anchor="end">Helper not reused</text>
+<rect x="300" y="353" width="21.0" height="16" fill="var(--ink)"/>
+<text x="327.0" y="365" class="val">1 · cumulative 100%</text>
+<text x="300" y="404" class="tick">accepted blockers (reviewer said blocking, orchestrator accepted), n = 133, four runs</text></svg>
+</section>
+
+<section>
+<h2>A quarter arose after the first build</h2>
+<p>Fix rounds fixed the case a finding named and left a sibling of the same class, or broke something nearby. The fix template says "do not widen the scope".</p>
+<svg viewBox="0 0 1000 174" width="100%" role="img" aria-label="Where blockers arose">
+<line x1="300.0" y1="10" x2="300.0" y2="140" class="grid"/><text x="300.0" y="154" class="tick" text-anchor="middle">0</text>
+<line x1="426.0" y1="10" x2="426.0" y2="140" class="grid"/><text x="426.0" y="154" class="tick" text-anchor="middle">20</text>
+<line x1="552.0" y1="10" x2="552.0" y2="140" class="grid"/><text x="552.0" y="154" class="tick" text-anchor="middle">40</text>
+<line x1="678.0" y1="10" x2="678.0" y2="140" class="grid"/><text x="678.0" y="154" class="tick" text-anchor="middle">60</text>
+<line x1="804.0" y1="10" x2="804.0" y2="140" class="grid"/><text x="804.0" y="154" class="tick" text-anchor="middle">80</text>
+<line x1="930.0" y1="10" x2="930.0" y2="140" class="grid"/><text x="930.0" y="154" class="tick" text-anchor="middle">100</text>
+<text x="290" y="27" class="lab" text-anchor="end">first build</text><rect x="300" y="15" width="623.7" height="16" fill="var(--ink)"/><text x="929.7" y="27" class="val">99</text>
+<text x="290" y="53" class="lab" text-anchor="end">fix round: sibling left</text><rect x="300" y="41" width="126.0" height="16" fill="var(--ink)"/><text x="432.0" y="53" class="val">20</text>
+<text x="290" y="79" class="lab" text-anchor="end">fix round: new regression</text><rect x="300" y="67" width="56.7" height="16" fill="var(--ink)"/><text x="362.7" y="79" class="val">9</text>
+<text x="290" y="105" class="lab" text-anchor="end">fix round: other</text><rect x="300" y="93" width="6.3" height="16" fill="var(--ink)"/><text x="312.3" y="105" class="val">1</text>
+<text x="290" y="131" class="lab" text-anchor="end">post-merge review</text><rect x="300" y="119" width="25.2" height="16" fill="var(--ink)"/><text x="331.2" y="131" class="val">4</text>
+<text x="300" y="170" class="tick">accepted blockers by where they arose, n = 133</text></svg>
+</section>
+
+<section>
+<h2>Where it stands today</h2>
+<div class="stats">
+<div class="stat"><b>8%</b><span>first reviews clean (3 of 37), orchestrator's rule</span></div>
+<div class="stat"><b>2.68</b><span>accepted blockers per first review</span></div>
+<div class="stat"><b>1.77</b><span>fix rounds per item that had a fix loop (31 items)</span></div>
+<div class="stat"><b>37%</b><span>of all credits went to fix rounds and re-reviews (13,748 of 36,867)</span></div>
+</div>
+<p class="notes">Target: 25% clean and at most 1.5 blockers per first review over the next 25 first reviews. Decide on blockers per review: a drop to 1.5 has about 75 to 80% power after 12 first reviews; the clean rate needs about 59 per group.</p>
+</section>
+
+<section>
+<h2>Which proposal answers which cause</h2>
+<p>● the proposal's main target; ○ helps. Column headers carry the blocker count for each cause.</p>
+<table class="m"><thead><tr><th class="p">Proposal \ cause (blockers)</th><th title="Event order, race or restart">ORDER<br><span class="n">25</span></th><th title="Adjacent path, caller or record format">ADJ<br><span class="n">25</span></th><th title="Library or platform fact">PLAT<br><span class="n">20</span></th><th title="Wrong structure or identity">DESIGN<br><span class="n">12</span></th><th title="Edge value or scale">EDGE<br><span class="n">11</span></th><th title="Failure or timeout path">FAIL<br><span class="n">9</span></th><th title="Explicit requirement missed">MUST<br><span class="n">7</span></th><th title="Outside input or trust boundary">BOUND<br><span class="n">7</span></th><th title="Existing contract not read">READ<br><span class="n">5</span></th><th title="Test could not fail">TEST<br><span class="n">5</span></th><th title="Brief silent">SPEC<br><span class="n">2</span></th><th title="Convention">CONV<br><span class="n">2</span></th><th title="UI quality">UIQ<br><span class="n">2</span></th><th title="Helper not reused">REUSE<br><span class="n">1</span></th></tr></thead><tbody><tr><th class="p">P1 Map, cases and facts in the preamble <span class="first">try first</span></th><td>●</td><td>●</td><td>●</td><td>○</td><td>●</td><td>●</td><td>○</td><td>●</td><td>●</td><td>●</td><td></td><td>○</td><td>○</td><td>●</td></tr><tr><th class="p">P2 Testable MUSTs, RISK, known cases, facts in the brief</th><td>○</td><td>○</td><td>○</td><td>○</td><td></td><td></td><td>●</td><td></td><td></td><td></td><td>●</td><td></td><td></td><td></td></tr><tr><th class="p">P3 Fix rounds fix the class <span class="first">try first</span></th><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td></td><td></td><td></td><td></td><td>○</td><td></td><td></td><td>○</td><td></td></tr><tr><th class="p">P4 Cause tags, defect log, mine.py --quality <span class="first">try first</span></th><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td><td>○</td></tr><tr><th class="p">P5 Orchestrator: split, live-check facts, catch up</th><td>○</td><td>○</td><td>○</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>
+<p class="notes">P1 to P5 are in the note's Q4. INFERRED: together they would likely have prevented 55 to 70 of the 133 blockers, for 15 to 25% more build credits. P4 prevents nothing by itself; it keeps the case lists true and makes the measure automatic.</p>
+</section>
+</main>
+</body>
+</html>
