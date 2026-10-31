@@ -1,0 +1,237 @@
+run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evidence,accepted,fixed_later,paraphrase
+2026-10-27,e-fence,review(in-chat),1,SEC,blocking,Major,L1,I2,unknown,yes,fix-report,Knowledge-search hits from others' repositories reach the agent unfenced
+2026-10-27,e-fence,review(in-chat),2,SEC,blocking,Major,L1,I2,unknown,yes,fix-report,Attachment name and content sit in tags the content can close
+2026-10-27,e-fence,review(in-chat),3,SEC,blocking,Major,L1,I2,unknown,yes,fix-report,Task retry prompt carries failed check output unfenced
+2026-10-27,e-fence,review(in-chat),4,REL,non-blocking,Minor,L3,I3,unknown,yes,fix-report,Refused id gives HTTP 500 after a session was already created
+2026-10-27,e-fence,review(in-chat),R,SEC,recorded,Minor,L2,I3,unknown,deferred,no,"Engine-output values and owner-text tags left unfenced, recorded for later"
+2026-10-27,v5-edit,review(in-chat),1,DATA,blocking,Major,L2,I2,unknown,yes,fix-report,Opening a dirty file in a second view silently replaces the draft with disk text
+2026-10-27,v5-edit,review(in-chat),2,DATA,blocking,Blocker,L2,I1,unknown,yes,fix-report,Saving a NUL-free non-UTF-8 file rewrites its original bytes
+2026-10-27,v5-edit,review(in-chat),3,SEC,blocking,Minor,L3,I1,unknown,yes,fix-report,Folder swapped for a symlink between check and rename writes outside workspace
+2026-10-27,v5-edit,review(in-chat),R1,REL,recorded,Minor,L3,I3,unknown,deferred,no,Hash check not atomic with the rename
+2026-10-27,v5-edit,review(in-chat),R2,DATA,recorded,Minor,L2,I3,unknown,deferred,no,No unload guard for unsaved drafts; file ownership not preserved
+2026-10-27,v5-edit,review(in-chat),R3,MAINT,recorded,Nit,L1,I4,unknown,deferred,no,Stale code comment
+2026-10-27,ops-stable,review(in-chat),1,COMP,blocking,Major,L1,I2,unknown,yes,fix-report,"Fresh clone on newest tag skips install and build, then start refuses"
+2026-10-27,ops-stable,review(in-chat),2,COR,blocking,Major,L2,I2,unknown,yes,fix-report,"Tag check ignores untracked files, so a tag can miss a helper file"
+2026-10-27,ops-stable,review(in-chat),3,REL,blocking,Minor,L3,I2,unknown,yes,fix-report,Shutdown signals a lock-file PID without checking it is still the host
+2026-10-27,ops-stable,review(in-chat),4,DATA,blocking,Minor,L3,I1,unknown,yes,fix-report,Backup retention can delete the live home if the owner points both paths together
+2026-10-27,ops-stable,review(in-chat),5,VERIF,blocking,Major,L2,I2,unknown,yes,fix-report,Dependency audit error is read as no findings and allows tagging
+2026-10-27,gaps55,review(in-chat),1,REL,blocking,Major,L1,I2,unknown,yes,fix-report,Oversize or unreadable attachment aborts the whole send
+2026-10-27,gaps55,review(in-chat),2,COR,blocking,Major,L2,I2,unknown,yes,fix-report,Cursor adapter drops the skipped-attachment note the brief requires
+2026-10-27,gaps55,review(in-chat),R,SEC,recorded,Major,L1,I2,unknown,deferred,no,Mid-size text files still go to the SDK by path unfenced
+2026-10-27,pr80,review(in-chat),1,PERF,blocking,Minor,L2,I3,unknown,yes,fix-report,Size limit applied after full download and counts characters not bytes
+2026-10-27,pr80,review(in-chat),2,UX,blocking,Major,L2,I2,unknown,yes,fix-report,Render mutates a prop set; StrictMode shows thread headers without bodies
+2026-10-27,pr80,review(in-chat),3,DATA,blocking,Major,L2,I2,unknown,yes,fix-report,File view reads newer commits than the change list after a push
+2026-10-27,p7-cursor,review(in-chat),1,SEC,blocking,Blocker,L2,I1,unknown,yes,yes,"Agent file writes can land outside the workspace, silently under auto-approve"
+2026-10-27,p7-cursor,review(in-chat),2,SEC,blocking,Blocker,L1,I1,unknown,yes,partly,One approval authorises any later command or file of the same kind
+2026-10-27,p7-cursor,review(in-chat),3,REL,blocking,Major,L2,I2,unknown,yes,no,A Stop during folder creation does not stop the approved write
+2026-10-27,p7-cursor,review(in-chat),4,REL,blocking,Major,L2,I2,unknown,yes,no,Stop sends SIGTERM only; commands ignoring it keep running
+2026-10-27,p7-cursor,review(in-chat),5,PERF,blocking,Minor,L2,I3,unknown,yes,yes,Agent can lift the terminal output limit; released terminals never freed
+2026-10-27,p7-cursor,rv-p7-fix1,1,SEC,blocking,Minor,L3,I1,INFERRED,deferred,no,Parent folder swapped for a symlink after the final check
+2026-10-27,p7-cursor,rv-p7-fix1,2,SEC,blocking,Blocker,L2,I1,INFERRED,yes,yes,Flattened approval key lets literal arguments become shell text
+2026-10-27,p7-cursor,rv-p7-fix1,3,REL,blocking,Minor,L3,I2,INFERRED,yes,yes,Stopped turn A consumes turn B's grant across an await
+2026-10-27,p7-cursor,rv-p7-fix1,4,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Descendant ignoring SIGTERM survives Stop once its leader exits
+2026-10-27,p7-cursor,rv-p7-fix1,5,DATA,blocking,Minor,L3,I1,INFERRED,yes,yes,Symlink plus .. path truncates a different file (new)
+2026-10-27,p7-cursor,rv-p7-post,1,VERIF,blocking,Major,L1,I2,VERIFIED,yes,yes,"SDK strips tool-call id, so the claimed approval match never runs"
+2026-10-27,p7-cursor,rv-p7-post,2,SEC,blocking,Blocker,L2,I1,INFERRED,yes,partly,"Approval ignores env and cwd, so BASH_ENV changes what runs"
+2026-10-27,p7-cursor,rv-p7-post,3,REL,pre-existing,Pre-existing,L2,I3,INFERRED,yes,yes,Stop during target resolution still opens an approval card
+2026-10-27,p7-cursor,rv-p7-post,4,SEC,pre-existing,Pre-existing,L3,I1,INFERRED,yes,yes,close() keeps grants; a late request during Restart can use one
+2026-10-27,p7-cursor,rv-p7-fix3,1,SEC,blocking,Blocker,L2,I1,INFERRED,unknown,unknown,Terminal env secrets shown on the approval card and written to the log
+2026-10-27,p7-cursor,rv-p7-fix3,2,UX,non-blocking,Nit,L2,I4,INFERRED,unknown,unknown,Trailing slash in cwd asks for a second approval
+2026-10-27,p7-cursor,rv-p7-fix3,3,UX,non-blocking,Minor,L2,I3,INFERRED,unknown,unknown,Ordinary approval card still hides env and cwd behind Details
+2026-10-27,t7-codeintel,rv-t7-codeintel,1,SEC,blocking,Blocker,L2,I1,INFERRED,yes,yes,In-folder symlink results return source from outside the folder
+2026-10-27,t7-codeintel,rv-t7-codeintel,2,SEC,blocking,Blocker,L1,I1,INFERRED,yes,no,Hover returns signatures from a sibling folder
+2026-10-27,t7-codeintel,rv-t7-codeintel,3,SEC,blocking,Minor,L3,I1,INFERRED,yes,yes,File name with newlines escapes the data fence
+2026-10-27,t7-codeintel,rv-t7-codeintel,4,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Initialisation timeout leaves a dead client that is never replaced
+2026-10-27,t7-codeintel,rv-t7-fix1,1,SEC,blocking,Minor,L2,I3,INFERRED,unknown,unknown,Local alias still leaks outside signature through hover
+2026-10-27,p6-runs,rv-p6-runs,1,COR,blocking,Blocker,L1,I1,INFERRED,yes,yes,"After a send-back, a finish merges without the owner; test asserts it"
+2026-10-27,p6-runs,rv-p6-runs,2,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Failed orchestrator notice rolls item back while the fix runs
+2026-10-27,p6-runs,rv-p6-runs,3,REL,blocking,Major,L2,I2,INFERRED,yes,yes,tell resolves even when Stop prevented the send
+2026-10-27,p6-runs,rv-p6-runs,4,REL,blocking,Minor,L3,I2,INFERRED,yes,yes,Stale timeout callback overwrites the next round's state
+2026-10-27,p6-runs,rv-p6-runs,5,SEC,non-blocking,Minor,L3,I2,INFERRED,yes,yes,Finding text goes into the worker prompt unfenced
+2026-10-27,diagram,rv-diagram,1,UX,blocking,Minor,L3,I3,INFERRED,yes,fix-report,Fit cannot show a very wide diagram because of a fixed zoom floor
+2026-10-27,diagram,rv-diagram,2,UX,blocking,Major,L1,I2,INFERRED,yes,fix-report,"Toolbar covers the top of the drawing, against the owner's ruling"
+2026-10-27,diagram,rv-diagram,3,SEC,non-blocking,Minor,L3,I3,INFERRED,yes,fix-report,Saved SVG keeps external references that load outside the app
+2026-10-27,files54,rv-files54,1,COR,blocking,Major,L1,I2,INFERRED,yes,fix-report,After idle expiry the finder returns a stale listing missing new files
+2026-10-27,files54,rv-files54,2,COR,blocking,Major,L2,I2,INFERRED,yes,fix-report,Ignore-file or index changes never reload the listing
+2026-10-27,files54,rv-files54,3,PERF,blocking,Minor,L3,I3,INFERRED,yes,fix-report,Registration arriving after stop leaks a watcher
+2026-10-27,files54,rv-files54,4,REL,blocking,Major,L2,I2,INFERRED,yes,fix-report,A watcher error stops change notifications for good
+2026-10-27,files54,rv-files54,5,REL,blocking,Minor,L2,I3,INFERRED,deferred,no,Rename reported with one path leaves the language server stale
+2026-10-27,files54,rv-files54,6,COMP,blocking,Minor,L3,I3,INFERRED,deferred,no,Case-insensitive paths can miss open-file exclusion on macOS
+2026-10-27,files54,rv-files54,7,PERF,non-blocking,Minor,L2,I3,INFERRED,unknown,no,Sessions at / or home get unbounded recursive watches
+2026-10-27,files54,rv-files54,8,VERIF,non-blocking,Minor,L1,I3,INFERRED,unknown,no,Watcher tests have timing that masks failures and missing assertions
+2026-10-27,ux4,rv-ux4,1,VERIF,non-blocking,Minor,L1,I3,INFERRED,unknown,no,Hover-colour test passes when the new rule is deleted
+2026-10-27,ux4,rv-ux4,2,VERIF,non-blocking,Minor,L1,I3,INFERRED,unknown,no,Model-switch test fake bypasses the real default-effort mapping
+2026-10-27,ux4,rv-ux4,3,VERIF,non-blocking,Minor,L1,I3,INFERRED,unknown,no,Palette test does not cover message rows or keyboard selection
+2026-10-28,pr-overview,rv-pr-overview,F1,COR,blocking,Major,L1,I2,INFERRED,yes,yes,"Reviewer-count policy can vanish, so the strip says nothing blocks"
+2026-10-28,pr-overview,rv-pr-overview,F2,COR,blocking,Major,L1,I2,INFERRED,yes,partly,Optional builds and checks shown as completion blockers
+2026-10-28,pr-overview,rv-pr-overview,F3,REL,blocking,Major,L2,I2,INFERRED,yes,yes,"Failed reads become empty, so the strip reads as clear"
+2026-10-28,pr-overview,rv-pr-overview,F4,COR,blocking,Minor,L1,I4,VERIFIED,no,no,"Linked items read with a read-only POST, not the literal GET asked"
+2026-10-28,pr-overview,rv-pr-overview,F5,VERIF,blocking,Major,L1,I2,VERIFIED,yes,yes,Brief-named blocker cases and route-level tests missing
+2026-10-28,pr-overview,rv-pr-overview,F6,UX,non-blocking,Nit,L2,I4,INFERRED,yes,yes,Transient photo failure cached as missing until restart
+2026-10-28,pr-overview,rv-pr-overview,F7,UX,non-blocking,Nit,L1,I4,VERIFIED,no,no,Reviewers with no vote get no mark
+2026-10-28,pr-overview,rv-pr-overview,C,REPORT,blocking,Correction,L1,I3,VERIFIED,yes,yes,Report overclaims: only-blockers and every-reviewer-mark statements
+2026-10-28,pr-overview,rr-pr-overview,F2b,COR,blocking,Major,L2,I2,INFERRED,yes,fix-report,Not-applicable path-filtered build policy still blocks
+2026-10-28,pr-overview,rr-pr-overview,F4b,COR,blocking,Minor,L1,I4,VERIFIED,no,no,POST read still used (repeat of rejected finding)
+2026-10-28,pr-overview,rr-pr-overview,F1b,COR,non-blocking,Minor,L3,I3,INFERRED,no,no,Pending required reviewer stands for every reviewer policy
+2026-10-28,pr-overview,rr-pr-overview,F6b,UX,non-blocking,Nit,L2,I4,VERIFIED,no,no,Mounted avatar does not retry after a transient failure
+2026-10-28,pr-overview,rr-pr-overview,C,REPORT,non-blocking,Correction,L1,I3,VERIFIED,yes,fix-report,Report claims a unit test that does not exist
+2026-10-28,big-files,rv-big-files,1,PERF,blocking,Minor,L3,I3,INFERRED,partly,yes,File growing or swapped between stat and read is read whole
+2026-10-28,big-files,rv-big-files,2,COR,blocking,Minor,L3,I2,INFERRED,yes,yes,"Large-file confirmation sends the current list, not the files it named"
+2026-10-28,big-files,rv-big-files,3,DATA,blocking,Major,L1,I2,INFERRED,yes,yes,"Editing a message with a large file rewinds, fails, and drops its attachments"
+2026-10-28,big-files,rv-big-files,4,COR,blocking,Major,L2,I2,VERIFIED,yes,yes,"Binary check now reads only the first 64 KB, against the brief"
+2026-10-28,big-files,rv-big-files,5,SEC,blocking,Pre-existing,L2,I2,VERIFIED,no,no,File name from @ completion reaches the model unfenced
+2026-10-28,big-files,rv-big-files,6,COR,non-blocking,Minor,L2,I3,VERIFIED,yes,yes,Confirmed /plan message resends different text
+2026-10-28,big-files,rv-big-files,7,VERIF,non-blocking,Minor,L1,I3,INFERRED,yes,partly,Tests would not catch a whole-file read or a dropped adapter payload
+2026-10-28,big-files,rv-big-files,8,REL,far-fetched,Minor,L3,I3,INFERRED,no,no,File swapped for a FIFO can block the read
+2026-10-28,big-files,rv-big-files,9,COR,confirmed-claim,Major,L1,I2,VERIFIED,yes,yes,"Cursor gets none of the normal attachments (worker's own finding, confirmed)"
+2026-10-28,big-files,rv-big-files,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,Report overstates binary handling and misstates /plan behaviour
+2026-10-28,big-files,rr-big-files,1,REL,non-blocking,Nit,L3,I4,INFERRED,unknown,no,Endpoint answers 500 or 200 to non-object JSON; FIFO open can block
+2026-10-28,big-files,rr-big-files,2,VERIF,non-blocking,Minor,L1,I3,VERIFIED,unknown,no,Race and read-length cases still untested
+2026-10-28,credit-tracker,rv-credit-tracker,1,SEC,blocking,Minor,L2,I3,INFERRED,yes,partly,"Tool error text, possibly holding a login, written to the local log"
+2026-10-28,credit-tracker,rv-credit-tracker,2,COR,blocking,Major,L1,I2,INFERRED,yes,partly,Per-run report misses overlaps with other runs
+2026-10-28,credit-tracker,rv-credit-tracker,3,COR,non-blocking,Major,L1,I2,VERIFIED,yes,yes,Missing credit figure silently replaced by a different counter that reads 0
+2026-10-28,credit-tracker,rv-credit-tracker,4,DATA,non-blocking,Major,L1,I2,INFERRED,yes,yes,Tests can change the owner's real armed run state
+2026-10-28,credit-tracker,rv-credit-tracker,5,VERIF,non-blocking,Minor,L1,I3,VERIFIED,yes,yes,"Fake gh ignores arguments, environment and stdin"
+2026-10-28,credit-tracker,rv-credit-tracker,6,REL,far-fetched,Minor,L3,I3,INFERRED,yes,yes,Invalid UTF-8 output can stop an end stamp
+2026-10-28,credit-tracker,rv-credit-tracker,7,VERIF,far-fetched,Nit,L3,I4,INFERRED,no,no,Timeout test could race under heavy scheduling delay
+2026-10-28,credit-tracker,rv-credit-tracker,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,Report says duplicate end behaves as before; it now fails
+2026-10-28,credit-tracker,rr-credit-tracker,1b,SEC,blocking,Minor,L3,I3,INFERRED,yes,yes,Start records from the earlier version still carry error text into end
+2026-10-28,credit-tracker,rr-credit-tracker,2b,COR,blocking,Major,L1,I2,INFERRED,yes,no,Still-open items ignored when computing overlaps
+2026-10-28,credit-tracker,rr-credit-tracker,3,DOC,non-blocking,Minor,L1,I4,VERIFIED,yes,yes,Skill page omits one reason code
+2026-10-28,credit-tracker,pm-credit-tracker,1,COR,blocking,Major,L1,I2,VERIFIED,yes,fix-report,Items finished with add stay running and mark later work as overlapping
+2026-10-28,credit-tracker,pm-credit-tracker,2,SEC,non-blocking,Nit,L3,I4,VERIFIED,unknown,no,Reason-code prefix check admits a mixed known-code string
+2026-10-28,insights-history,rv-insights-history,1,PERF,blocking,Major,L1,I3,VERIFIED,yes,yes,History parsing blocks the host; owner has 137 MiB single lines
+2026-10-28,insights-history,rv-insights-history,2,SEC,non-blocking,Minor,L3,I3,VERIFIED,yes,yes,"Linked folders below the roots are followed, against the report"
+2026-10-28,insights-history,rv-insights-history,3,COR,non-blocking,Minor,L3,I2,VERIFIED,yes,yes,Autopilot or sub-agent messages may count as owner turns
+2026-10-28,gaps-1,rv-gaps-1,1,SEC,blocking,Minor,L3,I2,VERIFIED,yes,fix-report,Pin confirmations echo stored titles unfenced
+2026-10-28,gaps-1,rv-gaps-1,2,SEC,blocking,Major,L2,I2,VERIFIED,yes,fix-report,Worker reply enters the orchestrator's next message unfenced
+2026-10-28,gaps-1,rv-gaps-1,3,SEC,blocking,Minor,L3,I2,VERIFIED,yes,fix-report,Finish result names repository files unfenced
+2026-10-28,gaps-1,rv-gaps-1,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,Report says confirmations echo only the agent's own input
+2026-10-28,gaps-3,rv-gaps-3,1,SEC,blocking,Minor,L3,I1,VERIFIED,yes,fix-report,Approval key and run folder disagree for link/.. paths
+2026-10-28,gaps-3,rv-gaps-3,2,SEC,blocking,Pre-existing,L2,I3,VERIFIED,no,no,Hover can show outside-derived inferred types
+2026-10-28,gaps-3,rv-gaps-3,3,SEC,non-blocking,Pre-existing,L3,I1,INFERRED,no,no,Symlink retarget race between check and run remains
+2026-10-28,gaps-3,rv-gaps-3,4,COR,non-blocking,Minor,L3,I3,INFERRED,no,no,Case rule measured on a mount point's parent can hide changes
+2026-10-28,gaps-3,rv-gaps-3,C,REPORT,correction,Correction,L1,I3,VERIFIED,unknown,unknown,Report says all three gaps fixed; too broad
+2026-10-28,canvas-a,rv-canvas-a,1,SEC,blocking,Minor,L3,I1,INFERRED,no,no,Canvas scripts can leak data through WebRTC lookups
+2026-10-28,canvas-a,rv-canvas-a,2,DATA,blocking,Major,L1,I2,INFERRED,yes,fix-report,Saved canvas cards break after a relaunch on a new port
+2026-10-28,canvas-a,rv-canvas-a,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,fix-report,"Report overclaims no network, symlink refusal and a no-store test"
+2026-10-29,stable-env,stable-env-review1,1,COMP,blocking,Major,L1,I2,VERIFIED,yes,fix-report,Stable start from an app terminal runs Electron as Node and fails
+2026-10-29,stable-env,stable-env-review1,2,COMP,blocking,Major,L2,I2,VERIFIED,yes,fix-report,Clearing every AMC_ variable drops owner settings the copy needs
+2026-10-29,stable-env,stable-env-review1,3,VERIF,non-blocking,Minor,L1,I3,VERIFIED,yes,fix-report,Mixed-case variable removal untested
+2026-10-29,stable-env,stable-env-review1,4,DOC,non-blocking,Minor,L1,I4,VERIFIED,yes,fix-report,Plan still says the copy inherits AMC_ variables
+2026-10-29,flake-3,flake-3-review1,1,VERIF,blocking,Major,L1,I2,VERIFIED,yes,fix-report,No test still drives real OS events for a file in a subfolder
+2026-10-29,flake-3,flake-3-review1,2,VERIF,blocking,Major,L1,I2,VERIFIED,yes,fix-report,Sleep guard misses a common sleep form and matches comments
+2026-10-29,flake-3,flake-3-review1,3,VERIF,blocking,Major,L1,I2,VERIFIED,yes,fix-report,Port guard ignores the browser config that still uses the shared port
+2026-10-29,flake-3,flake-3-review1,4,VERIF,non-blocking,Minor,L2,I3,INFERRED,yes,fix-report,"Zoom test waits for the title, not the saved zoom"
+2026-10-29,flake-3,flake-3-review1,5,VERIF,non-blocking,Minor,L1,I3,VERIFIED,yes,fix-report,Several test deadlines lengthened without a stated reason
+2026-10-29,refused-send,refused-send-review1,1,REL,blocking,Major,L2,I2,INFERRED,yes,yes,A refusal arriving after Stop can restore the running state
+2026-10-29,refused-send,refused-send-review1,2,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Consecutive refused turns pair a late echo with the wrong turn
+2026-10-29,refused-send,refused-send-review1,3,REL,open,Minor,L3,I2,OPEN,recorded,no,Engine end then refusal then echo restores running; SDK ordering unknown
+2026-10-29,canvas-b,canvas-b-review1,1,SEC,blocking,Major,L2,I2,INFERRED,yes,yes,Guard inserted at a <head> that can sit inside a comment
+2026-10-29,canvas-b,canvas-b-review1,2,SEC,blocking,Major,L2,I2,INFERRED,yes,yes,SVG canvas pages run scripts without the guard
+2026-10-29,canvas-b,canvas-b-review1,3,SEC,blocking,Minor,L3,I1,INFERRED,yes,partly,Source checked then reopened by path; a racing writer can swap it
+2026-10-29,canvas-b,canvas-b-rereview1,1,SEC,blocking,Minor,L3,I2,VERIFIED,yes,yes,Canvas opened directly gets WebRTC through an empty iframe
+2026-10-29,canvas-b,canvas-b-rereview1,2,SEC,blocking,Minor,L3,I1,VERIFIED,yes,partly,Parent-folder swap race still copies outside bytes; hardlinks pass
+2026-10-29,canvas-b,canvas-b-rereview1,3,SEC,blocking,Minor,L3,I1,VERIFIED,yes,partly,Destination parent swap redirects the create outside
+2026-10-29,canvas-b,canvas-b-rereview5,1,REPORT,non-blocking,Correction,L3,I1,VERIFIED,yes,unknown,Report understates the remaining race: outside bytes can be copied or deleted
+2026-10-29,canvas-b,canvas-b-rereview5,2,SEC,non-blocking,Minor,L3,I1,INFERRED,unknown,unknown,Re-check before delete would shrink the cleanup race
+2026-10-29,pr-threads,pr-threads-review1,1,UX,blocking,Major,L2,I2,VERIFIED,yes,no,Thread on a folded line stays hidden after reveal
+2026-10-29,pr-threads,pr-threads-review1,2,UX,blocking,Minor,L2,I3,VERIFIED,yes,yes,Rebuilding zones drops extra selections and shifts the view
+2026-10-29,pr-threads,pr-threads-review1,3,COR,blocking,Major,L1,I2,VERIFIED,yes,partly,Old-side threads drawn at the wrong line
+2026-10-29,pr-threads,pr-threads-review1,4,VERIF,blocking,Major,L1,I2,VERIFIED,yes,yes,An existing browser test now fails
+2026-10-29,pr-threads,pr-threads-review1,5,UX,non-blocking,Major,L1,I3,VERIFIED,yes,yes,Deleted-code zones exposed to assistive tech and unselectable by mouse
+2026-10-29,pr-threads,pr-threads-review1,6,UX,non-blocking,Major,L1,I3,VERIFIED,yes,yes,At 900 px the layout toggle shows the wrong layout
+2026-10-29,pr-threads,pr-threads-review1,7,COR,non-blocking,Minor,L3,I2,VERIFIED,yes,yes,Threads with unknown status hidden as resolved
+2026-10-29,pr-threads,pr-threads-review1,8,VERIF,non-blocking,Minor,L1,I3,VERIFIED,partly,yes,"Mutation checks miss folding, selection and status regressions"
+2026-10-29,pr-threads,pr-threads-rereview1,1b,UX,blocking,Major,L1,I2,VERIFIED,yes,fix-report,"Restoring view state re-folds the region, hiding the thread"
+2026-10-29,pr-threads,pr-threads-rereview1,2b,UX,blocking,Minor,L3,I3,VERIFIED,yes,fix-report,Inline thread on deleted first line placed one line low
+2026-10-29,pr-threads,pr-threads-rereview1,3,COR,non-blocking,Minor,L3,I3,VERIFIED,yes,fix-report,Host open-thread count excludes unknown status
+2026-10-29,insights-history,insights-history-rereview1,1,SEC,blocking,Minor,L2,I3,VERIFIED,yes,partly,A history root that is a link is still followed
+2026-10-29,insights-history,insights-history-rereview1,2,REL,blocking,Major,L2,I2,INFERRED,yes,yes,"Parser worker jobs have no deadline, so a stall hangs history for good"
+2026-10-29,insights-history,insights-history-rereview1,C,REPORT,correction,Correction,L1,I3,VERIFIED,unknown,unknown,Report omits an unhandled rejection in the full-suite log
+2026-10-30,insights-history,insights-history-review,1,SEC,blocking,Minor,L3,I3,VERIFIED,no,unknown,Linked root spelled with a trailing slash bypasses the refusal
+2026-10-30,insights-history,insights-history-review,2,SEC,non-blocking,Minor,L3,I3,INFERRED,no,no,Folder containment still raceable by a swap
+2026-10-30,insights-history,insights-history-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,unknown,unknown,Stall test never stalls; new lint warning reported as pre-existing
+2026-10-30,measures-view,measures-view-review,1,UX,non-blocking,Minor,L2,I3,VERIFIED,yes,fix-report,Empty state says nothing recorded when records sit outside the window
+2026-10-30,measures-view,measures-view-review,2,UX,non-blocking,Minor,L1,I4,VERIFIED,yes,fix-report,"Singular counts read 1 calls, 1 commands, 1 records; jargon label"
+2026-10-30,measures-view,measures-view-review,3,VERIF,non-blocking,Minor,L1,I3,INFERRED,unknown,no,Tests compute expected totals with the code under test
+2026-10-30,measures-view,measures-view-review,4,PERF,non-blocking,Minor,L3,I3,VERIFIED,unknown,no,Whole measures file parsed per request; 9 KB today
+2026-10-30,panel-menu,panel-menu-review,1,UX,blocking,Major,L1,I2,VERIFIED,yes,yes,Customize moves at a group boundary snap back while announcing success
+2026-10-30,panel-menu,panel-menu-review,2,UX,blocking,Minor,L2,I3,VERIFIED,yes,yes,Dialog shows an action as available in run sessions where the menu hides it
+2026-10-30,panel-menu,panel-menu-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,Report says header actions get separate groups; they share one
+2026-10-30,panel-menu,panel-menu-rereview,1,UX,blocking,Minor,L2,I3,INFERRED,yes,yes,Keyboard focus lost when a move disables the focused arrow
+2026-10-30,panel-menu,panel-menu-rereview2,1,VERIF,non-blocking,Minor,L1,I3,INFERRED,unknown,no,"Focus test sometimes checks any button, not the right arrow"
+2026-10-30,live-checks,live-checks-review,1,COR,blocking,Major,L2,I2,VERIFIED,yes,yes,Unclosed analysis tag deletes the summary; dialog re-buys a summary each reopen
+2026-10-30,live-checks,live-checks-review,2,COST,blocking,Major,L2,I2,VERIFIED,yes,partly,"Live-suite request counter bypassed, so paid sends can exceed the stated limit"
+2026-10-30,live-checks,live-checks-review,3,REPORT,non-blocking,Correction,L1,I3,VERIFIED,yes,yes,Report calls non-deferral unexplained; tools are registered never-defer
+2026-10-30,live-checks,live-checks-review,4,REPORT,non-blocking,Correction,L1,I3,VERIFIED,yes,yes,"Tool-event counter can never match, so its claim is unsupported"
+2026-10-30,live-checks,live-checks-rereview2,2b,VERIF,blocking,Major,L1,I2,INFERRED,yes,yes,"New per-workflow limit is spent by the title call, breaking basic"
+2026-10-30,live-checks,live-checks-rereview3,1,VERIF,non-blocking,Minor,L1,I3,VERIFIED,unknown,no,"Titles-on budget test sets no budget, so proves nothing"
+2026-10-30,markers,markers-review,1,COR,blocking,Major,L1,I2,VERIFIED,yes,yes,"Today counted as an elapsed day, so one minute is compared with a full day"
+2026-10-30,markers,markers-review,2,COR,blocking,Major,L1,I2,VERIFIED,yes,partly,Resumed sessions counted wholly on the side of their first message
+2026-10-30,markers,markers-review,3,UX,blocking,Major,L1,I2,VERIFIED,yes,yes,"Bar height unexplained; values only on hover, not by keyboard"
+2026-10-30,markers,markers-review,4,UX,blocking,Major,L1,I2,VERIFIED,yes,partly,"One gold colour means regression, no change and marker date"
+2026-10-30,markers,markers-review,5,UX,blocking,Major,L1,I3,VERIFIED,yes,yes,New class name restyles existing sandbox and approval badges
+2026-10-30,markers,markers-review,6,UX,non-blocking,Minor,L2,I3,INFERRED,yes,yes,"Focus lost when add, edit or delete unmounts the control"
+2026-10-30,markers,markers-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,unknown,unknown,Report misses a new lint warning; mutation counts unsupported
+2026-10-30,markers,markers-rereview,2b,COR,blocking,Minor,L2,I3,VERIFIED,yes,yes,A turn spanning midnight charged wholly to its start day
+2026-10-30,markers,markers-rereview,4b,UX,blocking,Major,L2,I2,VERIFIED,yes,yes,"Verdict text in one light theme is 3.86:1, below AA"
+2026-10-30,run-edges,run-edges-review,1,DATA,blocking,Major,L2,I2,INFERRED,yes,partly,Stopping during a slow merge loses an accepted review answer
+2026-10-30,run-edges,run-edges-review,2,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Ending one run answers another run's pending requests
+2026-10-30,run-edges,run-edges-review,3,REL,blocking,Major,L2,I2,INFERRED,yes,yes,"End can mark a run ended mid-merge, then merge overwrites it"
+2026-10-30,run-edges,run-edges-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,"Mutation fails on wording, not duplicates; worker-merge coverage overstated"
+2026-10-30,run-edges,run-edges-rereview,1b,REL,blocking,Major,L2,I2,INFERRED,yes,yes,After restart a completed answer replays and can start an unapproved fix round
+2026-10-30,run-edges,run-edges-rereview,2,UX,non-blocking,Minor,L2,I3,INFERRED,yes,yes,End looks enabled during a short merge the host will refuse
+2026-10-30,run-edges,run-edges-rereview2,1c,DATA,blocking,Minor,L3,I2,INFERRED,yes,yes,Upgrade then crash between answer and action drops a legacy review's action
+2026-10-30,run-edges,run-edges-rereview2,2,VERIF,non-blocking,Minor,L1,I3,VERIFIED,yes,yes,Restart test injects the answer after shutdown instead of interrupting
+2026-10-30,home-reorder,home-reorder-review,1,UX,blocking,Minor,L2,I3,VERIFIED,yes,yes,Reset order stays visible after the order again matches the rules
+2026-10-30,home-reorder,home-reorder-review,2,DATA,blocking,Major,L2,I2,INFERRED,yes,yes,One failing source erases the owner's hand order for its rows
+2026-10-30,home-reorder,home-reorder-review,3,UX,non-blocking,Minor,L2,I3,VERIFIED,yes,yes,Drag moves are not announced to screen readers
+2026-10-30,home-reorder,home-reorder-review,4,UX,non-blocking,Minor,L2,I3,INFERRED,yes,yes,Keyboard Reset removes the focused button with no new focus
+2026-10-30,home-reorder,home-reorder-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,unknown,unknown,Browser test does not drive the timed refresh it claims; no mutation logs
+2026-10-30,home-reorder,home-reorder-rereview2,1,VERIF,blocking,Major,L2,I2,INFERRED,yes,yes,"Reorder spec reads rows before they load, so it can fail on unchanged code"
+2026-10-30,notes-search,notes-search-review,1,SEC,blocking,Minor,L3,I1,INFERRED,no,no,File swapped for an escaping link between check and read allows an outside read
+2026-10-30,notes-search,notes-search-review,2,SEC,blocking,Minor,L3,I3,INFERRED,no,no,Removed knowledge source stays readable until restart
+2026-10-30,notes-search,notes-search-review,3,COR,non-blocking,Minor,L3,I3,VERIFIED,no,no,A query starting with dashes is read as an option and shown as healthy
+2026-10-30,notes-search,notes-search-review,4,UX,non-blocking,Minor,L3,I3,VERIFIED,no,no,Failed clipboard write still says the path was copied
+2026-10-30,notes-search,notes-search-review,C,REPORT,correction,Correction,L1,I4,VERIFIED,unknown,unknown,Lint warning count wrong; dedup fixture cannot prove dedup
+2026-10-30,clusters,clusters-review,1,SEC,blocking,Major,L2,I2,VERIFIED,yes,partly,Cached topic names from one source are sent in a request for another source
+2026-10-30,clusters,clusters-review,2,SEC,blocking,Major,L1,I2,VERIFIED,yes,yes,Prompt cap counts only clusters; evidence text sent unfenced and uncapped
+2026-10-30,clusters,clusters-review,3,UX,blocking,Minor,L2,I3,VERIFIED,yes,yes,"Dismissals keyed by position, so a reordered reply resurrects a dismissed item"
+2026-10-30,clusters,clusters-review,4,COR,non-blocking,Major,L1,I3,VERIFIED,yes,yes,Says the context filled when the record shows only that it compacted
+2026-10-30,clusters,clusters-rereview,1b,SEC,blocking,Major,L1,I2,INFERRED,yes,yes,Mixed-source naming batch records only some sources on each name
+2026-10-30,clusters,clusters-rereview2,1c,SEC,non-blocking,Minor,L3,I3,OPEN,unknown,no,Names saved before the fix stay under-attributed
+2026-10-30,forecast-parallel,forecast-parallel-review,1,COMP,blocking,Major,L2,I2,VERIFIED,no,no,"With one slot, an unslotted item now overlaps, changing old forecasts"
+2026-10-30,forecast-parallel,forecast-parallel-review,2,COR,blocking,Major,L1,I2,VERIFIED,yes,yes,"Blocked items hold idle slots, so forecasts run long and items look late"
+2026-10-30,startup,startup-review,1,UX,blocking,Major,L1,I2,INFERRED,yes,yes,Diagram toolbar arrives late and pushes conversation content down
+2026-10-30,startup,startup-review,2,REL,non-blocking,Minor,L3,I2,INFERRED,yes,yes,A lazy chunk that fails to load has no error boundary or retry
+2026-10-30,startup,startup-review,3,PERF,non-blocking,Minor,L2,I3,VERIFIED,unknown,no,Start-up size budget left with 990 characters of headroom
+2026-10-30,startup,startup-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,unknown,unknown,Report misstates entry size and claims a test ran that did not
+2026-10-30,tree,tree-review,1,UX,blocking,Major,L2,I2,INFERRED,yes,yes,Next change moves the tree's logical focus but not keyboard focus
+2026-10-30,tree,tree-review,2,UX,blocking,Major,L1,I2,INFERRED,yes,yes,Leaving Find a file pulls focus back into the tree
+2026-10-30,tree,tree-review,3,UX,blocking,Minor,L3,I2,INFERRED,yes,yes,"Lock-only pull request leaves focus on a hidden row, no tab stop"
+2026-10-30,tree,tree-review,4,UX,non-blocking,Minor,L2,I3,VERIFIED,yes,yes,"ArrowRight on a file moves to the next row, against the APG"
+2026-10-30,tree,tree-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,unknown,unknown,Report's test filter skipped ten pull request specs; focus never asserted
+2026-10-30,tree,tree-rereview,1b,UX,blocking,Major,L2,I2,INFERRED,yes,yes,Stale focus request steals focus while typing in Find a file
+2026-10-30,diff-colour,diff-colour-review,1,UX,blocking,Major,L1,I2,VERIFIED,yes,yes,Added and removed tints push code colours below AA contrast
+2026-10-30,diff-colour,diff-colour-review,2,COR,blocking,Minor,L2,I3,VERIFIED,yes,partly,"Each hunk tokenised fresh, so a comment opened above is coloured as code"
+2026-10-30,diff-colour,diff-colour-review,3,PERF,blocking,Major,L1,I2,INFERRED,yes,partly,"New renderer reachable from start-up, against the no-growth constraint"
+2026-10-30,diff-colour,diff-colour-rereview,1b,VERIF,blocking,Minor,L1,I3,VERIFIED,yes,yes,"Contrast test skips colours under 1.5:1, so coverage is not exhaustive"
+2026-10-30,diff-colour,diff-colour-rereview,2b,COR,blocking,Minor,L2,I3,VERIFIED,yes,yes,Markdown files still tokenised per hunk in Changes
+2026-10-30,diff-colour,diff-colour-rereview,3b,PERF,blocking,Major,L1,I2,VERIFIED,yes,yes,"Renderer still eager; start-up grows by 1,314 characters"
+2026-10-30,diff-colour,diff-colour-rereview2,2c,PERF,non-blocking,Minor,L1,I4,VERIFIED,unknown,no,Static-import closure grows 78 bytes; logged metric misses it
+2026-10-30,diff-colour,diff-colour-rereview2,4,VERIF,non-blocking,Major,L1,I2,VERIFIED,yes,unknown,Existing browser test selects a file as a button and now times out
+2026-10-30,drafts,drafts-review,1,REL,blocking,Major,L2,I2,INFERRED,yes,partly,Send and clear are two requests; close between them or double Send resends
+2026-10-30,drafts,drafts-review,2,DATA,blocking,Blocker,L2,I1,INFERRED,yes,yes,"Stop during lookup reports success, so unsent pieces are cleared and lost"
+2026-10-30,drafts,drafts-review,3,DATA,blocking,Blocker,L2,I1,INFERRED,yes,partly,A note being typed is saved only on blur; reload loses it
+2026-10-30,drafts,drafts-review,4,SEC,blocking,Major,L1,I2,VERIFIED,yes,yes,"Forks inherit another session's pending pieces, against the owner's ruling"
+2026-10-30,drafts,drafts-review,5,PERF,non-blocking,Minor,L1,I4,VERIFIED,partly,no,Each edit appends a full snapshot; storage grows without bound
+2026-10-30,drafts,drafts-review,6,UX,non-blocking,Minor,L2,I3,VERIFIED,yes,yes,Truncated quotes readable only by hover; no focus after remove
+2026-10-30,drafts,drafts-rereview,1b,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Send-piece-now and large-file paths skip the in-flight guard
+2026-10-30,drafts,drafts-rereview,2b,DATA,blocking,Minor,L3,I1,INFERRED,yes,yes,Note whose save is in flight is skipped by the close flush
+2026-10-30,drafts,drafts-rereview,4b,UX,non-blocking,Minor,L3,I3,INFERRED,yes,yes,Removing the last piece may focus another pane's message box
+2026-10-30,drafts,drafts-rereview2,1c,DATA,blocking,Blocker,L2,I1,INFERRED,yes,fix-report,"Send piece now right after typing can send without the note, then drop the piece"
+2026-10-30,router-outcomes,router-outcomes-review,1,COR,blocking,Major,L1,I2,VERIFIED,yes,yes,Audit joins a round to the wrong decision; a real-folder test fails
+2026-10-30,router-outcomes,router-outcomes-review,2,COR,blocking,Minor,L3,I2,VERIFIED,yes,partly,A quoted verdict line before the real one is read as the verdict
+2026-10-30,router-outcomes,router-outcomes-review,3,REL,blocking,Major,L2,I2,VERIFIED,yes,yes,A retry with no verdict keeps the earlier verdict file
+2026-10-30,router-outcomes,router-outcomes-rereview,1b,COR,blocking,Minor,L3,I2,INFERRED,no,no,Four-backtick fence holding a three-backtick verdict example misreads
