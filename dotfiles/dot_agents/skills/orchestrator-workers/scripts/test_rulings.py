@@ -43,8 +43,12 @@ class RuleTest(Tmp):
     def test_refusals_write_nothing(self):
         self.run.round('a-review')
         self.assertNotEqual(self.add(round_='b-review'), 0)
-        self.assertNotEqual(self.add(round_='../run/a-review'), 0)
         self.assertNotEqual(self.add(reason='  '), 0)
+        self.assertFalse(os.path.exists(os.path.join(self.run.dir, 'rulings.jsonl')))
+
+    def test_path_separator_refused(self):
+        self.run.round('a-review')
+        self.assertNotEqual(self.add(round_='../run/a-review'), 0)
         with self.assertRaises(SystemExit):
             quiet(rule.main, ['add', self.run.dir, 'a-review', '1', '--grade', 'Huge', '--ruled', 'Minor',
                               '--by', 'o', '--reason', 'r'])
@@ -86,10 +90,9 @@ class RulingsTest(Tmp):
 
     def test_no_rulings_file(self):
         self.run.round('a-review')
-        p = subprocess.run([sys.executable, '-B', os.path.join(HERE, 'mine.py'), self.run.dir, '--rulings'],
-                           capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
-        self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertIn('no rulings', p.stdout)
+        code, out = quiet(mine.main, [self.run.dir, '--rulings'])
+        self.assertEqual(code, 0)
+        self.assertIn('no rulings', out)
 
 
 class QualityTest(Tmp):

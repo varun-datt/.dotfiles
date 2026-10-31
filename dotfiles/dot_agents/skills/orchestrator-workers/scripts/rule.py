@@ -20,12 +20,16 @@ def fail(msg):
     return 2
 
 
+def round_name_ok(name):
+    return bool(name) and name not in ('.', '..') and not any(s and s in name for s in ('/', os.sep, os.altsep))
+
+
 def add(a):
     run = os.path.abspath(os.path.expanduser(a.run))
     if not os.path.isdir(run):
         return fail(f'no run folder at {run}')
     name = a.round
-    if not name or name in ('.', '..') or '/' in name or os.sep in name or (os.altsep and os.altsep in name):
+    if not round_name_ok(name):
         return fail(f'round {name!r} is not a round name')
     if not os.path.isfile(os.path.join(run, name + '.jsonl')):
         return fail(f'no round {name!r}: {name}.jsonl is not in {run}')
