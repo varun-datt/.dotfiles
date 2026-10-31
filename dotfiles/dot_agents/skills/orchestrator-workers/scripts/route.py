@@ -2,17 +2,27 @@
 """Pick each worker round's model, effort and credit cap from the brief, past outcomes and the budget left.
 
 Usage:
+    python3 route.py run ROUND --kind K --brief FILE --worktree DIR [--run RUN] [--author-model M]
+                          [--override "model=..,effort=..,context=..,cap=N|none,reason=.."] [--add-dir DIR ...]
+                          [--timeout S] [--fresh] [pick's options]
     python3 route.py pick --run RUN --item ID --kind build|fix|review|research|small|resume|merge --prompt FILE
-                          [--author-model M] [--diff FILE] [--budget-left F] [--run-fraction F] [--seed N]
+                          [--author-model M] [--diff FILE] [--budget-left F] [--run-fraction F] [--seed N] [--fresh]
     python3 route.py escalate --run RUN --item ID
     python3 route.py report --run RUN
     python3 route.py eval-classifier --run RUN [--models a,b,c] [--max-credits N]
 
+run is the one way to launch a worker or review round: it checks the brief (brief.py check, exit 5), picks or
+takes the override (whose reason is required), logs the decision with the CLI version, waits for load
+(sweep.py load --wait 15, exit 12), writes ROUND.start, ROUND.base and the time budget, launches `copilot -p`
+with exactly the logged model, effort, context and cap under a timeout, sweeps leftovers on exit, and exits
+non-zero when copilot failed (its code; 124 timed out), the round hit its cap (3) or errored (4).
 pick prints `MODEL=... EFFORT=... CONTEXT=... CAP=...` (and a `# reason` line) and appends one JSON line to RUN/routes.jsonl.
+pick and run reuse a round's logged decision that has not launched yet; --fresh draws again.
+A review without --author-model takes the model of the item's latest author round log.
 The policies (categories, floors, targets) and the model mapping live in ../references/routes.json.
 Design and reading guide: ../references/routing.md.
 """
-import argparse, collections, datetime, json, os, random, re, subprocess, sys
+import argparse, collections, contextlib, datetime, fcntl, json, os, random, re, signal, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -441,7 +451,7 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
 
 
 def escalate(item, history, cfg, run):
-    last = next((d for d in reversed(read_decisions(run)) if d['item'] == item and d.get('event') in ('pick', 'escalate')), None)
+    last = next((d for d in reversed(read_decisions(run)) if d.get('item') == item and d.get('event') in ('pick', 'escalate')), None)
     if not last:
         raise LookupError(f'no logged decision for {item}')
     kind, cur = last['kind'], last['choice']
@@ -460,19 +470,273 @@ def escalate(item, history, cfg, run):
             'reason': reason}
 
 
+@contextlib.contextmanager
+def locked(path):
+    with open(path + '.lock', 'a') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
+def write_json(path, data):
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix='.' + os.path.basename(path) + '.')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.remove(tmp)
+        raise
+
+
 def log(run, record):
-    with open(os.path.join(run, 'routes.jsonl'), 'a', encoding='utf-8') as f:
+    path = os.path.join(run, 'routes.jsonl')
+    with locked(path), open(path, 'a', encoding='utf-8') as f:
         f.write(json.dumps(record, ensure_ascii=False) + '\n')
+
+
+def pending(run, rnd):
+    """The round's latest decision that no launch has used yet, else None."""
+    last = None
+    for d in read_decisions(run):
+        if d.get('event') in ('pick', 'escalate') and d.get('item') == rnd:
+            last = d
+        elif d.get('event') == 'launch' and d.get('round') == rnd:
+            last = None
+    return last
+
+
+OVERRIDE_KEYS = ('model', 'effort', 'context', 'cap')
+
+
+def parse_override(spec):
+    """{field: value, ..., 'reason': text} from "model=..,effort=..,context=..,cap=N|none,reason=..": reason last, required."""
+    head, sep, reason = spec.partition('reason=')
+    reason = reason.strip()
+    if not sep or not reason:
+        raise ValueError('an override needs reason=<why>, last')
+    out = {}
+    for part in filter(None, (p.strip() for p in head.split(','))):
+        k, eq, v = (x.strip() for x in part.partition('='))
+        if not eq or k not in OVERRIDE_KEYS or not v:
+            raise ValueError(f'bad override field {part!r}; use {", ".join(OVERRIDE_KEYS)}')
+        if k == 'model' and v == 'auto':
+            raise ValueError('never the automatic model choice')
+        if k == 'effort' and v not in EFFORTS:
+            raise ValueError(f'effort must be one of {", ".join(EFFORTS)}')
+        if k == 'context' and v not in ('default', 'long_context'):
+            raise ValueError('context must be default or long_context')
+        if k == 'cap':
+            if v == 'none':
+                v = None
+            elif not v.isdigit() or int(v) <= 0:
+                raise ValueError('cap must be a positive whole number or none')
+            else:
+                v = int(v)
+        out[k] = v
+    if not out:
+        raise ValueError(f'an override sets at least one of {", ".join(OVERRIDE_KEYS)} before reason=')
+    out['reason'] = reason
+    return out
+
+
+def apply_override(rec, ov, rnd):
+    base = rec.get('routed_choice') or rec['choice']
+    choice = {**base, **{k: ov[k] for k in OVERRIDE_KEYS if k in ov}}
+    return {**rec, 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'), 'item': rnd,
+            'override': ov, 'routed_choice': base, 'choice': choice,
+            'reason': f"override: {ov['reason']} | routed: {rec.get('routed_reason', rec['reason'])}",
+            'routed_reason': rec.get('routed_reason', rec['reason'])}
+
+
+def author_from_log(run, rnd):
+    """(model, file) of the item's latest author round log in the run folder, else (None, None)."""
+    import mine
+    item = mine.split_name(rnd)[0]
+    found = []
+    for fn in os.listdir(run):
+        if not fn.endswith('.jsonl') or fn in NOT_ROUND:
+            continue
+        it, kind = mine.split_name(fn[:-len('.jsonl')])
+        if it == item and kind not in mine.REVIEW_KINDS:
+            found.append((os.path.getmtime(os.path.join(run, fn)), fn))
+    for _, fn in sorted(found, reverse=True):
+        r = mine.read_round(os.path.join(run, fn))
+        if r and r.get('model'):
+            return r['model'], fn
+    return None, None
+
+
+def mcp_servers():
+    try:
+        with open(os.path.expanduser('~/.copilot/mcp-config.json'), encoding='utf-8') as f:
+            return list(json.load(f).get('mcpServers', {}))
+    except (OSError, ValueError, AttributeError):
+        return []
+
+
+def cli_version():
+    try:
+        done = subprocess.run(['copilot', '--version'], capture_output=True, text=True, timeout=60, stdin=subprocess.DEVNULL)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = done.stdout.strip().splitlines()
+    return lines[0].strip() if done.returncode == 0 and lines else None
+
+
+def launch_argv(rnd, kind, wt, choice, add_dirs, prompt):
+    argv = ['copilot', '-C', wt, '-n', os.environ.get('OW_PREFIX', 'ow-') + rnd, '--model', choice['model'],
+            '--reasoning-effort', choice['effort'], '--context', choice.get('context') or 'default']
+    if choice.get('cap') is not None:
+        argv += ['--max-ai-credits', str(choice['cap'])]
+    argv += ['--no-ask-user', '--allow-all-tools', '--deny-tool', 'shell(git push)']
+    if kind == 'review':
+        argv += ['--deny-tool', 'shell(git commit)', '--deny-tool', 'shell(npm)', '--deny-tool=url']
+    argv += ['--disable-builtin-mcps']
+    for s in mcp_servers():
+        argv += ['--disable-mcp-server', s]
+    for d in add_dirs:
+        argv += ['--add-dir', d]
+    return argv + ['--output-format', 'json', '-p', prompt]
+
+
+def set_budget(run, rnd, kind, text):
+    """Write the round's time budget in minutes to budgets.json (the brief's TIME BUDGET, else the one there) and return it."""
+    path = os.path.join(run, 'budgets.json')
+    with locked(path):
+        try:
+            with open(path, encoding='utf-8') as f:
+                b = json.load(f)
+        except FileNotFoundError:
+            b = {}
+        m = re.search(r'^TIME BUDGET:\s*(\d+)', text, re.M)
+        old = b.get(rnd, b.get(mine_kind(kind)))
+        b[rnd] = int(m.group(1)) if m else old if isinstance(old, (int, float)) else (30 if kind == 'review' else 60)
+        write_json(path, b)
+    return b[rnd]
+
+
+def sweep(*args):
+    return subprocess.run([sys.executable, '-B', os.path.join(HERE, 'sweep.py'), *args], stdin=subprocess.DEVNULL).returncode
+
+
+def outcome(rc, path):
+    """The launcher's exit code: copilot's own when non-zero, 3 when the round hit its cap, 4 when it errored or has no result."""
+    import mine
+    r = mine.read_round(path) if os.path.exists(path) else None
+    if rc != 0:
+        return 128 - rc if rc < 0 else rc
+    if r and (r['cap'] or {}).get('capped'):
+        return 3
+    if r is None or r['error'] or r['exit'] != 0:
+        return 4
+    return 0
+
+
+REVIEW_TAIL = '\n\nYour LAST message is the only one read: repeat every finding in it in full, even ones an earlier message gave.\n'
+
+
+def run_round(a, cfg):
+    run = os.path.abspath(os.path.expanduser(a.run or os.environ.get('OW_RUN_DIR') or ''))
+    rnd, kind, wt = a.round, a.kind, os.path.abspath(os.path.expanduser(a.worktree))
+    if not a.run and not os.environ.get('OW_RUN_DIR') or not os.path.isdir(run):
+        print('route.py run: set --run or OW_RUN_DIR to the run folder', file=sys.stderr)
+        return 2
+    if not os.path.isdir(wt):
+        print(f'route.py run: no worktree at {wt}', file=sys.stderr)
+        return 2
+    try:
+        ov = parse_override(a.override) if a.override is not None else None
+    except ValueError as ex:
+        print(f'route.py run: override refused: {ex}', file=sys.stderr)
+        return 2
+    brief = os.path.abspath(os.path.expanduser(a.brief))
+    if subprocess.run([sys.executable, '-B', os.path.join(HERE, 'brief.py'), 'check', brief], stdin=subprocess.DEVNULL).returncode:
+        return 5
+    with open(brief, encoding='utf-8') as f:
+        text = f.read()
+    author_src = 'argument' if a.author_model else None
+    if kind == 'review' and not a.author_model:
+        a.author_model, fn = author_from_log(run, rnd)
+        author_src = fn and f'log:{fn}'
+    version = cli_version()
+    with locked(os.path.join(run, f'.{rnd}.route')):
+        rec = None if a.fresh else pending(run, rnd)
+        if rec is not None and ov is not None and rec.get('override') != ov:
+            rec = apply_override(rec, ov, rnd)
+            rec.update(cli_version=version, model_id=rec['choice']['model'])
+            log(run, rec)
+        elif rec is None:
+            rec = draw(a, run, rnd, kind, text, cfg)
+            rec['inputs']['author_source'] = author_src
+            if ov is not None:
+                rec = apply_override(rec, ov, rnd)
+            rec.update(cli_version=version, model_id=rec['choice']['model'], worktree=wt)
+            log(run, rec)
+    c = rec['choice']
+    minutes = set_budget(run, rnd, kind, text)
+    secs = a.timeout or int(minutes * 60 * (1 if kind == 'review' else 3))
+    emit(rec)
+    if a.load_wait and sweep('load', '--wait', str(a.load_wait)):
+        print(f'LOAD: {rnd} not launched', file=sys.stderr)
+        return 12
+    argv = launch_argv(rnd, kind, wt, c, a.add_dir or [], text + (REVIEW_TAIL if kind == 'review' else ''))
+    jsonl = os.path.join(run, rnd + '.jsonl')
+    try:
+        with open(os.path.join(run, rnd + '.start'), 'w') as f:
+            f.write(f'{int(datetime.datetime.now().timestamp())}\n')
+        base = subprocess.run(['git', '-C', wt, 'rev-parse', 'HEAD'], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        if base.returncode == 0:
+            with open(os.path.join(run, rnd + '.base'), 'w') as f:
+                f.write(base.stdout)
+        else:
+            print(f'route.py run: no git HEAD in {wt}; {rnd}.base not written', file=sys.stderr)
+        log(run, {'event': 'launch', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
+                  'round': rnd, 'kind': kind, 'decision_at': rec['at'], 'cli_version': version, 'model_id': c['model'],
+                  'timeout_s': secs, 'brief': brief, 'argv': argv[:-1]})
+        env = {**os.environ, 'COPILOT_TASK_WAIT_TIMEOUT_SECONDS': str(min(5400, secs)), 'GIT_CONFIG_COUNT': '1',
+               'GIT_CONFIG_KEY_0': 'url.blocked-by-orchestrator://.pushInsteadOf', 'GIT_CONFIG_VALUE_0': ''}
+        print(f"launch {rnd} {c['model']}/{c['effort']}/{c.get('context', 'default')} cap {c.get('cap')} timeout {secs}s "
+              f"at {datetime.datetime.now():%H:%M:%S}", flush=True)
+        with open(jsonl, 'wb') as out, open(os.path.join(run, rnd + '.err'), 'wb') as err:
+            try:
+                p = subprocess.Popen(argv, cwd=wt, stdin=subprocess.DEVNULL, stdout=out, stderr=err, env=env,
+                                     start_new_session=True)
+            except OSError as ex:
+                print(f'route.py run: cannot start copilot: {ex}', file=sys.stderr)
+                return 127
+            try:
+                rc = p.wait(timeout=secs)
+            except subprocess.TimeoutExpired:
+                for sig in (signal.SIGTERM, signal.SIGKILL):
+                    with contextlib.suppress(ProcessLookupError, PermissionError):
+                        os.killpg(p.pid, sig)
+                    try:
+                        p.wait(timeout=10)
+                        break
+                    except subprocess.TimeoutExpired:
+                        pass
+                rc = 124
+    finally:
+        sweep('leftovers', wt, '--kill')
+    code = outcome(rc, jsonl)
+    print(f"{rnd} exit {rc}{' TIMED OUT' if rc == 124 else ''} -> {code} at {datetime.datetime.now():%H:%M:%S}", flush=True)
+    subprocess.run([sys.executable, '-B', os.path.join(HERE, 'result.py'), jsonl, '--no-report'], stdin=subprocess.DEVNULL)
+    return code
 
 
 def emit(rec):
     c = rec['choice']
-    print(f"MODEL={c['model']} EFFORT={c['effort']} CONTEXT={c.get('context', 'default')} CAP={c['cap']}")
+    print(f"MODEL={c['model']} EFFORT={c['effort']} CONTEXT={c.get('context', 'default')} "
+          f"CAP={'none' if c.get('cap') is None else c['cap']}")
     print(f"# {rec['reason']}")
 
 
 def report(run, rounds=None, items=None):
-    decisions = read_decisions(run)
+    decisions = [d for d in read_decisions(run) if isinstance(d.get('choice'), dict)]
     if rounds is None:
         rounds, items = load_mine(run)
     by_item = {i['item']: i for i in items}
@@ -563,20 +827,31 @@ def eval_classifier(samples, models, cfg, max_credits, call=None):
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest='cmd', required=True)
-    p = sub.add_parser('pick')
+    routing = argparse.ArgumentParser(add_help=False)
+    routing.add_argument('--kind', required=True, choices=KINDS)
+    routing.add_argument('--author-model', help='a review: the author round\'s model (default: read from its log); a resume: the model it continues')
+    routing.add_argument('--diff', help='a diff file whose text is also checked for risk areas')
+    routing.add_argument('--budget-left', type=float, help='fraction of the run\'s credit budget still unspent (0 to 1)')
+    routing.add_argument('--run-fraction', type=float, help='fraction of the run\'s planned time already elapsed (0 to 1)')
+    routing.add_argument('--seed', type=int, help='fix the random draws (logged either way)')
+    routing.add_argument('--grades-json', help='a classifier answer to use instead of calling copilot (a file or JSON)')
+    routing.add_argument('--no-classifier', action='store_true', help='use the keyword rules without calling copilot')
+    routing.add_argument('--fresh', action='store_true', help='draw again instead of reusing the round\'s unlaunched decision')
+    routing.add_argument('--history-root', default=STATE_ROOT)
+    routing.add_argument('--config')
+    p = sub.add_parser('pick', parents=[routing])
     p.add_argument('--run', required=True)
     p.add_argument('--item', required=True)
-    p.add_argument('--kind', required=True, choices=KINDS)
     p.add_argument('--prompt', required=True, help='the brief file')
-    p.add_argument('--author-model', help='a review: the author round\'s model; a resume: the model it continues')
-    p.add_argument('--diff', help='a diff file whose text is also checked for risk areas')
-    p.add_argument('--budget-left', type=float, help='fraction of the run\'s credit budget still unspent (0 to 1)')
-    p.add_argument('--run-fraction', type=float, help='fraction of the run\'s planned time already elapsed (0 to 1)')
-    p.add_argument('--seed', type=int, help='fix the random draws (logged either way)')
-    p.add_argument('--grades-json', help='a classifier answer to use instead of calling copilot (a file or JSON)')
-    p.add_argument('--no-classifier', action='store_true', help='use the keyword rules without calling copilot')
-    p.add_argument('--history-root', default=STATE_ROOT)
-    p.add_argument('--config')
+    n = sub.add_parser('run', parents=[routing], help='pick or take the override, log it, and launch the round')
+    n.add_argument('round', help='the round name: <item>, <item>-fixN, <item>-review ...')
+    n.add_argument('--run', help='run folder (default: $OW_RUN_DIR)')
+    n.add_argument('--brief', required=True)
+    n.add_argument('--worktree', required=True)
+    n.add_argument('--override', help='"model=..,effort=..,context=..,cap=N|none,reason=.." (reason required, last)')
+    n.add_argument('--add-dir', action='append', help='passed to copilot; repeatable')
+    n.add_argument('--timeout', type=int, help='seconds (default: from the time budget)')
+    n.add_argument('--load-wait', type=float, default=15, help='minutes sweep.py load waits; 0 skips it (default 15)')
     e = sub.add_parser('escalate')
     e.add_argument('--run', required=True)
     e.add_argument('--item', required=True)
@@ -591,6 +866,8 @@ def main(argv=None):
     v.add_argument('--history-root', default=STATE_ROOT)
     v.add_argument('--config')
     a = ap.parse_args(argv)
+    if a.cmd == 'run':
+        return run_round(a, load_config(a.config))
     run = os.path.abspath(os.path.expanduser(a.run))
     if not os.path.isdir(run):
         print(f'route.py: no run folder at {run}', file=sys.stderr)
@@ -608,10 +885,9 @@ def main(argv=None):
                   f"{x['agreement']:>5} {x['accuracy']!s:>5} {x['balanced']!s:>5}")
         print(f'# {spent} credits; agree = same tier as {models[0]}; acc and bal: hard tier against failed or capped rounds')
         return 0
-    history = load_history(run, a.history_root)
     if a.cmd == 'escalate':
         try:
-            rec = escalate(a.item, history, cfg, run)
+            rec = escalate(a.item, load_history(run, a.history_root), cfg, run)
         except LookupError as ex:
             print(f'route.py: {ex}', file=sys.stderr)
             return 2
@@ -620,6 +896,21 @@ def main(argv=None):
         return 0
     with open(os.path.expanduser(a.prompt), encoding='utf-8') as f:
         text = f.read()
+    if a.kind == 'review' and not a.author_model:
+        a.author_model = author_from_log(run, a.item)[0]
+    with locked(os.path.join(run, f'.{a.item}.route')):
+        rec = None if a.fresh else pending(run, a.item)
+        if rec is None:
+            rec = draw(a, run, a.item, a.kind, text, cfg)
+            log(run, rec)
+        else:
+            print(f'# reusing the decision logged at {rec["at"]}; --fresh draws again')
+    emit(rec)
+    return 0
+
+
+def draw(a, run, item, kind, text, cfg):
+    history = load_history(run, a.history_root)
     diff = ''
     if a.diff:
         with open(os.path.expanduser(a.diff), encoding='utf-8', errors='replace') as f:
@@ -639,11 +930,9 @@ def main(argv=None):
             out['source'] = 'stub'
             return out
     seed = a.seed if a.seed is not None else random.SystemRandom().randrange(2 ** 31)
-    rec = pick(a.item, a.kind, text, history, cfg, a.author_model, diff, a.budget_left, a.run_fraction,
-               random.Random(seed), seed, call, a.author_model if a.kind == 'resume' else None)
-    log(run, rec)
-    emit(rec)
-    return 0
+    rec = pick(item, kind, text, history, cfg, a.author_model, diff, a.budget_left, a.run_fraction,
+               random.Random(seed), seed, call, a.author_model if kind == 'resume' else None)
+    return rec
 
 
 if __name__ == '__main__':

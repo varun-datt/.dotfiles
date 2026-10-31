@@ -4,6 +4,7 @@ stalled orchestrator chat no longer stops the run, and alerts the owner when the
 
 Usage:
     python3 runqueue.py add <id> --cmd "<shell command>" [--after id1,id2] [--no-slot] [--priority N]
+                                 [--unrouted-reason "<why>"]
     python3 runqueue.py done <id>        # merged or closed; items waiting on it become ready
     python3 runqueue.py status           # one line per item
     timeout 172800 python3 runqueue.py run [--slots 3] [--poll 30] [--idle-alert 20] [--chat-log PATH]
@@ -11,6 +12,9 @@ Usage:
 
 Every subcommand works on <run>/queue.json (OW_RUN_DIR, or --run-dir) under <run>/queue.lock.
 `add`, `done` and `status` touch <run>/heartbeat: they are the chat's sign of life.
+`add` refuses a command that runs `copilot` without `route.py run` (or review.sh, which calls it) unless
+--unrouted-reason says why; the reason is kept with the item. A script that hides copilot is caught by
+`mine.py --audit`, not here.
 
 `run` launches ready items (highest priority first, then in the order added) while fewer than
 --slots slot items run; --no-slot items (reviews) do not count. Each item runs in its own process
@@ -26,7 +30,15 @@ minutes while it stays true. --idle-alert 0 turns it off.
 
 States: waiting (on an item not done), ready, running, exited N, done.
 """
-import argparse, contextlib, fcntl, json, os, signal, subprocess, sys, tempfile, threading, time
+import argparse, contextlib, fcntl, json, os, re, signal, subprocess, sys, tempfile, threading, time
+
+COPILOT = re.compile(r'(?:^|[\s;&|(`/])copilot(?=\s|$|[;&|)`])')
+ROUTED = re.compile(r'\broute\.py\s+run\b|\breview\.sh\b')
+
+
+def unrouted(cmd):
+    """True when a shell command runs `copilot` itself rather than through `route.py run` or review.sh."""
+    return bool(COPILOT.search(cmd)) and not ROUTED.search(cmd)
 
 
 def run_dir(arg=None):
@@ -182,6 +194,7 @@ def main(argv=None):
     a.add_argument('--after', default='', help='comma-separated ids that must be done first')
     a.add_argument('--no-slot', action='store_true', help='does not count against --slots (reviews)')
     a.add_argument('--priority', type=int, default=0, help='higher launches first (default 0)')
+    a.add_argument('--unrouted-reason', help='why a command that runs copilot skips route.py run (logged with the item)')
     d = sub.add_parser('done', parents=[common], help='mark an item merged or closed')
     d.add_argument('id')
     sub.add_parser('status', parents=[common], help='one line per item')
@@ -228,9 +241,15 @@ def main(argv=None):
             if unknown:
                 print(f"queue: unknown --after id: {', '.join(unknown)}", file=sys.stderr)
                 return 2
+            reason = (args.unrouted_reason or '').strip()
+            if unrouted(args.shell) and not reason:
+                print('queue: this command runs copilot without route.py run; launch it with route.py run, '
+                      'or pass --unrouted-reason "<why>"', file=sys.stderr)
+                return 2
             items.append({'id': args.id, 'cmd': args.shell, 'after': after, 'slot': not args.no_slot,
                           'priority': args.priority, 'added': time.time(), 'done': False,
-                          'pid': None, 'start': None, 'end': None, 'exit': None})
+                          'pid': None, 'start': None, 'end': None, 'exit': None,
+                          **({'unrouted_reason': reason} if reason else {})})
             save(rd, q)
         elif args.cmd == 'done':
             if args.id not in by_id:

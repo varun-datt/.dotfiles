@@ -125,6 +125,17 @@ class QueueTest(unittest.TestCase):
         with open(os.path.join(self.rd, 'queue.json')) as f:
             self.assertEqual([it['id'] for it in json.load(f)['items']], ['a'])
 
+    def test_add_refuses_an_unrouted_copilot_command_unless_given_a_reason(self):
+        with mock.patch('sys.stderr'):
+            self.assertEqual(self.cli('add', 'a', '--cmd', 'copilot -p "do it" --model m'), 2)
+        self.assertEqual(self.cli('add', 'a', '--cmd', 'copilot -p "do it"', '--unrouted-reason', 'owner probe'), 0)
+        self.assertEqual(self.cli('add', 'b', '--cmd', 'python3 route.py run b --kind build --brief b.md --worktree w'), 0)
+        self.assertEqual(self.cli('add', 'c', '--cmd', 'bash review.sh b-review w'), 0)
+        with open(os.path.join(self.rd, 'queue.json')) as f:
+            items = {it['id']: it for it in json.load(f)['items']}
+        self.assertEqual(items['a']['unrouted_reason'], 'owner probe')
+        self.assertNotIn('unrouted_reason', items['b'])
+
 
 if __name__ == '__main__':
     unittest.main()

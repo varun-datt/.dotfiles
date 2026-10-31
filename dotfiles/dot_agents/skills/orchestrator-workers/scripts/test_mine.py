@@ -532,7 +532,8 @@ class LogVerdictTest(Base):
             f.write('review it\n')
         env = {**os.environ, 'PATH': bin_dir + os.pathsep + os.environ['PATH'], 'OW_RUN_DIR': self.run.dir,
                'PYTHONDONTWRITEBYTECODE': '1', 'HOME': self.tmp}
-        p = subprocess.run(['bash', os.path.join(HERE, 'review.sh'), '--effort', 'max', 'x-review', wt],
+        p = subprocess.run(['bash', os.path.join(HERE, 'review.sh'), '--override', 'effort=max,reason=test',
+                            '--load-wait', '0', '--no-classifier', 'x-review', wt],
                            capture_output=True, text=True, env=env, timeout=60, stdin=subprocess.DEVNULL)
         self.assertEqual(p.returncode, 0, p.stderr)
         with open(os.path.join(self.run.dir, 'x-review.txt')) as f:
@@ -560,7 +561,7 @@ class LogVerdictTest(Base):
             f.write('Blocking: none\n')
         env = {**os.environ, 'PATH': bin_dir + os.pathsep + os.environ['PATH'], 'OW_RUN_DIR': self.run.dir,
                'PYTHONDONTWRITEBYTECODE': '1', 'HOME': self.tmp}
-        p = subprocess.run(['bash', os.path.join(HERE, 'review.sh'), 'x-review', wt],
+        p = subprocess.run(['bash', os.path.join(HERE, 'review.sh'), '--load-wait', '0', '--no-classifier', 'x-review', wt],
                            capture_output=True, text=True, env=env, timeout=60, stdin=subprocess.DEVNULL)
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertFalse(os.path.exists(txt))

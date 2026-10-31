@@ -130,21 +130,20 @@ Per item:
 - migration or version numbers reserved in its task body.
 
 ```sh
-python3 ~/.agents/skills/orchestrator-workers/scripts/brief.py check "$OW_RUN_DIR/<item>.prompt.md" || exit 5
-python3 ~/.agents/skills/orchestrator-workers/scripts/sweep.py load --wait 15 || exit 12
-trap 'python3 ~/.agents/skills/orchestrator-workers/scripts/sweep.py leftovers <wt-root>/<item> --kill' EXIT
-date +%s > "$OW_RUN_DIR/<item>.start"
-git -C <wt-root>/<item> rev-parse HEAD > "$OW_RUN_DIR/<item>.base"
-COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
-  GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=url.blocked-by-orchestrator://.pushInsteadOf GIT_CONFIG_VALUE_0= \
-  timeout <seconds> \
-  copilot -C <wt-root>/<item> -n "${OW_PREFIX:-ow-}<item>" \
-  --model <model> --reasoning-effort <effort> --max-ai-credits <cap> --no-ask-user --allow-all-tools \
-  --deny-tool 'shell(git push)' --disable-builtin-mcps --disable-mcp-server <name> \
-  [--add-dir <path>] --output-format json -p "$(cat "$OW_RUN_DIR/<item>.prompt.md")" \
-  </dev/null > "$OW_RUN_DIR/<item>.jsonl" 2> "$OW_RUN_DIR/<item>.err"
+python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind build \
+  --brief "$OW_RUN_DIR/<item>.prompt.md" --worktree <wt-root>/<item> \
+  [--add-dir <path> ...] [--override "model=..,effort=..,context=..,cap=<n>|none,reason=.."] </dev/null
 ```
 
+- **Every round goes through `route.py run`; a run must not write its own copilot launch scripts.**
+  Scripts with a fixed `MODEL` and `EFFORT` bypassed the router on 2026-10-30. The launcher checks
+  the brief (exit 5), picks the model, effort, context tier and cap or takes `--override` (refused
+  without a `reason=`), logs the decision with the CLI version to `routes.jsonl`, waits for load
+  (exit 12), writes `<item>.start`, `<item>.base` and the time budget in `budgets.json`, and runs
+  `copilot -p` under a timeout with exactly the logged values, no MCP servers, push denied and no
+  questions, into `<item>.jsonl` and `<item>.err`. On exit it sweeps the worktree's leftovers. It
+  exits non-zero when copilot fails (124 on timeout) or the round errored (4) or hit its cap (3).
+  Re-running it before the round launched reuses the logged decision; `--fresh` draws again.
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
   Why each flag is there: [references/details.md](references/details.md#launch-flags).
 - **Load and leftovers** (`scripts/sweep.py`): a launch, review or merge gate waits while the Mac
@@ -156,11 +155,12 @@ COPILOT_TASK_WAIT_TIMEOUT_SECONDS=5400 \
   or a worker prompt without a filled REUSE CHECK and ALLOWED DEPENDENCIES line: on 2026-10-27 one
   brief had no research step and another's "use a library if one fits" lost to the preamble's
   dependency rule, so both features were hand-written.
-- **Model, effort, context tier and credit cap:** `python3 scripts/route.py pick` chooses them per round and logs why ([router](references/routing.md#the-router)); the static table in [references/routing.md](references/routing.md) is its fallback. The cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --history <earlier run> ... --caps`. A kind with under 5 rounds on a model gets a cap derived from another model's rounds by price (`scripts/prices.json`, refreshed from the SDK's `listModels()`). `--chat <debug-log-dir> --budget N` prints the run's spend, chat included (an upper bound), against N and how many more rounds fit.
+- **Model, effort, context tier and credit cap:** `route.py run` (or `route.py pick` to see the choice without launching) chooses them per round and logs why ([router](references/routing.md#the-router)); the static table in [references/routing.md](references/routing.md) is its fallback. The cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --history <earlier run> ... --caps`. A kind with under 5 rounds on a model gets a cap derived from another model's rounds by price (`scripts/prices.json`, refreshed from the SDK's `listModels()`). `--chat <debug-log-dir> --budget N` prints the run's spend, chat included (an upper bound), against N and how many more rounds fit.
 - **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
-  runs it under `timeout` (`--help` lists the model, effort, cap and timeout overrides) and writes
-  the verdict line to `<run>/<name>.txt` for `mine.py`. Use another model
-  family. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
+  launches it through `route.py run --kind review` (`--help` lists the options it passes on, such
+  as `--override` and `--timeout`) and writes the verdict line to `<run>/<name>.txt` for `mine.py`.
+  The router picks another model family from the author's model, read from the author round's
+  log when `--author-model` is not given. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
   shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
   A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"
   filter on gpt-6.1-sol, or a sub-agent that refuses (2026-10-29: 3 rounds, 131 credits, no
@@ -203,6 +203,8 @@ every script in the folder.)
 - **Queue every approved item** with `runqueue.py add <id> --cmd "<launch command>" [--after <ids>]`
   instead of launching it by hand. `--after` names only queued ids, so queue an item that waits on
   one started by hand after that one merges. Queue reviews with `--no-slot` and a `review.sh` command.
+  `add` refuses a command that runs `copilot` without `route.py run` or `review.sh`, unless it
+  carries `--unrouted-reason "<text>"`, which is stored with the item.
 - **After each merge,** call `runqueue.py done <id>`. Items that wait on it become ready.
 - **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
