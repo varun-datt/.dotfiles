@@ -240,7 +240,7 @@ class FixRoundTest(Tmp):
         with open(os.path.join(self.run.dir, 'rulings.jsonl'), 'w') as f:
             ruling(f, 'rv-a-fix1', 'Major', 'Major')
         g = mine.rulings(mine.read_rulings(self.run.dir), mine.load_rounds(self.run.dir))
-        self.assertEqual((g['odd'], g['model']['gpt-x']), ([], {'accepted': 1}))
+        self.assertEqual((g['odd'], g['model'].get('gpt-x')), ([], {'accepted': 1}))
 
     def test_first_review_has_a_verdict_and_follows_the_build(self):
         r = self.run
