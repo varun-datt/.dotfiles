@@ -18,11 +18,14 @@ bold, italics or with trailing punctuation counts as alone. A worker brief whose
 With --repo, each open row of DIR/docs/tech-debt.md on a path the prompt names (a backticked token, or a
 word inside a fenced block, that is an existing file or folder relative to DIR) whose TD-<n> id the
 prompt does not mention gets a warning with the line `debt.py for-files` prints; the exit code is unchanged.
+DIR itself (`.` or its absolute path) is not a named path, and a path outside DIR is ignored. Options may
+come before, between or after the prompt files.
 
 The kind comes from --kind, else from the prompt's first line outside comments and code blocks:
 the reviewer, research or worker preamble's opening. A worker prompt with a line that starts
 "THIS IS A FIX ROUND" before its first "TASK:" line is a fix round. Anything else is "other".
 """
+import argparse
 import os
 import re
 import sys
@@ -147,23 +150,18 @@ def debt_warnings(text, repo):
     here = os.path.dirname(os.path.abspath(__file__))
     if here not in sys.path:
         sys.path.insert(0, here)
-    import argparse
     import debt
     paths = named_paths(text, repo)
     if not paths:
         return []
     try:
-        rows = debt.cmd_for_files(argparse.Namespace(repo=repo, paths=paths))
+        rows = debt.rows_for_files(repo, paths)
     except (debt.Refused, OSError, ValueError) as e:
         return [f"{debt.REGISTER} could not be read, so its open rows were not checked: {debt.one_line(e)}"]
     visible = "\n".join(brief_lines(text))
-    out = []
-    for row in rows.splitlines():
-        m = re.match(r"- (TD-\d+) .*?`([^`]*)`", row)
-        if m and not re.search(rf"\b{m.group(1)}(?!\d)", visible):
-            out.append(f"{m.group(1)} is open on {m.group(2)}, which the brief names, and the brief does not name the row: "
-                       f"paste it under the TECH DEBT line and fix it, or say why not: {row}")
-    return out
+    return [f"{r['Id']} is open on {r['File']}, which the brief names, and the brief does not name the row: "
+            f"paste it under the TECH DEBT line and fix it, or say why not: {debt.for_files_line(repo, r)}"
+            for r in rows if not re.search(rf"\b{r['Id']}(?!\d)", visible)]
 
 
 def problems(text, kind=None):
@@ -180,27 +178,29 @@ def problems(text, kind=None):
     return found
 
 
+def folder(value):
+    if not os.path.isdir(value):
+        raise argparse.ArgumentTypeError("--repo must name a folder")
+    return os.path.abspath(value)
+
+
+def parser():
+    ap = argparse.ArgumentParser(prog="brief.py", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("cmd", choices=("check",))
+    ap.add_argument("--kind", choices=KINDS)
+    ap.add_argument("--repo", type=folder)
+    ap.add_argument("prompts", nargs="+", metavar="prompt.md")
+    return ap
+
+
 def main(argv=None):
-    args = sys.argv[1:] if argv is None else argv
-    kind = repo = None
-    while len(args) >= 2 and args[0] == "check" and args[1] in ("--kind", "--repo"):
-        flag, value = args[1], args[2] if len(args) > 2 else None
-        args = args[:1] + args[3:]
-        if flag == "--kind":
-            kind = value
-            if kind not in KINDS:
-                print(f"brief.py: --kind must be one of {', '.join(KINDS)}", file=sys.stderr)
-                return 2
-        elif value is None or not os.path.isdir(value):
-            print("brief.py: --repo must name a folder", file=sys.stderr)
-            return 2
-        else:
-            repo = os.path.abspath(value)
-    if len(args) < 2 or args[0] != "check":
-        print(__doc__.strip(), file=sys.stderr)
-        return 2
+    try:
+        args = parser().parse_intermixed_args(argv)
+    except SystemExit as e:
+        return e.code
+    kind, repo = args.kind, args.repo
     failed = False
-    for path in args[1:]:
+    for path in args.prompts:
         with open(path, encoding="utf-8") as f:
             text = f.read()
         found = problems(text, kind)

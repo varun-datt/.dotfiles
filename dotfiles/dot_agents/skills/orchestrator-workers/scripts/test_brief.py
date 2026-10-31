@@ -2,6 +2,7 @@ import contextlib
 import io
 import os
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -277,6 +278,69 @@ class DebtTest(unittest.TestCase):
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(brief.main(["check", "--repo", os.path.join(self.repo, "nope"), "x.md"]), 2)
             self.assertEqual(brief.main(["check", "--repo"]), 2)
+
+    def cli(self, *args, cwd=None):
+        script = str(Path(__file__).parent / "brief.py")
+        return subprocess.run([sys.executable, "-B", script, *args], cwd=cwd or self.repo,
+                              capture_output=True, text=True, stdin=subprocess.DEVNULL, timeout=60)
+
+    def test_options_parse_before_between_and_after_the_prompt_files(self):
+        good, bad = os.path.join(self.repo, "good.md"), os.path.join(self.repo, "bad.md")
+        Path(good).write_text(worker() + "`src/ui/file-view.tsx`\n")
+        Path(bad).write_text(worker(reuse=None))
+        orders = [["--repo", self.repo, good], [good, "--repo", self.repo], [f"--repo={self.repo}", good],
+                  ["--kind", "build", good, "--repo", self.repo], [good, "--repo", self.repo, "--kind", "build"]]
+        for order in orders:
+            r = self.cli("check", *order)
+            self.assertEqual((r.returncode, re.findall(r"warning: (TD-\d+)", r.stderr)), (0, ["TD-4"]), order)
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(brief.main(["check", *order]), 0, order)
+            self.assertEqual(re.findall(r"warning: (TD-\d+)", err.getvalue()), ["TD-4"], order)
+        err = io.StringIO()
+        with contextlib.redirect_stderr(err):
+            self.assertEqual(brief.main(["check", good, "--repo", self.repo, bad]), 2)
+        self.assertIn("bad.md: no REUSE CHECK line", err.getvalue())
+        for order in ([good, "--repo", self.repo, bad], [good, bad, "--repo", self.repo], ["--repo", self.repo, good, bad]):
+            r = self.cli("check", *order)
+            self.assertEqual(r.returncode, 2, order)
+            self.assertIn("bad.md: no REUSE CHECK line", r.stderr, order)
+            self.assertEqual(re.findall(r"warning: (TD-\d+)", r.stderr), ["TD-4"], order)
+        self.assertEqual(self.cli("check", good, "--kind", "fix").returncode, 0)
+        for usage in (["check", good, "--kind", "bogus"], ["check", good, "--repo"], ["check", good, "--repo", "nope"],
+                      ["check", "--repo", self.repo], ["check"], [], ["list", good]):
+            self.assertEqual(self.cli(*usage).returncode, 2, usage)
+
+    def test_a_backticked_area_does_not_replace_the_file_in_the_warning(self):
+        Path(self.repo, "docs", "tech-debt.md").write_text(REGISTER.replace("| ui |", "| `ui` |"))
+        code, err = self.run_check(worker() + "Change `src/ui/file-view.tsx`.\n")
+        self.assertEqual(re.findall(r"warning: (TD-\d+) is open on (\S+),", err), [("TD-4", "src/ui/file-view.tsx")])
+
+    def test_a_line_suffix_alone_still_names_the_file(self):
+        self.assertEqual(self.ids("Change `src/ui/file-view.tsx:12`.\n"), (0, ["TD-4"]))
+        self.assertEqual(self.ids("Change `src/ui/file-view.tsx:12-14`.\n"), (0, ["TD-4"]))
+
+    def test_a_path_that_escapes_the_repo_is_not_named_even_when_it_exists(self):
+        outside = tempfile.mkdtemp()
+        self.addCleanup(lambda: __import__("shutil").rmtree(outside))
+        Path(outside, "x.ts").write_text("x\n")
+        rel = os.path.relpath(os.path.join(outside, "x.ts"), self.repo)
+        self.assertTrue(rel.startswith(".." + os.sep) and os.path.exists(os.path.join(self.repo, rel)))
+        text = f"Change `{rel}`, `{os.path.join(outside, 'x.ts')}` and `src/hostile.ts`.\n"
+        self.assertEqual(brief.named_paths(text, self.repo), ["src/hostile.ts"])
+
+    def test_the_repository_root_itself_is_not_matched(self):
+        self.assertEqual(self.ids(f"Worktree `{self.repo}`, `.`, `./`.\n"), (0, []))
+
+    def test_without_repo_the_current_folders_register_is_not_read(self):
+        path = os.path.join(self.repo, "x.prompt.md")
+        Path(path).write_text(worker() + "Change `src/ui/file-view.tsx`.\n")
+        r = self.cli("check", path, cwd=self.repo)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        here = os.getcwd()
+        os.chdir(self.repo)
+        self.addCleanup(os.chdir, here)
+        self.assertEqual(self.run_check(worker() + "Change `src/ui/file-view.tsx`.\n", repo=False), (0, ""))
 
 
 if __name__ == "__main__":

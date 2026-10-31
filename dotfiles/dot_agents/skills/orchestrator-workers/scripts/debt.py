@@ -189,23 +189,28 @@ def cmd_close(a):
     return change(repo, close)
 
 
-def cmd_for_files(a):
-    repo = repo_dir(a.repo)
+def rows_for_files(repo, paths):
     _, text = read(repo)
     if text is None:
-        return ''
+        return []
     wanted = []
-    for p in a.paths:
+    for p in paths:
         if os.path.isabs(p):
             p = os.path.relpath(p, repo)
         wanted.append(os.path.normpath(p))
-    out = []
-    for r in Register(text).rows:
-        f = r['File']
-        if is_open(r) and any(w == '.' or f == w or f.startswith(w.rstrip(os.sep) + os.sep) for w in wanted):
-            gone = '' if os.path.lexists(os.path.join(repo, f)) else ' (the file no longer exists; close the row if the finding went with it)'
-            out.append(f"- {r['Id']} ({r['Grade']}, {r['Area']}, about {r['Minutes']} min) `{f}`: {r['Scenario']}{gone}")
-    return '\n'.join(out)
+    return [r for r in Register(text).rows if is_open(r) and any(
+        w == '.' or r['File'] == w or r['File'].startswith(w.rstrip(os.sep) + os.sep) for w in wanted)]
+
+
+def for_files_line(repo, r):
+    f = r['File']
+    gone = '' if os.path.lexists(os.path.join(repo, f)) else ' (the file no longer exists; close the row if the finding went with it)'
+    return f"- {r['Id']} ({r['Grade']}, {r['Area']}, about {r['Minutes']} min) `{f}`: {r['Scenario']}{gone}"
+
+
+def cmd_for_files(a):
+    repo = repo_dir(a.repo)
+    return '\n'.join(for_files_line(repo, r) for r in rows_for_files(repo, a.paths))
 
 
 def cmd_stale(a):
