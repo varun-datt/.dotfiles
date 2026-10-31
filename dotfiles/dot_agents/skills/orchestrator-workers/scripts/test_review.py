@@ -5,6 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
+import brief
 import mine
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -23,15 +24,84 @@ def visible(text):
     return re.sub(r'<!--.*?-->', '', text, flags=re.S)
 
 
+def numbered(text, start, end):
+    return re.findall(r'^\d+\. .*$', text.split(start, 1)[1].split(end, 1)[0], flags=re.M)
+
+
+REVIEW_CHECKS = [
+    '1. Each MUST in the task, and each owner ruling it cites: met, partly met or not met, with file:line.',
+    "2. The author's impact map and case table: what reads or writes the changed code that the map misses; cases that "
+    'apply but are missing; rows whose test could not fail; facts marked VERIFIED without a source.',
+    '3. Data: what the owner could lose, overwrite or see misattributed, including when Stop, close, reload, restart or '
+    'a failing source lands mid-step.',
+    '4. Security and privacy: outside text reaching a model, a command or HTML unfenced; secrets or private content in '
+    'logs, cards, prompts or files; path escape; argument lists built from unvalidated input. '
+    '{{PROJECT_SECURITY_SECTIONS}}',
+    '5. Reliability: ordering, late events, retries, double actions, timeouts with no deadline.',
+    "6. The owner's experience: a flow that breaks or misleads, focus taken while typing, contrast below WCAG AA, "
+    'attention drawn to a normal state.',
+    '7. Performance, compatibility and paid spend, at the owner\'s real data sizes and settings.',
+    '8. The checks: do the new tests fail when the behaviour is removed? Is each mutation control killed by a failing '
+    'assertion, not merely invalid (a crash, compile error or timeout)? Could a timing assumption flake on a loaded '
+    'machine? Does an existing test now fail?',
+    "9. Claims in the author's report that the diff does not support.",
+    '10. Gaps against the acceptance rows the task names.',
+]
+REVIEW_REPORT = [
+    '1. The verdict as the first line: `Blocking: none`, or `N blocking` where N counts Blockers and Majors.',
+    '2. **Blocking.** For each Blocker or Major: `B1. [Major] AREA L1/I2 CAUSE: title`, then `Class:` and every member '
+    'of the class you found, its scenario, file:line, the reason for each grade, VERIFIED or INFERRED with the command '
+    'or test that would confirm it, and a fix in one line that covers the whole class.',
+    '3. **Check.** Possible Majors with no concrete scenario yet: one line each, with what would confirm them.',
+    '4. **Minor.** One line each: `AREA Lx/Ix CAUSE: what, file:line; class: ...`.',
+    '5. **Pre-existing.** One line each.',
+    "6. **Corrections** to the author's report: one line each.",
+    '7. `Nits: N` as one line; do not list them.',
+    '8. **Not checked**, and why.',
+]
+REREVIEW_CHECKS = [
+    '1. Each finding: fixed, partly fixed or not fixed, with file:line. A finding is fixed when its failure scenario '
+    'can no longer happen; say how you know.',
+    "2. The class: the fix must cover the finding's whole class, not only the member the review named. List each member "
+    'the fix report names and the test that covers it; a member with no test, or one in the code that the report leaves '
+    'out, is not fixed. A fix that covers some members of a class is "partly fixed", and the finding stays open.',
+    '3. New problems the fix diff introduces, graded with the rubric. Look hardest at: {{NEARBY_RISKS_TO_CHECK}}. A fix '
+    'that trades one race or loss for another is a new Major.',
+    "4. Do the fix's tests fail when the fix is removed? Does an existing test now fail or flake?",
+    '5. Claims in the fix report that the diff does not support.',
+]
+REREVIEW_REPORT = [
+    '1. The verdict as the first line: `Blocking: none`, or `N blocking`.',
+    '2. **Findings.** One line each: number, fixed / partly / not fixed, file:line, how you know, and each class member '
+    'with its test or "no test".',
+    '3. **New blocking.** For each Blocker or Major the fix introduced: `B1. [Major] AREA L1/I2 CAUSE: title`, its '
+    'class, its scenario, file:line, the reason for each grade, VERIFIED or INFERRED with what would confirm it, and a '
+    'fix in one line.',
+    '4. **New minor.** One line each.',
+    '5. **Corrections** to the fix report: one line each.',
+    '6. **Outside scope**: one line each. Then `Nits: N`.',
+]
+
+
 class PromptTextTest(unittest.TestCase):
     def test_the_rubric_holds_the_grades_and_the_d1_matrix(self):
         r = read('references', 'rubric.md')
         for word in ('Blocker', 'Major', 'Minor', 'Nit', 'L1 ', 'L2 ', 'L3 ', 'I1 ', 'I2 ', 'I3 '):
             self.assertIn(word, r)
+        self.assertIn('\n| | L1 normal | L2 plausible | L3 contrived |\n', r)
         rows = {m.group(1): [c.strip() for c in m.group(2).split('|')]
                 for m in re.finditer(r'^\| \*\*(I\d) [a-z]+\*\* \|(.*)\|$', r, flags=re.M)}
+        self.assertEqual(rows, {'I1': ['Blocker', 'Blocker', 'Minor, tagged SEC or DATA for the owner'],
+                                'I2': ['Major', 'Major', 'Minor'], 'I3': ['Major', 'Minor', 'Minor'],
+                                'I4': ['Minor', 'Nit', 'Nit']})
         blocking = {(i, f'L{n + 1}') for i, cells in rows.items() for n, c in enumerate(cells) if c in ('Blocker', 'Major')}
         self.assertEqual(blocking, {('I1', 'L1'), ('I1', 'L2'), ('I2', 'L1'), ('I2', 'L2'), ('I3', 'L1')})
+        for row in ('| Blocker, Major | Blocks: one fix round | Fix brief; re-review checks the fix |',
+                    '| Minor | Does not block | One line on the repository\'s tech-debt list |',
+                    '| Nit | Does not block | Counted in one line, never listed |',
+                    '| Pre-existing | Does not block | Tech-debt list if it would be Major, else dropped |',
+                    '| Correction | Does not block | The orchestrator fixes the record |'):
+            self.assertIn('\n' + row + '\n', r)
 
     def test_skill_md_states_the_same_rule_and_points_at_the_rubric(self):
         lifecycle = read('SKILL.md').split('## Lifecycle', 1)[1].split('\n## ', 1)[0]
@@ -48,6 +118,9 @@ class PromptTextTest(unittest.TestCase):
         for cause in CAUSES:
             self.assertEqual(len(re.findall(rf'\b{cause} \(', t)), 1, cause)
         self.assertLess(t.index('The verdict as the first line'), t.index('**Blocking.**'))
+        self.assertEqual(numbered(t, 'CHECK, in this order', '{{RISK_CHECKS_OR_DELETE}}'), REVIEW_CHECKS)
+        self.assertEqual(numbered(t, 'REPORT, in this order', 'Mark every claim'), REVIEW_REPORT)
+        self.assertIn('\nBlocking rule ({{BLOCKING_RULE_SOURCE}}): Blocker and Major block; nothing else does.\n', t)
 
     def test_the_rereview_checks_every_member_of_the_class(self):
         t = visible(read('assets', 'rereview.md'))
@@ -55,6 +128,10 @@ class PromptTextTest(unittest.TestCase):
                      'partly fixed'):
             self.assertIn(part, t)
         self.assertRegex(t, r'member .*has no test|member with no test')
+        self.assertEqual(numbered(t, '\nCHECK\n', 'Out of scope'), REREVIEW_CHECKS)
+        self.assertEqual(numbered(t, 'REPORT, in this order', 'Mark every claim'), REREVIEW_REPORT)
+        self.assertIn('\nBlocking rule ({{BLOCKING_RULE_SOURCE}}): a Blocker or Major that is still open, or that the '
+                      'fix introduced, blocks; nothing else does.\n', t)
 
 
 class VerdictTest(unittest.TestCase):
@@ -140,6 +217,57 @@ class ReviewShTest(unittest.TestCase):
         self.assertNotEqual(p.returncode, 0)
         self.assertIn('no rubric at', p.stderr)
         self.assertFalse(os.path.exists(self.args))
+
+    def filled(self):
+        with open(os.path.join(self.run_dir, 'x-review.filled.md'), encoding='utf-8') as f:
+            return f.read()
+
+    def test_quoted_placeholder_examples_are_left_as_written(self):
+        rubric = read('references', 'rubric.md').rstrip('\n')
+        examples = ('Say `{{RUBRIC}} {{TASK}}` here.', '| slot | `{{RUBRIC}}` | `{{TASK}}` |',
+                    'Spans: `` `{{RUBRIC}}` `` and `{{TASK}}`.', '> quoted: `{{RUBRIC}}` and `{{TASK}}`',
+                    '> {{RUBRIC}} `{{TASK}}`'.replace('{{RUBRIC}}', '`{{RUBRIC}}`'),
+                    '```\nuse `{{RUBRIC}}` and `{{TASK}}`\n```', '````md\n```\n`{{RUBRIC}}` `{{TASK}}`\n```\n````',
+                    '~~~\n`{{RUBRIC}}` `{{TASK}}`\n~~~', '<!-- ```\n-->\n`{{RUBRIC}}`')
+        for ex in examples:
+            self.assertEqual(brief.problems(ex), [], ex)
+            for head, tail in (('You are a read-only reviewer.\n' + ex + '\n==== RUBRIC ====\n', '\n==== END ====\n'),
+                               ('==== RUBRIC ====\n', '\n' + ex + '\n')):
+                p = self.review(head + '{{RUBRIC}}' + tail)
+                self.assertEqual(p.returncode, 0, ex + p.stderr)
+                self.assertEqual(self.filled(), head + rubric + tail, ex)
+            if os.path.exists(self.args):
+                os.remove(self.args)
+            p = self.review(ex + '\n')
+            self.assertEqual(p.returncode, 0, ex + p.stderr)
+            self.assertTrue(self.launched_prompt().startswith(ex + '\n'), ex)
+
+    def test_a_bare_placeholder_in_a_fence_or_quote_is_left_and_refused_as_brief_py_would(self):
+        for ex in ('```\n{{RUBRIC}}\n```', '````\n```\n{{RUBRIC}}\n````', '```\n~~~\n{{RUBRIC}}\n```',
+                   '```\n``` x\n{{RUBRIC}}\n```', '> {{RUBRIC}}', '  > {{TASK}}', '```\nunclosed\n{{RUBRIC}}'):
+            self.assertNotEqual(brief.problems(ex + '\n'), [], ex)
+            if os.path.exists(self.args):
+                os.remove(self.args)
+            p = self.review('==== RUBRIC ====\n{{RUBRIC}}\n' + ex + '\n')
+            self.assertNotEqual(p.returncode, 0, ex)
+            self.assertIn('unfilled placeholders: {{', p.stderr, ex)
+            self.assertFalse(os.path.exists(self.args), ex)
+
+    def test_a_bare_slot_outside_fences_and_code_is_filled(self):
+        rubric = read('references', 'rubric.md').rstrip('\n')
+        for head, tail in (('````\n```\n````\n', '\n'), ('    ```\n', '\n'), ('```a`b\n', '\n'),
+                           ('   ~~~ md\n`x`\n   ~~~\n', '\n'), ('x ` ', ' y\n'), ('<!-- ```\n-->\n', '\n'),
+                           ('`a` ', ' `{{TASK}}`\n'), ('', ' and {{RUBRIC}} twice\n'), ('`` ', ' ``\n'),
+                           ('`a` `', '\n')):
+            p = self.review(head + '{{RUBRIC}}' + tail)
+            self.assertEqual(p.returncode, 0, head + p.stderr)
+            self.assertEqual(self.filled(), head + rubric + tail.replace('{{RUBRIC}}', rubric), head)
+
+    def test_the_rubric_holds_nothing_that_could_shift_code_spans_or_placeholders(self):
+        r = read('references', 'rubric.md')
+        self.assertNotIn('`', r)
+        self.assertNotIn('{{', r)
+        self.assertNotIn('<!--', r)
 
     def test_a_prompt_named_like_its_filled_copy_is_not_overwritten(self):
         p = self.review('{{RUBRIC}}\n', prompt_path=os.path.join(self.run_dir, '.', 'x-review.filled.md'))
