@@ -216,7 +216,6 @@ class DebtTest(unittest.TestCase):
         before = sorted(os.listdir(os.path.dirname(FIXTURE)))
         self.cli('import-plan', FIXTURE, '--dry-run')
         self.assertEqual(sorted(os.listdir(os.path.dirname(FIXTURE))), before)
-        subprocess.run([sys.executable, '-B', SCRIPT, 'import-plan', FIXTURE], capture_output=True, stdin=subprocess.DEVNULL, check=False)
         self.assertNotEqual(subprocess.run([sys.executable, '-B', SCRIPT, 'import-plan', FIXTURE], capture_output=True, stdin=subprocess.DEVNULL).returncode, 0)
 
     def test_import_plan_with_no_known_gaps_prints_nothing(self):

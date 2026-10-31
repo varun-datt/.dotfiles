@@ -281,8 +281,6 @@ def plan_passages(text):
 
 
 def cmd_import_plan(a):
-    if not a.dry_run:
-        raise Refused('only --dry-run is supported; add each row with `debt.py add` once its area, grade and file are known')
     try:
         with open(a.plan, encoding='utf-8') as f:
             text = f.read()
