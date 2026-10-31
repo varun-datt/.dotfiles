@@ -42,7 +42,9 @@ ruling on the same round and finding replaces the earlier one; every line stays 
 --quality takes each item's first review: the first review with a verdict after the item's first build and
 before its first fix or rebuild, else the first review in that span ("no verdict"). A review of an item
 whose build is not in the run is listed as unknown provenance. Blockers per first review count the
-orchestrator's accepted blockers; fix rounds are averaged over items with at least one fix round.
+orchestrator's accepted blockers; fix rounds are averaged over every item with at least one fix round,
+and one with no build and first review in the run is listed as provenance missing. A round's kind is
+the kind route.py launched it as (routes.jsonl), else its name's. Averages are rounded once, when printed.
 Clean under the reviewer: its verdict reads "Blocking: none". Under the orchestrator: no
 Blocker or Major ruled in rulings.jsonl, else the <item>.accepted line ("none", N or "N blocking"),
 else the ACCEPTED list of the item's first fix brief (<fix round>.md), else the reviewer's clean verdict;
@@ -77,6 +79,7 @@ NEEDED = ('model.call_start', 'user.message', 'session.usage_checkpoint', 'resul
 COMPACT_FROM, COMPACT_TO = 0.75, 0.6
 AUDIT_SLACK = datetime.timedelta(minutes=2)
 AUDIT_KIND = {'small': 'build', 'research': 'build', 'catchup': 'merge', 'rereview': 'review'}
+LAUNCH_KIND = {'small': 'build'}
 TYPE_PREFIX = '{"type":"'
 TIMESTAMP = re.compile(r'"timestamp"\s*:\s*"([^"]+)"')
 VERDICT = re.compile(r'^(?:verdict\s*:\s*\**\s*)?(?:blocking\s*:\s*none\b|no\s+blocking\s+(?:findings|issues)\b|(\d+)\s+blocking\b)', re.I)
@@ -279,7 +282,7 @@ def cumulative_usage(checkpoint, model):
 
 
 def load_rounds(run):
-    rounds = []
+    rounds, launched = [], launch_kinds(run)
     for fn in sorted(os.listdir(run)):
         if not fn.endswith('.jsonl') or fn == 'markers.jsonl':
             continue
@@ -297,6 +300,9 @@ def load_rounds(run):
         start = start or r['first'] or datetime.datetime.fromtimestamp(os.path.getmtime(path), UTC)
         end = r['last'] or datetime.datetime.fromtimestamp(os.path.getmtime(path), UTC)
         item, kind = split_name(name)
+        # route.py has no rereview kind, so a review launch keeps the name's finer rereview.
+        if name in launched and not (launched[name] == 'review' and kind == 'rereview'):
+            kind = launched[name]
         cap = r['cap'] or {}
         rounds.append({'name': name, 'item': item, 'kind': kind, 'model': r['model'], 'effort': r['effort'],
                        'start': start, 'wall_min': max(0.0, (end - start).total_seconds() / 60),
@@ -464,7 +470,7 @@ def caps(rounds, factor=FACTOR, window=WINDOW, min_rounds=MIN_ROUNDS, floor=FLOO
         last = [r['credits'] for r in sorted(rs, key=lambda x: x['start'])[-window:]]
         med = statistics.median(last)
         enough = len(last) >= min_rounds
-        row = {'kind': kind, 'model': model, 'n': len(last), 'median': round(med, 1),
+        row = {'kind': kind, 'model': model, 'n': len(last), 'median': med,
                'cap': max(CLI_MIN_CAP, round(factor * med) if enough else floor),
                'from': f'{factor} x median' if enough else f'floor (n < {min_rounds})'}
         if not enough:
@@ -475,7 +481,7 @@ def caps(rounds, factor=FACTOR, window=WINDOW, min_rounds=MIN_ROUNDS, floor=FLOO
                 ratio = price_ratio(dr, donor, model, prices)
                 if ratio:
                     dmed = statistics.median(r['credits'] for r in dr) * ratio
-                    row.update(median=round(dmed, 1), cap=max(CLI_MIN_CAP, round(factor * dmed)),
+                    row.update(median=dmed, cap=max(CLI_MIN_CAP, round(factor * dmed)),
                                **{'from': f'derived from {donor} by price (x{ratio:.2f})'})
                     break
         out.append(row)
@@ -508,14 +514,14 @@ def usage_by_kind(rounds):
         by[(r['kind'], r['model'] or '?')].append(r)
     out = []
     for (kind, model), rs in sorted(by.items()):
-        out.append({'kind': kind, 'model': model, 'rounds': len(rs), 'wall_min': round(sum(r['wall_min'] for r in rs), 1),
+        out.append({'kind': kind, 'model': model, 'rounds': len(rs), 'wall_min': sum(r['wall_min'] for r in rs),
                     'calls': sum((r.get('usage') or {}).get('calls', r.get('call_starts', 0)) for r in rs),
                     'cold_calls': sum(r.get('cold_calls', 0) for r in rs),
                     'compactions': sum(r.get('compactions', 0) for r in rs),
                     'compacted_rounds': sum(r.get('compactions', 0) > 0 for r in rs),
                     'efforts': sorted({r['effort'] or '?' for r in rs}),
                     'tokens': {c: sum((r.get('usage') or {}).get(c, 0) for r in rs) for c in CLASSES + ('reasoning',)},
-                    'credits_by_class': {c: round(sum((r.get('priced') or {}).get(c, 0) for r in rs), 1) for c in CLASSES}})
+                    'credits_by_class': {c: sum((r.get('priced') or {}).get(c, 0) for r in rs) for c in CLASSES}})
     return out
 
 
@@ -551,8 +557,8 @@ def chat_spend(path, prices):
         else:
             total += credits
         models.append({'model': model, 'calls': t['calls'], 'tokens': {c: t[c] for c in CLASSES},
-                       'credits': None if credits is None else round(credits, 1)})
-    return {'credits': round(total, 1), 'upper_bound': True, 'models': models, 'unpriced': unpriced}
+                       'credits': credits})
+    return {'credits': total, 'upper_bound': True, 'models': models, 'unpriced': unpriced}
 
 
 def budget_report(budget, rounds, chat, cap_rows):
@@ -561,8 +567,8 @@ def budget_report(budget, rounds, chat, cap_rows):
     left = budget - spent
     fit = [{'kind': c['kind'], 'model': c['model'], 'median': c['median'],
             'rounds': int(left // c['median']) if left > 0 and c['median'] > 0 else 0} for c in cap_rows]
-    return {'budget': budget, 'rounds_credits': round(spent_rounds, 1), 'chat_credits': chat['credits'] if chat else None,
-            'spent': round(spent, 1), 'left': round(left, 1), 'fit': fit}
+    return {'budget': budget, 'rounds_credits': spent_rounds, 'chat_credits': chat['credits'] if chat else None,
+            'spent': spent, 'left': left, 'fit': fit}
 
 
 def load_markers(run):
@@ -601,8 +607,8 @@ def measure(markers, rounds):
             ma = statistics.median(after) if after else None
             if mb is not None and ma is not None:
                 saving += (mb - ma) * len(after)
-            rows.append({'kind': kind, 'before_n': len(before), 'before_median': mb and round(mb, 1),
-                         'after_n': len(after), 'after_median': ma and round(ma, 1)})
+            rows.append({'kind': kind, 'before_n': len(before), 'before_median': mb,
+                         'after_n': len(after), 'after_median': ma})
         out.append({'at': iso(m['at']), 'label': m['label'], 'scope': m['scope'], 'kinds': rows,
                     'saving': round(saving)})
     return out
@@ -626,7 +632,7 @@ def kinds(rounds):
     for (kind, model), rs in sorted(by.items()):
         known = [r['credits'] for r in rs if r['credits'] is not None]
         out.append({'kind': kind, 'model': model, 'rounds': len(rs), 'credits': sum(known),
-                    'median': round(statistics.median(known), 1) if known else None,
+                    'median': statistics.median(known) if known else None,
                     'capped': sum(r['capped'] for r in rs)})
     return out
 
@@ -635,23 +641,42 @@ def audit_kind(kind):
     return AUDIT_KIND.get(kind, kind)
 
 
-def read_decisions(run):
-    """The routing decisions in <run>/routes.jsonl that name an item, kind and choice."""
-    out = []
+def read_routes(run):
+    """(line number, record) for each JSON object in <run>/routes.jsonl."""
     try:
         with open(os.path.join(run, 'routes.jsonl'), encoding='utf-8') as f:
             lines = f.read().splitlines()
     except FileNotFoundError:
-        return out
-    launches = {}
+        return []
+    out = []
     for i, line in enumerate(lines):
         try:
             d = json.loads(line)
         except ValueError:
             continue
-        if isinstance(d, dict) and d.get('event') == 'launch' and d.get('round'):
+        if isinstance(d, dict):
+            out.append((i, d))
+    return out
+
+
+def launch_kinds(run):
+    """The kind each round was launched as (route.py's launch record, the latest one per round)."""
+    out = {}
+    for _, d in read_routes(run):
+        kind = LAUNCH_KIND.get(d.get('kind'), d.get('kind'))
+        if d.get('event') == 'launch' and d.get('round') and kind in WORKER_KINDS + REVIEW_KINDS:
+            out[d['round']] = kind
+    return out
+
+
+def read_decisions(run):
+    """The routing decisions in <run>/routes.jsonl that name an item, kind and choice."""
+    out = []
+    launches = {}
+    for i, d in read_routes(run):
+        if d.get('event') == 'launch' and d.get('round'):
             launches[(d['round'], d.get('decision_at'))] = d
-        elif isinstance(d, dict) and d.get('item') and d.get('kind') and isinstance(d.get('choice'), dict):
+        elif d.get('item') and d.get('kind') and isinstance(d.get('choice'), dict):
             out.append({**d, '_line': i + 1, '_at': parse_time(d.get('at')) if d.get('at') else None})
     for d in out:
         ln = launches.get((d['item'], d.get('at')))
@@ -916,15 +941,18 @@ def quality(run, rounds, rows):
     rf = sum(r['credits'] for r in rounds if r['credits'] is not None and r['kind'] in REVIEW_KINDS + ('fix',))
     n = len(firsts)
     accepted = [f['ruled_blocking'] for f in firsts if f['ruled_blocking'] is not None]
-    looped = [f['fix_rounds'] for f in firsts if f['fix_rounds']]
+    fixes = {item: sum(r['kind'] == 'fix' for r in rs) for item, rs in by_item.items()}
+    looped = [n_fix for n_fix in fixes.values() if n_fix]
+    with_first = {f['item'] for f in firsts}
     return {'first_reviews': firsts, 'n': n, 'unknown_provenance': unknown,
+            'looped_no_first': [item for item, n_fix in fixes.items() if n_fix and item not in with_first],
             'clean_reviewer': sum(f['blocking'] == 0 for f in firsts),
             'no_verdict': sum(f['blocking'] is None for f in firsts),
             'clean_orchestrator': sum(f['ruled_blocking'] == 0 for f in firsts),
             'unruled': sum(f['ruled_blocking'] is None for f in firsts),
-            'blockers_per_review': round(sum(accepted) / len(accepted), 2) if accepted else None,
+            'blockers_per_review': sum(accepted) / len(accepted) if accepted else None,
             'looped_items': len(looped),
-            'fix_rounds_per_item': round(sum(looped) / len(looped), 2) if looped else None,
+            'fix_rounds_per_item': sum(looped) / len(looped) if looped else None,
             'review_fix_credits': rf, 'credits': sum(known),
             'review_fix_share': rf / sum(known) if sum(known) else None,
             'causes': pareto.most_common(), 'classes': classes.most_common()}
@@ -952,6 +980,8 @@ def quality_text(q):
         out.append(f"  {f['item']:<24} {f['round']:<28} reviewer {f['verdict'] or 'no verdict'}; ruled "
                    f"{'unruled' if f['ruled_blocking'] is None else f['ruled_blocking']} ({f['ruled_source']}); "
                    f"fixes {f['fix_rounds']}")
+    for item in q['looped_no_first']:
+        out.append(f'  looped, provenance missing: {item} (fix rounds counted; no build and first review of it in the run)')
     for name in q['unknown_provenance']:
         out.append(f'  unknown provenance: {name} (no build of its item in the run; not a first review)')
     return '\n'.join(out)

@@ -1,7 +1,7 @@
-import csv, io, contextlib, json, os, subprocess, sys, tempfile, unittest
+import csv, io, contextlib, datetime, json, os, subprocess, sys, tempfile, unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import kappa, mine, rule, sample  # noqa: E402
+import kappa, mine, route, rule, sample  # noqa: E402
 from test_mine import Run, T0  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -364,6 +364,87 @@ class FixRoundTest(Tmp):
                 code = kappa.main([good, self.sheet(name, rows), '--column', 'g'])
             self.assertEqual(code, 2)
             self.assertIn(needle, err.getvalue())
+
+
+def iso_at(epoch):
+    return datetime.datetime.fromtimestamp(epoch, datetime.timezone.utc).isoformat(timespec='seconds')
+
+
+class LaunchKindTest(Tmp):
+    def routes(self, *rows):
+        with open(os.path.join(self.run.dir, 'routes.jsonl'), 'w') as f:
+            for row in rows:
+                f.write(json.dumps(row) + '\n')
+
+    def launch(self, round_, kind, at):
+        pick = {'event': 'pick', 'at': iso_at(at - 6), 'item': round_, 'kind': kind, 'category': 'docs-research',
+                'tier': 'medium', 'choice': {'model': 'claude-opus-5.5', 'effort': 'high', 'context': 'default', 'cap': 1200},
+                'override': {'cap': 1200, 'reason': 'owner cap for this research; one resume allowed'}}
+        return pick, {'event': 'launch', 'at': iso_at(at), 'round': round_, 'kind': kind, 'decision_at': pick['at']}
+
+    def test_research_resume_keeps_launch_kind_category_and_tier(self):
+        self.run.round('dr2', credits=10, session='s1')
+        self.run.round('dr2-r2', at=T0 + 3600, credits=20, session='s2')
+        self.routes(*self.launch('dr2-r2', 'research', T0 + 3600))
+        rs = mine.load_rounds(self.run.dir)
+        self.assertEqual({r['name']: r['kind'] for r in rs}, {'dr2': 'build', 'dr2-r2': 'research'})
+        a = mine.audit(rs, mine.read_decisions(self.run.dir))
+        self.assertEqual([(x['name'], x['status']) for x in a['rounds']], [('dr2', 'unrouted'), ('dr2-r2', 'overridden')])
+        self.assertEqual(a['unused'], [])
+        hist = route.build_history([(self.run.dir, rs, mine.items(rs))], mine.read_decisions(self.run.dir))
+        got = {h['item'] + ':' + h['kind']: (h['category'], h['tier']) for h in hist}
+        self.assertEqual(got['dr2:research'], ('docs-research', 'medium'))
+
+    def test_each_launch_kind_wins_over_the_name_and_name_is_the_fallback(self):
+        names = {'a-fix1': 'review', 'b-review': 'build', 'c-r2': 'fix', 'd-rereview': 'review', 'e-x': 'small',
+                 'rv-g-fix1': 'review'}
+        rows = []
+        for i, (name, kind) in enumerate(names.items()):
+            self.run.round(name, at=T0 + i * 100, credits=1, session='s' + name)
+            rows += self.launch(name, kind, T0 + i * 100)[1:]
+        self.run.round('f-fix1', at=T0 + 900, credits=1, session='sf')
+        self.routes(*rows, {'event': 'launch', 'round': 'f-fix1', 'kind': 'bogus'})
+        got = {r['name']: r['kind'] for r in mine.load_rounds(self.run.dir)}
+        self.assertEqual(got, {'a-fix1': 'review', 'b-review': 'build', 'c-r2': 'fix', 'd-rereview': 'rereview',
+                               'e-x': 'build', 'rv-g-fix1': 'rereview', 'f-fix1': 'fix'})
+
+
+class AverageTest(Tmp):
+    def test_looped_item_without_provenance_is_counted_and_named(self):
+        r = self.run
+        r.round('a-review', credits=5, session='ra', report='1 blocking\n')
+        r.round('a-fix1', at=T0 + 700, credits=5, session='sa')
+        q = mine.quality(r.dir, mine.load_rounds(r.dir), None)
+        self.assertEqual((q['n'], q['looped_items'], q['fix_rounds_per_item'], q['looped_no_first']), (0, 1, 1.0, ['a']))
+        text = mine.quality_text(q)
+        self.assertIn('fix rounds per looped item: 1.0 (1 looped)', text)
+        self.assertIn('looped, provenance missing: a', text)
+
+    def test_looped_item_with_provenance_is_not_flagged(self):
+        r = self.run
+        r.round('a', credits=10, session='sa')
+        r.round('a-review', at=T0 + 700, credits=5, session='ra', report='1 blocking\n')
+        r.round('a-fix1', at=T0 + 1400, credits=5, session='sa')
+        r.round('a-fix2', at=T0 + 2100, credits=5, session='sa')
+        q = mine.quality(r.dir, mine.load_rounds(r.dir), None)
+        self.assertEqual((q['looped_items'], q['fix_rounds_per_item'], q['looped_no_first']), (1, 2.0, []))
+
+    def test_two_of_thirteen_blockers_prints_point_two(self):
+        r = self.run
+        for i in range(13):
+            r.round(f'i{i}', at=T0 + i * 2000, credits=1, session=f's{i}')
+            r.round(f'i{i}-review', at=T0 + i * 2000 + 700, credits=1, session=f'r{i}', report='1 blocking\n')
+            with open(os.path.join(r.dir, f'i{i}.accepted'), 'w') as f:
+                f.write('1 blocking\n' if i < 2 else 'none\n')
+        q = mine.quality(r.dir, mine.load_rounds(r.dir), None)
+        self.assertEqual(q['blockers_per_review'], 2 / 13)
+        self.assertIn('accepted by the orchestrator: 0.2\n', mine.quality_text(q))
+
+    def test_boundary_rounds_once_with_python_default(self):
+        self.assertEqual([mine.fmt1(x) for x in (0.25, 0.75, 1.45, 0.15)], ['0.2', '0.8', '1.4', '0.1'])
+        rows = [{'kind': 'fix', 'model': 'm', 'credits': c, 'capped': False, 'start': T0} for c in (3.44, 3.48)]
+        # Rounded to 3.5 first, a later :.0f would print 4 instead of 3.
+        self.assertAlmostEqual(mine.kinds(rows)[0]['median'], 3.46)
 
 
 class HelpTest(unittest.TestCase):

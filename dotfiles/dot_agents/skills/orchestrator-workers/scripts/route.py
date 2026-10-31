@@ -250,7 +250,7 @@ def build_history(rounds_items, decisions=()):
         for r in rounds:
             if not r.get('ended') or not r.get('model') or r['kind'] == 'other':
                 continue
-            d = logged.get((r['item'], mine_kind(r['kind'])))
+            d = logged.get((r['name'], mine_kind(r['kind']))) or logged.get((r['item'], mine_kind(r['kind'])))
             hist.append({'kind': mine_kind(r['kind']), 'category': d and d['category'], 'tier': d and d['tier'],
                          'model': r['model'], 'effort': r.get('effort'),
                          'context': (d and d['choice'].get('context')) or 'default',
