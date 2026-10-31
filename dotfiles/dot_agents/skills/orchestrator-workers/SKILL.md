@@ -158,9 +158,12 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   or a worker prompt without a filled REUSE CHECK and ALLOWED DEPENDENCIES line: on 2026-10-27 one
   brief had no research step and another's "use a library if one fits" lost to the preamble's
   dependency rule, so both features were hand-written. A worker brief (not a fix round) is also
-  refused when a numbered MUST has no "SHALL" ("WHEN <event or state>, <part> SHALL <response>"),
+  refused when a top-level numbered MUST has no "SHALL" ("WHEN <event or state>, <part> SHALL <response>"),
   or its RISK, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY line is missing or empty; each
-  may say "none" with a reason. A TIME BUDGET over 45 minutes only warns: split the item.
+  may say "none" with a reason, and a bare "none" in backticks or with punctuation is still empty.
+  A TIME BUDGET over 45 minutes only warns: split the item. The prompt's kind comes from its first
+  line (the preamble's opening, then a "THIS IS A FIX ROUND" line before "TASK:"), not from a quote
+  further down; `brief.py check --kind <kind>` overrides it.
 - **Model, effort, context tier and credit cap:** `route.py run` (or `route.py pick` to see the choice without launching) chooses them per round and logs why ([router](references/routing.md#the-router)); the static table in [references/routing.md](references/routing.md) is its fallback. The cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --history <earlier run> ... --caps`. A kind with under 5 rounds on a model gets a cap derived from another model's rounds by price (`scripts/prices.json`, refreshed from the SDK's `listModels()`). `--chat <debug-log-dir> --budget N` prints the run's spend, chat included (an upper bound), against N and how many more rounds fit.
 - **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
   launches it through `route.py run --kind review` (`--help` lists the options it passes on, such

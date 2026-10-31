@@ -64,7 +64,7 @@ class BriefTest(unittest.TestCase):
         self.assertEqual(brief.problems(worker(fields=FIELDS.replace("RISK: UI\n", ""))), ["no RISK line"])
 
     def test_each_brief_field_is_required(self):
-        for field in brief.BRIEF_FIELDS:
+        for field in ("RISK", "CASES THE ORCHESTRATOR KNOWS", "FACTS TO VERIFY"):
             kept = "".join(x for x in FIELDS.splitlines(True) if not x.startswith(field + ":"))
             self.assertEqual(brief.problems(worker(fields=kept)), [f"no {field} line"])
 
@@ -107,6 +107,9 @@ class BriefTest(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("warning: TIME BUDGET of 60 minutes is over 45", err)
         self.assertEqual(check(worker(budget="TIME BUDGET: 45 minutes.\n")), (0, ""))
+        code, err = check(worker(budget="TIME BUDGET: 46 minutes.\n"))
+        self.assertEqual(code, 0)
+        self.assertIn("warning: TIME BUDGET of 46 minutes is over 45", err)
         code, err = check(worker(fields="", budget="TIME BUDGET: 60 minutes.\n"))
         self.assertEqual(code, 2)
         self.assertIn("warning: TIME BUDGET", err)
@@ -116,6 +119,90 @@ class BriefTest(unittest.TestCase):
         filled = re.sub(r"\{\{[^{}\n]+\}\}", "sample value", body).replace("2. sample value", "2. WHEN zoomed, the view SHALL scale")
         self.assertEqual(brief.problems(PREAMBLE + filled), [])
         self.assertEqual(brief.problems(PREAMBLE + filled.replace("RISK: ", "")), ["no RISK line"])
+
+    def test_text_under_the_musts_that_is_not_a_top_level_item_is_not_a_must(self):
+        for extra in ("   1. Old records still load.\n", "  - 2. Old records still load.\n", "\t3) Old records load.\n",
+                      "```\n2. WHEN x, y does z\nMUST\n3. no shall\n```\n", "~~~\n2. no shall\n~~~\n",
+                      "> 2. WHEN x, y does z\n", "> MUST\n> 1. no shall\n", "Write each `MUST` as one sentence.\n"):
+            self.assertEqual(brief.problems(worker(must=MUST + extra)), [], extra)
+        self.assertEqual(len(brief.problems(worker(must=MUST + "```\nx\n```\n2. no shall\n"))), 1)
+
+    def test_a_fenced_example_of_a_field_is_not_the_field(self):
+        fenced = "```\nRISK: UI\n```\n"
+        self.assertEqual(brief.problems(worker(fields=fenced + FIELDS.replace("RISK: UI\n", ""))), ["no RISK line"])
+
+    def test_kind_comes_from_the_leading_declaration_not_a_quote(self):
+        quoted = worker(fields="") + "Quote from a fix: THIS IS A FIX ROUND\n> THIS IS A FIX ROUND\n"
+        self.assertEqual(brief.prompt_kind(quoted), "build")
+        self.assertEqual(len(brief.problems(quoted)), 3)
+        for marker in ("You are a read-only reviewer", "`THIS IS A FIX ROUND`", "<!-- THIS IS A FIX ROUND -->",
+                       "```\nTHIS IS A FIX ROUND\n```"):
+            self.assertEqual(brief.prompt_kind(worker() + marker + "\n"), "build", marker)
+        late_fix = worker() + "THIS IS A FIX ROUND\n"
+        self.assertEqual(brief.prompt_kind(late_fix), "build")
+        research = "You are a research worker for amc. A worker prompt opens with \"You are a worker session\".\n" \
+            "MUST\n1. no shall\nREUSE CHECK: x\nALLOWED DEPENDENCIES: none\n"
+        self.assertEqual(brief.prompt_kind(research), "research")
+        self.assertEqual(brief.problems(research), [])
+        self.assertEqual(brief.prompt_kind("```\nYou are a read-only reviewer\n```\n" + worker()), "build")
+        self.assertEqual(brief.prompt_kind("Note: You are a worker session\n" + worker()), "other")
+
+    def test_an_explicit_kind_overrides_detection(self):
+        self.assertEqual(len(brief.problems(worker(fields=""), kind="fix")), 0)
+        self.assertEqual(len(brief.problems(worker(fields=""), kind="build")), 3)
+        code, err = check(worker(fields=""))
+        self.assertEqual(code, 2)
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "x.prompt.md")
+            Path(path).write_text(worker(fields="", budget="TIME BUDGET: 90\n"))
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                self.assertEqual(brief.main(["check", "--kind", "fix", path]), 0)
+                self.assertEqual(brief.main(["check", "--kind", "bogus", path]), 2)
+            self.assertNotIn("warning", err.getvalue())
+
+    def test_each_shipped_template_filled_as_skill_md_says_passes_with_its_kind(self):
+        assets = Path(__file__).parent.parent / "assets"
+
+        def fill(name):
+            text = re.sub(r"\{\{[^{}\n]+\}\}", "sample value", (assets / name).read_text())
+            return text.replace("2. sample value", "2. WHEN zoomed, the view SHALL scale")
+        build = fill("preamble-worker.md") + fill("task-body.md")
+        original = re.sub(r"\{\{[^{}\n]+\}\}", "sample value", (assets / "task-body.md").read_text())
+        fix = fill("preamble-worker.md") + fill("fix.md").replace("ORIGINAL BRIEF\nsample value", "ORIGINAL BRIEF\n" + original)
+        review = fill("review.md").replace("==== THE AUTHOR'S TASK ====\nsample value", "==== THE AUTHOR'S TASK ====\n" + build)
+        cases = {"build": build, "fix": fix, "review": review, "research": fill("preamble-research.md") + fill("task-body.md"),
+                 "rereview": fill("rereview.md"), "resume": fill("resume.md")}
+        kinds = {"rereview": "review", "resume": "other"}
+        self.assertEqual(sorted(p.name for p in assets.glob("*.md")),
+                         ["fix.md", "preamble-research.md", "preamble-worker.md", "rereview.md", "resume.md", "review.md", "task-body.md"])
+        for name, text in cases.items():
+            self.assertEqual(brief.prompt_kind(text), kinds.get(name, name), name)
+            self.assertEqual(brief.problems(text), [], name)
+            self.assertEqual(brief.warnings(text), [], name)
+
+    def test_a_decorated_bare_none_is_refused_per_field(self):
+        values = ("`none`", "**none**", "*None*", "_none_", "none,", "none.", "none -", "NONE;", "`n/a`.")
+        for field in ("RISK", "CASES THE ORCHESTRATOR KNOWS", "FACTS TO VERIFY", "REUSE CHECK"):
+            for value in values:
+                fields = re.sub(rf"^{field}:.*$", f"{field}: {value}", FIELDS + "REUSE CHECK: x\n", flags=re.M)
+                found = brief.problems(worker(fields=fields, reuse=None))
+                self.assertEqual(len(found), 1, (field, value))
+                self.assertRegex(found[0], rf"^line \d+: {field} is empty", (field, value))
+            for value in ("none: a new view", "none, because the view is new", "`none` - the view is new"):
+                fields = re.sub(rf"^{field}:.*$", f"{field}: {value}", FIELDS + "REUSE CHECK: x\n", flags=re.M)
+                self.assertEqual(brief.problems(worker(fields=fields, reuse=None)), [], (field, value))
+
+    def test_allowed_dependencies_may_be_a_decorated_none_but_not_empty(self):
+        for value in ("none", "`none`", "None."):
+            self.assertEqual(brief.problems(worker(deps=f"ALLOWED DEPENDENCIES: {value}")), [], value)
+        found = brief.problems(worker(deps="ALLOWED DEPENDENCIES: `n/a`"))
+        self.assertEqual(len(found), 1)
+        self.assertRegex(found[0], r"^line \d+: ALLOWED DEPENDENCIES is empty")
+
+    def test_a_missing_field_names_the_line_that_mentions_it(self):
+        found = brief.problems(worker(fields=FIELDS.replace("RISK: UI", "- **RISK:** UI")))
+        self.assertEqual(found, ["no RISK line: line 8 names it, but the field must start its own line"])
 
 
 if __name__ == "__main__":
