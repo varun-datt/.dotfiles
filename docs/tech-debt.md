@@ -15,4 +15,6 @@ Known findings that did not block a merge, kept by `debt.py` (the orchestrator-w
 | TD-9 | 2026-10-31 | debt | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/test_debt.py | Expected dates are taken once, so a run across midnight fails | p5-review2 | 5 | open |
 | TD-10 | 2026-10-31 | brief | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/brief.py | Fence toggling ignores the delimiter length, so a 4-backtick example around a 3-backtick fence breaks the MUST count | p1-rereview | 10 | open |
 | TD-11 | 2026-10-31 | brief | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/brief.py | The placeholder check refuses quoted prose that shows a {{NAME}} example | p3-review | 10 | open |
-<!-- debt.py next id: 12 -->
+| TD-12 | 2026-10-31 | review | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/review.sh | review.sh stages through a fixed <out>.tmp name, so a source prompt at that path is removed by the rename | p3-review, p3-rereview | 5 | open |
+| TD-13 | 2026-10-31 | templates | Minor | dotfiles/dot_agents/skills/orchestrator-workers/assets/rereview.md | The fix and re-review templates disagree on whether evidence that a case cannot happen may stand in for a test (assets/fix.md vs assets/rereview.md:28) | p3-review | 10 | open |
+<!-- debt.py next id: 14 -->
