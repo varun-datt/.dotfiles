@@ -200,7 +200,7 @@ class DebtTest(unittest.TestCase):
     # MUST 5
     def test_import_plan_dry_run_finds_each_passage_shape(self):
         out = self.cli('import-plan', FIXTURE, '--dry-run', '--counts').stdout.splitlines()
-        self.assertEqual([(line.split()[1], line.split()[-2]) for line in out], [('1', '3'), ('2', '2'), ('3', '1'), ('4', '2'), ('5', '1')])
+        self.assertEqual([(line.split()[1], line.split()[-2]) for line in out], [('1', '3'), ('2', '2'), ('3', '1'), ('4', '2'), ('5', '1'), ('?', '2')])
         rows = self.cli('import-plan', FIXTURE, '--dry-run').stdout.splitlines()
         gaps = [r.split(' | ', 4)[4] for r in rows]
         self.assertEqual(gaps[0], 'a widget renamed during a search keeps its old name')

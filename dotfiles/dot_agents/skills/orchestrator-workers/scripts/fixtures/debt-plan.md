@@ -18,3 +18,9 @@
 5. Thread markers. Known gap, accepted by the owner on 2026-01-04: a thread on a deleted first line
    shows a stray number.
 6. Nothing known here, and no gaps worth a row.
+
+## Notes
+
+- **A trial run:** two fixes, one review, about
+  70. No conflicts. Known gaps found: a tool's results reach the agent unfenced; a name in a link
+  can still carry words.

@@ -8,7 +8,8 @@ Usage:
     python3 debt.py for-files <repo> PATH ...                   open rows on these files or under these folders,
                                                                 as lines a brief pastes under a heading
     python3 debt.py stale <repo> --runs FILE [--threshold 3]    open rows with THRESHOLD or more runs since their date
-    python3 debt.py import-plan PLAN.md --dry-run [--counts]    rows a PLAN.md's "Known gaps" passages would give
+    python3 debt.py import-plan PLAN.md --dry-run [--counts]    rows a PLAN.md's "Known gaps" passages would give,
+                                                                by item number (a column-0 "N."), or "?" under a bullet
 
 The register is a markdown table; text outside the table is kept as written. Ids are TD-<n>, one above the
 highest ever used (a `<!-- debt.py next id: n -->` line after the table remembers it if a row is deleted by hand).
@@ -223,7 +224,8 @@ def cmd_stale(a):
     return '\n'.join(out)
 
 
-ITEM = re.compile(r'^ {0,3}(\d+)\. \S')
+ITEM = re.compile(r'^(\d+)\. \S')
+BULLET = re.compile(r'^[-*] \S')
 GAPS = re.compile(r'\bKnown gaps?\b([^:.\n]{0,60}):', re.I)
 
 
@@ -261,9 +263,9 @@ def plan_passages(text):
     blocks, item, buf, first = [], None, [], 0
     for n, line in enumerate(text.splitlines(), 1):
         m = ITEM.match(line)
-        if m or line.startswith('#') or line.startswith('|'):
+        if m or BULLET.match(line) or line.startswith('#') or line.startswith('|'):
             blocks.append((item, first, buf))
-            item, buf, first = (m.group(1) if m else None), [], n
+            item, buf, first = (m.group(1) if m else '?' if BULLET.match(line) else None), [], n
         buf.append((n, line))
     blocks.append((item, first, buf))
     for item, _, lines in blocks:
