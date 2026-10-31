@@ -3,7 +3,7 @@ run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evi
 2026-10-27,e-fence,review(in-chat),2,SEC,blocking,Major,L1,I2,unknown,yes,fix-report,Attachment name and content sit in tags the content can close
 2026-10-27,e-fence,review(in-chat),3,SEC,blocking,Major,L1,I2,unknown,yes,fix-report,Task retry prompt carries failed check output unfenced
 2026-10-27,e-fence,review(in-chat),4,REL,non-blocking,Minor,L3,I3,unknown,yes,fix-report,Refused id gives HTTP 500 after a session was already created
-2026-10-27,e-fence,review(in-chat),R,SEC,recorded,Minor,L2,I3,unknown,deferred,no,"Engine-output values and owner-text tags left unfenced, recorded for later"
+2026-10-27,e-fence,review(in-chat),R,SEC,recorded,Major,L1,I3,unknown,deferred,no,"Engine-output values and owner-text tags left unfenced, recorded for later"
 2026-10-27,v5-edit,review(in-chat),1,DATA,blocking,Major,L2,I2,unknown,yes,fix-report,Opening a dirty file in a second view silently replaces the draft with disk text
 2026-10-27,v5-edit,review(in-chat),2,DATA,blocking,Blocker,L2,I1,unknown,yes,fix-report,Saving a NUL-free non-UTF-8 file rewrites its original bytes
 2026-10-27,v5-edit,review(in-chat),3,SEC,blocking,Minor,L3,I1,unknown,yes,fix-report,Folder swapped for a symlink between check and rename writes outside workspace
@@ -40,14 +40,14 @@ run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evi
 2026-10-27,p7-cursor,rv-p7-fix3,3,UX,non-blocking,Minor,L2,I3,INFERRED,unknown,unknown,Ordinary approval card still hides env and cwd behind Details
 2026-10-27,t7-codeintel,rv-t7-codeintel,1,SEC,blocking,Blocker,L2,I1,INFERRED,yes,yes,In-folder symlink results return source from outside the folder
 2026-10-27,t7-codeintel,rv-t7-codeintel,2,SEC,blocking,Blocker,L1,I1,INFERRED,yes,no,Hover returns signatures from a sibling folder
-2026-10-27,t7-codeintel,rv-t7-codeintel,3,SEC,blocking,Minor,L3,I1,INFERRED,yes,yes,File name with newlines escapes the data fence
+2026-10-27,t7-codeintel,rv-t7-codeintel,3,SEC,blocking,Blocker,L1,I1,INFERRED,yes,yes,File name with newlines escapes the data fence
 2026-10-27,t7-codeintel,rv-t7-codeintel,4,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Initialisation timeout leaves a dead client that is never replaced
 2026-10-27,t7-codeintel,rv-t7-fix1,1,SEC,blocking,Minor,L2,I3,INFERRED,unknown,unknown,Local alias still leaks outside signature through hover
 2026-10-27,p6-runs,rv-p6-runs,1,COR,blocking,Blocker,L1,I1,INFERRED,yes,yes,"After a send-back, a finish merges without the owner; test asserts it"
 2026-10-27,p6-runs,rv-p6-runs,2,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Failed orchestrator notice rolls item back while the fix runs
 2026-10-27,p6-runs,rv-p6-runs,3,REL,blocking,Major,L2,I2,INFERRED,yes,yes,tell resolves even when Stop prevented the send
 2026-10-27,p6-runs,rv-p6-runs,4,REL,blocking,Minor,L3,I2,INFERRED,yes,yes,Stale timeout callback overwrites the next round's state
-2026-10-27,p6-runs,rv-p6-runs,5,SEC,non-blocking,Minor,L3,I2,INFERRED,yes,yes,Finding text goes into the worker prompt unfenced
+2026-10-27,p6-runs,rv-p6-runs,5,SEC,non-blocking,Major,L1,I2,INFERRED,yes,yes,Finding text goes into the worker prompt unfenced
 2026-10-27,diagram,rv-diagram,1,UX,blocking,Minor,L3,I3,INFERRED,yes,fix-report,Fit cannot show a very wide diagram because of a fixed zoom floor
 2026-10-27,diagram,rv-diagram,2,UX,blocking,Major,L1,I2,INFERRED,yes,fix-report,"Toolbar covers the top of the drawing, against the owner's ruling"
 2026-10-27,diagram,rv-diagram,3,SEC,non-blocking,Minor,L3,I3,INFERRED,yes,fix-report,Saved SVG keeps external references that load outside the app
@@ -69,7 +69,7 @@ run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evi
 2026-10-28,pr-overview,rv-pr-overview,F5,VERIF,blocking,Major,L1,I2,VERIFIED,yes,yes,Brief-named blocker cases and route-level tests missing
 2026-10-28,pr-overview,rv-pr-overview,F6,UX,non-blocking,Nit,L2,I4,INFERRED,yes,yes,Transient photo failure cached as missing until restart
 2026-10-28,pr-overview,rv-pr-overview,F7,UX,non-blocking,Nit,L1,I4,VERIFIED,no,no,Reviewers with no vote get no mark
-2026-10-28,pr-overview,rv-pr-overview,C,REPORT,blocking,Correction,L1,I3,VERIFIED,yes,yes,Report overclaims: only-blockers and every-reviewer-mark statements
+2026-10-28,pr-overview,rv-pr-overview,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,Report overclaims: only-blockers and every-reviewer-mark statements
 2026-10-28,pr-overview,rr-pr-overview,F2b,COR,blocking,Major,L2,I2,INFERRED,yes,fix-report,Not-applicable path-filtered build policy still blocks
 2026-10-28,pr-overview,rr-pr-overview,F4b,COR,blocking,Minor,L1,I4,VERIFIED,no,no,POST read still used (repeat of rejected finding)
 2026-10-28,pr-overview,rr-pr-overview,F1b,COR,non-blocking,Minor,L3,I3,INFERRED,no,no,Pending required reviewer stands for every reviewer policy
@@ -103,9 +103,9 @@ run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evi
 2026-10-28,insights-history,rv-insights-history,1,PERF,blocking,Major,L1,I3,VERIFIED,yes,yes,History parsing blocks the host; owner has 137 MiB single lines
 2026-10-28,insights-history,rv-insights-history,2,SEC,non-blocking,Minor,L3,I3,VERIFIED,yes,yes,"Linked folders below the roots are followed, against the report"
 2026-10-28,insights-history,rv-insights-history,3,COR,non-blocking,Minor,L3,I2,VERIFIED,yes,yes,Autopilot or sub-agent messages may count as owner turns
-2026-10-28,gaps-1,rv-gaps-1,1,SEC,blocking,Minor,L3,I2,VERIFIED,yes,fix-report,Pin confirmations echo stored titles unfenced
+2026-10-28,gaps-1,rv-gaps-1,1,SEC,blocking,Major,L1,I2,VERIFIED,yes,fix-report,Pin confirmations echo stored titles unfenced
 2026-10-28,gaps-1,rv-gaps-1,2,SEC,blocking,Major,L2,I2,VERIFIED,yes,fix-report,Worker reply enters the orchestrator's next message unfenced
-2026-10-28,gaps-1,rv-gaps-1,3,SEC,blocking,Minor,L3,I2,VERIFIED,yes,fix-report,Finish result names repository files unfenced
+2026-10-28,gaps-1,rv-gaps-1,3,SEC,blocking,Major,L1,I2,VERIFIED,yes,fix-report,Finish result names repository files unfenced
 2026-10-28,gaps-1,rv-gaps-1,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,Report says confirmations echo only the agent's own input
 2026-10-28,gaps-3,rv-gaps-3,1,SEC,blocking,Minor,L3,I1,VERIFIED,yes,fix-report,Approval key and run folder disagree for link/.. paths
 2026-10-28,gaps-3,rv-gaps-3,2,SEC,blocking,Pre-existing,L2,I3,VERIFIED,no,no,Hover can show outside-derived inferred types
@@ -182,7 +182,7 @@ run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evi
 2026-10-30,run-edges,run-edges-review,C,REPORT,correction,Correction,L1,I3,VERIFIED,yes,yes,"Mutation fails on wording, not duplicates; worker-merge coverage overstated"
 2026-10-30,run-edges,run-edges-rereview,1b,REL,blocking,Major,L2,I2,INFERRED,yes,yes,After restart a completed answer replays and can start an unapproved fix round
 2026-10-30,run-edges,run-edges-rereview,2,UX,non-blocking,Minor,L2,I3,INFERRED,yes,yes,End looks enabled during a short merge the host will refuse
-2026-10-30,run-edges,run-edges-rereview2,1c,DATA,blocking,Minor,L3,I2,INFERRED,yes,yes,Upgrade then crash between answer and action drops a legacy review's action
+2026-10-30,run-edges,run-edges-rereview2,1c,DATA,blocking,Major,L2,I2,INFERRED,yes,yes,Upgrade then crash between answer and action drops a legacy review's action
 2026-10-30,run-edges,run-edges-rereview2,2,VERIF,non-blocking,Minor,L1,I3,VERIFIED,yes,yes,Restart test injects the answer after shutdown instead of interrupting
 2026-10-30,home-reorder,home-reorder-review,1,UX,blocking,Minor,L2,I3,VERIFIED,yes,yes,Reset order stays visible after the order again matches the rules
 2026-10-30,home-reorder,home-reorder-review,2,DATA,blocking,Major,L2,I2,INFERRED,yes,yes,One failing source erases the owner's hand order for its rows
@@ -216,7 +216,7 @@ run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evi
 2026-10-30,diff-colour,diff-colour-review,1,UX,blocking,Major,L1,I2,VERIFIED,yes,yes,Added and removed tints push code colours below AA contrast
 2026-10-30,diff-colour,diff-colour-review,2,COR,blocking,Minor,L2,I3,VERIFIED,yes,partly,"Each hunk tokenised fresh, so a comment opened above is coloured as code"
 2026-10-30,diff-colour,diff-colour-review,3,PERF,blocking,Major,L1,I2,INFERRED,yes,partly,"New renderer reachable from start-up, against the no-growth constraint"
-2026-10-30,diff-colour,diff-colour-rereview,1b,VERIF,blocking,Minor,L1,I3,VERIFIED,yes,yes,"Contrast test skips colours under 1.5:1, so coverage is not exhaustive"
+2026-10-30,diff-colour,diff-colour-rereview,1b,VERIF,non-blocking,Minor,L1,I3,VERIFIED,yes,yes,"Contrast test skips colours under 1.5:1, so coverage is not exhaustive"
 2026-10-30,diff-colour,diff-colour-rereview,2b,COR,blocking,Minor,L2,I3,VERIFIED,yes,yes,Markdown files still tokenised per hunk in Changes
 2026-10-30,diff-colour,diff-colour-rereview,3b,PERF,blocking,Major,L1,I2,VERIFIED,yes,yes,"Renderer still eager; start-up grows by 1,314 characters"
 2026-10-30,diff-colour,diff-colour-rereview2,2c,PERF,non-blocking,Minor,L1,I4,VERIFIED,unknown,no,Static-import closure grows 78 bytes; logged metric misses it
@@ -228,7 +228,7 @@ run,item,round,finding,area,severity_today,severity_rubric,likelihood,impact,evi
 2026-10-30,drafts,drafts-review,5,PERF,non-blocking,Minor,L1,I4,VERIFIED,partly,no,Each edit appends a full snapshot; storage grows without bound
 2026-10-30,drafts,drafts-review,6,UX,non-blocking,Minor,L2,I3,VERIFIED,yes,yes,Truncated quotes readable only by hover; no focus after remove
 2026-10-30,drafts,drafts-rereview,1b,REL,blocking,Major,L2,I2,INFERRED,yes,yes,Send-piece-now and large-file paths skip the in-flight guard
-2026-10-30,drafts,drafts-rereview,2b,DATA,blocking,Minor,L3,I1,INFERRED,yes,yes,Note whose save is in flight is skipped by the close flush
+2026-10-30,drafts,drafts-rereview,2b,DATA,blocking,Blocker,L2,I1,INFERRED,yes,yes,Note whose save is in flight is skipped by the close flush
 2026-10-30,drafts,drafts-rereview,4b,UX,non-blocking,Minor,L3,I3,INFERRED,yes,yes,Removing the last piece may focus another pane's message box
 2026-10-30,drafts,drafts-rereview2,1c,DATA,blocking,Blocker,L2,I1,INFERRED,yes,fix-report,"Send piece now right after typing can send without the note, then drop the piece"
 2026-10-30,router-outcomes,router-outcomes-review,1,COR,blocking,Major,L1,I2,VERIFIED,yes,yes,Audit joins a round to the wrong decision; a real-folder test fails

@@ -8,8 +8,8 @@ Spike for the orchestrator-workers reviews, 2026-10-30. Each claim is VERIFIED (
 - **Q2 Major.** There are 11 areas, mapped to ISO/IEC 25010's nine characteristics, plus three the data added: paid spend, the checks themselves, and the author's report. "Major" means the owner loses data, leaks something, gets a wrong result or a broken flow, or a check stops working.
 - **Q3 Rubric.** Severity comes from likelihood (normal use, plausible, contrived) against impact (harm, wrong, degraded, cosmetic), giving Blocker, Major, Minor or Nit. Pre-existing and Correction are separate classes. A Major must carry a failure scenario, file:line, and VERIFIED or INFERRED. An INFERRED Major gets reproduced before anyone fixes it.
 - **Q4 Blocking.** Blocker and Major block. Minor goes to one tech-debt list per repository, which AMC's PLAN.md "Known gaps" lines already start. Nits are one counted line. The orchestrator rules on each finding and records it; the owner can overrule. Debt is paid when an item touches the same file, or when a class repeats.
-- **Q5 Calibration.** Don't tell the reviewer "only majors": Anthropic warns models then report less. Ask for every finding, graded by rule, with minors in one line. Record each ruling as data and measure agreement. Depth follows the risk areas.
-- **Q6 Our data.** Today 145 findings blocked; under the rubric 102 would, because 51 drop and 8 rise. First reviews that block go from 30 of 32 to 27 of 32. 10 rounds would not have run: 1,001 credits and 97 minutes, 7.4% of fix and re-review spend. No dropped finding has evidence of hitting the owner. Of the 51, 19 were real but contrived or minor.
+- **Q5 Calibration.** Don't tell the reviewer "only majors": Anthropic's Opus 5 guidance warns models then report less. Ask for every finding, graded by rule, with minors in one line. Record each ruling as data and measure agreement. Depth follows the risk areas.
+- **Q6 Our data.** Today 143 findings blocked; under the rubric 109 would, because 44 drop and 10 rise. First reviews that block go from 30 of 32 to 27 of 32. 8 rounds would not have run: 796 credits and 75 minutes, 6.0% of fix and re-review spend. No dropped finding has evidence of hitting the owner. Of the 44, 17 were real but contrived or minor.
 - **Q7 Also.** Fixes caused at least 8 new defects. A reviewer re-raised a rejected finding. Corrections should not cost fix rounds. Review the brief, because unmet MUSTs are the cheapest catch. Reviews of documents need a claims rubric.
 - **Gains and costs.** The rubric gains fewer and shorter fix rounds, grades that can be checked, and a debt list that gets paid. It costs a longer prompt (about 900 more words in), one ruling line per finding, and a list to tend. Its risk is that a real problem is graded "contrived". The second-grader check in Q6 and the "Check" list in the rubric are there to catch that.
 
@@ -59,7 +59,7 @@ Facts, our gates:
 | Colour contrast across themes | tool | axe in the views it visits; reviewers found 2 contrast failures | `markers`, `diff-colour` |
 | Layout and visual checks | tool and a look | `expectCleanLayout` and the owner's rule to look at images | AMC `AGENTS.md:80-89` |
 
-INFERRED: a review earns its cost on what tools cannot see: the brief's intent, the order of events, where outside text flows, what is lost when a step stops halfway, whether a test can fail, and whether the report is true. About 8 of our 102 Major or worse findings were tool-catchable (3 broken existing tests, 2 start-up size, 2 contrast, 1 flaky spec). Our reviewers spend almost nothing on style (1 maintainability finding, 8 Nits of 236), so the 75%-upkeep pattern does not appear; our noise is contrived security cases and repeats.
+INFERRED: a review earns its cost on what tools cannot see: the brief's intent, the order of events, where outside text flows, what is lost when a step stops halfway, whether a test can fail, and whether the report is true. About 8 of our 109 Major or worse findings were tool-catchable (3 broken existing tests, 2 start-up size, 2 contrast, 1 flaky spec). Our reviewers spend almost nothing on style (1 maintainability finding, 8 Nits of 236), so the 75%-upkeep pattern does not appear; our noise is contrived security cases and repeats.
 
 ## Q2 What counts as major, area by area
 
@@ -118,7 +118,7 @@ Proposal (INFERRED): one two-factor scale, taken from OWASP's likelihood × impa
 
 Why these choices:
 
-- **Three likelihood steps, not two.** Today's two-way rule splits the middle badly: Stop pressed mid-request is "normal use" to one reviewer and "far-fetched" to another. L2 names those moments; 50 of our 102 Major or worse findings are L2.
+- **Three likelihood steps, not two.** Today's two-way rule splits the middle badly: Stop pressed mid-request is "normal use" to one reviewer and "far-fetched" to another. L2 names those moments; 52 of our 109 Major or worse findings are L2.
 - **Outside text is hostile at L1.** Text from repositories, pull requests and models arrives in normal use, so prompt-injection paths stay Major. A local attacker racing the file system is L3.
 - **I1 at L3 is Minor, but shown to the owner.** PR-Agent's "do not skip a genuine problem just because the trigger scenario is narrow" argues for keeping it visible. The owner's own rulings argue against blocking: he accepted the canvas race class on 2026-10-29 (AMC `PLAN.md:1352-1357`).
 - **Words, not numbers.** Greptile found self-rated 1–10 severity "nearly random". Models state confidence in an inflated way (https://arxiv.org/html/2604.01457v1), and verbal confidence is calibrated only under some prompts (https://arxiv.org/html/2412.14737).
@@ -158,15 +158,15 @@ Facts:
 - VERIFIED, the opposite design: Anthropic's security action filters at the source, with a 0.7 confidence floor and hard exclusions. Codex posts only P0 and P1. Qodo keeps everything in the summary.
 - VERIFIED: aggregating several reviews raised F1 by up to 43.67% (SWR-Bench). uReview's best setup paired a generator with a grader from another vendor. Google keeps a check only while its "Not useful" ratio stays under 10%. Graphite tracks acceptance rate.
 - VERIFIED, our orchestrator's rulings against the rubric:
-  - Of 145 blocking findings, the orchestrator rejected 10. The rubric demotes 9 of those 10. The tenth, `forecast-parallel` #1, the orchestrator ruled intended; the rubric keeps it Major.
-  - It accepted 36 findings that the rubric demotes, and those went into fix rounds.
+  - Of 143 blocking findings, the orchestrator rejected 10. The rubric demotes 9 of those 10. The tenth, `forecast-parallel` #1, the orchestrator ruled intended; the rubric keeps it Major.
+  - It accepted 30 findings that the rubric demotes, and those went into fix rounds.
   - A rejected finding was raised again as blocking, twice (`pr-overview`, a read-only POST).
 - VERIFIED: lessons from 2026-10-16. "A cheaper shadow reviewer missed a reproduced blocker" (`references/lessons.md:221-222`). A fix prompt that names cases "gets those cases fixed, not their class" (`:191-195`).
 
 INFERRED:
 
-- **Report everything, filter by rule.** Telling the reviewer "majors only" risks the literal under-reporting Anthropic warns about, and it leaves no trail to calibrate against. Ask for every finding, graded by the rubric, with Minor findings as one line each and Nits as a count. The prompts' word limits (900 and 600) bound the token cost; the extra cost is mostly input, about 900 words of rubric. The filter is the rule, and a second model checks it: the orchestrator, from another family, rules on every Major, as uReview's grader does.
-- **Calibrate from the rulings.** `mine.py` reads `rulings.jsonl` and reports, per area and reviewer model, the acceptance rate (target 75% or more, Bosu's and uReview's level), demotion rate, "not reproduced" rate, and demoted rows later proved real. An area under 50% acceptance for two runs gets a rubric rule or an exclusion, as Google turns off noisy checks. The owner's overrules are the gold labels.
+- **Report everything, filter by rule.** Telling the reviewer "majors only" risks the under-reporting Anthropic's guidance for Claude Opus 5 warns about, and it leaves no trail to calibrate against. Ask for every finding, graded by the rubric, with Minor findings as one line each and Nits as a count. The prompts' word limits (900 and 600) bound the token cost; the extra cost is mostly input, about 900 words of rubric. The filter is the rule, and a second model checks it: the orchestrator, from another family, rules on every Major, as uReview's grader does.
+- **Calibrate from the rulings.** `mine.py` reads `rulings.jsonl` and reports, per area and reviewer model, the acceptance rate (target 75% or more, uReview's useful rate; Bosu found 65.5%), demotion rate, "not reproduced" rate, and demoted rows later proved real. An area under 50% acceptance for two runs gets a rubric rule or an exclusion, as Google turns off noisy checks. The owner's overrules are the gold labels.
 - **Depth follows risk** (`references/routing.md:49-60`): a diff in a risk area gets max effort (which `review.sh` supports) plus that area's checklist block (the menu in the draft `review.md`), and every I1 at L3 is listed for the owner; other diffs get high effort and the base checklist; documents get a claims check (Q7). A second reviewer from a third family, merged as SWR-Bench aggregates, is worth a trial on risk-area diffs only, at about 68 credits a round; not proposed by default.
 
 ## Q6 Our own data
@@ -177,14 +177,14 @@ Before and after (VERIFIED counts, grades INFERRED):
 
 | | Today | Under the rubric |
 |---|---|---|
-| Findings that block | 145 | 102 (12 Blocker, 90 Major) |
-| Blocking findings demoted | | 51 (48 Minor, 2 Pre-existing, 1 Correction) |
-| Non-blocking findings promoted | | 8 |
+| Findings that block | 143 | 109 (14 Blocker, 95 Major) |
+| Blocking findings demoted | | 44 (42 Minor, 2 Pre-existing) |
+| Non-blocking findings promoted | | 10 |
 | First reviews that block (items with a verdict) | 30 of 32 | 27 of 32 |
 | The same, with the 6 in-chat reviews | 36 of 38 | 33 of 38 |
-| Re-review findings that block | 34 | 17 |
+| Re-review findings that block | 33 | 19 |
 
-Of the 51 demotions, 31 are L3 (contrived): 15 in SEC, mostly file-system races and hostile names, and 16 elsewhere. 16 are L2: 14 degraded (I3) and 2 pre-existing. 4 are L1: 2 cosmetic, 1 test gap and 1 Correction.
+Of the 44 demotions, 26 are L3 (contrived): 12 in SEC, mostly file-system races and hostile names, and 14 elsewhere. 16 are L2: 14 degraded (I3) and 2 pre-existing. 2 are L1, both cosmetic.
 
 The owner's "26 of 28" comes from `research/2026-10-30-router-effort-context.md:208`, counted at about 19:35 on 2026-10-30, before the last items were reviewed. My count by item with a verdict is 30 of 32 (94%), against 93% then. The same proportion; the exact 28 items are OPEN, because that doc does not list them.
 
@@ -195,16 +195,15 @@ Rounds that would not have run (VERIFIED costs from `mine.py`; which rounds is I
 | gaps-3 | fix1 | 99.5 | 20.1 |
 | canvas-b | fix2, rereview2–5 | 633.0 | 41.8 |
 | panel-menu | fix2, rereview2 | 63.4 | 13.3 |
-| run-edges | fix3, rereview3 | 205.4 | 21.9 |
-| **Total** | **10 rounds** | **1,001.3** | **97.1** |
+| **Total** | **8 rounds** | **795.9** | **75.2** |
 
 For scale: all rounds 36,695 credits; fix rounds 72 (11,610 credits, 2,324 minutes); re-reviews 34 (1,715 credits, plus 177 misfiled); reviews 34 (2,304 credits).
 
-The 10 rounds are 7.4% of fix and re-review spend and 2.7% of all spend. The larger effect is scope. Fix rounds that also carried demoted findings could have been shorter. If fix cost scales with the number of findings, about 29% of 9,237 credits over 48 fix rounds, roughly 2,700, went to findings the rubric demotes (INFERRED, crude).
+The 8 rounds are 6.0% of fix and re-review spend and 2.2% of all spend. The larger effect is scope. Fix rounds that also carried demoted findings could have been shorter. If fix cost scales with the number of findings, about 25% of 9,237 credits over 48 fix rounds, roughly 2,300, went to findings the rubric demotes (INFERRED, crude).
 
-False negatives (VERIFIED from the records; INFERRED meaning): none of the 51 demoted findings has a record of hitting the owner's data or normal use; 19 were confirmed real (10 at L2, 9 at L3), true but contrived or minor, and become debt rows. One counter-case: `pr-threads` review #2 (zones drop extra selections, demoted to Minor), whose fix caused a new Major (restoring the view re-folds a thread). The rubric is also stricter in 8 places, for example a wrong "context filled" claim (`clusters`) and an existing browser test that now times out (`diff-colour`).
+False negatives (VERIFIED from the records; INFERRED meaning): none of the 44 demoted findings has a record of hitting the owner's data or normal use; 17 were confirmed real (10 at L2, 7 at L3), true but contrived or minor, and become debt rows. One counter-case: `pr-threads` review #2 (zones drop extra selections, demoted to Minor), whose fix caused a new Major (restoring the view re-folds a thread). The rubric is also stricter in 10 places, for example a wrong "context filled" claim (`clusters`) and an existing browser test that now times out (`diff-colour`).
 
-Consistency (INFERRED): one grader, me, with the hard calls on L2 against L3. 31 of 51 demotions turn on "contrived". To measure it, a grader from another model family should grade a stratified sample of 40 rows from `findings.csv` blind: 10 Blocker or Major, 20 demoted, and 10 others. Compute Cohen's kappa on the four levels, aim for 0.6 or more, and rewrite the definition behind each disagreement. Repeat it on every new run's rulings.
+Consistency (INFERRED): one grader, me, with the hard calls on L2 against L3. 26 of 44 demotions turn on "contrived". To measure it, a grader from another model family should grade a stratified sample of 40 rows from `findings.csv` blind: 10 Blocker or Major, 20 demoted, and 10 others. Compute Cohen's kappa on the four levels, aim for 0.6 or more, and rewrite the definition behind each disagreement. Repeat it on every new run's rulings.
 
 ## Q7 Other things that matter
 
@@ -239,7 +238,7 @@ Invented: the L2 list of unlucky moments, the COST and VERIF areas, the "Check" 
 2. The matrix: Blocker and Major block (I1 at L1–L2; I2 at L1–L2; I3 at L1). Minor goes to debt.
 3. Only Blockers block. Majors go to a fix round only when the orchestrator judges the fix cheap.
 
-Recommended: 2. Option 1 leaves the L2 middle to each reviewer's mood. Option 3 would have merged 90 Majors, including 6 unmet MUSTs.
+Recommended: 2. Option 1 leaves the L2 middle to each reviewer's mood. Option 3 would have merged 95 Majors, including 6 unmet MUSTs.
 
 **D2. What the reviewer reports.** It binds `review.md`, `rereview.md` and the calibration in D4.
 
@@ -247,7 +246,7 @@ Recommended: 2. Option 1 leaves the L2 middle to each reviewer's mood. Option 3 
 2. Every finding, graded: Blockers and Majors in full, Minors one line each, Nits as a count.
 3. Every finding in full.
 
-Recommended: 2. It follows Anthropic's advice against "only high-severity", keeps an audit trail, and stays inside the word limits. Option 3 recreates today's noise.
+Recommended: 2. It follows Anthropic's Opus 5 advice against "only high-severity", keeps an audit trail, and stays inside the word limits. Option 3 recreates today's noise.
 
 **D3. Where minor findings go.** It binds AMC's `PLAN.md`, every brief that touches a listed file, and the run plan.
 
@@ -263,7 +262,7 @@ Recommended: 2. Option 1 is where today's "batched into a later item" goes to di
 2. One line per Blocker or Major in `<run>/rulings.jsonl`, plus agreement figures in `mine.py`, plus a 40-row blind second grader each new rubric version.
 3. Option 2, with the owner ruling every Major.
 
-Recommended: 2. It turns rulings into data at about one line per finding. Option 3 puts 90 decisions per four runs on the owner.
+Recommended: 2. It turns rulings into data at about one line per finding. Option 3 puts 95 decisions per four runs on the owner.
 
 ## Build plan
 
@@ -285,7 +284,7 @@ Each phase fits one worker session, standard library only, with tests in the ski
 
    Tests: a diff touching `src/host/sessions.ts` gets the turn-and-state block and max effort, and a docs-only diff gets neither.
 
-Case against: the rubric's main lever is the L3 "contrived" band, and I set it from the owner's past rulings and my own single grading. If a second grader disagrees on L2 against L3 (kappa under 0.6), or a demoted finding later hits the owner's data, the band is too wide. The savings shown here (7.4% of fix spend) would not justify the risk. The test that would show it: a demoted row reopened by a real defect report within the next two runs.
+Case against: the rubric's main lever is the L3 "contrived" band, and I set it from the owner's past rulings and my own single grading. If a second grader disagrees on L2 against L3 (kappa under 0.6), or a demoted finding later hits the owner's data, the band is too wide. The savings shown here (6.0% of fix spend) would not justify the risk. The test that would show it: a demoted row reopened by a real defect report within the next two runs.
 
 ## Appendix: sources not read
 

@@ -70,7 +70,7 @@
 <body>
 <main>
   <h1>Review severity: what blocks, what becomes debt</h1>
-  <p class="lede">Grade each review finding by <b>how likely</b> it is against <b>what it breaks</b>. Only Blocker and Major findings block a merge and cost a fix round. Minor findings go to a tech-debt list per repository, and Nits are just counted. On our last four runs (236 findings), blocking findings drop from 145 to 102, and 10 fix and re-review rounds (1,001 credits, 97 minutes) would not have run.</p>
+  <p class="lede">Grade each review finding by <b>how likely</b> it is against <b>what it breaks</b>. Only Blocker and Major findings block a merge and cost a fix round. Minor findings go to a tech-debt list per repository, and Nits are just counted. On our last four runs (236 findings), blocking findings drop from 143 to 109, and 8 fix and re-review rounds (796 credits, 75 minutes) would not have run.</p>
   <p class="muted">Data: runs of 2026-10-27 to -30, graded by hand by one grader (not yet cross-checked). Per-finding grades are in research/2026-10-30-review-severity/findings.csv; round costs come from orchestrator-workers mine.py.</p>
 
   <div class="grid">
@@ -95,32 +95,32 @@
       <h2>What changes on our 236 findings</h2>
       <div class="stackrow">
         <div class="t">Today: blocking or not</div>
-        <div class="stack" role="img" aria-label="Today: 145 blocking, 91 not blocking">
-          <div style="width:61.4%;background:var(--grey);color:var(--text)">145 blocking</div>
-          <div style="width:38.6%;background:var(--ink-4);color:var(--text)">91 not</div>
+        <div class="stack" role="img" aria-label="Today: 143 blocking, 93 not blocking">
+          <div style="width:60.6%;background:var(--grey);color:var(--text)">143 blocking</div>
+          <div style="width:39.4%;background:var(--ink-4);color:var(--text)">93 not</div>
         </div>
       </div>
       <div class="stackrow">
         <div class="t">Under the rubric</div>
-        <div class="stack" role="img" aria-label="Rubric: 12 Blocker, 90 Major, 102 Minor, 8 Nit, 5 Pre-existing, 19 Correction">
-          <div style="width:5.1%;background:var(--ink);color:#fff">12</div>
-          <div style="width:38.1%;background:var(--ink-2);color:#fff">90 Major</div>
-          <div style="width:43.2%;background:var(--ink-3);color:var(--text)">102 Minor</div>
+        <div class="stack" role="img" aria-label="Rubric: 14 Blocker, 95 Major, 95 Minor, 8 Nit, 5 Pre-existing, 19 Correction">
+          <div style="width:5.9%;background:var(--ink);color:#fff">14</div>
+          <div style="width:40.3%;background:var(--ink-2);color:#fff">95 Major</div>
+          <div style="width:40.2%;background:var(--ink-3);color:var(--text)">95 Minor</div>
           <div style="width:13.6%;background:var(--ink-4);color:var(--text)">32</div>
         </div>
         <div class="key" style="margin-top:2px">
-          <span><span class="sw" style="background:var(--ink)"></span>Blocker 12</span>
-          <span><span class="sw" style="background:var(--ink-2)"></span>Major 90</span>
-          <span><span class="sw" style="background:var(--ink-3)"></span>Minor 102</span>
+          <span><span class="sw" style="background:var(--ink)"></span>Blocker 14</span>
+          <span><span class="sw" style="background:var(--ink-2)"></span>Major 95</span>
+          <span><span class="sw" style="background:var(--ink-3)"></span>Minor 95</span>
           <span><span class="sw" style="background:var(--ink-4)"></span>Nit 8, Pre-existing 5, Correction 19</span>
         </div>
       </div>
       <div class="big">
-        <div><b>145 → 102</b>findings that block</div>
+        <div><b>143 → 109</b>findings that block</div>
         <div><b>30 → 27</b>of 32 first reviews block</div>
-        <div><b>34 → 17</b>re-review findings that block</div>
+        <div><b>33 → 19</b>re-review findings that block</div>
       </div>
-      <p class="muted" style="margin-top:8px">51 blocking findings demoted (31 contrived, 15 of them security); 8 promoted. None of the 51 has a record of hitting the owner's data; 19 were real but contrived or minor.</p>
+      <p class="muted" style="margin-top:8px">44 blocking findings demoted (26 contrived, 12 of them security); 10 promoted. None of the 44 has a record of hitting the owner's data; 17 were real but contrived or minor.</p>
     </section>
 
     <section class="panel">
@@ -130,15 +130,15 @@
         <span><span class="sw" style="background:var(--ink)"></span>Blocker or Major under the rubric</span>
       </div>
       <div class="bars">
-        <div class="lab">SEC</div><div class="pair"><div class="bar today"><span style="width:92.5%"></span><em>37</em></div><div class="bar rubric"><span style="width:45%"></span><em>18</em></div></div>
+        <div class="lab">SEC</div><div class="pair"><div class="bar today"><span style="width:92.5%"></span><em>37</em></div><div class="bar rubric"><span style="width:57.5%"></span><em>23</em></div></div>
         <div class="lab">COR</div><div class="pair"><div class="bar today"><span style="width:65%"></span><em>26</em></div><div class="bar rubric"><span style="width:52.5%"></span><em>21</em></div></div>
         <div class="lab">UX</div><div class="pair"><div class="bar today"><span style="width:55%"></span><em>22</em></div><div class="bar rubric"><span style="width:40%"></span><em>16</em></div></div>
         <div class="lab">REL</div><div class="pair"><div class="bar today"><span style="width:55%"></span><em>22</em></div><div class="bar rubric"><span style="width:45%"></span><em>18</em></div></div>
-        <div class="lab">DATA</div><div class="pair"><div class="bar today"><span style="width:35%"></span><em>14</em></div><div class="bar rubric"><span style="width:27.5%"></span><em>11</em></div></div>
-        <div class="lab">VERIF</div><div class="pair"><div class="bar today"><span style="width:25%"></span><em>10</em></div><div class="bar rubric"><span style="width:25%"></span><em>10</em></div></div>
+        <div class="lab">DATA</div><div class="pair"><div class="bar today"><span style="width:35%"></span><em>14</em></div><div class="bar rubric"><span style="width:32.5%"></span><em>13</em></div></div>
+        <div class="lab">VERIF</div><div class="pair"><div class="bar today"><span style="width:22.5%"></span><em>9</em></div><div class="bar rubric"><span style="width:25%"></span><em>10</em></div></div>
         <div class="lab">PERF</div><div class="pair"><div class="bar today"><span style="width:17.5%"></span><em>7</em></div><div class="bar rubric"><span style="width:7.5%"></span><em>3</em></div></div>
         <div class="lab">COMP</div><div class="pair"><div class="bar today"><span style="width:12.5%"></span><em>5</em></div><div class="bar rubric"><span style="width:10%"></span><em>4</em></div></div>
-        <div class="lab">REPORT</div><div class="pair"><div class="bar today"><span style="width:2.5%"></span><em>1</em></div><div class="bar rubric"><span style="width:0%"></span><em>0</em></div></div>
+        <div class="lab">REPORT</div><div class="pair"><div class="bar today"><span style="width:0%"></span><em>0</em></div><div class="bar rubric"><span style="width:0%"></span><em>0</em></div></div>
         <div class="lab">COST</div><div class="pair"><div class="bar today"><span style="width:2.5%"></span><em>1</em></div><div class="bar rubric"><span style="width:2.5%"></span><em>1</em></div></div>
       </div>
       <p class="muted" style="margin-top:8px">Bars start at zero on one scale (0 to 40). Security drops most: file-system races and hostile names become Minor; prompt-injection paths stay Major. Areas: SEC security and privacy, COR correctness, UX experience, REL ordering and failure, DATA data loss, VERIF the checks, PERF speed, COMP start-up and platforms, REPORT the author's report, COST paid spend.</p>
@@ -147,19 +147,18 @@
     <section class="panel">
       <h2>What it would have saved</h2>
       <div class="big">
-        <div><b>10</b>rounds not run</div>
-        <div><b>1,001</b>credits</div>
-        <div><b>97</b>minutes</div>
-        <div><b>7.4%</b>of fix and re-review credits</div>
+        <div><b>8</b>rounds not run</div>
+        <div><b>796</b>credits</div>
+        <div><b>75</b>minutes</div>
+        <div><b>6.0%</b>of fix and re-review credits</div>
       </div>
       <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px">
         <tr style="text-align:left;border-bottom:1px solid var(--rule)"><th>Item</th><th>Rounds skipped</th><th style="text-align:right">Credits</th><th style="text-align:right">Min</th></tr>
         <tr><td>canvas-b</td><td>fix2, re-review 2 to 5</td><td style="text-align:right">633.0</td><td style="text-align:right">41.8</td></tr>
-        <tr><td>run-edges</td><td>fix3, re-review 3</td><td style="text-align:right">205.4</td><td style="text-align:right">21.9</td></tr>
         <tr><td>gaps-3</td><td>fix1</td><td style="text-align:right">99.5</td><td style="text-align:right">20.1</td></tr>
         <tr><td>panel-menu</td><td>fix2, re-review 2</td><td style="text-align:right">63.4</td><td style="text-align:right">13.3</td></tr>
       </table>
-      <p class="muted" style="margin-top:8px">The larger effect is shorter fix rounds: if fix cost scales with the number of findings, about 2,700 credits went to findings the rubric demotes (an estimate, not measured). For scale: a review round averages about 68 credits and 6 minutes; a fix round about 161 credits and 32 minutes.</p>
+      <p class="muted" style="margin-top:8px">The larger effect is shorter fix rounds: if fix cost scales with the number of findings, about 2,300 credits went to findings the rubric demotes (an estimate, not measured). For scale: a review round averages about 68 credits and 6 minutes; a fix round about 161 credits and 32 minutes.</p>
     </section>
 
     <section class="panel wide">
