@@ -4,6 +4,8 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import runqueue as q  # noqa: E402
 
+S = os.path.dirname(os.path.abspath(q.__file__))
+
 
 def wait_until(pred, timeout=10):
     end = time.time() + timeout
@@ -124,6 +126,52 @@ class QueueTest(unittest.TestCase):
             self.assertEqual(self.cli('add', 'b', '--cmd', 'true', '--after', 'nope'), 2)
         with open(os.path.join(self.rd, 'queue.json')) as f:
             self.assertEqual([it['id'] for it in json.load(f)['items']], ['a'])
+
+    def test_add_refuses_an_unrouted_copilot_command_unless_given_a_reason(self):
+        with mock.patch('sys.stderr'):
+            self.assertEqual(self.cli('add', 'a', '--cmd', 'copilot -p "do it" --model m'), 2)
+        self.assertEqual(self.cli('add', 'a', '--cmd', 'copilot -p "do it"', '--unrouted-reason', 'owner probe'), 0)
+        self.assertEqual(self.cli('add', 'b', '--cmd', f'python3 {S}/route.py run b --kind build --brief b.md --worktree w'), 0)
+        self.assertEqual(self.cli('add', 'c', '--cmd', f'bash {S}/review.sh b-review w'), 0)
+        with open(os.path.join(self.rd, 'queue.json')) as f:
+            items = {it['id']: it for it in json.load(f)['items']}
+        self.assertEqual(items['a']['unrouted_reason'], 'owner probe')
+        self.assertNotIn('unrouted_reason', items['b'])
+
+    def test_add_refuses_every_copilot_mention_unless_route_py_run_or_review_sh_is_the_program(self):
+        launch = os.path.join(self.tmp.name, 'launch.zsh')
+        with open(launch, 'w') as f:
+            f.write('#!/bin/zsh\nMODEL=m\ntimeout 9000 copilot -C wt --model "$MODEL" -p "$(cat brief.md)"\necho done\n')
+        plain = os.path.join(self.tmp.name, 'launch')
+        with open(plain, 'w') as f:
+            f.write('MODEL=m\ntimeout 9000 copilot -p x\n')
+        tidy = os.path.join(self.tmp.name, 'tidy.sh')
+        with open(tidy, 'w') as f:
+            f.write('#!/bin/sh\necho tidy\n')
+        refused = ['timeout --signal TERM 9000 copilot -p x', '>log copilot -p x', '"$(command -v copilot)" -p x',
+                   f'bash {plain}', f'cd {self.tmp.name} && bash launch', 'c""opilot -p x', '`which copilot` -p x',
+                   f'bash {S}/review.sh a w; copilot -p x', f'bash {S}/review.sh a w && copilot -p x',
+                   f'nohup zsh -c "bash {S}/review.sh a w; copilot -p x" &', f'python3 {S}/route.py pick a; copilot -p x',
+                   'python3 /x/route.py run a', f'bash {self.tmp.name}/gone.sh',
+                   'zsh run1030/launch.zsh x',
+                   'env A=1 copilot -p x', 'timeout 900 copilot -p x', 'nohup copilot -p x &', 'A=1 B=2 copilot -p x',
+                   "zsh -c 'copilot -p x'", 'bash -c "cd /tmp && copilot -p x"', "sh -c 'copilot -p x'",
+                   'true; copilot -p x', 'true && copilot -p x', 'false || copilot -p x', 'echo hi | copilot -p x',
+                   'echo review.sh; copilot -p x', 'copilot -p "run review.sh then stop"',
+                   f'nohup zsh -c "cd {self.tmp.name} && zsh launch.zsh x >log 2>&1" &', f'zsh {launch}',
+                   'echo "$(copilot -p x)"', 'echo copilot']
+        for n, cmd in enumerate(refused):
+            with mock.patch('sys.stderr'):
+                self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd), 2, cmd)
+            self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe'), 0, cmd)
+        run = f'python3 -B {S}/route.py run a --kind build --brief b --worktree w'
+        for n, cmd in enumerate([run, f'bash {S}/review.sh a-review w >a.log 2>&1', f'{S}/review.sh a-review w',
+                                 f'nohup zsh -c "{run} >a.log 2>&1" &', f'nohup zsh -c "bash {S}/review.sh a-review w" &',
+                                 f'timeout --signal TERM 9000 env A=1 {run}', f'sh {tidy}', 'sleep 1',
+                                 f'cd /tmp && bash {S}/review.sh a-review w >a.log 2>&1']):
+            self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd), 0, cmd)
+        items = self.items()
+        self.assertEqual({items[f'r{n}']['unrouted_reason'] for n in range(len(refused))}, {'owner probe'})
 
 
 if __name__ == '__main__':

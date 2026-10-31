@@ -5,15 +5,15 @@ The long tables behind [../SKILL.md](../SKILL.md). Labels: VERIFIED, INFERRED, O
 
 ## Launch flags
 
-VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
+`scripts/route.py run` passes every flag below; a run does not assemble them by hand. VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
 
 | Flag | Why |
 | --- | --- |
-| `timeout <s>` | A hard cap on a hung run; about 3x the budget (INFERRED) |
+| `timeout <s>` | A hard cap on a hung run; about 3x the budget (INFERRED), the budget itself for a review; `route.py run --timeout` overrides it |
 | `COPILOT_TASK_WAIT_TIMEOUT_SECONDS` | A `-p` run that leaves a background task running is cut off after 600 s. The variable is not listed in `copilot help environment` (OPEN). The real fix is the preamble's rule: gates run in the foreground |
 | `-C <worktree>` | The worker works in its own worktree |
 | `-n <prefix><item>` | `-r` can resume it by name, and `status.py` recognises it as live. Name run files `<item>*` |
-| `--model`, `--reasoning-effort <effort>` | By the kind of round, from [routing.md](routing.md); never the automatic choice |
+| `--model`, `--reasoning-effort <effort>`, `--context <tier>` | The router's logged choice ([routing.md](routing.md#the-router)); never the automatic choice |
 | `--max-ai-credits <cap>` | Ends a runaway round; the cap comes from `mine.py --caps` ([routing](routing.md#credit-caps)). The minimum is 30, and the last model call may overshoot it (VERIFIED, `copilot --help`, CLI 1.0.97) |
 | `--no-ask-user`, `--allow-all-tools` | Headless: nobody is there to answer a question or a permission prompt |
 | `--deny-tool 'shell(git push)'` | Deny rules win over allow-all, but a hook that rewrites the command runs first: rtk turns `git push` into `rtk git push` and the rule misses (VERIFIED 2026-10-17, rtk 0.51.0) |
@@ -22,7 +22,7 @@ VERIFIED: every flag below is listed by `copilot --help` for CLI 1.0.95.
 | `--add-dir <path>` | `-p` sessions are denied files outside the worktree. This grants access, writing included, so the prompt must say read-only |
 | `--output-format json` | JSONL events for `status.py` and `result.py` |
 | `</dev/null`, `2> <item>.err` | No stdin to wait on; stderr carries CLI-wide failures |
-| Reviewer (`scripts/review.sh`): `--deny-tool 'shell(git push)'`, `'shell(git commit)'`, `'shell(npm)'`, `--deny-tool=url` | No pushes, commits, installs or fetches; the shell stays for `git diff`. Use a model from another family |
+| Reviewer (`scripts/review.sh`, through `route.py run --kind review`): `--deny-tool 'shell(git push)'`, `'shell(git commit)'`, `'shell(npm)'`, `--deny-tool=url` | No pushes, commits, installs or fetches; the shell stays for `git diff`. The router picks a model from another family |
 
 **Reading a result.**
 - The last `assistant.message` holds the report.
