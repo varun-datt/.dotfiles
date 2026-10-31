@@ -232,6 +232,8 @@ Invented: the L2 list of unlucky moments, the COST and VERIF areas, the "Check" 
 
 ## Decisions for the owner
 
+Owner's rulings (2026-10-30): D1, D2, D3 and D4 all option 2, as recommended.
+
 **D1. The blocking threshold.** It binds `SKILL.md`'s Lifecycle rule, the verdict count `mine.py` reads, the router's success reward (D1 of the 2026-10-30 router spike) and every fix brief.
 
 1. Keep today's one-line rule and use the rubric only to describe findings.

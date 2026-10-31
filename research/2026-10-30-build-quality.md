@@ -180,6 +180,8 @@ Total, INFERRED: P1 40 to 50, P2 8 to 12, P3 12 to 18 (about half shared with P1
 
 ## Decisions for the owner
 
+Owner's rulings (2026-10-30): decisions 1, 2, 3 and 4 all option 2, as recommended.
+
 1. **How the build method reaches workers.**
    1. In the preamble only: cheapest, no skill change; the lists live in one template and grow it.
    2. **Recommended:** the preamble's six steps plus the case lists as `software-testing` references that the preamble names by path. The lists stay short, are reused by any agent that tests, and P4's defect log updates them in one place.
