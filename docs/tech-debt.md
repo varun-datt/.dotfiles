@@ -18,4 +18,6 @@ Known findings that did not block a merge, kept by `debt.py` (the orchestrator-w
 | TD-12 | 2026-10-31 | review | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/review.sh | review.sh stages through a fixed <out>.tmp name, so a source prompt at that path is removed by the rename | p3-review, p3-rereview | 5 | open |
 | TD-13 | 2026-10-31 | templates | Minor | dotfiles/dot_agents/skills/orchestrator-workers/assets/rereview.md | The fix and re-review templates disagree on whether evidence that a case cannot happen may stand in for a test (assets/fix.md vs assets/rereview.md:28) | p3-review | 10 | open |
 | TD-14 | 2026-10-31 | orchestrator-workers | Minor | dotfiles/dot_agents/skills/orchestrator-workers/references/routing.md | routing.md:49 still says a round's kind comes from its name suffix only; since p4 it comes from the routes.jsonl launch record first | p4-rereview2, 2026-10-31 | 5 | open |
-<!-- debt.py next id: 15 -->
+| TD-15 | 2026-10-31 | orchestrator-workers | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/brief.py | brief check --repo reads docs/tech-debt.md through a docs/ symlink, so a linked docs folder lets a register outside the repository be read (containment is lexical) | p6 reviews, 2026-10-31 | 15 | open |
+| TD-16 | 2026-10-31 | orchestrator-workers | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/debt.py | brief check takes about 4 s on a large register (estimated, not remeasured after the fix) | p6 reviews, 2026-10-31 | 20 | open |
+<!-- debt.py next id: 17 -->
