@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review severity: rubric and our findings</title>
+<style>
+  :root {
+    --ink: oklch(0.400 0.110 250);
+    --ink-2: oklch(0.560 0.090 250);
+    --ink-3: oklch(0.800 0.050 250);
+    --ink-4: oklch(0.930 0.020 250);
+    --gold: oklch(0.650 0.146 60);
+    --grey: oklch(0.720 0.010 250);
+    --text: oklch(0.250 0.020 250);
+    --muted: oklch(0.450 0.015 250);
+    --rule: oklch(0.880 0.010 250);
+    --bg: oklch(0.990 0.003 250);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  main { max-width: 1120px; margin: 0 auto; padding: 24px 28px 40px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  p { margin: 0 0 8px; }
+  .lede { font-size: 15px; max-width: 900px; }
+  .muted { color: var(--muted); font-size: 12.5px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+  .panel { border: 1px solid var(--rule); border-radius: 6px; padding: 14px 16px; background: #fff; }
+  .wide { grid-column: 1 / -1; }
+  table.matrix { border-collapse: separate; border-spacing: 4px; width: 100%; }
+  .matrix th { font-size: 12.5px; text-align: left; font-weight: 600; padding: 4px 6px; vertical-align: bottom; }
+  .matrix th.row { width: 34%; }
+  .matrix th small { display: block; font-weight: 400; color: var(--muted); }
+  .matrix td { padding: 8px; border-radius: 4px; font-weight: 600; font-size: 13px; text-align: center; border: 2px solid transparent; }
+  .b { background: var(--ink); color: #fff; }
+  .m { background: var(--ink-2); color: #fff; }
+  .mi { background: var(--ink-3); color: var(--text); }
+  .n { background: var(--ink-4); color: var(--text); }
+  .blocks { border-color: var(--gold) !important; box-shadow: inset 0 0 0 1px var(--gold); }
+  .key { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+  .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
+  .bars { display: grid; grid-template-columns: 70px 1fr; row-gap: 3px; column-gap: 8px; align-items: center; font-size: 12.5px; }
+  .bars .lab { font-weight: 600; }
+  .pair { display: grid; row-gap: 2px; }
+  .bar { height: 11px; display: flex; align-items: center; }
+  .bar span { display: block; height: 100%; border-radius: 2px; }
+  .bar em { font-style: normal; margin-left: 6px; font-size: 12px; color: var(--muted); }
+  .today span { background: var(--grey); }
+  .rubric span { background: var(--ink); }
+  .stack { display: flex; height: 26px; border-radius: 3px; overflow: hidden; margin: 4px 0 2px; }
+  .stack div { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+  .stackrow { margin-bottom: 12px; }
+  .stackrow .t { font-size: 12.5px; font-weight: 600; }
+  .big { display: flex; gap: 22px; flex-wrap: wrap; }
+  .big div { min-width: 140px; }
+  .big b { display: block; font-size: 26px; color: var(--ink); line-height: 1.1; }
+  .flow { display: flex; align-items: stretch; gap: 0; flex-wrap: nowrap; }
+  .step { flex: 1; border: 1px solid var(--rule); border-radius: 5px; padding: 8px 9px; font-size: 12.5px; background: var(--bg); }
+  .step b { display: block; font-size: 13px; margin-bottom: 2px; }
+  .arrow { align-self: center; padding: 0 4px; color: var(--muted); font-size: 16px; }
+  ul.tight { margin: 4px 0 0; padding-left: 18px; }
+  ul.tight li { margin-bottom: 2px; }
+  footer { margin-top: 18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Review severity: what blocks, what becomes debt</h1>
+  <p class="lede">Grade each review finding by <b>how likely</b> it is against <b>what it breaks</b>. Only Blocker and Major findings block a merge and cost a fix round. Minor findings go to a tech-debt list per repository, and Nits are just counted. On our last four runs (236 findings), blocking findings drop from 143 to 109, and 8 fix and re-review rounds (796 credits, 75 minutes) would not have run.</p>
+  <p class="muted">Data: runs of 2026-10-27 to -30, graded by hand by one grader (not yet cross-checked). Per-finding grades are in research/2026-10-30-review-severity/findings.csv; round costs come from orchestrator-workers mine.py.</p>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>The rubric at a glance</h2>
+      <table class="matrix" aria-label="Severity matrix: impact rows by likelihood columns">
+        <tr><th class="row"></th><th>L1 normal use<small>owner data, outside text</small></th><th>L2 plausible<small>Stop, reload, restart</small></th><th>L3 contrived<small>local race, hostile name</small></th></tr>
+        <tr><th class="row">I1 harm<small>loss, leak, bypass, unapproved act</small></th><td class="b blocks">Blocker</td><td class="b blocks">Blocker</td><td class="mi">Minor<br><small style="font-weight:400">shown to owner</small></td></tr>
+        <tr><th class="row">I2 wrong<small>wrong result, MUST unmet, dead check</small></th><td class="m blocks">Major</td><td class="m blocks">Major</td><td class="mi">Minor</td></tr>
+        <tr><th class="row">I3 degraded<small>slow, confusing, has workaround</small></th><td class="m blocks">Major</td><td class="mi">Minor</td><td class="mi">Minor</td></tr>
+        <tr><th class="row">I4 cosmetic</th><td class="mi">Minor</td><td class="n">Nit</td><td class="n">Nit</td></tr>
+      </table>
+      <div class="key">
+        <span><span class="sw" style="background:transparent;border:2px solid var(--gold)"></span>blocks the merge, costs a fix round</span>
+        <span>Minor: one line, to the debt list</span>
+        <span>Nit: counted only</span>
+      </div>
+      <p class="muted" style="margin-top:8px">A Blocker or Major must carry a failure scenario, file:line and VERIFIED or INFERRED. An INFERRED Major is reproduced before it is fixed. Pre-existing problems and report Corrections are separate and never cost a fix round.</p>
+    </section>
+
+    <section class="panel">
+      <h2>What changes on our 236 findings</h2>
+      <div class="stackrow">
+        <div class="t">Today: blocking or not</div>
+        <div class="stack" role="img" aria-label="Today: 143 blocking, 93 not blocking">
+          <div style="width:60.6%;background:var(--grey);color:var(--text)">143 blocking</div>
+          <div style="width:39.4%;background:var(--ink-4);color:var(--text)">93 not</div>
+        </div>
+      </div>
+      <div class="stackrow">
+        <div class="t">Under the rubric</div>
+        <div class="stack" role="img" aria-label="Rubric: 14 Blocker, 95 Major, 95 Minor, 8 Nit, 5 Pre-existing, 19 Correction">
+          <div style="width:5.9%;background:var(--ink);color:#fff">14</div>
+          <div style="width:40.3%;background:var(--ink-2);color:#fff">95 Major</div>
+          <div style="width:40.2%;background:var(--ink-3);color:var(--text)">95 Minor</div>
+          <div style="width:13.6%;background:var(--ink-4);color:var(--text)">32</div>
+        </div>
+        <div class="key" style="margin-top:2px">
+          <span><span class="sw" style="background:var(--ink)"></span>Blocker 14</span>
+          <span><span class="sw" style="background:var(--ink-2)"></span>Major 95</span>
+          <span><span class="sw" style="background:var(--ink-3)"></span>Minor 95</span>
+          <span><span class="sw" style="background:var(--ink-4)"></span>Nit 8, Pre-existing 5, Correction 19</span>
+        </div>
+      </div>
+      <div class="big">
+        <div><b>143 → 109</b>findings that block</div>
+        <div><b>30 → 27</b>of 32 first reviews block</div>
+        <div><b>33 → 19</b>re-review findings that block</div>
+      </div>
+      <p class="muted" style="margin-top:8px">44 blocking findings demoted (26 contrived, 12 of them security); 10 promoted. None of the 44 has a record of hitting the owner's data; 17 were real but contrived or minor.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Blocking findings by area</h2>
+      <div class="key" style="margin:0 0 8px">
+        <span><span class="sw" style="background:var(--grey)"></span>blocking today</span>
+        <span><span class="sw" style="background:var(--ink)"></span>Blocker or Major under the rubric</span>
+      </div>
+      <div class="bars">
+        <div class="lab">SEC</div><div class="pair"><div class="bar today"><span style="width:92.5%"></span><em>37</em></div><div class="bar rubric"><span style="width:57.5%"></span><em>23</em></div></div>
+        <div class="lab">COR</div><div class="pair"><div class="bar today"><span style="width:65%"></span><em>26</em></div><div class="bar rubric"><span style="width:52.5%"></span><em>21</em></div></div>
+        <div class="lab">UX</div><div class="pair"><div class="bar today"><span style="width:55%"></span><em>22</em></div><div class="bar rubric"><span style="width:40%"></span><em>16</em></div></div>
+        <div class="lab">REL</div><div class="pair"><div class="bar today"><span style="width:55%"></span><em>22</em></div><div class="bar rubric"><span style="width:45%"></span><em>18</em></div></div>
+        <div class="lab">DATA</div><div class="pair"><div class="bar today"><span style="width:35%"></span><em>14</em></div><div class="bar rubric"><span style="width:32.5%"></span><em>13</em></div></div>
+        <div class="lab">VERIF</div><div class="pair"><div class="bar today"><span style="width:22.5%"></span><em>9</em></div><div class="bar rubric"><span style="width:25%"></span><em>10</em></div></div>
+        <div class="lab">PERF</div><div class="pair"><div class="bar today"><span style="width:17.5%"></span><em>7</em></div><div class="bar rubric"><span style="width:7.5%"></span><em>3</em></div></div>
+        <div class="lab">COMP</div><div class="pair"><div class="bar today"><span style="width:12.5%"></span><em>5</em></div><div class="bar rubric"><span style="width:10%"></span><em>4</em></div></div>
+        <div class="lab">REPORT</div><div class="pair"><div class="bar today"><span style="width:0%"></span><em>0</em></div><div class="bar rubric"><span style="width:0%"></span><em>0</em></div></div>
+        <div class="lab">COST</div><div class="pair"><div class="bar today"><span style="width:2.5%"></span><em>1</em></div><div class="bar rubric"><span style="width:2.5%"></span><em>1</em></div></div>
+      </div>
+      <p class="muted" style="margin-top:8px">Bars start at zero on one scale (0 to 40). Security drops most: file-system races and hostile names become Minor; prompt-injection paths stay Major. Areas: SEC security and privacy, COR correctness, UX experience, REL ordering and failure, DATA data loss, VERIF the checks, PERF speed, COMP start-up and platforms, REPORT the author's report, COST paid spend.</p>
+    </section>
+
+    <section class="panel">
+      <h2>What it would have saved</h2>
+      <div class="big">
+        <div><b>8</b>rounds not run</div>
+        <div><b>796</b>credits</div>
+        <div><b>75</b>minutes</div>
+        <div><b>6.0%</b>of fix and re-review credits</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px">
+        <tr style="text-align:left;border-bottom:1px solid var(--rule)"><th>Item</th><th>Rounds skipped</th><th style="text-align:right">Credits</th><th style="text-align:right">Min</th></tr>
+        <tr><td>canvas-b</td><td>fix2, re-review 2 to 5</td><td style="text-align:right">633.0</td><td style="text-align:right">41.8</td></tr>
+        <tr><td>gaps-3</td><td>fix1</td><td style="text-align:right">99.5</td><td style="text-align:right">20.1</td></tr>
+        <tr><td>panel-menu</td><td>fix2, re-review 2</td><td style="text-align:right">63.4</td><td style="text-align:right">13.3</td></tr>
+      </table>
+      <p class="muted" style="margin-top:8px">The larger effect is shorter fix rounds: if fix cost scales with the number of findings, about 2,300 credits went to findings the rubric demotes (an estimate, not measured). For scale: a review round averages about 68 credits and 6 minutes; a fix round about 161 credits and 32 minutes.</p>
+    </section>
+
+    <section class="panel wide">
+      <h2>The review system, end to end</h2>
+      <div class="flow">
+        <div class="step"><b>1. Tools first</b>types, lint, tests, axe, build; add a secret scan and start-up budget</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>2. Review by risk</b>risk areas get max effort and their checklist; others the base list</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>3. Grade every finding</b>likelihood × impact, with a scenario and file:line for Majors</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>4. Route</b>Blocker or Major: fix round. Minor: debt list. Nit: count. Correction: fix the record</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>5. Rule and record</b>orchestrator accepts, demotes or rejects; owner can overrule; one line each</div>
+        <div class="arrow">→</div>
+        <div class="step"><b>6. Calibrate</b>acceptance rate per area; a second grader on 40 rows, aim kappa ≥ 0.6</div>
+      </div>
+      <ul class="tight muted" style="margin-top:10px">
+        <li>Re-reviews check only the fixed findings and the fix diff (8 fixes caused new defects). One extra round when one is left open, then the owner decides.</li>
+        <li>Debt is paid when a later item touches the same file (fixes under about 15 minutes), when a class repeats 3 times, or when the list passes about 30 rows.</li>
+        <li>The main risk: a real problem graded "contrived". It is watched by the second grader and by reopening any demoted row a real defect hits.</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer class="muted">Research note: research/2026-10-30-review-severity.md. Rubric: research/2026-10-30-review-severity/rubric.md.</footer>
+</main>
+</body>
+</html>
