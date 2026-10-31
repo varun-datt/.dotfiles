@@ -220,6 +220,32 @@ class SessionLogTest(unittest.TestCase):
         result = self.run_script("coverage", "--out", str(self.out), "--ledger", str(ledger))
         self.assertEqual(result.returncode, 0, result.stdout)
 
+    def test_quotes_drops_candidates_whose_quote_is_not_in_their_chunk(self):
+        self.out.mkdir(parents=True, exist_ok=True)
+        (self.out / "chunk-01.md").write_text('USER\nNever push.\n  Keep going.\nAGENT\nThe gate \u2014 it "failed" twice, then passed.\n')
+        (self.out / "chunk-02.md").write_text("AGENT\nNothing here.\n")
+        ledger = self.root / "ledger.md"
+        ledger.write_text("\n".join([
+            "## chunk-01",
+            "- 01:00 | correction | never push | \"Never push. Keep going.\"",
+            "- 01:05 | lesson | the gate flakes | `the gate - it \\\"failed\\\" twice ... passed`",
+            "- 01:09 | fact | invented | \u201cthe gate passed three times\u201d",
+            "## chunk-02",
+            "- 02:00 | fact | from the wrong chunk | \"Never push.\"",
+            "",
+        ]))
+        result = self.run_script("quotes", "--out", str(self.out), "--ledger", str(ledger))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("4 candidates: 2 quotes found, 2 not in their chunk", result.stdout)
+        checked = (self.root / "ledger.checked.md").read_text()
+        self.assertIn("never push |", checked)
+        self.assertIn("the gate flakes", checked)
+        self.assertNotIn("invented", checked)
+        self.assertIn("## chunk-02\nnone (all 1 candidates failed the quote check)", checked)
+        unsupported = (self.out / "unsupported.md").read_text()
+        self.assertIn("chunk-01 | - 01:09", unsupported)
+        self.assertIn("chunk-02 | - 02:00", unsupported)
+
     def test_no_log_found_says_to_fall_back_to_the_context(self):
         result = self.run_script("digest", "--out", str(self.out))
         self.assertEqual(result.returncode, 1)

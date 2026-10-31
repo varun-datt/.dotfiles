@@ -19,6 +19,20 @@ Pick the mode from what the user named; with no argument, distill this session.
 
 The steps below hold for every mode; a mode's reference adds to steps 2 and 6.
 
+## Models
+
+Route each kind of work to the cheapest model that does it as well; credits are billed by token, and a long source is mostly input.
+
+| Work | Model | Why |
+| --- | --- | --- |
+| Reading a chunk and listing candidates | GPT-6.1 Sol | Extraction, not judgement. On 2026-10-30 Sol read a chunk for 23.5 credits that Opus read for 61 on average, and listed the most candidates; the default model refused a chunk on 2026-10-27 and Opus one on 2026-10-30, and Sol read both |
+| A chunk its reader refused | The other family (Claude Opus 5.5) | On 2026-10-27 halving a refused chunk did not help and switching family did |
+| Checking quotes and coverage | `session_log.py`, no model | Mechanical |
+| Judging, writing records, the report (step 3 on) | Claude Opus 5.5 | Judgement against existing records: a miss loses a record, a wrong call adds a duplicate |
+| A source of up to two chunks, or one document | This chat, no subagent | A subagent's start (about 50k tokens of instructions) costs more than it saves |
+
+In VS Code, pass the model to the subagent call as `GPT-6.1 Sol (copilot)`; there is no effort setting per call, so each model runs at the effort VS Code is set to for it (on 2026-10-30, Opus high and Sol medium). In Copilot CLI, pass `--model`. Claude Haiku 5.5 and GPT-6 Luna cost about a fortieth of Opus per token (VS Code's `models.json`, 2026-10-30) but are untested here: try one beside Sol on two chunks before routing reading to it.
+
 Copy this checklist into your reply and tick it as you go:
 
 ```text

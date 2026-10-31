@@ -6,6 +6,7 @@ Reads VS Code chat transcripts, Copilot CLI session state and Cursor agent trans
   session_log.py find [--session ID] [--cwd DIR]
   session_log.py digest [--session ID] [--cwd DIR] [--out DIR] [--chunk-chars N]
   session_log.py coverage --out DIR --ledger FILE
+  session_log.py quotes --out DIR --ledger FILE
 """
 
 import argparse
@@ -504,6 +505,57 @@ def cmd_coverage(args):
     return 0
 
 
+FOLD = str.maketrans({"\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"', "\u2013": "-", "\u2014": "-", "`": ""})
+
+
+def fold(text):
+    text = text.replace('\\"', '"').replace("\\n", " ").replace("**", "").translate(FOLD)
+    return " ".join(text.lower().split())
+
+
+def quote_found(quote, chunk):
+    quote = quote.strip().strip('"\'`\u201c\u201d\u2018\u2019').strip()
+    parts = [fold(p).strip(" \"'") for p in re.split(r"\[\.\.\.\]|\.\.\.|\u2026", quote)]
+    parts = [p for p in parts if p]
+    return bool(parts) and all(p in chunk for p in parts)
+
+
+def cmd_quotes(args):
+    out, ledger = Path(args.out), Path(args.ledger)
+    chunks = {p.stem: fold(p.read_text(encoding="utf-8")) for p in out.glob("chunk-*.md")}
+    kept, dropped, current, count = [], [], None, {}
+    for line in ledger.read_text(encoding="utf-8").splitlines():
+        heading = re.match(r"^#+\s*(chunk-\d+)\b", line)
+        if heading:
+            current = heading.group(1)
+            count[current] = [0, 0]
+            kept.append(line)
+            continue
+        fields = line.strip().strip("|").split("|")
+        if not current or len(fields) < 4 or not re.search(r"\w", fields[-1]):
+            kept.append(line)
+            continue
+        count[current][0] += 1
+        if quote_found(fields[-1], chunks.get(current, "")):
+            kept.append(line)
+        else:
+            count[current][1] += 1
+            dropped.append(f"{current} | {line.strip()}")
+    lines = []
+    for line in kept:
+        lines.append(line)
+        heading = re.match(r"^#+\s*(chunk-\d+)\b", line)
+        if heading and count[heading.group(1)][0] and count[heading.group(1)][0] == count[heading.group(1)][1]:
+            lines.append(f"none (all {count[heading.group(1)][0]} candidates failed the quote check)")
+    checked = ledger.with_name(ledger.stem + ".checked.md")
+    checked.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    (out / "unsupported.md").write_text("\n".join(dropped) + "\n", encoding="utf-8")
+    total = sum(c[0] for c in count.values())
+    print(f"{total} candidates: {total - len(dropped)} quotes found, {len(dropped)} not in their chunk")
+    print(f"kept: {checked}\nunsupported: {out / 'unsupported.md'}")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -514,11 +566,12 @@ def main(argv=None):
         if name == "digest":
             p.add_argument("--out", help="default: ~/.cache/distill/<session>")
             p.add_argument("--chunk-chars", type=int, default=100_000)
-    p = sub.add_parser("coverage")
-    p.add_argument("--out", required=True)
-    p.add_argument("--ledger", required=True)
+    for name in ("coverage", "quotes"):
+        p = sub.add_parser(name)
+        p.add_argument("--out", required=True)
+        p.add_argument("--ledger", required=True)
     args = parser.parse_args(argv)
-    return {"find": cmd_find, "digest": cmd_digest, "coverage": cmd_coverage}[args.command](args)
+    return {"find": cmd_find, "digest": cmd_digest, "coverage": cmd_coverage, "quotes": cmd_quotes}[args.command](args)
 
 
 if __name__ == "__main__":
