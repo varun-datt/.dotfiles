@@ -1,0 +1,41 @@
+id,severity_rubric,likelihood,impact,note
+S01,Major,L1,I3,Normal navigation steals focus
+S02,Major,L1,I2,Wrong decision association; existing test fails
+S03,Blocker,L1,I1,Saving corrupts original file bytes
+S04,Major,L2,I2,Retry records stale verdict
+S05,Minor,L1,I4,Unintended cosmetic restyling; thin
+S06,Blocker,L1,I1,Normal agent writes bypass workspace confinement
+S07,Major,L1,I3,Normal removal steals cross-pane focus; thin
+S08,Minor,L2,I3,Restore hides thread; unfolding remains workable
+S09,Correction,,,Unsupported counter claim
+S10,Minor,L1,I3,Missing coverage; test exception; thin
+S11,Major,L1,I3,Reveal leaves thread hidden; manual unfolding workaround
+S12,Nit,,,Comment wording
+S13,Minor,L2,I3,Growing file defeats bounded read; thin
+S14,Minor,L3,I1,SEC: local symlink race escapes confinement
+S15,Correction,,,Report overclaims confirmation input isolation
+S16,Major,L2,I2,Existing check flakes on unchanged code
+S17,Minor,L2,I3,Screen-reader barrier; alternate navigation presumed; thin
+S18,Minor,L3,I2,Local FIFO swap hangs read
+S19,Major,L2,I2,Failing audit falsely permits tagging
+S20,Major,L2,I2,Stop fails to stop command; harm unspecified; thin
+S21,Minor,L3,I1,SEC: local swaps or hardlinks expose outside bytes
+S22,Major,L1,I2,Normal fork violates explicit owner ruling
+S23,Correction,,,Already rejected ruling; do not re-raise
+S24,Minor,L2,I3,Stop leaves unwanted card; no execution stated
+S25,Blocker,L1,I1,Exported external loads bypass confinement; thin
+S26,Major,L1,I3,Normal rebuild loses selection and view position
+S27,Blocker,L1,I1,Untrusted canvas scripts can leak data
+S28,Nit,,,No failure scenario; deadline preference; thin
+S29,Major,L2,I2,Timeout permanently prevents client flow
+S30,Minor,L3,I1,SEC: local parent swap redirects outside write
+S31,Major,L1,I2,Optional checks wrongly block completion
+S32,Major,L1,I2,Reviewer policies conflated; thin
+S33,Correction,,,Report claims nonexistent test
+S34,Major,L1,I2,Normal hover shows wrong-folder signatures
+S35,Minor,L3,I1,DATA: race may overwrite changed destination; thin
+S36,Major,L1,I2,Inapplicable build policy blocks completion
+S37,Blocker,L2,I1,Second view destroys unsaved draft
+S38,Major,L1,I3,Supported light theme fails WCAG AA
+S39,Nit,,,Details remain available; visibility preference; thin
+S40,Major,L2,I2,Notice failure records rollback while fix continues

@@ -1,0 +1,41 @@
+id,text
+S01,Leaving Find a file pulls focus back into the tree
+S02,Audit joins a round to the wrong decision; a real-folder test fails
+S03,Saving a NUL-free non-UTF-8 file rewrites its original bytes
+S04,A retry with no verdict keeps the earlier verdict file
+S05,New class name restyles existing sandbox and approval badges
+S06,"Agent file writes can land outside the workspace, silently under auto-approve"
+S07,Removing the last piece may focus another pane's message box
+S08,"Restoring view state re-folds the region, hiding the thread"
+S09,"Tool-event counter can never match, so its claim is unsupported"
+S10,Mixed-case variable removal untested
+S11,Thread on a folded line stays hidden after reveal
+S12,Stale code comment
+S13,File growing or swapped between stat and read is read whole
+S14,File swapped for an escaping link between check and read allows an outside read
+S15,Report says confirmations echo only the agent's own input
+S16,"Reorder spec reads rows before they load, so it can fail on unchanged code"
+S17,Drag moves are not announced to screen readers
+S18,File swapped for a FIFO can block the read
+S19,Dependency audit error is read as no findings and allows tagging
+S20,Stop sends SIGTERM only; commands ignoring it keep running
+S21,Parent-folder swap race still copies outside bytes; hardlinks pass
+S22,"Forks inherit another session's pending pieces, against the owner's ruling"
+S23,POST read still used (repeat of rejected finding)
+S24,Stop during target resolution still opens an approval card
+S25,Saved SVG keeps external references that load outside the app
+S26,Rebuilding zones drops extra selections and shifts the view
+S27,Canvas scripts can leak data through WebRTC lookups
+S28,Several test deadlines lengthened without a stated reason
+S29,Initialisation timeout leaves a dead client that is never replaced
+S30,Destination parent swap redirects the create outside
+S31,Optional builds and checks shown as completion blockers
+S32,Pending required reviewer stands for every reviewer policy
+S33,Report claims a unit test that does not exist
+S34,Hover returns signatures from a sibling folder
+S35,Hash check not atomic with the rename
+S36,Not-applicable path-filtered build policy still blocks
+S37,Opening a dirty file in a second view silently replaces the draft with disk text
+S38,"Verdict text in one light theme is 3.86:1, below AA"
+S39,Ordinary approval card still hides env and cwd behind Details
+S40,Failed orchestrator notice rolls item back while the fix runs
