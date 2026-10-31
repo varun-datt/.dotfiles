@@ -182,8 +182,11 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 
 **Prompts** ([assets/](assets/)); placeholders are `{{NAME}}` or `{{NAME|default}}`:
 - **Worker:** [preamble-worker.md](assets/preamble-worker.md) + [task-body.md](assets/task-body.md).
-  The preamble carries the shared rules: never push, no secrets, `commit --only`, gates in the
-  foreground, polls at most every 240 s to keep the cache warm, a labelled report.
+  The preamble opens with the build method (map, cases, facts, small steps, tests that fail when
+  broken, rows checked against evidence), naming the `software-testing` case lists by their
+  deployed path, then carries the shared rules: never push, no secrets, `commit --only`, gates in
+  the foreground, polls at most every 240 s to keep the cache warm, a labelled report with an
+  impact map and a case table.
 - **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body.
 - **Reviews:** [review.md](assets/review.md) and the fixes-only [rereview.md](assets/rereview.md).
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
