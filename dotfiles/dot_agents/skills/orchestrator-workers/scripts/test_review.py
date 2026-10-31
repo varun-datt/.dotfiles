@@ -142,8 +142,9 @@ class ReviewShTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.args))
 
     def test_a_prompt_named_like_its_filled_copy_is_not_overwritten(self):
-        p = self.review('{{RUBRIC}}\n', prompt_path=os.path.join(self.run_dir, 'x-review.filled.md'))
+        p = self.review('{{RUBRIC}}\n', prompt_path=os.path.join(self.run_dir, '.', 'x-review.filled.md'))
         self.assertNotEqual(p.returncode, 0)
+        self.assertIn('would be overwritten', p.stderr)
         self.assertFalse(os.path.exists(self.args))
 
 
