@@ -121,7 +121,8 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
 - **Tech debt** (`scripts/debt.py`, one `docs/tech-debt.md` per repository): the orchestrator adds a
   row for each Minor finding and each Major the owner merged as a known gap. A brief that touches a
   listed file names its rows (`debt.py for-files <repo> <paths>`) and fixes those under about 15
-  minutes. A class seen 3 times becomes a planned item; past about 30 open rows, each run plans one
+  minutes: its `TECH DEBT:` line lists the ids it fixes with their lines, or says why not, and
+  `route.py run` warns (exit unchanged) for each open row on a named path whose id the brief leaves out; the worktree's root folder itself is not matched, since every brief names it in YOUR RESOURCES. A class seen 3 times becomes a planned item; past about 30 open rows, each run plans one
   debt item; `debt.py stale` lists rows untouched for 3 runs, to close "won't fix" or keep.
 - Fixes made after the re-review go to a **post-merge review (commit-then-review)** on main, so
   nothing lands unreviewed. Anything still open is recorded for the owner.

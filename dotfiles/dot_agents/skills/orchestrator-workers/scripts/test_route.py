@@ -412,6 +412,22 @@ class Launcher(unittest.TestCase):
             p = self.launch(rnd, 'small', *extra, mode=mode)
             self.assertEqual(p.returncode, code, (mode, p.stdout, p.stderr))
 
+    def test_run_checks_the_brief_against_the_worktree_debt_register_and_still_launches(self):
+        os.makedirs(os.path.join(self.wt, 'src'))
+        os.makedirs(os.path.join(self.wt, 'docs'))
+        with open(os.path.join(self.wt, 'src', 'a.ts'), 'w') as f:
+            f.write('x\n')
+        with open(os.path.join(self.wt, 'docs', 'tech-debt.md'), 'w') as f:
+            f.write('| Id | Date | Area | Grade | File | Scenario | Source | Minutes | Status |\n'
+                    '| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n'
+                    '| TD-7 | 2026-10-01 | a | Minor | src/a.ts | made-up scenario | r1 | 5 | open |\n')
+        with open(self.brief, 'a') as f:
+            f.write('Change `src/a.ts`.\n')
+        p = self.launch()
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertIn('warning: TD-7 is open on src/a.ts', p.stderr)
+        self.assertTrue(os.path.exists(self.args))
+
     def test_add_dir_is_taken_any_number_of_times(self):
         p = self.launch('x', 'small', '--add-dir', '/tmp/one', '--add-dir', '/tmp/two')
         self.assertEqual(p.returncode, 0, p.stderr)
