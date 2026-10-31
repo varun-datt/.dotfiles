@@ -17,7 +17,15 @@ def read(path, column, key):
         reader = csv.DictReader(f)
         if column not in (reader.fieldnames or []) or key not in (reader.fieldnames or []):
             raise ValueError(f'{path}: needs columns {key!r} and {column!r}')
-        return {row[key]: (row[column] or '').strip() for row in reader}
+        out = {}
+        for row in reader:
+            i = (row[key] or '').strip()
+            if not i:
+                raise ValueError(f'{path}: line {reader.line_num} has an empty {key!r}')
+            if i in out:
+                raise ValueError(f'{path}: {key} {i!r} appears more than once')
+            out[i] = (row[column] or '').strip()
+        return out
 
 
 def kappa(pairs):

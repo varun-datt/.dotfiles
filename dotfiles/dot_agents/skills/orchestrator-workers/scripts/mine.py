@@ -37,9 +37,13 @@ flagged when its log's model or effort differs from the decision. Markers (`stat
 per round of each kind they cover, before and after, up to the neighbouring markers.
 
 --rulings sorts each line of <run>/rulings.jsonl into accepted (ruled at the reviewer's grade), demoted,
-promoted, rejected or not-reproduced; a ruling whose round has no events in the run is an orphan.
---quality takes each item's first review (its earliest review round, so a review after a rebuild or fix
-is not one). Clean under the reviewer: its verdict reads "Blocking: none". Under the orchestrator: no
+promoted, rejected or not-reproduced; a ruling whose round has no events in the run is an orphan. A later
+ruling on the same round and finding replaces the earlier one; every line stays in the file.
+--quality takes each item's first review: the first review with a verdict after the item's first build and
+before its first fix or rebuild, else the first review in that span ("no verdict"). A review of an item
+whose build is not in the run is listed as unknown provenance. Blockers per first review count the
+orchestrator's accepted blockers; fix rounds are averaged over items with at least one fix round.
+Clean under the reviewer: its verdict reads "Blocking: none". Under the orchestrator: no
 Blocker or Major ruled in rulings.jsonl, else the <item>.accepted line ("none", N or "N blocking"),
 else the ACCEPTED list of the item's first fix brief (<fix round>.md), else the reviewer's clean verdict;
 a reviewer's blocking verdict with none of these is "unruled". Causes are the reviewer's cause tags
@@ -50,7 +54,7 @@ import argparse, collections, datetime, json, os, re, statistics, subprocess, sy
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import status
 
-SUFFIX = re.compile(r'-(rereview|review|fix|resume|merge|catchup|research)\d*$')
+SUFFIX = re.compile(r'-(rereview|review|fix|resume|merge|catchup|research|r(?=\d))\d*$')
 REVIEW_KINDS = ('review', 'rereview')
 WORKER_KINDS = ('build', 'research', 'fix', 'resume', 'merge', 'catchup', 'other')
 SCOPES = {'all': WORKER_KINDS + REVIEW_KINDS, 'workers': WORKER_KINDS, 'reviews': REVIEW_KINDS,
@@ -62,7 +66,7 @@ FLOOR = 3000
 CLI_MIN_CAP = 30
 COLD_AFTER = 300
 IDLE_GAP = 10
-REVIEW_PREFIX = {'rv-': 'review', 'rr-': 'rereview', 'pm-': 'review'}
+PREFIX_KIND = {'rv-': 'review', 'rr-': 'rereview', 'pm-': 'review', 'merge-': 'merge'}
 CLASSES = ('input', 'output', 'cache_read', 'cache_write')
 USAGE_KEYS = CLASSES + ('reasoning', 'calls')
 PRICE_KEYS = {'input': 'inputPrice', 'output': 'outputPrice', 'cache_read': 'cacheReadPrice',
@@ -101,12 +105,14 @@ def split_name(name):
         m = SUFFIX.search(item)
         if not m or m.start() == 0:
             break
-        kinds.append(m.group(1))
+        kinds.append('resume' if m.group(1) == 'r' else m.group(1))
         item = item[:m.start()]
-    if not kinds:
-        for prefix, kind in REVIEW_PREFIX.items():
-            if item.startswith(prefix) and len(item) > len(prefix):
-                return item[len(prefix):], kind
+    for prefix, kind in PREFIX_KIND.items():
+        if item.startswith(prefix) and len(item) > len(prefix):
+            if kind != 'merge' and kinds:
+                # rv-<item>-fix1 reviews a fix round: a re-review, not a fix.
+                kind = 'rereview' if kinds[0] == 'fix' else kind
+            return item[len(prefix):], kind
     return item, (kinds[0] if kinds else 'build')
 
 
@@ -728,14 +734,24 @@ def read_rulings(run):
         return None
     out = []
     with f:
-        for line in f:
+        for i, line in enumerate(f, 1):
             try:
                 row = json.loads(line)
             except ValueError:
-                continue
+                row = None
             if isinstance(row, dict) and row.get('round'):
                 out.append(row)
+            elif line.strip():
+                print(f'mine.py: rulings.jsonl line {i} is not a ruling, skipped', file=sys.stderr)
     return out
+
+
+def latest(rows):
+    """The last ruling per (round, finding), in file order of each one's first appearance."""
+    out = collections.OrderedDict()
+    for row in rows:
+        out[(row['round'], row.get('n'))] = row
+    return list(out.values())
 
 
 def ruling_kind(row):
@@ -753,6 +769,7 @@ def rulings(rows, rounds):
     by_name = {r['name']: r for r in rounds}
     area, model = collections.OrderedDict(), collections.OrderedDict()
     orphans, odd = [], []
+    lines, rows = len(rows), latest(rows)
     for row in rows:
         r = by_name.get(row['round'])
         kind = ruling_kind(row)
@@ -764,14 +781,15 @@ def rulings(rows, rounds):
             continue
         for table, key in ((area, row.get('area') or '?'), (model, r['model'] or '?')):
             table.setdefault(key, collections.Counter())[kind] += 1
-    return {'total': len(rows), 'area': area, 'model': model, 'orphans': orphans, 'odd': odd}
+    return {'total': len(rows), 'lines': lines, 'area': area, 'model': model, 'orphans': orphans, 'odd': odd}
 
 
 def rulings_text(run, rows, rounds):
     if rows is None:
         return f'no rulings: {os.path.join(run, "rulings.jsonl")} does not exist'
     g = rulings(rows, rounds)
-    out = [f"rulings: {g['total']} ({len(g['orphans'])} orphaned)"]
+    out = [f"rulings: {g['total']} findings from {g['lines']} lines, latest ruling each "
+           f"({len(g['orphans'])} orphaned)"]
     for title, table in (('area', g['area']), ('reviewer model', g['model'])):
         out.append(f'by {title}:')
         for key, c in table.items():
@@ -851,14 +869,25 @@ def orchestrator_blocking(run, review, item_rounds, ruled):
 
 def quality(run, rounds, rows):
     ruled = collections.defaultdict(list)
-    for row in rows or []:
+    for row in latest(rows or []):
         ruled[row['round']].append(row)
     by_item = collections.OrderedDict()
     for r in rounds:
         by_item.setdefault(r['item'], []).append(r)
-    firsts = []
+    firsts, unknown = [], []
     for item, rs in by_item.items():
-        first = next((r for r in rs if r['kind'] == 'review'), None)
+        rs = sorted(rs, key=lambda x: (x['start'], x['name']))
+        build = next((i for i, r in enumerate(rs) if r['kind'] == 'build'), None)
+        if build is None:
+            unknown += [r['name'] for r in rs if r['kind'] == 'review']
+            continue
+        span = []
+        for r in rs[build + 1:]:
+            if r['kind'] in ('fix', 'build'):
+                break
+            if r['kind'] == 'review':
+                span.append(r)
+        first = next((r for r in span if r['blocking'] is not None), span[0] if span else None)
         if first is None:
             continue
         n, source = orchestrator_blocking(run, first, rs, ruled)
@@ -886,14 +915,16 @@ def quality(run, rounds, rows):
     known = [r['credits'] for r in rounds if r['credits'] is not None]
     rf = sum(r['credits'] for r in rounds if r['credits'] is not None and r['kind'] in REVIEW_KINDS + ('fix',))
     n = len(firsts)
-    verdicts = [f['blocking'] for f in firsts if f['blocking'] is not None]
-    return {'first_reviews': firsts, 'n': n,
+    accepted = [f['ruled_blocking'] for f in firsts if f['ruled_blocking'] is not None]
+    looped = [f['fix_rounds'] for f in firsts if f['fix_rounds']]
+    return {'first_reviews': firsts, 'n': n, 'unknown_provenance': unknown,
             'clean_reviewer': sum(f['blocking'] == 0 for f in firsts),
             'no_verdict': sum(f['blocking'] is None for f in firsts),
             'clean_orchestrator': sum(f['ruled_blocking'] == 0 for f in firsts),
             'unruled': sum(f['ruled_blocking'] is None for f in firsts),
-            'blockers_per_review': round(sum(verdicts) / len(verdicts), 2) if verdicts else None,
-            'fix_rounds_per_item': round(sum(f['fix_rounds'] for f in firsts) / n, 2) if n else None,
+            'blockers_per_review': round(sum(accepted) / len(accepted), 2) if accepted else None,
+            'looped_items': len(looped),
+            'fix_rounds_per_item': round(sum(looped) / len(looped), 2) if looped else None,
             'review_fix_credits': rf, 'credits': sum(known),
             'review_fix_share': rf / sum(known) if sum(known) else None,
             'causes': pareto.most_common(), 'classes': classes.most_common()}
@@ -905,8 +936,8 @@ def quality_text(q):
     out = [f"first reviews: {q['n']}",
            f"clean, reviewer's verdict: {rate(q['clean_reviewer'])}; no verdict: {q['no_verdict']}",
            f"clean, orchestrator's ruling: {rate(q['clean_orchestrator'])}; unruled: {q['unruled']}",
-           f"blockers per first review: {fmt(q['blockers_per_review'])}",
-           f"fix rounds per item: {fmt(q['fix_rounds_per_item'])}",
+           f"blockers per first review, accepted by the orchestrator: {fmt1(q['blockers_per_review'])}",
+           f"fix rounds per looped item: {fmt1(q['fix_rounds_per_item'])} ({q['looped_items']} looped)",
            'review and fix share of credits: ' + (f"{q['review_fix_share']:.0%} ({q['review_fix_credits']:,.0f} of "
                                                   f"{q['credits']:,.0f})" if q['review_fix_share'] is not None else 'unknown')]
     total = sum(n for _, n in q['causes'])
@@ -921,6 +952,8 @@ def quality_text(q):
         out.append(f"  {f['item']:<24} {f['round']:<28} reviewer {f['verdict'] or 'no verdict'}; ruled "
                    f"{'unruled' if f['ruled_blocking'] is None else f['ruled_blocking']} ({f['ruled_source']}); "
                    f"fixes {f['fix_rounds']}")
+    for name in q['unknown_provenance']:
+        out.append(f'  unknown provenance: {name} (no build of its item in the run; not a first review)')
     return '\n'.join(out)
 
 
@@ -998,6 +1031,10 @@ def spend_line(b):
 
 def fmt(x):
     return '-' if x is None else f'{x:,.0f}'
+
+
+def fmt1(x):
+    return '-' if x is None else f'{x:,.1f}'
 
 
 def main(argv=None):
