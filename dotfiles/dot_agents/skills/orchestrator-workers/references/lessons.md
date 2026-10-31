@@ -192,7 +192,7 @@ that point at it), and no work product, repository, customer, host or cloud reso
   rounds on a keyboard-focus slice each fixed exactly the paths the review had named, and the next
   review found the same fault on paths nobody named. Name the class, have the worker reproduce each
   case with real input before changing code, and have it list every member of the class with a
-  test. [notes]
+  test. Now in [assets/fix.md](../assets/fix.md). [notes]
 - **A worker's fakes encode the worker's own assumptions about an outside system.** A tool passed
   every gate while querying a log field the real store does not have; one zero-row live query
   (select the field, limit 0) found it in seconds. Before reviewing a worker's tool that reads an

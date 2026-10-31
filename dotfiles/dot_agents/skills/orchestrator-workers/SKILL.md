@@ -52,7 +52,10 @@ which answers you inferred from the repository.
 1. **Goal and items:** the deliverable; each item with its acceptance criteria; the plan and
    decision files that settle the details. For a complex item: what was surveyed for reuse
    (products, libraries, patterns), or a research step first, and which dependencies it may add
-   (owner, 2026-10-27: skipping that research is "a vary big miss").
+   (owner, 2026-10-27: skipping that research is "a vary big miss"). Split an item expected to
+   take over 45 minutes, or one touching two of the project's hot spots (turn and run state, file
+   containment, a shared view's state), into two items: large items averaged 3.1 blocking findings
+   against 1.6 for small ones, and three rounds ran out of credits or time (2026-10-30).
 2. **Where:**
    - the repository and its main branch;
    - the worktree root: a dedicated folder outside `/tmp`, for example
@@ -154,7 +157,13 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 - **The brief check** (`scripts/brief.py`) refuses a prompt with an unfilled `{{PLACEHOLDER}}`,
   or a worker prompt without a filled REUSE CHECK and ALLOWED DEPENDENCIES line: on 2026-10-27 one
   brief had no research step and another's "use a library if one fits" lost to the preamble's
-  dependency rule, so both features were hand-written.
+  dependency rule, so both features were hand-written. A worker brief (not a fix round) is also
+  refused when a top-level numbered MUST has no "SHALL" ("WHEN <event or state>, <part> SHALL <response>"),
+  or its RISK, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY line is missing or empty; each
+  may say "none" with a reason, and a bare "none" in backticks or with punctuation is still empty.
+  A TIME BUDGET over 45 minutes only warns: split the item. The prompt's kind comes from its first
+  line (the preamble's opening, then a "THIS IS A FIX ROUND" line before "TASK:"), not from a quote
+  further down; `brief.py check --kind <kind>` overrides it.
 - **Model, effort, context tier and credit cap:** `route.py run` (or `route.py pick` to see the choice without launching) chooses them per round and logs why ([router](references/routing.md#the-router)); the static table in [references/routing.md](references/routing.md) is its fallback. The cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --history <earlier run> ... --caps`. A kind with under 5 rounds on a model gets a cap derived from another model's rounds by price (`scripts/prices.json`, refreshed from the SDK's `listModels()`). `--chat <debug-log-dir> --budget N` prints the run's spend, chat included (an upper bound), against N and how many more rounds fit.
 - **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
   launches it through `route.py run --kind review` (`--help` lists the options it passes on, such
@@ -168,12 +177,18 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   max in a fresh session, saying the review is same-family: `--override "model=..,effort=max,same_family=yes,reason=422 .."`.
   Without `same_family=yes` the launcher refuses any review in the author's family, and any review whose author it
   cannot find (no `--author-model`, no author round log, none saved with a reused decision).
-- **An INFERRED vendor fact gets its live check before the merge.** On 2026-10-29 a feature
-  built on Copilot's message ids merged, and the live check after it showed the ids were
-  snapshot positions: a fix round and a second merge undid it.
+- **An INFERRED vendor fact gets its live check before the build**, and the brief's FACTS TO
+  VERIFY carries the result. On 2026-10-29 a feature built on Copilot's message ids merged, and
+  the live check after it showed the ids were snapshot positions: a fix round and a second merge
+  undid it.
+- **Bring main into a branch before its review** when main has moved under the files the item
+  touches, so the reviewer reads the code that will merge (one stale selector, 2026-10-30).
 - **Fix rounds** start a fresh session named `<prefix><item>-fixN` (owner, 2026-10-29: resumed
   rounds averaged 92k tokens per request against 75k for builds). Its brief carries the accepted
-  findings, the files they name and the branch state, with the item's brief for context. One
+  findings, the files they name and the branch state, with the item's brief for context. It fixes
+  each finding's class, not only the case named ([fix.md](assets/fix.md)). Before it, save the
+  build's report with `python3 scripts/result.py "$OW_RUN_DIR/<item>.jsonl" >
+  "$OW_RUN_DIR/<item>.report.md"` and fill `{{BUILD_REPORT_PATH}}` with that path. One
   round per item; a further round goes on the owner's list.
 - **Resume rounds** (`<item>-resumeN`, a stopped worker): `copilot -r ow-<item>` with the same
   flags. Credit caps for both: [routing](references/routing.md#credit-caps).
