@@ -59,6 +59,11 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    without `slot` or `after` fields: with `slot: false` an item runs beside the single slot.
    Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
    mix, up to what fits at P90. Say what is out of scope.
+   For work that spans days ("when will these 12 items be done?"), also run
+   `estimates.py throughput --items <N> [--kind <kind> ...] [--days 28]`: it draws past days'
+   finished-item counts, days with none included, and prints the days to finish at P50, P85 and
+   P95 (owner, 2026-11-01; a forecast that skips zero days runs early). Give both forecasts when
+   they differ. Imported worker rounds count only when their kind is named.
 6. Arm the run guard: `estimates.py arm --run <run> --until <stop time HH:MM> --session <chat id>
    --plan plan.json`. While it is armed, a Stop hook (`~/.copilot/hooks/run-guard.json`) refuses to
    let that chat's turn end before the stop time while a planned item has no `end`. The chat id in

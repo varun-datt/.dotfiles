@@ -579,5 +579,49 @@ class RunGuardTest(Isolated):
         self.assertIn("Run guard: not checked", output["systemMessage"])
 
 
+class ThroughputTest(Isolated):
+    today = datetime(2026, 11, 1).date()
+
+    def done(self, days_ago, kind="feature", imported=False):
+        at = datetime.combine(self.today - timedelta(days=days_ago), datetime.min.time()).replace(hour=12).astimezone()
+        return {"event": "done", "id": f"x{days_ago}", "kind": kind, "actual": 5.0, "at": at.isoformat()} | ({"imported": True} if imported else {})
+
+    def test_days_with_none_count_as_zero_from_the_first_logged_day_and_today_is_left_out(self):
+        items = [self.done(5), self.done(5), self.done(3), self.done(0)]
+        self.assertEqual(estimates.daily_counts(items, 28, self.today), [2, 0, 1, 0, 0])
+        self.assertEqual(estimates.daily_counts(items, 2, self.today), [0, 0])
+
+    def test_imported_worker_rounds_count_only_when_their_kind_is_asked_for(self):
+        items = [self.done(2), self.done(1, "worker-build", imported=True)]
+        self.assertEqual(estimates.daily_counts(items, 28, self.today), [1, 0])
+        self.assertEqual(estimates.daily_counts(items, 28, self.today, ["worker-build"]), [1])
+        self.assertEqual(estimates.daily_counts([], 28, self.today), [])
+
+    def test_zero_days_lengthen_the_forecast(self):
+        steady = estimates.throughput([2], 6, runs=200, seed=1)
+        self.assertEqual((steady["days_p50"], steady["days_p95"]), (3, 3))
+        gappy = estimates.throughput([2, 0, 0, 0], 6, runs=500, seed=1)
+        self.assertGreater(gappy["days_p50"], steady["days_p50"])
+        self.assertGreaterEqual(gappy["days_p95"], gappy["days_p85"])
+        self.assertEqual((gappy["zero_days"], gappy["finished_in_history"], gappy["guess"]), (3, 2, True))
+
+    def test_no_finished_item_in_the_window_is_refused_not_looped(self):
+        with self.assertRaises(ValueError):
+            estimates.throughput([0, 0, 0], 1)
+        with self.assertRaises(ValueError):
+            estimates.throughput([], 1)
+
+    def test_command_line_prints_the_forecast_and_refuses_bad_input(self):
+        yesterday = (datetime.now().astimezone() - timedelta(days=1)).isoformat()
+        estimates.append({"event": "done", "id": "a", "kind": "feature", "estimate": 5, "actual": 5, "method": "history", "at": yesterday})
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(estimates.main(["throughput", "--items", "2", "--seed", "1"]), 0)
+        self.assertEqual(json.loads(out.getvalue())["days_p50"], 2)
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(estimates.main(["throughput", "--items", "0"]), 2)
+            self.assertEqual(estimates.main(["throughput", "--items", "2", "--kind", "review"]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -275,6 +275,46 @@ def forecast(plan, window, items, runs=1000, seed=None, slots=1):
     }
 
 
+def daily_counts(items, days, today, kinds=None):
+    """Items finished per local calendar day over the last `days` full days before `today`, zero days
+    included; the range starts no earlier than the first logged item, so days before the log are not zeros."""
+    chosen = [i for i in items if (i["kind"] in kinds if kinds else not i.get("imported"))]
+    if not chosen:
+        return []
+    first = min(parse_time(i["at"]).astimezone().date() for i in chosen)
+    start = max(today - timedelta(days=days), first)
+    counts = {start + timedelta(days=n): 0 for n in range((today - start).days)}
+    for i in chosen:
+        day = parse_time(i["at"]).astimezone().date()
+        if day in counts:
+            counts[day] += 1
+    return [counts[d] for d in sorted(counts)]
+
+
+def throughput(counts, items, runs=1000, seed=None):
+    """Days to finish `items` more, by drawing past days' finished-item counts with replacement."""
+    if not any(counts):
+        raise ValueError("no finished items in the history window (today is not counted)")
+    rng = random.Random(seed)
+    needed = []
+    for _ in range(runs):
+        done = days = 0
+        while done < items:
+            done += rng.choice(counts)
+            days += 1
+        needed.append(days)
+    return {
+        "items": items,
+        "history_days": len(counts),
+        "zero_days": counts.count(0),
+        "finished_in_history": sum(counts),
+        "guess": len(counts) < MIN_HISTORY,
+        "days_p50": percentile(needed, 50),
+        "days_p85": percentile(needed, 85),
+        "days_p95": percentile(needed, 95),
+    }
+
+
 def report(items, logged=None):
     if not items:
         return {"n": 0}
@@ -495,6 +535,12 @@ def main(argv=None):
     p.add_argument("--days", type=int, default=180)
     p.add_argument("--seed", type=int, default=None)
     p.add_argument("--slots", type=int, default=1, help="worker slots running at once; 1 forecasts every item in sequence")
+    p = sub.add_parser("throughput", help="days to finish N more items, from items finished per day, zero days included")
+    p.add_argument("--items", type=int, required=True, help="items left to finish")
+    p.add_argument("--kind", action="append", default=None, help="count only this kind; repeat for more; default every kind except imported worker rounds")
+    p.add_argument("--days", type=int, default=28, help="full days of history before today")
+    p.add_argument("--runs", type=int, default=1000)
+    p.add_argument("--seed", type=int, default=None)
     p = sub.add_parser("report", help="estimate against actual for one run, or all")
     p.add_argument("--run", default=None)
     p = sub.add_parser("kinds", help="markdown table of measured pace per kind")
@@ -554,6 +600,17 @@ def main(argv=None):
             return 2
         try:
             result = forecast(plan, args.window, recent(completed(read()), args.days), args.runs, args.seed, args.slots)
+        except ValueError as e:
+            print(e, file=sys.stderr)
+            return 2
+        print(json.dumps(result))
+    elif args.command == "throughput":
+        if args.items < 1 or args.days < 1 or args.runs < 1:
+            print("--items, --days and --runs must be at least 1", file=sys.stderr)
+            return 2
+        counts = daily_counts(completed(read()), args.days, now().date(), args.kind)
+        try:
+            result = throughput(counts, args.items, args.runs, args.seed)
         except ValueError as e:
             print(e, file=sys.stderr)
             return 2
