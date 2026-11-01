@@ -86,6 +86,7 @@ The owner answers in the chat. Record the answer with `answered` as soon as you 
   - near the cap it adds "the next model call is final; tools will be disabled.";
   - then a `session.info` "Session limit reached..." and a `session.warning` "Session limit reached (32.5/30 AI credits used)...": the last call overshot the cap;
   - a `-r` resume's cap counts only that round (VERIFIED 2026-10-27, [routing](routing.md#credit-caps)), although the help says limits "apply across the current conversation".
+  - the model sees the cap and what is left from its first turns (CLI 1.0.105, 2026-11-01): an Opus 5.5 research round capped at 600 reasoned "With only 578 credits left, I need to be frugal", stopped at 116 and skipped most of its survey. The research preamble now says the limit is a safety stop, not a target.
 - **Mining** (`scripts/mine.py`): per round, credits and premium requests are the difference between consecutive `session.usage_checkpoint` totals of the same session, from its `result` `sessionId`; a session's first round that is not a build, research or review is listed as partial, outside caps and markers, only when an earlier launch of its item (a `<name>.start`) has no events in the folder; a fresh `-p` merge or catch-up counts in full. A capped review or re-review reads `incomplete`, never a verdict; the report's own line is kept as `raw_verdict`. A round that died before any checkpoint has unknown credits, and its spend lands in the next round of its session (INFERRED).
 
 ## Timeline export
