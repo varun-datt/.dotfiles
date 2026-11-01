@@ -213,7 +213,10 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   deployed path, then carries the shared rules: never push, no secrets, `commit --only`, gates in
   the foreground, polls at most every 240 s to keep the cache warm, a labelled report with an
   impact map and a case table.
-- **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body.
+- **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body. Its note is
+  critiqued by another model family with [critique-research.md](assets/critique-research.md),
+  against a snapshot of the note, page, task and report; the critic also asks whether the note
+  builds what already exists (owner, 2026-11-01).
 - **Reviews:** [review.md](assets/review.md) and the fixes-only [rereview.md](assets/rereview.md),
   which grade on [references/rubric.md](references/rubric.md) (`review.sh` fills `{{RUBRIC}}`) and
   tag each finding's cause and class; the re-review checks each fix covered its whole class.

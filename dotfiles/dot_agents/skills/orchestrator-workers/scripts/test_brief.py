@@ -173,10 +173,11 @@ class BriefTest(unittest.TestCase):
         fix = fill("preamble-worker.md") + fill("fix.md").replace("ORIGINAL BRIEF\nsample value", "ORIGINAL BRIEF\n" + original)
         review = fill("review.md").replace("==== THE AUTHOR'S TASK ====\nsample value", "==== THE AUTHOR'S TASK ====\n" + build)
         cases = {"build": build, "fix": fix, "review": review, "research": fill("preamble-research.md") + fill("task-body.md"),
-                 "rereview": fill("rereview.md"), "resume": fill("resume.md")}
-        kinds = {"rereview": "review", "resume": "other"}
+                 "rereview": fill("rereview.md"), "resume": fill("resume.md"), "critique": fill("critique-research.md")}
+        kinds = {"rereview": "review", "resume": "other", "critique": "other"}
         self.assertEqual(sorted(p.name for p in assets.glob("*.md")),
-                         ["fix.md", "preamble-research.md", "preamble-worker.md", "rereview.md", "resume.md", "review.md", "task-body.md"])
+                         ["critique-research.md", "fix.md", "preamble-research.md", "preamble-worker.md", "rereview.md",
+                          "resume.md", "review.md", "task-body.md"])
         for name, text in cases.items():
             self.assertEqual(brief.prompt_kind(text), kinds.get(name, name), name)
             self.assertEqual(brief.problems(text), [], name)

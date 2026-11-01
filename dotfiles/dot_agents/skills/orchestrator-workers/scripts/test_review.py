@@ -46,6 +46,9 @@ REVIEW_CHECKS = [
     'machine? Does an existing test now fail?',
     "9. Claims in the author's report that the diff does not support.",
     '10. Gaps against the acceptance rows the task names.',
+    '11. Reuse: code that builds what already exists: a dependency in the manifest (read it; never judge what is '
+    "installed from a worktree's `node_modules`), a decision the task cites, an installed skill or an in-repo helper. "
+    'Name it with file:line.',
 ]
 REVIEW_REPORT = [
     '1. The verdict as the first line: `Blocking: none`, or `N blocking` where N counts Blockers and Majors.',

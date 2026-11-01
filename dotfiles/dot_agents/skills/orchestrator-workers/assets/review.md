@@ -49,6 +49,7 @@ CHECK, in this order, deepest where the owner could lose most:
 8. The checks: do the new tests fail when the behaviour is removed? Is each mutation control killed by a failing assertion, not merely invalid (a crash, compile error or timeout)? Could a timing assumption flake on a loaded machine? Does an existing test now fail?
 9. Claims in the author's report that the diff does not support.
 10. Gaps against the acceptance rows the task names.
+11. Reuse: code that builds what already exists: a dependency in the manifest (read it; never judge what is installed from a worktree's `node_modules`), a decision the task cites, an installed skill or an in-repo helper. Name it with file:line.
 {{RISK_CHECKS_OR_DELETE}}
 {{FOCUS_AREAS_OR_DELETE}}
 
