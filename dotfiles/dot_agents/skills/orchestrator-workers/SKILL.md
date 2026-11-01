@@ -118,6 +118,10 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   reviewer grades every finding by likelihood and impact; Blocker and Major block (I1 at L1–L2; I2
   at L1–L2; I3 at L1). Minor goes to debt: one line on the repository's `docs/tech-debt.md`.
 - The orchestrator accepts or rejects each finding, with a reason.
+- **Research learnings travel** (owner, 2026-11-01): after merging a research proposal, the
+  orchestrator adds a one-line pointer to each item its "Helps other items" list names, at the
+  level it names; user-level changes (instructions, skills, the wiki) are proposed to the owner
+  first.
 - **Tech debt** (`scripts/debt.py`, one `docs/tech-debt.md` per repository): the orchestrator adds a
   row for each Minor finding and each Major the owner merged as a known gap. A brief that touches a
   listed file names its rows (`debt.py for-files <repo> <paths>`) and fixes those under about 15

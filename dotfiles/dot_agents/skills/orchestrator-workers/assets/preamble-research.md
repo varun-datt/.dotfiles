@@ -11,6 +11,7 @@ Your proposal must:
 - for each decision, give 2-3 options with the trade-offs and one recommendation, and say what the choice binds beyond itself, for example a convention others will copy;
 - include visuals the owner can understand at a glance: diagrams and wireframes where the topic has screens or flows;
 - end with a phased build plan, each phase small enough for one worker session, with the tests that would prove it;
+- after the build plan, list under "Helps other items" each finding that would help work outside this task, at every level it holds: this project's other items (by `name (id)`), other repositories, and the user level (personal instructions, skills, the wiki), each with one line on what it would change there;
 - stay under {{WORD_LIMIT}} words, not counting diagrams.
 
 Your final message: a summary of under 400 words listing the decisions the owner must make, each with your recommendation, plus your proposal's path and commit id. Name anything temporary as temporary, with what replaces it.
