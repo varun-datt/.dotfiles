@@ -133,7 +133,7 @@ class RulingTest(unittest.TestCase):
         p = self.by['2']['properties']
         self.assertEqual((p['ruling'], p['rulingSource']), ('accepted', 'rulings.jsonl'))
         self.assertEqual([x['source'] for x in p['rulingOthers']], ['fix-brief-accepted'])
-        self.assertNotIn('suppressions', self.by['2'])
+        self.assertEqual(self.by['2']['suppressions'], [])
 
     def test_brief_accepted_item_matched_by_text(self):
         p = self.by['1']['properties']
@@ -156,7 +156,7 @@ class RulingTest(unittest.TestCase):
     def test_unruled_blocking_finding_is_left_unruled(self):
         r = self.by['5']
         self.assertEqual((r['properties']['ruling'], r['properties']['blocking']), (None, True))
-        self.assertNotIn('suppressions', r)
+        self.assertEqual(r['suppressions'], [])
 
     def test_sarif_fields(self):
         r = self.by['1']
@@ -194,7 +194,7 @@ FIRST = """2 blocking
 
 RE = """2 blocking
 
-1. **INFERRED — [runner.py:85](tools/runner.py#L85): Queue guard remains bypassable.** Timeout and redirect wrapped launches evade executable detection.
+1. **INFERRED, not fixed — [runner.py:85](tools/runner.py#L85): Queue guard remains bypassable.** Timeout and redirect wrapped launches evade executable detection.
 
 2. **INFERRED — [route.py:564](tools/route.py#L564): Reuse can lose a known author.** A reused pick forgets the saved author, so an override launches a same family reviewer.
 
@@ -309,6 +309,198 @@ class OlderFormsTest(unittest.TestCase):
                          ['F1', 'F2'])
 
 
+class FixRoundTwoTest(unittest.TestCase):
+    """Findings of the r1 fix round, one test (or a few) per finding."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.run = Run(os.path.join(tmp.name, 'run-x'))
+
+    def by(self, **kw):
+        res = findings.record(self.run.dir, **kw)
+        self.unparsed = res[3]
+        return {(r['properties']['round'], r['properties']['n']): r for r in res[0]}
+
+    # finding 1
+    def test_numbered_heading_with_its_body_after_a_blank_line(self):
+        fs = findings.parse('1 blocking\n\n### 1. Saved notes vanish on close\n\nThe store drops the write in src/a.py:3. cause: ADJ\n')
+        self.assertEqual([(f['n'], f['cause'], f['file'], f['title']) for f in fs],
+                         [('1', 'ADJ', 'src/a.py', 'Saved notes vanish on close')])
+
+    def test_details_after_a_blank_line_stay_with_their_finding(self):
+        fs = findings.parse('1 blocking\n\n1. [Major] Saved notes vanish in src/a.py:3\n\nClass: lost write. cause: ADJ\n')
+        self.assertEqual([(f['n'], f['cause'], f['class'], f['grade']) for f in fs], [('1', 'ADJ', 'lost write', 'Major')])
+
+    def test_c1_m1_and_1_b1_labels(self):
+        text = ('1 blocking\n\n**Findings.**\n\n1 (B1). **partly fixed — VERIFIED:** src/a.py:3 still loses one case.\n\n'
+                'c2. not fixed — src/b.py:4 drops it.\n\n**New minor.**\n\nM1. [Minor] REL L2/I3 FAIL: slow refresh erases the list\n')
+        fs = {f['n']: f for f in findings.parse(text, rereview=True)}
+        self.assertEqual(sorted(fs), ['c1', 'c2', 'm1'])
+        self.assertEqual((fs['c1']['ref'], fs['c1']['verdict'], fs['c1']['status']), ('1', 'partly', 'updated'))
+        self.assertEqual((fs['c2']['verdict'], fs['c2']['status']), ('not fixed', 'unchanged'))
+        self.assertEqual((fs['m1']['section'], fs['m1']['cause'], fs['m1']['blocking']), ('minor', 'FAIL', False))
+
+    def test_unconsumed_finding_like_block_is_named(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='2 blocking\n\n1. [Major] a.py:1 x breaks. cause: ADJ\n\nSome prose.\n\n'
+                                                     '- **New blocker: items stay running** in b.py:2\n')
+        self.by()
+        whys = [(u['line'], u['why']) for u in self.unparsed]
+        self.assertTrue(any(line == 7 and 'New blocker' in why for line, why in whys), whys)
+        self.assertTrue(any('only 1 blocking' in why for _, why in whys), whys)
+
+    # finding 2
+    def test_fix_report_same_kind_list_and_jsonl_only_critique_are_recorded(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report=REVIEW)
+        self.run.round('job-fix1', at=T0 + 20)
+        append(self.run, 'job-fix1', message('Fixed 1.\n\n**Same kind, not fixed:**\n- `a.py:3` keeps only the first error.\n'
+                                             '- `b.py:9`: the skip reason is lost.\n\n## Checks\n1. ran\n'))
+        self.run.round('doc-critique', at=T0 + 30)
+        append(self.run, 'doc-critique', message('1 blocking\n\n## Blocking\n\n1. [Major] The cited rate is wrong in notes.md:4\n'))
+        by = self.by()
+        fix = [(k[1], r['properties']['roundKind'], r['properties']['origin']) for k, r in by.items() if k[0] == 'job-fix1']
+        self.assertEqual(fix, [('s1', 'fix', 'same-kind'), ('s2', 'fix', 'same-kind')])
+        self.assertEqual(by[('job-fix1', 's1')]['locations'][0]['physicalLocation']['artifactLocation']['uri'], 'a.py')
+        self.assertEqual(by[('doc-critique', '1')]['properties']['roundKind'], 'critique')
+        heading = findings.same_kind('## Same kind, not fixed\n\n- `c.py:1` drops it too.\n\n## Checks\n1. ran\n')
+        self.assertEqual([x['text'] for x in heading], ['`c.py:1` drops it too.'])
+
+    # finding 3
+    def test_explicit_b1_b2_rulings_win_over_text(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='2 blocking\n\nB1. [Major] REL L2/I2 FAIL: retry loop spins on a missing lock in a.py:3\n'
+                                                     'Class: unbounded retry.\n\nB2. [Major] REL L2/I2 FAIL: retry loop spins on a missing socket in b.py:4\n'
+                                                     'Class: unbounded retry.\n')
+        self.run.round('job-fix1', at=T0 + 20)
+        write(self.run, 'job-fix1.prompt.md', 'FIX THESE, one at a time:\n1. B2: the retry loop spins on a missing socket and lock.\n\n'
+                                              'NOT TO CHANGE (rejected by the orchestrator): B1, the retry loop on a missing lock, is by design.\n')
+        by = self.by()
+        self.assertEqual(by[('job-review', '1')]['properties']['ruling'], 'rejected')
+        self.assertEqual(by[('job-review', '2')]['properties']['ruling'], 'accepted')
+
+    def test_text_match_that_fits_two_findings_is_left_unruled_and_reported(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='2 blocking\n\n1. Blocking: the retry loop spins forever. cause: FAIL\n'
+                                                     '2. Blocking: the retry loop spins forever. cause: FAIL\n')
+        self.run.round('job-fix1', at=T0 + 20)
+        write(self.run, 'job-fix1.prompt.md', 'ACCEPTED:\n1. The retry loop spins forever.\n')
+        by = self.by()
+        self.assertEqual([by[('job-review', n)]['properties']['ruling'] for n in ('1', '2')], [None, None])
+        self.assertTrue(any(u.get('kind') == 'ambiguous' for u in self.unparsed), self.unparsed)
+
+    # finding 4
+    def test_brief_sections_parsed_item_by_item(self):
+        write(self.run, 'a-fix1.prompt.md', 'ACCEPTED, fix these:\n1. one thing\n\n2. two thing\n\n3. three thing\n\n'
+                                            'REJECTED: the cache is by design; the log line is pre-existing, sent to debt.\n')
+        b = findings.brief(self.run.dir, 'a-fix1')
+        self.assertEqual(len(b['accepted']), 3)
+        self.assertEqual(b['rejected'], ['the cache is by design', 'the log line is pre-existing, sent to debt.'])
+        self.assertEqual([findings.reason_of(x) for x in b['rejected']], ['wrong', 'out-of-scope'])
+
+    def test_current_fix_brief_form(self):
+        write(self.run, 'b-fix1.prompt.md', 'THIS ROUND REPLACES the preamble.\n\nFIX THESE, one at a time:\n'
+                                            '1. First. Where: `a.py` about 3. Done when: x.\n2. Second. Where: `b.py`.\n\n'
+                                            'For each finding:\n1. Write one test.\n2. Fix the code.\n\n'
+                                            'NOT TO CHANGE (decided by the orchestrator; on the debt list): unittest discovery (finding B4); '
+                                            'odd names (finding B5). The pre-existing failure belongs to another task.\n\n'
+                                            'REUSE CHECK: not needed.\n')
+        b = findings.brief(self.run.dir, 'b-fix1')
+        self.assertEqual([x[:9] for x in b['accepted']], ['1. First.', '2. Second'])
+        self.assertEqual(len(b['rejected']), 3)
+        self.assertEqual([findings.refs(x) for x in b['rejected']], [['4'], ['5'], []])
+
+    def test_real_fix_briefs_of_the_p1_run(self):
+        real = os.path.expanduser('~/.local/state/orchestrator-workers/amc-2026-11-02-p1')
+        if not os.path.isfile(os.path.join(real, 'p1a-fix1.body.md')):
+            self.skipTest('the p1 run folder is not on this machine')
+        p1a, r3 = findings.brief(real, 'p1a-fix1'), findings.brief(real, 'r3-fix1')
+        self.assertEqual((len(p1a['accepted']), len(p1a['rejected'])), (5, 3))
+        self.assertEqual((len(r3['accepted']), len(r3['rejected'])), (8, 4))
+
+    # finding 5
+    def test_rereview_rejection_is_not_an_acceptance_and_a_bare_link_is_not_a_ruling(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report=REVIEW)
+        self.run.round('job-fix1', at=T0 + 20)
+        self.run.round('job-rereview', at=T0 + 30, report='1 blocking\n\n**Findings.**\n\n'
+                                                       'B1. Rejected — not a defect: the queue guard sees quoted wrapper commands in src/guard.py:10.\n\n'
+                                                       '2. Merge totals double count a resumed round, src/merge.py:20.\n')
+        by = self.by()
+        p1, p2 = by[('job-review', '1')]['properties'], by[('job-review', '2')]['properties']
+        self.assertEqual((p1['ruling'], p1['rulingSource'], p1['rulingReason']), ('rejected', 'rereview', 'wrong'))
+        self.assertEqual(by[('job-rereview', 'c1')]['partialFingerprints'], by[('job-review', '1')]['partialFingerprints'])
+        self.assertEqual(by[('job-rereview', 'c2')]['partialFingerprints'], by[('job-review', '2')]['partialFingerprints'])
+        self.assertIsNone(p2['ruling'])
+
+    # finding 6
+    def test_b_labels_in_a_rereview_findings_section_are_carried_not_introduced(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='2 blocking\n\nB1. [Major] SEC L2/I1 ADJ: edit approvals skip the recheck in acp.ts:553\n\n'
+                                                     'B2. [Major] REL L2/I2 FAIL: the source map is stale in knowledge.ts:240\n\n'
+                                                     'B3. [Major] COR L2/I2 EDGE: folder aliases compare as text in acp.ts:117\n')
+        self.run.round('job-fix1', at=T0 + 20)
+        self.run.round('job-rereview', at=T0 + 30, report='1 blocking\n\n**Findings.**\n\n'
+                                                       'B1. **Partly fixed — VERIFIED.** At acp.ts:560 a diff-only edit still bypasses it.\n\n'
+                                                       'B2. **Fixed — VERIFIED.** knowledge.ts:240 invalidates the map.\n\n'
+                                                       'B3. **Fixed — VERIFIED.** acp.ts:117 compares canonical paths.\n\n'
+                                                       '**Pre-existing.**\n\nVERIFIED COR L1/I2 PRE: the base retries three times in tasks.ts:13\n\n'
+                                                       '**New harm.**\n\nB1. [Major] REL L2/I2 FAIL: the new retry never ends in lock.py:12\n')
+        by = self.by()
+        for n, state in (('1', 'updated'), ('2', 'absent'), ('3', 'absent')):
+            c = by[('job-rereview', 'c' + n)]
+            self.assertEqual(c['partialFingerprints'], by[('job-review', n)]['partialFingerprints'])
+            self.assertEqual((c['baselineState'], c['properties']['introducedBy']), (state, None))
+        pre = by[('job-rereview', 'p1')]
+        self.assertEqual((pre['baselineState'], pre['properties']['introducedBy']), ('new', None))
+        self.assertEqual(by[('job-rereview', '1')]['properties']['introducedBy'], 'job-fix1')
+
+    # finding 7
+    def test_changing_a_line_number_in_the_raw_report_keeps_the_fingerprint(self):
+        a = findings.parse(RUBRIC)[0]
+        b = findings.parse(RUBRIC.replace('db.ts:288](src/store/db.ts#L288)', 'db.ts:301](src/store/db.ts#L301)'))[0]
+        self.assertEqual(b['line'], 301)
+        self.assertEqual(a['class'], 'unprotected transaction lifecycle')
+        self.assertEqual(findings.defect_fp('x', a), findings.defect_fp('x', b))
+
+    # finding 8
+    def test_fixed_status_word_decides_even_when_the_explanation_says_remains_or_still(self):
+        fs = {f['n']: f for f in findings.parse('Blocking: none\n\n**Findings.**\n\n'
+                                                '4. **Fixed — VERIFIED.** a.py:3; the old branch remains but is unreachable.\n'
+                                                '5. Fixed: b.py:4 still logs the value, which is harmless.\n', rereview=True)}
+        self.assertEqual([fs[n]['status'] for n in ('c4', 'c5')], ['absent', 'absent'])
+
+    # finding 9
+    def test_every_result_carries_suppressions_when_one_does_and_the_checker_enforces_it(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 1000, report=REVIEW)
+        self.run.round('job-fix1', at=T0 + 2000)
+        write(self.run, 'job-fix1.prompt.md', BRIEF)
+        results = findings.record(self.run.dir)[0]
+        self.assertEqual(sarif_errors(findings.sarif_log(results)), [])
+        self.assertTrue(all('suppressions' in r for r in results))
+        old = [dict(r) for r in results]
+        for r in old:
+            if r['suppressions'] == []:
+                del r['suppressions']
+        self.assertIn('suppressions on some results of the run only', ' '.join(sarif_errors(findings.sarif_log(old))))
+
+    # finding 10
+    def test_paths_are_kept_as_written(self):
+        for text, want in (('see .gitignore:3', '.gitignore'), ('see Makefile:12', 'Makefile'),
+                           ('see /abs/src/a.py:5', '/abs/src/a.py'), ('see ../src/a.py:7', '../src/a.py')):
+            self.assertEqual(findings.first_location(text)[0], want, text)
+
+    def test_table_row_message_is_its_title_cell(self):
+        self.assertEqual([f['title'] for f in findings.parse(TABLE)],
+                         ['Task links reach prompts unfenced', 'Fixtures mask the newline check'])
+
+    def test_tags_inside_full_emphasis_are_read(self):
+        f = findings.parse('1 blocking\n\n1. [Major] **REL L2/I2** **FAIL**: retry spins in a.py:3. **class: unbounded retry**\n')[0]
+        self.assertEqual((f['area'], f['cause'], f['class']), ('REL', 'FAIL', 'unbounded retry'))
+
+
 LEVEL = {'none', 'note', 'warning', 'error'}
 KIND = {'pass', 'open', 'informational', 'notApplicable', 'review', 'fail'}
 SUPPRESSION_KIND = {'inSource', 'external'}
@@ -346,6 +538,8 @@ def sarif_errors(log):
             if reg is not None and (not isinstance(reg.get('startLine'), int) or reg['startLine'] < 1):
                 errs.append(f'{i}: region.startLine')
         pf = r.get('partialFingerprints', {})
+        if 'suppressions' in r and not all('suppressions' in x for x in run.get('results', [])):
+            errs.append(f'{i}: suppressions on some results of the run only (3.27.23)')
         if not all(isinstance(v, str) for v in pf.values()):
             errs.append(f'{i}: partialFingerprints values')
         if not isinstance(r.get('properties', {}), dict):
@@ -375,6 +569,14 @@ class CliTest(unittest.TestCase):
         p = self.cli(self.run.dir, '--findings')
         self.assertIn('0 reviews, 0 findings, 0 defects, 0 reports not parsed', p.stdout)
         self.assertEqual((self.read(self.run.dir, 'findings.jsonl'), self.read(self.run.dir, 'defects.jsonl')), ('', ''))
+
+    def test_since_with_findings_is_refused_and_a_bad_date_is_refused_either_way(self):
+        p = self.cli(self.run.dir, '--findings', '--since', '2026-01-01', code=2)
+        self.assertIn('--since is refused', p.stderr)
+        self.assertFalse(os.path.exists(os.path.join(self.run.dir, 'findings.jsonl')))
+        p = self.cli(self.run.dir, '--findings', '--since', 'yesterday-ish', code=2)
+        self.assertIn('not an ISO date', p.stderr)
+        self.cli(self.run.dir, '--since', 'yesterday-ish', code=2)
 
     def test_run_with_no_reviews_and_a_clean_review(self):
         self.run.round('job', at=T0)
