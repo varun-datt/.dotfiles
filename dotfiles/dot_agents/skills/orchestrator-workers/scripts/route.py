@@ -278,6 +278,8 @@ def load_history(run, root=None):
 
 
 def cap_for(kind, model, history, cfg):
+    if kind in cfg.get('uncapped_kinds', ()):
+        return None
     return history['caps'].get((mine_kind(kind), model), cfg['default_cap'])
 
 

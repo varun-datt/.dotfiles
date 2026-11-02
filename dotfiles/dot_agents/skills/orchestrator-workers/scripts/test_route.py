@@ -159,6 +159,10 @@ class Pick(unittest.TestCase):
         self.assertEqual(rec['choice']['cap'], 1234)
         self.assertEqual(self.pick('fix', call=stub('review-fix'))['choice']['cap'], CFG['default_cap'])
 
+    def test_research_has_no_visible_cap(self):
+        hist = history(caps={('research', SONNET): 1234, ('research', OPUS): 1234})
+        self.assertIsNone(self.pick('research', call=stub('docs-research'), hist=hist)['choice']['cap'])
+
     def test_resume_keeps_the_model(self):
         rec = self.pick('resume', call=stub('resume'), resumed_model=OPUS)
         self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (OPUS, 'high'))

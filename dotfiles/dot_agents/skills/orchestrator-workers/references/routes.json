@@ -61,6 +61,7 @@
     ]
   },
   "default_cap": 3000,
+  "uncapped_kinds": ["research"],
   "kind_min_effort": {"resume": "high", "merge": "high"},
   "effort": {"calm_max_grade": 2, "calm": "medium", "else": "high", "risk_review": "max", "risk": "high"},
   "risk_patterns": [
