@@ -262,7 +262,49 @@ class CarryTest(unittest.TestCase):
         self.assertEqual(findings.defect_fp('x', f), findings.defect_fp('x', moved))
 
 
-REQUIRED_RESULT = {'message'}
+class OlderFormsTest(unittest.TestCase):
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.run = Run(os.path.join(tmp.name, 'run-f'))
+
+    def test_this_round_and_fix_round_briefs_and_known_limit_items(self):
+        write(self.run, 'a-fix1.prompt.md', 'TASK\n1. a must\n\nTHIS ROUND\nFix all.\n\n1. `x.py` about 3: guard fails.\n2. Rename: do NOT build it. Record it as a known limit.\n')
+        write(self.run, 'b-fix1.prompt.md', 'Fix round 1 for b. Fix 1.\n1. BLOCKING — `y.py:4`: a leak.\n')
+        a, b = findings.brief(self.run.dir, 'a-fix1'), findings.brief(self.run.dir, 'b-fix1')
+        self.assertEqual((len(a['accepted']), len(a['recorded'])), (1, 1))
+        self.assertTrue(a['accepted'][0].startswith('1. `x.py`'))
+        self.assertEqual((len(b['accepted']), b['recorded']), (1, []))
+
+    def test_original_task_marker_quoted_in_prose_does_not_cut_the_brief(self):
+        write(self.run, 'c-fix1.prompt.md', 'The brief is after "==== ORIGINAL TASK ====".\n\nACCEPTED, fix these:\n1. one\n\n'
+              '==== ORIGINAL TASK ====\nACCEPTED, fix these:\n1. from the task\n2. also\n')
+        self.assertEqual(findings.brief(self.run.dir, 'c-fix1')['accepted'], ['1. one'])
+
+    def test_fix_round_of_a_research_run_still_rules(self):
+        self.assertTrue(findings.is_fix({'kind': 'research', 'name': 'dr1-fix1'}))
+        self.assertFalse(findings.is_fix({'kind': 'research', 'name': 'dr1-review'}))
+
+    def test_severity_table_takes_blocking_from_the_verdict(self):
+        table = ('**1 blocking**\n\n| # | Severity | File | Vulnerability |\n|---|---|---|---|\n'
+                 '| 1 | HIGH | a.ts:3 | key and folder disagree |\n| 2 | MEDIUM | b.ts:9 | hover leaks |\n')
+        self.run.round('s', at=T0)
+        self.run.round('s-review', at=T0 + 10, report=table)
+        by = {r['properties']['n']: r['properties'] for r in findings.record(self.run.dir)[0]}
+        self.assertEqual((by['1']['blocking'], by['1'].get('blockingFrom'), by['2']['blocking']), (True, 'verdict', False))
+
+    def test_details_list_merges_into_its_row_and_follow_up_options_are_not_findings(self):
+        text = ('**1 blocking**\n\n| # | Severity | Issue |\n|---|---|---|\n| 1 | HIGH | key mismatch in a.ts:3 |\n\n'
+                '1. **Key mismatch**: details here.\n\n1. Fix highest severity issues\n2. Fix all issues\n3. Commit a summary of findings\n')
+        fs = findings.parse(text)
+        self.assertEqual([f['n'] for f in fs], ['1'])
+        self.assertIn('details here', fs[0]['text'])
+
+    def test_f_numbered_items_keep_their_label(self):
+        self.assertEqual([f['n'] for f in findings.parse('2 blocking\n\nF1. Blocking: a.py:1 x. cause: ADJ\nF2. Blocking: b.py:2 y. cause: EDGE\n')],
+                         ['F1', 'F2'])
+
+
 LEVEL = {'none', 'note', 'warning', 'error'}
 KIND = {'pass', 'open', 'informational', 'notApplicable', 'review', 'fail'}
 SUPPRESSION_KIND = {'inSource', 'external'}

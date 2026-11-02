@@ -36,8 +36,11 @@ LINK = re.compile(r'\[[^\]]*\]\(([^)\s#]+)#L(\d+)[^)]*\)')
 PATH_LINE = re.compile(r'(?<![\w/.-])((?:[\w.-]+/)*[\w-][\w.-]*\.[A-Za-z][A-Za-z0-9]*):(\d+)')
 GRADE = re.compile(r'\b(Blocker|Major|Minor|Nit)\b')
 RUBRIC = re.compile(r'\b(COR|DATA|SEC|PERF|REL|UX|COMP|COST|VERIF|MAINT|REPORT)\s+L([1-3])/I([1-4])\b')
-ITEM = re.compile(r'^[*_\s]*(?:(B)(\d+)|(\d+))[.):][*_]*\s+(.*)$')
+ITEM = re.compile(r'^[*_\s]*(?:(B)(\d+)|(F)?(\d+))[.):][*_]*\s+(.*)$')
 TABLE_N = re.compile(r'^\|\s*[*_]*(\d+)[*_]*\s*\|')
+KNOWN_LIMIT = re.compile(r'\bknown limit\b|\brecord it\b|\bdo not (?:build|fix)\b', re.I)
+# The security-review caller contract's follow-up choices, which end its report as a numbered list.
+OPTIONS = re.compile(r'^[\s*_"]*(?:Fix highest severity issues|Fix all issues|Commit a summary of findings)\b', re.I)
 NOT_REPRO = re.compile(r"\b(?:could\s*n[o']t|cannot|can't|could\s+not|unable\s+to)\s+reproduce|\bnot\s+reproduced\b", re.I)
 SECTIONS = (('new', ('new blocking', 'new harm', 'new finding', 'new major', 'new blocker')),
             ('minor', ('minor', 'non-blocking', 'nonblocking', 'new minor')),
@@ -55,6 +58,11 @@ WORD = re.compile(r'[a-z][a-z0-9]{2,}')
 STOP = set('the and for with that this from into its are was were not but has have than then when what which '
            'only also each every still does did can its their there here these those both they them our your '
            'fix fixed finding findings verified inferred open read blocking major minor test tests'.split())
+
+
+def is_fix(r):
+    # load_rounds gives a research run's fix round the run's kind; the name still says fix.
+    return r['kind'] == 'fix' or bool(re.search(r'-fix\d*$', r['name']))
 
 
 def section_of(line):
@@ -143,7 +151,12 @@ def split(report, rereview=False):
     fenced, table = False, None
 
     def close():
-        if cur:
+        if not cur:
+            return
+        same = next((o for o in out if o['label'] == cur['label'] and o['section'] == cur['section']), None)
+        if same:
+            same['text'] += '\n' + cur['text']
+        elif not OPTIONS.match(cur['text']):
             out.append(cur)
     for raw in (report or '').splitlines():
         s = raw.strip()
@@ -191,7 +204,7 @@ def split(report, rereview=False):
             if t:
                 num, body = (num_from_table or t.group(1)), s
             elif m:
-                num, body = (m.group(2) or m.group(3)), m.group(4)
+                num, body = (m.group(2) or (m.group(3) or '') + m.group(4)), m.group(5)
             else:
                 num, body = None, s
             if sec in PREFIX:
@@ -312,7 +325,7 @@ def brief(run, fix_name):
     for fn in (fix_name + '.md', fix_name + '.prompt.md', fix_name + '.body.md'):
         try:
             with open(os.path.join(run, fn), encoding='utf-8', errors='replace') as f:
-                lines = f.read().split('==== ORIGINAL TASK ====')[0].splitlines()
+                lines = re.split(r'(?m)^==== ORIGINAL TASK ====\s*$', f.read())[0].splitlines()
         except OSError:
             continue
         out = {'accepted': [], 'rejected': [], 'recorded': []}
@@ -328,6 +341,21 @@ def brief(run, fix_name):
             else:
                 continue
             seen = True
+        if not seen:
+            # Older briefs (2026-10-27 to 10-29) list the findings to fix as numbered items under a THIS ROUND or Fix round line.
+            start = next((i for i, line in enumerate(lines)
+                          if line.strip().upper().startswith(('THIS ROUND', 'FIX ROUND'))), None)
+            for line in lines[start + 1:] if start is not None else []:
+                s = line.strip()
+                if mine.LIST_ITEM.match(s):
+                    out['accepted'].append(s)
+                elif out['accepted'] and s and line[:1].isspace():
+                    out['accepted'][-1] += ' ' + s
+                elif out['accepted']:
+                    break
+            out['recorded'] = [a for a in out['accepted'] if KNOWN_LIMIT.search(a)]
+            out['accepted'] = [a for a in out['accepted'] if not KNOWN_LIMIT.search(a)]
+            seen = bool(out['accepted'] or out['recorded'])
         if seen:
             return out
     return None
@@ -393,8 +421,13 @@ def record(run, rounds=None):
             if not found and (r.get('blocking') or 0) > 0:
                 unparsed.append({'round': r['name'], 'file': r['name'] + ('.txt' if not r.get('report') else '.jsonl'),
                                  'line': 1, 'why': f"verdict says {r['blocking']} blocking but no finding was split out"})
-            prev_fix = next((x for x in reversed(rs[:idx]) if x['kind'] == 'fix'), None)
-            next_fix = next((x for x in rs[idx + 1:] if x['kind'] == 'fix'), None)
+            elif (r.get('blocking') or 0) > 0 and not any(f['blocking'] for f in found):
+                # Tables graded only by severity (CRITICAL, HIGH, MEDIUM): the verdict's count marks the first rows.
+                for f in [f for f in found if f['section'] in ('blocking', 'new')
+                          and not re.search(r'non-?\s?blocking', f['text'], re.I)][:r['blocking']]:
+                    f['blocking'], f['blocking_from'] = True, 'verdict'
+            prev_fix = next((x for x in reversed(rs[:idx]) if is_fix(x)), None)
+            next_fix = next((x for x in rs[idx + 1:] if is_fix(x)), None)
             prev_brief = brief(run, prev_fix['name']) if prev_fix else None
             carried = [f for f in found if f['n'].startswith('c')]
             links = {}
@@ -515,6 +548,8 @@ def result(run_name, o):
              'weightsVersion': None}
     if f.get('ruling_only'):
         props['fromRulingOnly'] = True
+    if f.get('blocking_from'):
+        props['blockingFrom'] = f['blocking_from']
     res = {'ruleId': f['cause'], 'level': LEVELS.get(f['grade'], 'note'), 'message': {'text': f['title']},
            'partialFingerprints': {FP_KEY: o['defect']}, 'baselineState': o['state'], 'properties': props}
     if res['ruleId'] is None:
