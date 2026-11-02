@@ -202,7 +202,11 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   "$OW_RUN_DIR/<item>.report.md"` and fill `{{BUILD_REPORT_PATH}}` with that path. One
   round per item; a further round goes on the owner's list.
 - **Resume rounds** (`<item>-resumeN`, a stopped worker): `copilot -r ow-<item>` with the same
-  flags. Credit caps for both: [routing](references/routing.md#credit-caps).
+  flags; `python3 -B scripts/resume.py <item> <round> <cap> <timeout>` does it from the item's
+  last launch in `routes.jsonl`, with the prompt in `$OW_RUN_DIR/<round>.prompt.md`. Credit caps
+  for both: [routing](references/routing.md#credit-caps).
+- **Before merging a note or page,** `python3 -B scripts/merge_check.py --patterns <file> <files>`
+  checks the redaction patterns on word boundaries and literal `\u` escapes.
 - **A `result` event is not success.** Check `exitCode` and `session.error`; `scripts/result.py`
   shows both, plus spend and the report. A round that hit its credit cap also exits 0 ([details](references/details.md#failure-modes-and-recoveries)).
 
