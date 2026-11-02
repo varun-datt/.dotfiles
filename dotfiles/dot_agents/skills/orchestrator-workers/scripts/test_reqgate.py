@@ -3,9 +3,11 @@ import io
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 import unittest.mock
 
@@ -546,6 +548,109 @@ class PathGateTest(GateCase):
             row = self.row(r, "FAIL_TO_PASS", test)
             self.assertEqual("fail", row["status"])
             self.assertIn(why, row["reason"])
+
+
+class StopAndErrorTest(GateCase):
+    base_files = {"pkg/calc.py": CALC_BASE, "pkg/test_calc.py": TEST_BASE}
+    head_files = {"pkg/calc.py": CALC_HEAD, "pkg/test_calc.py": TEST_HEAD, "src/a.test.ts": "// t\n",
+                  "pkg/test_sleepy.py": "import os, time, unittest\n\n\nclass SleepyTest(unittest.TestCase):\n"
+                                        "    def test_sleeps(self):\n        with open(os.environ['REQGATE_PIDFILE'], 'w') as f:\n"
+                                        "            f.write(str(os.getpid()))\n        time.sleep(60)\n"}
+
+    def argv(self, line, *extra):
+        tag = str(len(os.listdir(self.root)))
+        brief, report = os.path.join(self.root, f"brief{tag}.md"), os.path.join(self.root, f"report{tag}.md")
+        with open(brief, "w", encoding="utf-8") as f:
+            f.write(BRIEF.format(musts="1. WHEN a thing happens, the part SHALL do 1."))
+        with open(report, "w", encoding="utf-8") as f:
+            f.write(f"9. REQUIREMENTS MAP\n- MUST 1: {line}\n")
+        return ["check", "--repo", self.repo, "--base", self.base, "--head", "ow/x", "--brief", brief, "--report", report,
+                "--timeout", "30", *extra]
+
+    def run_main(self, *argv):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()) as err:
+            code = main(list(argv))
+        return code, err.getvalue()
+
+    def assert_clean(self):
+        self.assertEqual([], os.listdir(self.scratch), "temporary worktrees left behind")
+        self.assertEqual(1, git(self.repo, "worktree", "list").count("\n"), "worktree not removed")
+
+    def test_sigterm_during_a_slow_test_kills_it_and_removes_the_worktree(self):
+        pidfile = os.path.join(self.root, "pid")
+        env = dict(os.environ, TMPDIR=self.scratch, REQGATE_PIDFILE=pidfile)
+        gate = subprocess.Popen([sys.executable, "-B", os.path.join(HERE, "reqgate.py"),
+                                 *self.argv("pkg/test_sleepy.py::SleepyTest.test_sleeps [PASS_TO_PASS]")],
+                                env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        try:
+            for _ in range(200):
+                if os.path.exists(pidfile) and os.path.getsize(pidfile):
+                    break
+                time.sleep(0.1)
+            with open(pidfile, encoding="utf-8") as f:
+                child = int(f.read())
+            gate.send_signal(signal.SIGTERM)
+            _, err = gate.communicate(timeout=20)
+        finally:
+            if gate.poll() is None:
+                gate.kill()
+                gate.communicate()
+        self.assertEqual(128 + signal.SIGTERM, gate.returncode, err)
+        self.assertIn("stopped by signal 15", err)
+        with self.assertRaises(ProcessLookupError):
+            os.kill(child, 0)
+        self.assert_clean()
+
+    def test_exception_mid_run_removes_the_worktree_and_exits_two(self):
+        def boom(*a, **k):
+            raise RuntimeError("runner bug")
+        with unittest.mock.patch.dict(reqgate.RUNNERS, unittest=boom):
+            code, err = self.run_main(*self.argv("pkg/test_calc.py::CalcTest.test_add [PASS_TO_PASS]"))
+        self.assertEqual(2, code)
+        self.assertIn("RuntimeError: runner bug", err)
+        self.assert_clean()
+
+    def test_exception_while_waiting_kills_the_child(self):
+        real = subprocess.Popen.communicate
+        calls = []
+
+        def communicate(p, *a, **k):
+            calls.append(p.pid)
+            if len(calls) == 1:
+                raise RuntimeError("interrupted")
+            return real(p, *a, **k)
+        with unittest.mock.patch.object(subprocess.Popen, "communicate", communicate):
+            with self.assertRaises(RuntimeError):
+                reqgate.run_cmd(["sleep", "60"], self.root, 30)
+        with self.assertRaises(ProcessLookupError):
+            os.kill(calls[0], 0)
+
+    def test_removal_failure_is_reported_and_exits_two(self):
+        real = reqgate.git_status
+
+        def git_status(repo, *args):
+            return (1, "fatal: locked") if args[:2] == ("worktree", "remove") else real(repo, *args)
+        with unittest.mock.patch.object(reqgate, "git_status", git_status):
+            code, err = self.run_main(*self.argv("pkg/test_calc.py::CalcTest.test_add [PASS_TO_PASS]"))
+        self.assertEqual(2, code)
+        self.assertIn("could not clean up: git worktree remove", err)
+        self.assertIn("fatal: locked", err)
+        self.assert_clean()
+
+    def test_setup_errors_exit_two_with_one_line_and_no_traceback(self):
+        bad_json = (f"{sys.executable} -c \"import sys; o = [a for a in sys.argv if a.startswith('--outputFile=')][0]; "
+                    "open(o.split('=', 1)[1], 'w').write('{bad')\"")
+        cases = {"missing runner": self.argv("src/a.test.ts::a > b [PASS_TO_PASS]", "--vitest-cmd", "/missing/vitest"),
+                 "malformed JSON": self.argv("src/a.test.ts::a > b [PASS_TO_PASS]", "--vitest-cmd", bad_json),
+                 "failed --json write": self.argv("pkg/test_calc.py::CalcTest.test_add [PASS_TO_PASS]",
+                                                  "--json", os.path.join(self.root, "no-such-dir", "out.json"))}
+        for label, argv in cases.items():
+            with self.subTest(label):
+                code, err = self.run_main(*argv)
+                self.assertEqual(2, code, err)
+                self.assertEqual(1, len(err.strip().splitlines()), err)
+                self.assertNotIn("Traceback", err)
+                self.assert_clean()
 
 
 class ParseMapTest(unittest.TestCase):

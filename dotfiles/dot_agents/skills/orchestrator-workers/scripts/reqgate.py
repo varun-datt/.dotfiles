@@ -27,8 +27,10 @@ fails as "attribution unavailable"; a measured "covers no changed line" is repor
 Mutant counts use Stryker's status names. A `none` line is reported and counted, and
 is not a failure on its own. Every test runs in a temporary detached worktree, removed afterwards.
 
-Exit 0 when every check passes, 1 when any fails, 2 on a usage or setup error. --warn reports the
-same and exits 0. The Vitest and Stryker commands can be replaced with --vitest-cmd and
+Exit 0 when every check passes, 1 when any fails, 2 on a usage or setup error, an internal error or a
+worktree it could not remove; 128+N when stopped by signal N (SIGINT, SIGTERM), after killing its child
+processes and removing its worktrees. --warn reports the same and exits 0. The Vitest and Stryker
+commands can be replaced with --vitest-cmd and
 --stryker-cmd (defaults "npx --no-install vitest" and "npx --no-install stryker run").
 """
 import argparse
@@ -44,6 +46,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from brief import brief_lines, must_items  # noqa: E402
@@ -66,6 +69,23 @@ DETAIL_LINES = 3
 
 class SetupError(Exception):
     pass
+
+
+class Stopped(BaseException):
+    pass
+
+
+CLEANUP_ERRORS = []
+
+
+def on_signal(signum, _frame):
+    signal.signal(signum, signal.SIG_IGN)
+    raise Stopped(signum)
+
+
+def git_status(repo, *args):
+    p = subprocess.run(["git", "-C", repo, *args], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    return p.returncode, p.stderr.strip()
 
 
 def git(repo, *args, check=True):
@@ -169,23 +189,34 @@ def worktree(repo, ref, node_modules=None):
         link = os.path.join(tree, "node_modules")
         if os.path.islink(link):
             os.unlink(link)
-        git(repo, "worktree", "remove", "--force", tree, check=False)
+        code, err = git_status(repo, "worktree", "remove", "--force", tree)
+        if code and os.path.exists(tree):
+            CLEANUP_ERRORS.append(f"git worktree remove {tree}: {err}")
         shutil.rmtree(tmp, ignore_errors=True)
-        git(repo, "worktree", "prune", check=False)
+        code, err = git_status(repo, "worktree", "prune")
+        if code:
+            CLEANUP_ERRORS.append(f"git worktree prune: {err}")
+        if os.path.exists(tmp):
+            CLEANUP_ERRORS.append(f"{tmp} still exists")
 
 
 def run_cmd(cmd, cwd, timeout):
-    """Run in its own process group so a timeout stops every child; returns (code, out, err) or None on timeout."""
-    p = subprocess.Popen(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                         text=True, start_new_session=True)
+    """Run in its own process group so a timeout, signal or error stops every child; returns (code, out, err) or None on timeout."""
+    try:
+        p = subprocess.Popen(cmd, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, start_new_session=True)
+    except OSError as e:
+        raise SetupError(f"cannot run {cmd[0]}: {e.strerror or e}")
     try:
         out, err = p.communicate(timeout=timeout)
         return p.returncode, out, err
-    except subprocess.TimeoutExpired:
+    except BaseException as e:
         with contextlib.suppress(ProcessLookupError):
             os.killpg(p.pid, signal.SIGKILL)
         p.communicate()
-        return None
+        if isinstance(e, subprocess.TimeoutExpired):
+            return None
+        raise
 
 
 # A test outcome: passed, failed (an assertion), error (another exception), load (could not load,
@@ -336,6 +367,21 @@ def vitest_outcome(report, tree, path, parts, code=0, err=""):
     return "skipped", f"status {hit.get('status')}"
 
 
+def load_json(path, what):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except ValueError as e:
+        raise SetupError(f"{what} is not valid JSON: {e}")
+
+
+def split_cmd(cmd):
+    try:
+        return shlex.split(cmd)
+    except ValueError as e:
+        raise SetupError(f"cannot read the command {cmd!r}: {e}")
+
+
 def run_vitest(tree, path, name, timeout, vitest_cmd="npx --no-install vitest", **_):
     if not os.path.isfile(os.path.join(tree, path)):
         return "missing", f"{path} does not exist"
@@ -344,7 +390,7 @@ def run_vitest(tree, path, name, timeout, vitest_cmd="npx --no-install vitest", 
     pattern = "(?: > | )".join(js_escape(p) for p in parts)
     with tempfile.TemporaryDirectory(prefix="reqgate-out-") as tmp:
         out = os.path.join(tmp, "vitest.json")
-        cmd = shlex.split(vitest_cmd) + ["run", path, "-t", pattern, "--reporter=json", f"--outputFile={out}"]
+        cmd = split_cmd(vitest_cmd) + ["run", path, "-t", pattern, "--reporter=json", f"--outputFile={out}"]
         if project:
             cmd += ["--project", project]
         got = run_cmd(cmd, tree, timeout)
@@ -352,8 +398,7 @@ def run_vitest(tree, path, name, timeout, vitest_cmd="npx --no-install vitest", 
             return "timeout", f"no result after {timeout} s"
         if not os.path.exists(out):
             return "error", "Vitest wrote no JSON report: " + (last_lines(got[2]) or f"exit {got[0]}")
-        with open(out, encoding="utf-8") as f:
-            report = json.load(f)
+        report = load_json(out, "Vitest's report")
     return vitest_outcome(report, tree, path, parts, got[0], got[2])
 
 
@@ -377,7 +422,7 @@ def has_stryker(tree):
 def stryker_run(tree, ranges, timeout, stryker_cmd):
     """Run Stryker on the changed line ranges; returns the parsed mutation-testing-elements report."""
     mutate = ",".join(f"{p}:{s}-{e}" for p, rs in sorted(ranges.items()) for s, e in rs)
-    cmd = shlex.split(stryker_cmd) + ["--mutate", mutate, "--reporters", "json", "--disableBail"]
+    cmd = split_cmd(stryker_cmd) + ["--mutate", mutate, "--reporters", "json", "--disableBail"]
     got = run_cmd(cmd, tree, timeout)
     if got is None:
         raise SetupError(f"Stryker timed out after {timeout} s")
@@ -385,8 +430,7 @@ def stryker_run(tree, ranges, timeout, stryker_cmd):
     report = os.path.join(tree, STRYKER_REPORT)
     if code or not os.path.exists(report):
         raise SetupError(f"Stryker failed (exit {code}): " + (last_lines(err) or last_lines(out) or "no report"))
-    with open(report, encoding="utf-8") as f:
-        return json.load(f)
+    return load_json(report, "Stryker's report")
 
 
 def same_path(a, b):
@@ -598,16 +642,31 @@ def main(argv=None):
         args = parser().parse_args(argv)
     except SystemExit as e:
         return 2 if e.code else 0
+    CLEANUP_ERRORS.clear()
+    saved = {s: signal.signal(s, on_signal) for s in (signal.SIGINT, signal.SIGTERM)}
+    code = 2
     try:
         result = check(args)
+        print(table(result))
+        if args.json:
+            with open(args.json, "w", encoding="utf-8") as f:
+                json.dump(result, f, indent=2)
+        code = 0 if result["passed"] or args.warn else 1
+    except Stopped as e:
+        print(f"reqgate: stopped by signal {e.args[0]}", file=sys.stderr)
+        code = 128 + e.args[0]
     except (SetupError, subprocess.CalledProcessError) as e:
         print(f"reqgate: {e}", file=sys.stderr)
-        return 2
-    print(table(result))
-    if args.json:
-        with open(args.json, "w", encoding="utf-8") as f:
-            json.dump(result, f, indent=2)
-    return 0 if result["passed"] or args.warn else 1
+    except OSError as e:
+        print(f"reqgate: {e.strerror or e}: {e.filename or ''}".rstrip(": "), file=sys.stderr)
+    except Exception:
+        print(f"reqgate: internal error, the gate's worktrees were removed:\n{traceback.format_exc()}", file=sys.stderr)
+    finally:
+        for s, h in saved.items():
+            signal.signal(s, h)
+    for err in CLEANUP_ERRORS:
+        print(f"reqgate: could not clean up: {err}", file=sys.stderr)
+    return 2 if CLEANUP_ERRORS and code < 2 else code
 
 
 if __name__ == "__main__":
