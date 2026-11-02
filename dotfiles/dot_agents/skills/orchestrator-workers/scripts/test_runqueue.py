@@ -119,6 +119,21 @@ class QueueTest(unittest.TestCase):
         self.finish(t, ['b'])
         self.assertEqual(self.notes, [])
 
+    def test_idle_alert_is_not_repeated_while_the_same_items_wait(self):
+        self.cli('add', 'a', '--cmd', 'true')
+        old = time.time() - 3600
+        os.utime(os.path.join(self.rd, 'heartbeat'), (old, old))
+        t = self.start(idle_alert=0.001)
+        self.assertTrue(wait_until(lambda: self.notes))
+        time.sleep(0.5)
+        self.assertEqual(len(self.notes), 1)
+        self.cli('add', 'c', '--cmd', 'true')
+        self.assertTrue(wait_until(lambda: len(self.notes) == 2))
+        self.assertIn('c exited 0', self.notes[1])
+        self.cli('done', 'a')
+        self.cli('done', 'c')
+        t.join(5)
+
     def test_add_rejects_duplicates_and_unknown_after(self):
         self.assertEqual(self.cli('add', 'a', '--cmd', 'true'), 0)
         with mock.patch('sys.stderr'):

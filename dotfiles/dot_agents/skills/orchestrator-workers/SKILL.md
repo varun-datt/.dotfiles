@@ -248,7 +248,8 @@ every script in the folder.)
 - **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
-  line to `ALERT.log`. Nothing is sent while the chat is active or nothing waits on it.
+  line to `ALERT.log`, once for each new item waiting: it does not repeat while the same items
+  wait (owner, 2026-11-01). Nothing is sent while the chat is active or nothing waits on it.
 
 ## Time budgets and monitoring
 

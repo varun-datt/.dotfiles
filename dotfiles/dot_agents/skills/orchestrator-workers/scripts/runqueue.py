@@ -248,7 +248,7 @@ def waiting_on_chat(items, since):
 
 
 def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
-    procs, started, last_alert = {}, time.time(), None
+    procs, started, alerted = {}, time.time(), set()
     while True:
         with locked(rd):
             q = load(rd)
@@ -285,9 +285,9 @@ def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
             idle = time.time() - seen
             waits = waiting_on_chat(items, seen) if idle >= idle_alert * 60 else []
             if not waits:
-                last_alert = None
-            elif last_alert is None or time.time() - last_alert >= idle_alert * 60:
-                last_alert = time.time()
+                alerted = set()
+            elif set(waits) - alerted:
+                alerted |= set(waits)
                 msg = f"Chat idle {idle / 60:.0f} min; waiting on it: {', '.join(waits)}"
                 with open(os.path.join(rd, 'ALERT.log'), 'a', encoding='utf-8') as f:
                     f.write(f"{time.strftime('%Y-%m-%d %H:%M')} {msg}\n")
