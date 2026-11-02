@@ -29,9 +29,10 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
   Outside every source, kb exits with status 2 and asks for one.
 - **Each hit:** `{source, path, line, end, title, snippet, score, engines}`. `path` is relative to
   the source's root; `line` and `end` bound the matching lines; `engines` says which engines found it.
-- **Ranking:** engines merge by reciprocal rank (k = 60); then a hit whose title (front-matter
+- **Ranking:** each engine hands up to 50 candidates (more when `--limit` asks for more), whatever
+  the limit; they merge by reciprocal rank (k = 60); then a hit whose title (front-matter
   `title`, first heading, else file name) holds at least half of the query's content words scores
-  ×1.2, on every route. It held every fixture cell and lifted hit@1 37 → 41 of 75; it is not
+  ×1.2, on every route; the limit cuts last. It held every fixture cell and lifted hit@1 37 → 41 of 75; it is not
   called better until a held-out suite proves it.
 
 ## Set up
@@ -70,7 +71,7 @@ below, from the skill's folder in the chezmoi source, `$(chezmoi source-path)/do
 
 Any tool that prints this contract can be scored: `eval.py --engine "cmd:<command>"` runs
 `<command> QUERY SOURCES` with `KB_SOURCES` set. A replacement must hold `baseline.json` in every
-cell (`eval.py --check`) before it becomes the default. When AMC takes the search over, its command
+cell, for every measure it stores (`eval.py --check`), before it becomes the default. When AMC takes the search over, its command
 is scored the same way.
 
 ## Keep the cases current

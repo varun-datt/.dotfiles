@@ -7,7 +7,7 @@
 
 Usage:
     eval.py [--engine kb:fused --engine kb:regex ...] [--by class] [--json OUT] [--compare RUN]
-    eval.py --check                 exit 1 when the default engine falls below the baseline in any cell
+    eval.py --check                 exit 1 when the default engine falls below the baseline in any stored measure of any cell
     eval.py --write-baseline        record the engines just run as the baseline
 
 Each cell reports hit@5, hit@1, hit@3 and latency. Given several engines, each after the first is paired
@@ -235,7 +235,16 @@ def main(argv=None):
             raise SystemExit("no baseline.json yet: run with --write-baseline first")
         want = base["engines"][engines[0]]
         got = results[engines[0]]["cells"]
-        drops = [f"{k}: hit@5 {got[k]['hit5']} < {v['hit5']}" for k, v in want.items() if got.get(k, {}).get("hit5", 0) < v["hit5"]]
+        drops = []
+        for k, stored in want.items():
+            if k not in got:
+                drops.append(f"{k}: not measured")
+                continue
+            for metric, floor in stored.items():
+                if metric not in got[k]:
+                    drops.append(f"{k}: {metric} not measured")
+                elif got[k][metric] < floor:
+                    drops.append(f"{k}: {metric} {got[k][metric]} < {floor}")
         print("baseline: " + ("; ".join(drops) if drops else f"{engines[0]} holds every cell"))
         return 1 if drops else 0
     return 0

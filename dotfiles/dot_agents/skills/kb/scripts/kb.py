@@ -28,14 +28,18 @@ Modes:
     lex     ck's BM25        sem  ck's embeddings        hybrid  ck's regex plus embeddings
     fused   regex and sem merged by reciprocal rank
 Without ck, every mode that needs it falls back to regex. ck is found through $KB_CK, else on PATH.
+Each engine retrieves up to 50 candidates (more when --limit asks for more), whatever the limit.
 Results merge across engines and sources by reciprocal rank, k=60; then a hit whose title (front-matter
-title, first heading, else file name) holds half or more of the query's content words scores x1.2.
+title, first heading, else file name) holds half or more of the query's content words scores x1.2; the
+limit cuts that ranking last.
 """
 import argparse, glob, json, os, re, shutil, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 
 RRF_K = 60
 TITLE_BOOST = 1.2
+# Each engine's candidates, whatever the limit, so the boost and fusion rank the same pool and the limit cuts last.
+POOL = 50
 STOP = frozenset("a an the of for to in on and or is are was do does did how what which why when where who can "
                  "should we our it this that with by from at be as not i you very".split())
 WORD = re.compile(r"[^\W_]+")
@@ -223,13 +227,14 @@ def search(query, sources, mode="auto", limit=10):
         raise ValueError(f"mode is one of {', '.join(MODES)}")
     ck = ck_binary()
     jobs, _ = plan(query, sources, mode, ck)
+    depth = max(limit, POOL)
 
     def one(job):
         src, engine, folder = job
         if engine == "regex":
-            found = run_rg(query, src["root"], limit, src.get("paths") or ["."], src.get("exclude") or [])
+            found = run_rg(query, src["root"], depth, src.get("paths") or ["."], src.get("exclude") or [])
         else:
-            found = run_ck(engine, query, src["root"], folder, limit, ck, src.get("exclude") or [])
+            found = run_ck(engine, query, src["root"], folder, depth, ck, src.get("exclude") or [])
         return (src["name"], engine), [{**h, "source": src["name"]} for h in found]
 
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(jobs)))) as pool:
@@ -241,7 +246,7 @@ def search(query, sources, mode="auto", limit=10):
             key = (h["source"], h["path"])
             if key not in best or h["score"] > best[key]["score"]:
                 best[key] = h
-    rankings = [(engine, sorted(best.values(), key=lambda h: -h["score"])[:limit]) for engine, best in merged.items()]
+    rankings = [(engine, sorted(best.values(), key=lambda h: -h["score"])[:depth]) for engine, best in merged.items()]
     roots = {}
     for s in sources:
         roots.setdefault(s["name"], s["root"])
