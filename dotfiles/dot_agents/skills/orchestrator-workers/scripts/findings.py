@@ -76,7 +76,7 @@ STOP = set('the and for with that this from into its are was were not but has ha
 
 def is_fix(r):
     # load_rounds gives a research run's fix round the run's kind; the name still says fix.
-    return r['kind'] == 'fix' or bool(re.search(r'-fix\d*$', r['name']))
+    return r['kind'] == 'fix' or (r['kind'] not in mine.REVIEW_KINDS and bool(re.search(r'-fix\d*$', r['name'])))
 
 
 def section_of(line):
@@ -264,14 +264,21 @@ def split(report, rereview=False, dropped=None):
         tagged = (section in PREFIX or section in ('blocking', 'new')) and (mine.GRADED_TAG.search(plain(s)) or RUBRIC.search(plain(s))) \
             and not m and not t and not raw[:1].isspace()
         tagged = tagged or (section == 'correction' and s and not m and not s.startswith('|'))
+        bullet = not m and not t and not raw[:1].isspace() and re.match(r'^[-*+]\s+\S', s) is not None \
+            and section in ('blocking', 'new') and (cur is None or cur.get('bullet'))
         if section == 'skip' and not (m and m.group('pre') in ('B', 'M')):
             if cur and s:
                 cur['text'] += '\n' + s
             continue
-        if m or t or tagged:
+        if m or t or tagged or bullet:
             close()
             ref = None
-            if t:
+            if bullet:
+                sec, body = section, re.sub(r'^[-*+]\s+', '', s)
+                counters['bullet-' + sec] += 1
+                num = str(counters['bullet-' + sec])
+                label = PREFIX[sec] + num if sec in PREFIX else (('c' + num) if rereview and sec == 'blocking' else num)
+            elif t:
                 num, body = (num_from_table or t.group(1)), s
                 sec = section or 'blocking'
                 label = PREFIX[sec] + num if sec in PREFIX else (('c' + num) if rereview and sec == 'blocking' else num)
@@ -288,7 +295,7 @@ def split(report, rereview=False, dropped=None):
                     label = PREFIX[sec] + str(counters[sec])
                 else:
                     label = 'b' + str(len(out) + 1)
-            cur = {'label': label, 'text': body, 'section': sec, 'ref': ref, 'heading': heading, 'line': i}
+            cur = {'label': label, 'text': body, 'section': sec, 'ref': ref, 'heading': heading, 'line': i, 'bullet': bullet}
             if t:
                 cur['title'] = title_cell([c.strip().strip('*_` ') for c in s.strip('|').split('|')], header)
             continue

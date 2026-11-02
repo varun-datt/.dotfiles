@@ -341,6 +341,13 @@ class FixRoundTwoTest(unittest.TestCase):
         self.assertEqual((fs['c2']['verdict'], fs['c2']['status']), ('not fixed', 'unchanged'))
         self.assertEqual((fs['m1']['section'], fs['m1']['cause'], fs['m1']['blocking']), ('minor', 'FAIL', False))
 
+    def test_bullets_under_a_blocking_heading_are_findings_but_detail_bullets_are_not(self):
+        fs = findings.parse('**Verdict: request changes**\n\n**Blocking**\n- **VERIFIED** — a.py:3: the zone stays hidden.\n'
+                            '- **VERIFIED** — b.py:4: zones drop selections.\n\n**Non-blocking**\n- c.py:5: label is vague.\n')
+        self.assertEqual([(f['n'], f['file'], f['section']) for f in fs], [('1', 'a.py', 'blocking'), ('2', 'b.py', 'blocking')])
+        fs = findings.parse('1 blocking\n\n**Blocking**\n1. [Major] a.py:3 the zone stays hidden.\n- reveal the next line too\n')
+        self.assertEqual([f['n'] for f in fs], ['1'])
+
     def test_unconsumed_finding_like_block_is_named(self):
         self.run.round('job', at=T0)
         self.run.round('job-review', at=T0 + 10, report='2 blocking\n\n1. [Major] a.py:1 x breaks. cause: ADJ\n\nSome prose.\n\n'
@@ -366,6 +373,13 @@ class FixRoundTwoTest(unittest.TestCase):
         self.assertEqual(by[('doc-critique', '1')]['properties']['roundKind'], 'critique')
         heading = findings.same_kind('## Same kind, not fixed\n\n- `c.py:1` drops it too.\n\n## Checks\n1. ran\n')
         self.assertEqual([x['text'] for x in heading], ['`c.py:1` drops it too.'])
+
+    # finding 2: a review of a fix, named rv-<item>-fix1, stays a review
+    def test_review_round_named_after_its_fix_is_still_a_review(self):
+        self.run.round('job', at=T0)
+        self.run.round('rv-job-fix1', at=T0 + 10, report='1 blocking\n\n1. **Blocking** — a.py:3: the guard is skipped. cause: BOUND\n')
+        by = self.by()
+        self.assertEqual(by[('rv-job-fix1', 'c1')]['properties']['roundKind'], 'rereview')
 
     # finding 3
     def test_explicit_b1_b2_rulings_win_over_text(self):
