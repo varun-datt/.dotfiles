@@ -69,7 +69,7 @@ Merge candidates that say the same thing. Keep one only if it passes every test 
 
 Expect few: most sources leave a handful of records. When more than about ten pass, apply the tests again, harder, and merge before writing; a long list is the bloat this step exists to stop.
 
-Give each kept candidate a **kind**: `fact`, `rule` (always or never), `procedure` (multi-step how-to), `event` (a decision, incident or change, with its date; an incident that meets a postmortem trigger in [references/layout.md](references/layout.md) is offered the postmortem template), or `lesson` (expected, got, why, next time).
+Give each kept candidate a **kind**: `fact`, `rule` (always or never), `procedure` (multi-step how-to), `event` (a decision, incident or outside change, with its date; not a merge, deploy or ticket update, which their own history holds; an incident that meets a postmortem trigger in [references/layout.md](references/layout.md) is offered the postmortem template), or `lesson` (expected, got, why, next time).
 
 Give it a **destination**:
 
