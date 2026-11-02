@@ -602,10 +602,10 @@ class CaseFiles(unittest.TestCase):
         with open(self.cases, "w") as f:
             json.dump({"version": 1, **top, "queries": queries}, f, indent=1)
 
-    def main(self, *args):
+    def main(self, *args, engine=("--engine", "kb:regex")):
         with mock.patch.object(suite, "BASELINE", os.path.join(self.d, "fixture-baseline.json")), \
              mock.patch("sys.stdout", new_callable=io.StringIO) as out:
-            code = suite.main(["--cases", self.cases, "--engine", "kb:regex", *args])
+            code = suite.main(["--cases", self.cases, *engine, *args])
         return code, out.getvalue()
 
     def test_the_fixture_file_loads_as_before(self):
@@ -625,10 +625,8 @@ class CaseFiles(unittest.TestCase):
             stored = json.load(f)
         self.assertFalse(os.path.exists(os.path.join(self.d, "fixture-baseline.json")))
         self.assertEqual(stored["engines"]["kb:regex"], {"t/palette": {"hit5": 2, "hit1": 1, "hit3": 2, "mrr": 0.75}})
-        stored["default"] = "kb:regex"
-        with open(os.path.join(self.d, "more.baseline.json"), "w") as f:
-            json.dump(stored, f)
-        code, out = self.main("--check")
+        self.assertEqual(stored["default"], "kb:regex")
+        code, out = self.main("--check", engine=())
         self.assertEqual(code, 0)
         self.assertIn("kb:regex holds every cell", out)
         for metric, floor, shown in (("mrr", 0.76, "mrr 0.75 < 0.76"), ("hit1", 2, "hit1 1 < 2"), ("hit3", 3, "hit3 2 < 3")):
@@ -641,17 +639,100 @@ class CaseFiles(unittest.TestCase):
                 self.assertEqual(code, 1)
                 self.assertIn(f"t/palette: {shown}", out)
 
+    def test_writing_a_baseline_keeps_a_measured_default_and_replaces_an_unmeasured_one(self):
+        sidecar = os.path.join(self.d, "more.baseline.json")
+        for label, default, engines, want in (("measured", "cmd:x", {"cmd:x": {}}, "cmd:x"),
+                                              ("unmeasured", "kb:auto", {"kb:regex": {}}, "kb:regex")):
+            with self.subTest(label):
+                with open(sidecar, "w") as f:
+                    json.dump({"default": default, "engines": engines}, f)
+                self.assertEqual(self.main("--write-baseline")[0], 0)
+                with open(sidecar) as f:
+                    self.assertEqual(json.load(f)["default"], want)
+
+    def test_checking_an_engine_the_baseline_lacks_is_refused_with_a_message(self):
+        self.assertEqual(self.main("--write-baseline")[0], 0)
+        stop = None
+        with mock.patch.object(suite, "run") as run:
+            try:
+                self.main("--check", engine=("--engine", "cmd:other"))
+            except BaseException as e:  # noqa: B036
+                stop = e
+        run.assert_not_called()
+        self.assertIsInstance(stop, SystemExit)
+        self.assertIn("has no baseline for cmd:other, only for kb:regex", str(stop))
+
     def test_a_file_without_a_baseline_is_refused_under_check(self):
         with self.assertRaises(SystemExit) as stop:
             self.main("--check")
         self.assertIn(f"no baseline at {os.path.join(self.d, 'more.baseline.json')}", str(stop.exception))
 
-    def test_a_case_whose_expected_file_is_gone_is_reported_and_not_scored(self):
-        self.write([case("note", "larch", "s/notes/larch.md"), case("moved", "larch", "s/notes/gone.md")])
+    def test_a_case_whose_expected_file_is_gone_fails_check_by_its_id_and_counts_as_a_miss(self):
+        with open(os.path.join(self.d, "corpus/s/notes/other.md"), "w") as f:
+            f.write("spruce\n")
+        self.write([case("code", "larch", "s/src/larch.ts"), case("missed", "larch", "s/notes/other.md")])
+        self.assertEqual(self.main("--write-baseline")[0], 0)
+        os.remove(os.path.join(self.d, "corpus/s/notes/other.md"))
+        code, out = self.main("--check")
+        self.assertEqual(code, 1)
+        self.assertIn("case missed: s/notes/other.md is not in the corpus, so it cannot be scored", out)
+        self.assertIn("baseline: case missed: s/notes/other.md is not in the corpus", out)
+        with mock.patch("sys.stdout", new_callable=io.StringIO):
+            rows = suite.run(["kb:regex"], self.cases)["kb:regex"]
+        cell = suite.group(rows, "cell")["cells"]["t/palette"]
+        self.assertEqual((cell["n"], cell["hit1"], cell["mrr"]), (2, 1, 0.5))
+
+    def test_a_case_with_one_expected_file_gone_is_scored_against_the_rest(self):
+        self.write([case("both", "larch", "s/notes/gone.md", "s/notes/larch.md")])
         with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
             rows = suite.run(["kb:regex"], self.cases)["kb:regex"]
-        self.assertEqual([r["id"] for r in rows], ["note"])
-        self.assertIn("case moved: s/notes/gone.md is not in the corpus, so the case is not scored", out.getvalue())
+        self.assertEqual([(r["id"], r["rank"], r.get("unscorable")) for r in rows], [("both", 2, None)])
+        self.assertIn("case both: s/notes/gone.md is not in the corpus, so it is scored against the rest of its expect", out.getvalue())
+        self.assertEqual(self.main("--write-baseline")[0], 0)
+        self.assertEqual(self.main("--check")[0], 0)
+
+    def raw(self, records, sources=None):
+        """Each record on its own line, so record k is on line k + 1 and source k on line len(records) + 2 + k."""
+        text = '{"queries": [\n' + ",\n".join(records) + "\n]"
+        if sources is not None:
+            text += ', "corpus": {"dir": "corpus", "sources": [\n' + ",\n".join(sources) + "\n]}"
+        with open(self.cases, "w") as f:
+            f.write(text + "}\n")
+
+    def refused(self):
+        with self.assertRaises(SystemExit) as stop:
+            suite.load_cases(self.cases)
+        return str(stop.exception)
+
+    def test_every_malformed_record_is_refused_with_its_own_line(self):
+        good = json.dumps(case("note", "larch", "s/notes/larch.md"))
+        bad = lambda **kw: json.dumps({k: v for k, v in {**case("x", "larch", "s/notes/larch.md"), **kw}.items() if v is not ...})  # noqa: E731
+        for label, record, shown in (("null", "null", "case #2: is not an object"),
+                                     ("no id", bad(id=...), "case #2: lacks id"),
+                                     ("id a number", bad(id=5), "case #2: id, space, caller, class and q must be non-empty text"),
+                                     ("q null", bad(q=None), "case x: id, space, caller, class and q must be non-empty text"),
+                                     ("empty path", bad(expect=[{"path": ""}]), "case x: expect must be a non-empty list of {path}"),
+                                     ("anchor", bad(expect=[{"path": "s/a.md", "anchor": "("}]), "case x: anchor of s/a.md must be a regular expression"),
+                                     ("anchor a number", bad(expect=[{"path": "s/a.md", "anchor": 3}]), "case x: anchor of s/a.md must be"),
+                                     ("mustNot", bad(mustNot="s/src"), "case x: mustNot must be a list of text")):
+            with self.subTest(label):
+                self.raw([good, record, good.replace('"note"', '"later"')])
+                self.assertTrue(self.refused().startswith(f"{self.cases}:3: {shown}"), self.refused())
+
+    def test_a_second_record_with_the_same_id_is_refused_at_its_own_line(self):
+        good = json.dumps(case("note", "larch", "s/notes/larch.md"))
+        self.raw([good, good.replace("larch.md", "other.md"), good])
+        self.assertEqual(self.refused(), f"{self.cases}:3: case note: id note appears twice")
+
+    def test_every_malformed_source_is_refused_with_its_own_line(self):
+        good = json.dumps(case("note", "larch", "s/notes/larch.md"))
+        for label, source, shown in (("path a list", {"name": "t", "path": ["."]}, "source t: path must be text"),
+                                     ("exclude text", {"name": "t", "exclude": "x"}, "source t: exclude must be a list of text"),
+                                     ("no name", {"path": "."}, "a source must be an object with a non-empty name"),
+                                     ("null", None, "a source must be an object with a non-empty name")):
+            with self.subTest(label):
+                self.raw([good], [json.dumps({"name": "s", "path": "s"}), json.dumps(source)])
+                self.assertEqual(self.refused(), f"{self.cases}:5: {shown}")
 
     def test_a_malformed_file_is_refused_with_its_line(self):
         with open(self.cases, "w") as f:
@@ -665,18 +746,22 @@ class CaseFiles(unittest.TestCase):
         with self.assertRaises(SystemExit) as stop:
             suite.load_cases(self.cases)
         with open(self.cases) as f:
-            line = next(i for i, l in enumerate(f, 1) if '"broken"' in l)
+            line = next(i for i, l in enumerate(f, 1) if '"broken"' in l) - 1
         self.assertEqual(str(stop.exception), f"{self.cases}:{line}: case broken: lacks expect")
         self.write([case("note", "larch", "s/notes/larch.md"), case("note", "larch", "s/src/larch.ts")])
         with self.assertRaises(SystemExit) as stop:
             suite.load_cases(self.cases)
         with open(self.cases) as f:
-            line = [i for i, l in enumerate(f, 1) if '"id": "note"' in l][1]
+            line = [i for i, l in enumerate(f, 1) if '"id": "note"' in l][1] - 1
         self.assertEqual(str(stop.exception), f"{self.cases}:{line}: case note: id note appears twice")
-        self.write([case("note", "larch", "s/notes/larch.md")], corpus={"git": "x"})
-        with self.assertRaises(SystemExit) as stop:
-            suite.load_cases(self.cases)
-        self.assertIn('corpus must be {"dir": FOLDER} or {"git": REPOSITORY, "commit": ID}', str(stop.exception))
+        for corpus in ({"git": "x"}, {"dir": "corpus", "git": None}, {"git": None, "commit": "x"},
+                       {"dir": "corpus", "git": "corpus", "commit": "x"}):
+            with self.subTest(corpus=corpus):
+                self.write([case("note", "larch", "s/notes/larch.md")], corpus=corpus)
+                with self.assertRaises(SystemExit) as stop:
+                    suite.load_cases(self.cases)
+                self.assertIn('corpus must be {"dir": FOLDER} or {"git": REPOSITORY, "commit": ID}', str(stop.exception))
+                self.assertTrue(str(stop.exception).startswith(f"{self.cases}:"), str(stop.exception))
 
     def test_a_git_corpus_is_read_at_its_commit(self):
         repo = os.path.join(self.d, "corpus")

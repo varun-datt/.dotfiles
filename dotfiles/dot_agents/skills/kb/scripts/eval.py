@@ -8,13 +8,16 @@
 Usage:
     eval.py [--engine kb:fused --engine kb:regex ...] [--by class] [--json OUT] [--compare RUN] [--cases FILE]
     eval.py --check                 exit 1 when the default engine falls below the baseline in any stored measure of any cell
-    eval.py --write-baseline        record the engines just run as the baseline (hit@1, hit@3, hit@5 and MRR per cell)
+    eval.py --write-baseline        record the engines just run as the baseline (hit@1, hit@3, hit@5 and MRR per cell);
+                                    its default stays the one recorded (kb:auto in a new file) when that engine has a
+                                    baseline, else becomes the first engine run
 
 --cases FILE scores another case file, in fixtures/cases.json's shape, against its own baseline, FILE with
 .baseline.json for .json. Its "corpus" is {"dir": FOLDER} (copied) or {"git": REPOSITORY, "commit": ID}
 (that commit's tracked files, read with git archive), relative to the file; without one, the folder corpus/
 beside it. "sources": [{"name", "path", "exclude"}] in it names the sources; without them, each top-level
-folder is one, as for the fixtures. A case whose expected file is not in the corpus is reported and not scored.
+folder is one, as for the fixtures. An expected file that is not in the corpus is reported; a case left with
+none counts as a miss and fails --check, by its id.
 
 Each cell reports hit@5, hit@1, hit@3 and latency. Given several engines, each after the first is paired
 with the first, case by case by reciprocal rank, in a two-sided sign test over the cases that differ;
@@ -34,7 +37,6 @@ FIXTURES = os.path.join(HERE, "fixtures")
 CASES = os.path.join(FIXTURES, "cases.json")
 BASELINE = os.path.join(HERE, "baseline.json")
 CASE_KEYS = ("id", "space", "caller", "class", "q", "scope", "expect")
-CORPUS_KEY = r'"corpus"\s*:'
 sys.path.insert(0, HERE)
 import kb  # noqa: E402
 
@@ -49,23 +51,71 @@ def case_problem(c):
         return "id, space, caller, class and q must be non-empty text"
     if not (isinstance(c["scope"], list) and c["scope"] and all(isinstance(s, str) for s in c["scope"])):
         return "scope must be a non-empty list of source names"
-    if not (isinstance(c["expect"], list) and c["expect"] and all(isinstance(e, dict) and isinstance(e.get("path"), str) for e in c["expect"])):
+    if not (isinstance(c["expect"], list) and c["expect"] and all(isinstance(e, dict) and isinstance(e.get("path"), str) and e["path"]
+                                                                  for e in c["expect"])):
         return "expect must be a non-empty list of {path}"
+    for e in c["expect"]:
+        if "anchor" in e:
+            try:
+                re.compile(e["anchor"])
+            except (TypeError, re.error):
+                return f"anchor of {e['path']} must be a regular expression"
+    if "mustNot" in c and not (isinstance(c["mustNot"], list) and all(isinstance(m, str) for m in c["mustNot"])):
+        return "mustNot must be a list of text"
     return None
 
 
 def corpus_problem(spec):
-    if not isinstance(spec, dict) or not (isinstance(spec.get("dir"), str) or (isinstance(spec.get("git"), str) and isinstance(spec.get("commit"), str))):
-        return 'corpus must be {"dir": FOLDER} or {"git": REPOSITORY, "commit": ID}'
+    shape = 'corpus must be {"dir": FOLDER} or {"git": REPOSITORY, "commit": ID}'
+    if not isinstance(spec, dict) or ("dir" in spec and "git" in spec):
+        return shape
+    if "git" in spec and not (isinstance(spec["git"], str) and isinstance(spec.get("commit"), str)):
+        return shape
+    if "git" not in spec and not isinstance(spec.get("dir"), str):
+        return shape
     sources = spec.get("sources")
-    if sources is not None and not (isinstance(sources, list) and sources and all(isinstance(s, dict) and isinstance(s.get("name"), str) for s in sources)):
+    if sources is not None and not (isinstance(sources, list) and sources):
         return "corpus sources must be a non-empty list of {name, path, exclude}"
     return None
 
 
-def line_of(raw, pattern, nth=1):
-    found = [m.start() for m in re.finditer(pattern, raw)]
-    return raw.count("\n", 0, found[nth - 1]) + 1 if len(found) >= nth else "?"
+def source_problem(s):
+    if not (isinstance(s, dict) and isinstance(s.get("name"), str) and s["name"]):
+        return "a source must be an object with a non-empty name"
+    if s.get("path") is not None and not isinstance(s["path"], str):
+        return f"source {s['name']}: path must be text"
+    if s.get("exclude") is not None and not (isinstance(s["exclude"], list) and all(isinstance(e, str) for e in s["exclude"])):
+        return f"source {s['name']}: exclude must be a list of text"
+    return None
+
+
+def skip_space(raw, i):
+    while i < len(raw) and raw[i] in " \t\r\n":
+        i += 1
+    return i
+
+
+def members(raw, i):
+    """Where each member of the valid JSON object or array at raw[i] starts: {key: offset} or [offset]."""
+    i = skip_space(raw, i)
+    is_object = raw[i] == "{"
+    out = {} if is_object else []
+    i = skip_space(raw, i + 1)
+    while raw[i] not in "]}":
+        if is_object:
+            key, i = json.decoder.scanstring(raw, i + 1)
+            i = skip_space(raw, skip_space(raw, i) + 1)
+            out[key] = i
+        else:
+            out.append(i)
+        i = skip_space(raw, json.JSONDecoder().raw_decode(raw, i)[1])
+        if raw[i] == ",":
+            i = skip_space(raw, i + 1)
+    return out
+
+
+def line_at(raw, offset):
+    return raw.count("\n", 0, offset) + 1
 
 
 def load_cases(path):
@@ -81,18 +131,24 @@ def load_cases(path):
         raise SystemExit(f"{path}:{e.lineno}:{e.colno}: not valid JSON: {e.msg}")
     if not isinstance(data, dict) or not isinstance(data.get("queries"), list) or not data["queries"]:
         raise SystemExit(f"{path}:1: expected an object with a non-empty list of queries")
+    top = members(raw, 0)
+    at = members(raw, top["queries"])
     seen = set()
     for i, c in enumerate(data["queries"], 1):
-        cid = c.get("id") if isinstance(c, dict) and isinstance(c.get("id"), str) else None
+        cid = c.get("id") if isinstance(c, dict) and isinstance(c.get("id"), str) and c["id"] else None
         problem = case_problem(c) or (f"id {cid} appears twice" if cid in seen else None)
         if problem:
-            line = line_of(raw, r'"id"\s*:\s*' + re.escape(json.dumps(cid)), 2 if cid in seen else 1) if cid else "?"
-            raise SystemExit(f"{path}:{line}: case {cid or f'#{i}'}: {problem}")
+            raise SystemExit(f"{path}:{line_at(raw, at[i - 1])}: case {cid or f'#{i}'}: {problem}")
         seen.add(cid)
     corpus = data.get("corpus", {"dir": "corpus"})
     problem = corpus_problem(corpus)
     if problem:
-        raise SystemExit(f"{path}:{line_of(raw, CORPUS_KEY)}: {problem}")
+        raise SystemExit(f"{path}:{line_at(raw, top['corpus'])}: {problem}")
+    if corpus.get("sources"):
+        for s, offset in zip(corpus["sources"], members(raw, members(raw, top["corpus"])["sources"])):
+            problem = source_problem(s)
+            if problem:
+                raise SystemExit(f"{path}:{line_at(raw, offset)}: {problem}")
     return data["queries"], corpus
 
 
@@ -159,12 +215,13 @@ def score_case(case, hits, prefix, corpus):
 def cell_summary(rows):
     n = len(rows)
     anchors = [r["anchored"] for r in rows if r["anchored"] is not None]
+    timed = [r["ms"] for r in rows if r["ms"] is not None]
     return {"n": n, "hit1": sum(r["rank"] == 1 for r in rows), "hit3": sum(bool(r["rank"]) and r["rank"] <= 3 for r in rows),
             "hit5": sum(bool(r["rank"]) and r["rank"] <= 5 for r in rows),
             "mrr": round(sum(1 / r["rank"] for r in rows if r["rank"]) / n, 2) if n else 0,
             "anchor_ok": f"{sum(anchors)}/{len(anchors)}" if anchors else "-",
             "mustNot": sum(r["mustNot_violated"] for r in rows),
-            "p50_ms": round(statistics.median(r["ms"] for r in rows)) if n else 0}
+            "p50_ms": round(statistics.median(timed)) if timed else 0}
 
 
 def group(rows, by):
@@ -172,7 +229,8 @@ def group(rows, by):
     for r in rows:
         cells.setdefault(f"{r['space']}/{r['caller']}" if by == "cell" else f"{r['caller']}/{r['class']}", []).append(r)
     return {"cells": {k: cell_summary(v) for k, v in sorted(cells.items())}, "all": cell_summary(rows),
-            "misses": [r["id"] for r in rows if not r["rank"] or r["rank"] > 5]}
+            "misses": [r["id"] for r in rows if not r["rank"] or r["rank"] > 5],
+            "unscorable": {r["id"]: r["unscorable"] for r in rows if r.get("unscorable")}}
 
 
 def run(engines, cases_file=CASES):
@@ -190,13 +248,14 @@ def run(engines, cases_file=CASES):
         sources_file = os.path.join(tmp, "sources.json")
         with open(sources_file, "w") as f:
             json.dump({"sources": sources}, f)
-        scored = []
+        unscorable = {}
         for c in cases:
             gone = [e["path"] for e in c["expect"] if not os.path.isfile(os.path.join(corpus, e["path"]))]
-            if gone:
-                print(f"case {c['id']}: {', '.join(gone)} is not in the corpus, so the case is not scored")
-            else:
-                scored.append(c)
+            if len(gone) == len(c["expect"]):
+                unscorable[c["id"]] = f"{', '.join(gone)} is not in the corpus"
+                print(f"case {c['id']}: {unscorable[c['id']]}, so it cannot be scored: it counts as a miss and fails --check")
+            elif gone:
+                print(f"case {c['id']}: {', '.join(gone)} is not in the corpus, so it is scored against the rest of its expect")
         ck = kb.ck_binary()
         if ck and any(e.startswith("kb:") and e != "kb:regex" for e in engines):
             kb.index(sources, ck, io.StringIO())
@@ -204,12 +263,16 @@ def run(engines, cases_file=CASES):
         for spec_name in engines:
             go = engine_runner(spec_name, sources_file, sources)
             rows = []
-            for c in scored:
+            for c in cases:
+                about = {"space": c["space"], "caller": c["caller"], "class": c["class"], "id": c["id"]}
+                if c["id"] in unscorable:
+                    rows.append({"rank": None, "anchored": None, "mustNot_violated": False, "ms": None,
+                                 "unscorable": unscorable[c["id"]], **about})
+                    continue
+                live = {**c, "expect": [e for e in c["expect"] if os.path.isfile(os.path.join(corpus, e["path"]))]}
                 t0 = time.perf_counter()
                 hits = go(c["q"], c["scope"])
-                rows.append({**score_case(c, hits, prefix, corpus),
-                             "ms": (time.perf_counter() - t0) * 1000, "space": c["space"], "caller": c["caller"],
-                             "class": c["class"], "id": c["id"]})
+                rows.append({**score_case(live, hits, prefix, corpus), "ms": (time.perf_counter() - t0) * 1000, **about})
             results[spec_name] = rows
         return results
     finally:
@@ -295,6 +358,9 @@ def main(argv=None):
     if not kb.ck_binary():
         engines = [e for e in engines if not e.startswith("kb:") or e == "kb:regex"] or ["kb:regex"]
         print("ck not found: only regex runs", file=sys.stderr)
+    if a.check and base and engines[0] not in base.get("engines", {}):
+        raise SystemExit(f"{baseline} has no baseline for {engines[0]}, only for {', '.join(base.get('engines') or {}) or 'no engine'}: "
+                         f"run --write-baseline --engine {engines[0]} first, or check one of those")
     rows = run(engines, a.cases)
     results = {e: {**group(r, "cell"), "ranks": ranks_of(r)} for e, r in rows.items()}
     print_table(results)
@@ -316,6 +382,8 @@ def main(argv=None):
         out = base or {"default": "kb:auto", "engines": {}}
         for e, r in results.items():
             out["engines"][e] = {k: {m: v[m] for m in ("hit5", "hit1", "hit3", "mrr")} for k, v in r["cells"].items()}
+        if out["default"] not in out["engines"]:
+            out["default"] = next(iter(results))
         out["recorded"] = time.strftime("%Y-%m-%d")
         with open(baseline, "w") as f:
             json.dump(out, f, indent=1)
@@ -325,7 +393,7 @@ def main(argv=None):
             raise SystemExit(f"no baseline at {baseline} yet: run with --write-baseline first")
         want = base["engines"][engines[0]]
         got = results[engines[0]]["cells"]
-        drops = []
+        drops = [f"case {i}: {why}" for i, why in results[engines[0]]["unscorable"].items()]
         for k, stored in want.items():
             if k not in got:
                 drops.append(f"{k}: not measured")

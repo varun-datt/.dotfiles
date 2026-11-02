@@ -86,9 +86,10 @@ below, from the skill's folder in the chezmoi source, `$(chezmoi source-path)/do
   freight company); their mix copies measured real usage. Never add real content to them.
 - `python3 -B scripts/eval.py --cases FILE [--check]` scores another case file the same way, against
   its own baseline beside it (`FILE` with `.baseline.json`); `--write-baseline` records hit@1, hit@3,
-  hit@5 and MRR per cell. The file names its corpus: a folder, or a git repository at a pinned commit.
-  A case whose expected file is not in the corpus is reported and not scored, so its cell falls short
-  under `--check`. `scripts/fixtures/amc-probe-cases.json` holds AMC's 30 probe questions on AMC's own
+  hit@5 and MRR per cell, and keeps a default engine it measured. The file names its corpus: a folder,
+  or a git repository at a pinned commit. A record the script cannot use is refused with its file and
+  line. An expected file no longer in the corpus is reported; a case left with none counts as a miss
+  and fails `--check` by its id. `scripts/fixtures/amc-probe-cases.json` holds AMC's 30 probe questions on AMC's own
   repository, the one real file in `fixtures/`: questions and paths only, no content and nothing from
   work. They picked the title boost, so they guard against regressions and never prove a gain; run
   them where AMC's repository is checked out at `~/sandbox/personal/agent-mission-control`.
