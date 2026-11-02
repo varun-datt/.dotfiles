@@ -114,6 +114,10 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   -> trial merge -> merge -> gates on main -> restart owner's instance -> records
 ```
 
+- **Only judgement wakes the chat.** Queue each item as a [pipeline](#queue-runner): the runner prepares and
+  launches the review, the fix round and the re-check itself, and stops at two suspend points, ruling the
+  review's findings and merging, because only those need judgement. The chat waits for the next one with
+  `runqueue.py wait`; a failed step also stops the pipeline and waits on the chat.
 - **The blocking rule** ([references/rubric.md](references/rubric.md), owner, 2026-10-30): the
   reviewer grades every finding by likelihood and impact; Blocker and Major block (I1 at L1–L2; I2
   at L1–L2; I3 at L1). Minor goes to debt: one line on the repository's `docs/tech-debt.md`.
@@ -252,7 +256,33 @@ every script in the folder.)
   `|` or `$(...)` loses the exemption), or it carries `--unrouted-reason "<text>"`, which is stored with the item.
   A false refusal is acceptable; pass the reason or drop the extra commands.
 - **After each merge,** call `runqueue.py done <id>`. Items that wait on it become ready.
-- **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done.
+- **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done; a pipeline item also
+  names its step and what it waits on (a running round, the chat's done file, or a failure with its exit code).
+- **Pipelines: queue the whole item once** (owner, 2026-11-02, after the chat cost 7,105 of a run's 22,454 credits
+  re-reading its context at every round's end):
+  `runqueue.py add <id> --pipeline build,review,suspend:rulings,fix,recheck,suspend:merge --worktree <wt>
+  [--brief <prompt>] [--route-args "<route.py run options>"] [--review-args "<review.sh options>"]`. The runner
+  launches each step when the one before exits 0: build and fix through `route.py run` (rounds `<id>` and
+  `<id>-fix1`), review and re-check through `review.sh` (`<id>-review`, `<id>-rereview`), after
+  `scripts/reviewprep.py` writes `REVIEW-DIFF.patch`, `REVIEW-REPORT.md` and the filled prompt (risk blocks from
+  the brief's RISK line; the re-check's findings from the fix brief's numbered list). Reviews take no slot. The
+  diff starts at the HEAD the build (or fix) step had at its first launch, so a retry does not narrow it;
+  `<id>.reviewbase` overrides it after a catch-up with main.
+  - **Suspend points** are the two steps that need judgement: `suspend:rulings` (accept or reject each finding)
+    and `suspend:merge`. The item waits on the chat, the idle alert names it, and it resumes when
+    `<run>/<id>.<name>.done` exists. For rulings, write `<id>-fix1.body.md` (or the whole
+    `<id>-fix1.prompt.md`; otherwise the build's prompt with its body swapped is used) and then
+    `<id>.rulings.done`; write `none` in it to skip the fix and re-check when nothing blocks. Writing
+    `<id>.merge.done` after the merge marks the item done. `add` refuses a done file left from before.
+  - **A failed step stops the pipeline**: a non-zero exit (3 capped, 4 errored, 5 brief refused, 12 load,
+    124 timed out) or a prep failure (exit 2: no base, an empty diff, no report or findings) waits on the chat
+    with its reason. `runqueue.py retry <id>` relaunches it; `retry <id> --passed` marks it passed after the
+    chat finished it by hand (a resume round). A further fix round is never automatic.
+  - **Restarts are safe:** a step that started is never relaunched; its exit code is kept in
+    `<run>/<round>.queue-exit`, and one that vanished without it shows `failed ?`.
+  - **Wait in one blocking call:** `runqueue.py wait [--max-min 30]` returns when an item newly needs the chat
+    (a suspend, a failed step, a plain item that exited), printing one line each, and exits 1 on timeout.
+    Run it in a foreground terminal; it prints a tick each minute.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
   line to `ALERT.log`, once for each new item waiting: it does not repeat while the same items
