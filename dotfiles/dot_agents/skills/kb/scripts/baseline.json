@@ -4,229 +4,337 @@
   "kb:auto": {
    "product/agent": {
     "hit5": 14,
-    "hit1": 8
+    "hit1": 8,
+    "hit3": 14,
+    "mrr": 0.81
    },
    "product/palette": {
     "hit5": 4,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 3,
+    "mrr": 0.58
    },
    "product/request": {
     "hit5": 6,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 3,
+    "mrr": 0.48
    },
    "wiki/agent": {
     "hit5": 4,
-    "hit1": 3
+    "hit1": 3,
+    "hit3": 4,
+    "mrr": 0.88
    },
    "wiki/palette": {
     "hit5": 2,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 2,
+    "mrr": 1.0
    },
    "wiki/request": {
     "hit5": 3,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 3,
+    "mrr": 0.37
    },
    "work/agent": {
     "hit5": 9,
-    "hit1": 8
+    "hit1": 8,
+    "hit3": 9,
+    "mrr": 0.87
    },
    "work/palette": {
     "hit5": 14,
-    "hit1": 8
+    "hit1": 8,
+    "hit3": 15,
+    "mrr": 0.71
    },
    "work/request": {
     "hit5": 8,
-    "hit1": 3
+    "hit1": 3,
+    "hit3": 7,
+    "mrr": 0.5
    }
   },
   "kb:fused": {
    "product/agent": {
     "hit5": 14,
-    "hit1": 8
+    "hit1": 8,
+    "hit3": 14,
+    "mrr": 0.81
    },
    "product/palette": {
     "hit5": 5,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 4,
+    "mrr": 0.65
    },
    "product/request": {
     "hit5": 6,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 3,
+    "mrr": 0.48
    },
    "wiki/agent": {
     "hit5": 4,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 4,
+    "mrr": 0.75
    },
    "wiki/palette": {
     "hit5": 2,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 2,
+    "mrr": 1.0
    },
    "wiki/request": {
     "hit5": 3,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 3,
+    "mrr": 0.37
    },
    "work/agent": {
     "hit5": 9,
-    "hit1": 8
+    "hit1": 8,
+    "hit3": 9,
+    "mrr": 0.87
    },
    "work/palette": {
     "hit5": 13,
-    "hit1": 10
+    "hit1": 10,
+    "hit3": 15,
+    "mrr": 0.71
    },
    "work/request": {
     "hit5": 8,
-    "hit1": 3
+    "hit1": 3,
+    "hit3": 7,
+    "mrr": 0.5
    }
   },
   "kb:regex": {
    "product/agent": {
     "hit5": 14,
-    "hit1": 8
+    "hit1": 8,
+    "hit3": 14,
+    "mrr": 0.8
    },
    "product/palette": {
     "hit5": 4,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 4,
+    "mrr": 0.61
    },
    "product/request": {
     "hit5": 0,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 0,
+    "mrr": 0.0
    },
    "wiki/agent": {
     "hit5": 4,
-    "hit1": 3
+    "hit1": 3,
+    "hit3": 4,
+    "mrr": 0.88
    },
    "wiki/palette": {
     "hit5": 1,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 1,
+    "mrr": 0.5
    },
    "wiki/request": {
     "hit5": 0,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 0,
+    "mrr": 0.0
    },
    "work/agent": {
     "hit5": 9,
-    "hit1": 8
+    "hit1": 8,
+    "hit3": 9,
+    "mrr": 0.87
    },
    "work/palette": {
     "hit5": 14,
-    "hit1": 11
+    "hit1": 11,
+    "hit3": 14,
+    "mrr": 0.7
    },
    "work/request": {
     "hit5": 0,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 0,
+    "mrr": 0.0
    }
   },
   "kb:lex": {
    "product/agent": {
     "hit5": 9,
-    "hit1": 6
+    "hit1": 6,
+    "hit3": 9,
+    "mrr": 0.57
    },
    "product/palette": {
     "hit5": 4,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 4,
+    "mrr": 0.57
    },
    "product/request": {
     "hit5": 4,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 3,
+    "mrr": 0.36
    },
    "wiki/agent": {
     "hit5": 2,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 2,
+    "mrr": 0.5
    },
    "wiki/palette": {
     "hit5": 1,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 2,
+    "mrr": 0.67
    },
    "wiki/request": {
     "hit5": 2,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 2,
+    "mrr": 0.26
    },
    "work/agent": {
     "hit5": 6,
-    "hit1": 5
+    "hit1": 5,
+    "hit3": 6,
+    "mrr": 0.55
    },
    "work/palette": {
     "hit5": 15,
-    "hit1": 6
+    "hit1": 6,
+    "hit3": 12,
+    "mrr": 0.59
    },
    "work/request": {
     "hit5": 7,
-    "hit1": 3
+    "hit1": 3,
+    "hit3": 6,
+    "mrr": 0.47
    }
   },
   "kb:sem": {
    "product/agent": {
     "hit5": 14,
-    "hit1": 9
+    "hit1": 9,
+    "hit3": 13,
+    "mrr": 0.84
    },
    "product/palette": {
     "hit5": 3,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 5,
+    "mrr": 0.87
    },
    "product/request": {
     "hit5": 6,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 3,
+    "mrr": 0.48
    },
    "wiki/agent": {
     "hit5": 3,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 2,
+    "mrr": 0.47
    },
    "wiki/palette": {
     "hit5": 2,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 2,
+    "mrr": 1.0
    },
    "wiki/request": {
     "hit5": 3,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 3,
+    "mrr": 0.37
    },
    "work/agent": {
     "hit5": 8,
-    "hit1": 5
+    "hit1": 5,
+    "hit3": 7,
+    "mrr": 0.62
    },
    "work/palette": {
     "hit5": 6,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 9,
+    "mrr": 0.39
    },
    "work/request": {
     "hit5": 8,
-    "hit1": 3
+    "hit1": 3,
+    "hit3": 7,
+    "mrr": 0.5
    }
   },
   "kb:hybrid": {
    "product/agent": {
     "hit5": 14,
-    "hit1": 11
+    "hit1": 11,
+    "hit3": 13,
+    "mrr": 0.86
    },
    "product/palette": {
     "hit5": 3,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 4,
+    "mrr": 0.84
    },
    "product/request": {
     "hit5": 6,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 5,
+    "mrr": 0.51
    },
    "wiki/agent": {
     "hit5": 4,
-    "hit1": 2
+    "hit1": 2,
+    "hit3": 4,
+    "mrr": 0.88
    },
    "wiki/palette": {
     "hit5": 2,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 2,
+    "mrr": 1.0
    },
    "wiki/request": {
     "hit5": 3,
-    "hit1": 1
+    "hit1": 1,
+    "hit3": 3,
+    "mrr": 0.42
    },
    "work/agent": {
     "hit5": 9,
-    "hit1": 7
+    "hit1": 7,
+    "hit3": 9,
+    "mrr": 0.83
    },
    "work/palette": {
     "hit5": 10,
-    "hit1": 0
+    "hit1": 0,
+    "hit3": 11,
+    "mrr": 0.61
    },
    "work/request": {
     "hit5": 7,
-    "hit1": 5
+    "hit1": 5,
+    "hit3": 7,
+    "mrr": 0.62
    }
   }
  },
