@@ -190,6 +190,7 @@ class QueueTest(unittest.TestCase):
 
 
 FAKE_ROUTE = r'''import json, os, subprocess, sys, time
+time.sleep(float(os.environ.get('OW_FAKE_DELAY', '0')))
 a = sys.argv[1:]
 rnd, kind = a[1], a[a.index('--kind') + 1]
 wt, rd = a[a.index('--worktree') + 1], a[a.index('--run') + 1]
@@ -201,6 +202,8 @@ with open(os.path.join(rd, 'calls.log'), 'a') as f:
 head = subprocess.run(['git', '-C', wt, 'rev-parse', 'HEAD'], capture_output=True, text=True).stdout
 open(os.path.join(rd, rnd + '.base'), 'w').write(head)
 time.sleep(float(opt('sleep', '0')))
+while os.path.exists(os.path.join(rd, rnd + '.hold')):
+    time.sleep(0.02)
 if kind in ('build', 'fix') and not os.path.exists(os.path.join(rd, rnd + '.nocommit')):
     open(os.path.join(wt, rnd + '.txt'), 'w').write(f'{rnd} {time.time()}')
     subprocess.run(['git', '-C', wt, 'add', rnd + '.txt'])
@@ -215,10 +218,12 @@ sys.exit(int(opt('fake-exit', '0')))
 '''
 FAKE_REVIEW = r'''#!/usr/bin/env bash
 name="$1"; wt="$2"; rd="$OW_RUN_DIR"
+sleep "${OW_FAKE_DELAY:-0}"
 echo "$name review $(python3 -c 'import time; print(time.time())') $*" >> "$rd/calls.log"
 [ -f "$rd/$name.md" ] || exit 2
 cp "$wt/REVIEW-DIFF.patch" "$rd/$name.seen-diff"
 [ -f "$rd/$name.sleep" ] && sleep "$(cat "$rd/$name.sleep")"
+while [ -f "$rd/$name.hold" ]; do sleep 0.02; done
 echo "$name end $(python3 -c 'import time; print(time.time())')" >> "$rd/calls.log"
 [ -f "$rd/$name.fake-exit" ] && exit "$(cat "$rd/$name.fake-exit")"
 exit 0
@@ -388,15 +393,16 @@ class PipelineTest(unittest.TestCase):
     def test_reviews_do_not_take_a_slot_so_two_items_interleave(self):
         self.add('a')
         self.add('b')
-        for i in ('a', 'b'):
-            self.write(f'{i}.sleep', '0.4')
-            self.write(f'{i}-review.sleep', '1')
+        self.write('a-review.hold', '')
         t = self.start(slots=1)
-        self.at('a', 'suspend:rulings')
-        self.at('b', 'suspend:rulings')
+        self.assertTrue(wait_until(lambda: 'b' in self.launched()), self.calls())
+        self.assertEqual(self.step('a'), ('review', 'running'))
+        self.assertNotIn(['a-review', 'end'], [c[:2] for c in self.calls()])
         when = {(c[0], c[1] == 'end'): float(c[2]) for c in self.calls()}
         self.assertGreaterEqual(when[('b', False)], when[('a', True)])
-        self.assertLess(when[('b', False)], when[('a-review', True)])
+        os.remove(os.path.join(self.rd, 'a-review.hold'))
+        self.at('a', 'suspend:rulings')
+        self.at('b', 'suspend:rulings')
         for i in ('a', 'b'):
             self.write(f'{i}.rulings.done', 'none')
             self.write(f'{i}.merge.done', '')
@@ -420,6 +426,74 @@ class PipelineTest(unittest.TestCase):
         self.write('a.merge.done', '')
         t.join(5)
         self.assertEqual(self.launched(), ['a', 'a-review'])
+
+    def test_a_round_launched_just_before_a_crash_is_found_running_and_never_relaunched(self):
+        import subprocess
+        self.add('a')
+        self.write('a.hold', '')
+        real = subprocess.Popen
+
+        class Crash(BaseException):
+            pass
+
+        def popen(args, *a, **kw):
+            p = real(args, *a, **kw)
+            if args[:3] == ['/bin/sh', '-c', q.WRAP]:
+                raise Crash
+            return p
+        with mock.patch.object(q.subprocess, 'Popen', popen), mock.patch('threading.excepthook'):
+            t = self.start()
+            t.join(5)
+        self.assertFalse(t.is_alive())
+        s = self.items()['a']['pipeline'][0]
+        self.assertIsNotNone(s['start'])
+        self.assertIsNone(s['pid'])
+        self.assertTrue(wait_until(lambda: 'a' in self.launched()), self.calls())
+        if os.path.exists(os.path.join(self.rd, 'a.queue-pid')):
+            os.remove(os.path.join(self.rd, 'a.queue-pid'))
+        ev = threading.Event()
+        t = self.start(stop=ev)
+        self.assertTrue(wait_until(lambda: self.items()['a']['pipeline'][0]['pid'] is not None), self.items())
+        self.assertEqual(self.step('a'), ('build', 'running'))
+        self.stop(t, ev)
+        qd = q.load(self.rd)
+        qd['items'][0]['pipeline'][0].update(end=time.time(), exit=None, pid=None)
+        q.save(self.rd, qd)
+        self.assertEqual(self.step('a'), ('build', 'failed ?'))
+        with mock.patch('sys.stderr', new_callable=io.StringIO) as err:
+            self.assertEqual(self.cli('retry', 'a'), 2)
+            self.assertEqual(self.cli('retry', 'a', '--passed'), 2)
+        self.assertIn('a may still run', err.getvalue())
+        os.remove(os.path.join(self.rd, 'a.hold'))
+        self.assertTrue(wait_until(lambda: os.path.exists(os.path.join(self.rd, 'a.queue-exit'))))
+        self.assertTrue(wait_until(lambda: q.round_pid(self.rd, 'a') is None))
+        self.assertEqual(self.cli('retry', 'a', '--passed'), 0)
+        t = self.start()
+        self.at('a', 'suspend:rulings')
+        self.assertEqual(self.launched(), ['a', 'a-review'])
+        self.cli('done', 'a')
+        t.join(5)
+
+    def test_a_ready_fix_takes_a_freed_slot_before_any_new_build(self):
+        self.add('a')
+        ev = threading.Event()
+        t = self.start(slots=1, stop=ev)
+        self.at('a', 'suspend:rulings')
+        self.stop(t, ev)
+        self.add('b', FULL, '--priority', '9')
+        self.write('a-fix1.body.md', FIX_BODY.format(id='a'))
+        self.write('a.rulings.done', 'fix 1 and 2\n')
+        once = threading.Event()
+        once.set()
+        q.run(self.rd, slots=1, poll=0.05, idle_alert=0, stop=once)
+        self.assertEqual(self.step('a'), ('fix', 'running'))
+        self.assertEqual(self.step('b'), ('build', 'ready'))
+        t = self.start(slots=1)
+        self.at('a', 'suspend:merge')
+        self.at('b', 'suspend:rulings')
+        for i in ('a', 'b'):
+            self.cli('done', i)
+        t.join(5)
 
     def test_a_step_gone_without_an_exit_code_waits_on_the_chat(self):
         self.add('a')
@@ -471,12 +545,13 @@ class PipelineTest(unittest.TestCase):
 
     def test_status_names_the_step_and_what_it_waits_on(self):
         self.add('a')
-        self.write('a.sleep', '0.6')
+        self.write('a.hold', '')
         t = self.start()
         self.at('a', 'build', 'running')
         with mock.patch('sys.stdout', new_callable=io.StringIO) as out:
             self.cli('status')
         self.assertRegex(out.getvalue(), r'^a  build \(1/6\)  running a  \d+m$')
+        os.remove(os.path.join(self.rd, 'a.hold'))
         self.at('a', 'suspend:rulings')
         with mock.patch('sys.stdout', new_callable=io.StringIO) as out:
             self.cli('status')

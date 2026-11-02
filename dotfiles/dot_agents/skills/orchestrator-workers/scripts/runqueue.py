@@ -262,6 +262,11 @@ def takes_slot(it):
     return it['slot'] and ('pipeline' not in it or (current(it) or {}).get('name') in ('build', 'fix'))
 
 
+def continues(it):
+    """True for a pipeline item past its first step: finishing it comes before starting another."""
+    return 'pipeline' in it and current(it) is not it['pipeline'][0]
+
+
 def needs(items):
     """(key, line, since) for each item waiting on the chat: a plain item that exited, or a pipeline item
     suspended or stopped by a failed step. The key changes when the item reaches a new such point."""
@@ -320,7 +325,32 @@ def waiting_on_chat(items, since):
     return out
 
 
-WRAP = '"$@" </dev/null; rc=$?; echo $rc > "$0.tmp" && mv "$0.tmp" "$0"; exit $rc'
+WRAP = 'echo $$ > "${0%exit}pid"; "$@" </dev/null; rc=$?; echo $rc > "$0.tmp" && mv "$0.tmp" "$0"; exit $rc'
+
+
+def pid_file(rd, rnd):
+    return os.path.join(rd, rnd + '.queue-pid')
+
+
+def round_pid(rd, rnd, pid=None):
+    """The pid of the round's launcher while it runs, found by its saved pid, the pid file it writes, or its command
+    line, which names <round>.queue-exit (a stop between launch and save leaves neither); None when it does not run."""
+    marker = ' ' + exit_file(rd, rnd) + ' '
+    try:
+        out = subprocess.run(['ps', '-axww', '-o', 'pid=,command='], capture_output=True, text=True, timeout=30,
+                             stdin=subprocess.DEVNULL).stdout
+        cmds = {int(p): c for p, c in (ln.split(None, 1) for ln in out.splitlines() if len(ln.split(None, 1)) == 2)
+                if p.isdigit()}
+    except (OSError, subprocess.SubprocessError):
+        cmds = {}
+    known = [pid]
+    with contextlib.suppress(OSError, ValueError):
+        with open(pid_file(rd, rnd)) as f:
+            known.append(int(f.read()))
+    if not cmds:
+        return next((p for p in known if p and alive(p)), None)
+    ours = [p for p, c in cmds.items() if c.startswith('/bin/sh -c ') and marker in c + ' ']
+    return next((p for p in known if p in ours), None) or next(iter(ours), None)
 
 
 def fix_prompt(rd, it):
@@ -363,8 +393,9 @@ def step_argv(rd, it, s):
 def launch_step(rd, q, it, s):
     """Start the item's current step; a prep failure ends it at once with exit 2 and the reason."""
     rnd, now = round_name(it, s['name']), time.time()
-    with contextlib.suppress(FileNotFoundError):
-        os.remove(exit_file(rd, rnd))
+    for path in (exit_file(rd, rnd), pid_file(rd, rnd)):
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(path)
     try:
         if s['name'] in ('build', 'fix') and not s.get('head'):
             s['head'] = reviewprep.git(it['worktree'], 'rev-parse', 'HEAD').strip()
@@ -383,7 +414,16 @@ def launch_step(rd, q, it, s):
         s.update(end=time.time(), exit=127, reason=str(ex)[:300])
         return None
     s['pid'] = p.pid
+    save(rd, q)
     return p
+
+
+def exit_code(rd, rnd):
+    try:
+        with open(exit_file(rd, rnd)) as f:
+            return int(f.read().strip())
+    except (OSError, ValueError):
+        return None
 
 
 def poll_step(rd, it, s, procs, now):
@@ -395,13 +435,14 @@ def poll_step(rd, it, s, procs, now):
             return
         procs.pop(rnd)
     else:
-        try:
-            with open(exit_file(rd, rnd)) as f:
-                rc = int(f.read().strip())
-        except (OSError, ValueError):
-            if s.get('pid') and alive(s['pid']):
+        rc = exit_code(rd, rnd)
+        if rc is None:
+            live = round_pid(rd, rnd, s.get('pid'))
+            if live:
+                s['pid'] = live
                 return
-            rc = None
+            # It may have written its exit code and ended between the two checks.
+            rc = exit_code(rd, rnd)
     s['end'], s['exit'] = now, rc
 
 
@@ -462,7 +503,7 @@ def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
                     advance(rd, it, by_id, now)
             busy = sum(1 for it in items if takes_slot(it) and state(it, by_id) == 'running')
             ready = sorted((i for i, it in enumerate(items) if state(it, by_id) == 'ready'),
-                           key=lambda i: (-items[i]['priority'], i))
+                           key=lambda i: (not continues(items[i]), -items[i]['priority'], i))
             for i in ready:
                 it = items[i]
                 if takes_slot(it) and busy >= slots:
@@ -611,6 +652,11 @@ def main(argv=None):
                 print(f'queue: {args.id} is not a pipeline item stopped by a failed step', file=sys.stderr)
                 return 2
             s = current(it)
+            live = round_pid(rd, round_name(it, s['name']), s.get('pid'))
+            if live:
+                print(f"queue: {round_name(it, s['name'])} may still run (pid {live}); stop it or let it end first",
+                      file=sys.stderr)
+                return 2
             if args.report and (not args.passed or not os.path.isfile(os.path.join(rd, args.report + '.jsonl'))):
                 print(f'queue: --report needs --passed and an existing {args.report}.jsonl', file=sys.stderr)
                 return 2
