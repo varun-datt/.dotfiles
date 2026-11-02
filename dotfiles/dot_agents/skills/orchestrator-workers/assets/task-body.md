@@ -7,7 +7,7 @@ TASK: {{ITEM_TITLE}} (branch `{{BRANCH}}`, worktree `{{WORKTREE}}`, based on `{{
 GOAL
 {{GOAL_IN_TWO_OR_THREE_SENTENCES}}
 
-MUST (each is checked by the reviewer; each is one testable statement, "WHEN <event or state>, <the part> SHALL <response>", with the cases that prove it)
+MUST (each is checked by the reviewer and by `reqgate.py`, which reads the report's REQUIREMENTS MAP; each is one testable statement, "WHEN <event or state>, <the part> SHALL <response>", with the cases that prove it)
 1. WHEN {{EVENT_OR_STATE}}, {{PART}} SHALL {{RESPONSE}}. Cases: {{CASES_FOR_MUST_1}}.
 2. {{MUST_2}}
 

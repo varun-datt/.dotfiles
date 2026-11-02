@@ -355,5 +355,26 @@ class ParseMapTest(unittest.TestCase):
             self.assertEqual(0, main(["check", "--help"]))
 
 
+class TemplateFormTest(unittest.TestCase):
+    def test_the_preamble_asks_for_the_map_in_the_form_the_gate_reads(self):
+        skill = os.path.dirname(HERE)
+        with open(os.path.join(skill, "assets", "preamble-worker.md"), encoding="utf-8") as f:
+            text = f.read()
+        form = "`- MUST <n>: <test file path>::<test name> [FAIL_TO_PASS|PASS_TO_PASS]`"
+        self.assertIn("REQUIREMENTS MAP", text)
+        self.assertIn(form, text)
+        self.assertIn("`- MUST <n>: none (<why>)`", text)
+        for kind in ("FAIL_TO_PASS", "PASS_TO_PASS"):
+            line = form.strip("`").replace("<n>", "3").replace("<test file path>", "a/test_x.py") \
+                .replace("<test name>", "XTest.test_y").replace("FAIL_TO_PASS|PASS_TO_PASS", kind)
+            entries, problems, _ = parse_map(line)
+            self.assertEqual(([], "a/test_x.py", "XTest.test_y", kind),
+                             (problems, entries[0]["file"], entries[0]["name"], entries[0]["kind"]))
+        with open(os.path.join(skill, "SKILL.md"), encoding="utf-8") as f:
+            skill_text = f.read()
+        for phrase in ("reqgate.py check", "--warn", "phase 4", "what the author did not imagine"):
+            self.assertIn(phrase, skill_text)
+
+
 if __name__ == "__main__":
     unittest.main()

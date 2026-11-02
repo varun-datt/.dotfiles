@@ -303,6 +303,15 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
   - **invalid:** a crash, compile error or timeout, which proves nothing.
 - **Mutation score:** killed out of valid controls.
 - **Stale controls:** controls whose target code no longer exists.
+- **The requirement gate** (`scripts/reqgate.py`) checks each MUST has a test that can fail, from
+  the report's REQUIREMENTS MAP in SWE-bench's two lists: a FAIL_TO_PASS test must exist, pass at
+  head and fail on the base commit on an assertion (with only the branch's test files applied; a
+  load, import or compile failure fails the gate); a PASS_TO_PASS test must pass at head and, our
+  extension to SWE-bench, kill at least one Stryker mutant on the changed lines it covers (Stryker
+  on TypeScript only; Python's are reported "not checked: no mutant runner"). A `none` line is
+  counted and reported, not failed; whether it should fail is the owner's call. It cannot catch
+  what the author did not imagine: another caller, event order, a boundary value. It catches the
+  test that cannot fail, so the review keeps the SHALLs as context.
 
 ## Merge discipline
 
@@ -314,6 +323,12 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
   branch.
 - **The merge folder is reserved for gate runs.** Never check out anything else there while a gate
   runs.
+- **Run the requirement gate** before the merge, from the skill's scripts:
+  `python3 -B reqgate.py check --repo <repo> --base <base sha> --head <branch> --brief <item>.prompt.md
+  --report <item>.report.md --json <run>/<item>.reqgate.json --warn`. It tests in temporary detached
+  worktrees and never touches the checkout. It runs with `--warn` (reports, exits 0) until the
+  owner approves it after phase 4 of the review record; then drop `--warn`, and exit 1 blocks the
+  merge (2 is a usage or setup error).
 - **Workers may run while a merge gate runs, at most 2 of them** (owner, 2026-10-29: merging one
   item at a time left the slots idle about 45 minutes; three workers plus a gate once held the
   load at 18-28 on 18 CPUs). Queue each merge gate as a slot item with a high `--priority`, so
