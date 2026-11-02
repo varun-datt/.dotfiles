@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -211,7 +212,7 @@ class PythonGateTest(GateCase):
     def test_missing_test_file_or_name_fails_the_gate(self):
         r = self.gate([1, 2], ["- MUST 1: pkg/test_gone.py::GoneTest.test_x [FAIL_TO_PASS]",
                                "- MUST 2: pkg/test_calc.py::CalcTest.test_nope [PASS_TO_PASS]"], code=1)
-        self.assertTrue(self.row(r, "FAIL_TO_PASS", "pkg/test_gone.py::GoneTest.test_x")["reason"].startswith("missing at head"))
+        self.assertIn("pkg/test_gone.py is not tracked at head", self.row(r, "FAIL_TO_PASS", "pkg/test_gone.py::GoneTest.test_x")["reason"])
         self.assertTrue(self.row(r, "PASS_TO_PASS", "pkg/test_calc.py::CalcTest.test_nope")["reason"].startswith("missing at head"))
 
     def test_test_failing_at_head_fails_the_gate(self):
@@ -340,6 +341,44 @@ class NoSourceChangeTest(GateCase):
         self.assertEqual("no changed source lines: no mutants run", r["PASS_TO_PASS"][0]["reason"])
         self.assertEqual(0, r["mutants_run"])
         self.assertEqual([], self.logged("stryker"))
+
+
+class PathGateTest(GateCase):
+    base_files = {"pkg/calc.py": CALC_BASE, "pkg/test_calc.py": TEST_BASE}
+    head_files = {"pkg/calc.py": CALC_HEAD, "pkg/test_calc.py": TEST_HEAD}
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        outside = os.path.join(cls.root, "test_outside.py")
+        with open(outside, "w", encoding="utf-8") as f:
+            f.write(TEST_HEAD)
+        git(cls.repo, "checkout", "-q", "ow/x")
+        os.symlink(outside, os.path.join(cls.repo, "pkg", "test_link.py"))
+        git(cls.repo, "add", "pkg/test_link.py")
+        git(cls.repo, "commit", "-q", "-m", "link")
+        git(cls.repo, "checkout", "-q", "main")
+        os.makedirs(os.path.join(cls.repo, ".git", "info"), exist_ok=True)
+        with open(os.path.join(cls.repo, ".git", "info", "exclude"), "a", encoding="utf-8") as f:
+            f.write("pkg/test_untracked.py\n")
+        with open(os.path.join(cls.repo, "pkg", "test_untracked.py"), "w", encoding="utf-8") as f:
+            f.write(TEST_HEAD)
+
+    def test_paths_outside_the_head_tree_fail_before_anything_runs(self):
+        outside = os.path.join(self.root, "test_outside.py")
+        lines = {f"{outside}::CalcTest.test_clamp_negative": "is absolute",
+                 "../test_outside.py::CalcTest.test_clamp_negative": "escapes the repository",
+                 "pkg/../../test_outside.py::CalcTest.test_clamp_negative": "escapes the repository",
+                 "pkg/test_link.py::CalcTest.test_clamp_negative": "is a symlink",
+                 "pkg/test_untracked.py::CalcTest.test_clamp_negative": "is not tracked at head"}
+        ran = []
+        with unittest.mock.patch.dict(reqgate.RUNNERS, unittest=lambda *a, **k: ran.append(a) or ("passed", "")):
+            r = self.gate([1], [f"- MUST 1: {t} [FAIL_TO_PASS]" for t in lines], code=1)
+        self.assertEqual([], ran)
+        for test, why in lines.items():
+            row = self.row(r, "FAIL_TO_PASS", test)
+            self.assertEqual("fail", row["status"])
+            self.assertIn(why, row["reason"])
 
 
 class ParseMapTest(unittest.TestCase):

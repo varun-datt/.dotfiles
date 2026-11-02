@@ -14,7 +14,9 @@ FAIL_TO_PASS and PASS_TO_PASS are SWE-bench's two test lists: a test for new beh
 before the change and passes after, and a test guarding behaviour the base already had.
 
 Fails when a MUST has no line, a line names a MUST the brief lacks or cannot be read, the report
-has no map, or a named test is missing, ambiguous or does not pass at head. A FAIL_TO_PASS test is
+has no map, a mapped test path is absolute, escapes the repository, is a symlink or is not tracked at
+head (checked before anything runs), or a named test is missing, ambiguous or does not pass at head. A
+FAIL_TO_PASS test is
 run on the base commit with only the branch's test files applied and must fail there on an
 assertion; failing to load, import, compile or collect shows only that the code is absent, and
 fails the gate. Extension to SWE-bench: when the head tree has a Stryker config, a PASS_TO_PASS
@@ -114,6 +116,23 @@ def parse_map(text):
 def is_test_path(path):
     parts = path.replace("\\", "/").split("/")
     return bool(TEST_NAME.search(parts[-1])) or any(p in TEST_DIRS for p in parts[:-1])
+
+
+def path_problem(repo, head, path):
+    """Why a mapped test path cannot be trusted, or None: it must be a relative regular file tracked at head."""
+    if os.path.isabs(path) or path.startswith("~"):
+        return f"{path} is absolute: name a path inside the repository"
+    norm = os.path.normpath(path)
+    if norm == ".." or norm.startswith("../"):
+        return f"{path} escapes the repository"
+    out = git(repo, "ls-tree", head, "--", norm).split()
+    if not out:
+        return f"{path} is not tracked at head"
+    if out[0] == "120000":
+        return f"{path} is a symlink: name the file it points to"
+    if out[1] != "blob":
+        return f"{path} is not a file"
+    return None
 
 
 def changed_files(repo, base, head):
@@ -385,6 +404,11 @@ def check(args):
     problems += [f"MUST {n} has no line in the REQUIREMENTS MAP" for n in unmapped]
     tests = [e for e in entries if "file" in e and e["must"] in musts]
     nones = [e for e in entries if "none" in e and e["must"] in musts]
+    for e in tests:
+        why = path_problem(repo, head, e["file"])
+        if why:
+            e["check"], e["reason"] = "fail", why
+    runnable = [e for e in tests if "check" not in e]
     changed = changed_files(repo, base, head)
     branch_tests = [p for s, p in changed if s != "D" and is_test_path(p)]
     sources = [p for s, p in changed if s != "D" and not is_test_path(p) and p.endswith(JS_SUFFIXES)]
@@ -399,9 +423,9 @@ def check(args):
 
     mutants_run, stryker_error = 0, None
     with worktree(repo, head, node_modules) as tree:
-        for e in tests:
+        for e in runnable:
             e["head"], e["head_detail"] = run(tree, e)
-        keeps = [e for e in tests if e["kind"] == "PASS_TO_PASS"]
+        keeps = [e for e in runnable if e["kind"] == "PASS_TO_PASS"]
         mode = args.mutants if args.mutants != "auto" else ("stryker" if has_stryker(tree) else "none")
         ranges = changed_ranges(repo, base, head, sources) if keeps and mode == "stryker" else {}
         report = None
@@ -427,7 +451,7 @@ def check(args):
                     e["check"], e["reason"] = "pass", f"killed {killed} of {covered} mutants it covers"
                 else:
                     e["check"], e["reason"] = "fail", f"survived all {covered} mutants it covers on changed lines"
-    news = [e for e in tests if e["kind"] == "FAIL_TO_PASS"]
+    news = [e for e in runnable if e["kind"] == "FAIL_TO_PASS"]
     if news:
         with worktree(repo, base, node_modules) as tree:
             for p in branch_tests:
@@ -446,7 +470,7 @@ def check(args):
                     e["check"], e["reason"] = "fail", "passes on base: it cannot catch the change"
                 else:
                     e["check"], e["reason"] = "fail", f"{status} on base, not an assertion: {detail}".rstrip(": ")
-    for e in tests:
+    for e in runnable:
         if e["head"] != "passed":
             e["check"], e["reason"] = "fail", f"{e['head']} at head: {e['head_detail']}".rstrip(": ")
     failed = bool(problems) or any(e["check"] == "fail" for e in tests)
@@ -455,7 +479,7 @@ def check(args):
         "musts": musts,
         "problems": problems,
         "none": [{"must": e["must"], "why": e["none"]} for e in nones],
-        "FAIL_TO_PASS": [entry(e) for e in news],
+        "FAIL_TO_PASS": [entry(e) for e in tests if e["kind"] == "FAIL_TO_PASS"],
         "PASS_TO_PASS": [entry(e) for e in tests if e["kind"] == "PASS_TO_PASS"],
         "mutants_run": mutants_run,
         "minutes": round((time.monotonic() - started) / 60, 2),
