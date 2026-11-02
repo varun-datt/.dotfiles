@@ -63,26 +63,22 @@ REVIEW_REPORT = [
     '8. **Not checked**, and why.',
 ]
 REREVIEW_CHECKS = [
-    '1. Each finding: fixed, partly fixed or not fixed, with file:line. A finding is fixed when its failure scenario '
-    'can no longer happen; say how you know.',
-    "2. The class: the fix must cover the finding's whole class, not only the member the review named. List each member "
-    'the fix report names and the test that covers it; a member with no test, or one in the code that the report leaves '
-    'out, is not fixed. A fix that covers some members of a class is "partly fixed", and the finding stays open.',
-    '3. New problems the fix diff introduces, graded with the rubric. Look hardest at: {{NEARBY_RISKS_TO_CHECK}}. A fix '
-    'that trades one race or loss for another is a new Major.',
-    "4. Do the fix's tests fail when the fix is removed? Does an existing test now fail or flake?",
-    '5. Claims in the fix report that the diff does not support.',
+    '1. Each finding: fixed, partly fixed or not fixed, with file:line. Fixed means its scenario can no longer happen; '
+    'say how you know.',
+    "2. Each finding's test: does it check the finding's scenario, and would it fail with the fix removed? Read it; you "
+    'need not run it.',
+    '3. Harm the fix diff itself introduces: owner data lost or corrupted, a secret or private text leaking, an approval '
+    'or confinement bypassed, or a flow that no longer completes, in normal use or at an unlucky moment (Stop, restart, '
+    'reload, a failing source). Only lines this diff changes; nothing else counts here.',
 ]
 REREVIEW_REPORT = [
-    '1. The verdict as the first line: `Blocking: none`, or `N blocking`.',
-    '2. **Findings.** One line each: number, fixed / partly / not fixed, file:line, how you know, and each class member '
-    'with its test or "no test".',
-    '3. **New blocking.** For each Blocker or Major the fix introduced: `B1. [Major] AREA L1/I2 CAUSE: title`, its '
-    'class, its scenario, file:line, the reason for each grade, VERIFIED or INFERRED with what would confirm it, and a '
-    'fix in one line.',
-    '4. **New minor.** One line each.',
-    '5. **Corrections** to the fix report: one line each.',
-    '6. **Outside scope**: one line each. Then `Nits: N`.',
+    '1. The verdict as the first line: `Blocking: none`, or `N blocking` (findings not fixed or partly fixed, plus harm '
+    'the fix introduced).',
+    '2. **Findings.** One line each: number, fixed / partly / not fixed, file:line, how you know, and whether its test '
+    'would fail without the fix.',
+    '3. **New harm.** For each: `B1. [Major] AREA L1/I2 CAUSE: title`, its scenario, file:line, VERIFIED or INFERRED '
+    'with what would confirm it, and a fix in one line.',
+    '4. **Corrections** to the fix report: one line each.',
 ]
 
 
@@ -125,16 +121,45 @@ class PromptTextTest(unittest.TestCase):
         self.assertEqual(numbered(t, 'REPORT, in this order', 'Mark every claim'), REVIEW_REPORT)
         self.assertIn('\nBlocking rule ({{BLOCKING_RULE_SOURCE}}): Blocker and Major block; nothing else does.\n', t)
 
-    def test_the_rereview_checks_every_member_of_the_class(self):
-        t = visible(read('assets', 'rereview.md'))
-        for part in ('You are a read-only reviewer', '{{RUBRIC}}', '`Blocking: none`', '{{CLASS_1}}', 'whole class',
-                     'partly fixed'):
+    def test_the_rereview_checks_only_the_named_fixes_and_pauses_for_the_owner(self):
+        raw = read('assets', 'rereview.md')
+        t = visible(raw)
+        for part in ('You are a read-only reviewer', 'SHORT RE-REVIEW', '`Blocking: none`', '{{FIX_COMMITS}}',
+                     '{{FINDING_1}}', 'partly fixed'):
             self.assertIn(part, t)
-        self.assertRegex(t, r'member .*has no test|member with no test')
-        self.assertEqual(numbered(t, '\nCHECK\n', 'Out of scope'), REREVIEW_CHECKS)
+        self.assertIn("\nDo not look for other cases of each finding's kind, and do not review code the fix does not "
+                      'touch', t)
+        for hunt in ('whole class', '{{CLASS_1}}', '{{RUBRIC}}', 'member'):
+            self.assertNotIn(hunt, t)
+        self.assertEqual(numbered(t, '\nCHECK, nothing else:\n', '\nDo not look'), REREVIEW_CHECKS)
         self.assertEqual(numbered(t, 'REPORT, in this order', 'Mark every claim'), REREVIEW_REPORT)
-        self.assertIn('\nBlocking rule ({{BLOCKING_RULE_SOURCE}}): a Blocker or Major that is still open, or that the '
-                      'fix introduced, blocks; nothing else does.\n', t)
+        rule = ' '.join(raw.split('-->', 1)[0].split())
+        self.assertIn('a finding it leaves open pauses the item for the owner (owner, 2026-10-31, confirmed 2026-11-02)',
+                      rule)
+        self.assertNotIn('one more fix round', rule)
+
+    def test_no_skill_text_gives_a_finding_left_open_another_fix_round(self):
+        texts = {p: read(*p.split('/')) for p in ['SKILL.md'] + [f'references/{n}' for n in
+                                                                  sorted(os.listdir(os.path.join(SKILL, 'references')))
+                                                                  if n.endswith('.md')]}
+        for path, text in texts.items():
+            flat = ' '.join(text.split())
+            for said in ('one more fix round', 'another fix round', 'a second fix round', 'Fixes made after the re-review go'):
+                self.assertNotIn(said, flat, path)
+        lifecycle = ' '.join(read('SKILL.md').split('## Lifecycle', 1)[1].split('\n## ', 1)[0].split())
+        self.assertIn('A finding the re-review leaves open pauses the item for the owner (owner, 2026-10-31, confirmed '
+                      '2026-11-02)', lifecycle)
+
+    def test_the_critique_asks_for_each_cited_standard_s_own_names(self):
+        t = visible(read('assets', 'critique-research.md'))
+        checks = numbered(t, 'CHECK, in this order:', '{{ITEM_CHECKS_OR_DELETE}}')
+        standards = [c for c in checks if c.startswith('6. Standards')]
+        self.assertEqual(len(standards), 1, checks)
+        for part in ('field names, values and terms', 'invents its own name where the standard has one'):
+            self.assertIn(part, standards[0])
+        report = numbered(t, 'REPORT, nothing else:', 'Mark every claim')
+        self.assertIn('**Invented names**', ' '.join(report))
+        self.assertEqual([r.split('.', 1)[0] for r in report], [str(n) for n in range(1, len(report) + 1)])
 
 
 class VerdictTest(unittest.TestCase):
@@ -167,13 +192,13 @@ class ReviewShTest(unittest.TestCase):
         self.env = {**os.environ, 'PATH': bin_dir + os.pathsep + os.environ['PATH'], 'OW_RUN_DIR': self.run_dir,
                     'PYTHONDONTWRITEBYTECODE': '1', 'HOME': self.tmp}
 
-    def review(self, prompt_text, script=os.path.join(HERE, 'review.sh'), prompt_path=None):
+    def review(self, prompt_text, script=os.path.join(HERE, 'review.sh'), prompt_path=None, extra=(), under=()):
         prompt_path = prompt_path or os.path.join(self.tmp, 'my prompts', 'x review.md')
         os.makedirs(os.path.dirname(prompt_path), exist_ok=True)
         with open(prompt_path, 'w', encoding='utf-8') as f:
             f.write(prompt_text)
-        p = subprocess.run(['bash', script, '--author-model', 'gpt-6.1-sol', '--load-wait', '0', '--no-classifier',
-                            'x-review', self.wt, prompt_path],
+        p = subprocess.run([*under, 'bash', script, '--author-model', 'gpt-6.1-sol', '--load-wait', '0', '--no-classifier',
+                            *extra, 'x-review', self.wt, prompt_path],
                            capture_output=True, text=True, env=self.env, timeout=60, stdin=subprocess.DEVNULL)
         with open(prompt_path, encoding='utf-8') as f:
             self.assertEqual(f.read(), prompt_text, 'the original prompt was modified')
@@ -182,6 +207,49 @@ class ReviewShTest(unittest.TestCase):
     def launched_prompt(self):
         with open(self.args, encoding='utf-8') as f:
             return f.read().split('\0')[-2]
+
+    def add_dirs(self):
+        with open(self.args, encoding='utf-8') as f:
+            argv = f.read().split('\0')
+        return [argv[i + 1] for i, a in enumerate(argv) if a == '--add-dir']
+
+    def test_review_started_by_a_caffeinate_process_is_refused_and_nothing_launches(self):
+        under = ['bash', '-c', 'exec -a caffeinate /bin/bash -c "\\"\\$@\\"; exit \\$?" inner "$@"', 'outer']
+        p = self.review('You are a read-only reviewer. caffeinate was killed.\n', under=under)
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertIn('review.sh: refused: this launcher runs under caffeinate (pid ', p.stderr)
+        self.assertEqual(p.stderr.count('\n'), 1, p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+        self.assertEqual(os.listdir(self.run_dir), [])
+
+    def test_a_research_critique_reads_the_run_folder_and_the_project(self):
+        critique = '<!-- launch note -->\nYou are a read-only critic from a different model family.\n'
+        project = os.path.join(self.tmp, 'project repo')
+        os.makedirs(project)
+        p = self.review(critique, extra=('--project', project))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(self.add_dirs(), [self.run_dir, project])
+        self.assertNotIn('run folder only', p.stderr)
+        p = self.review(critique)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(self.add_dirs(), [self.run_dir])
+        self.assertIn('review.sh: no --project given, so the critic reads the run folder only', p.stderr)
+
+    def test_a_code_review_gets_no_run_folder_and_a_bad_project_is_refused(self):
+        p = self.review('You are a read-only reviewer.\n')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(self.add_dirs(), [])
+        os.remove(self.args)
+        p = self.review('You are a read-only critic.\n', extra=('--project', os.path.join(self.tmp, 'gone')))
+        self.assertEqual(p.returncode, 2)
+        self.assertIn('--project needs a folder', p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+
+    def test_the_critique_template_launch_line_names_the_project(self):
+        t = read('assets', 'critique-research.md')
+        self.assertIn('--project <project repository>', t)
+        self.assertIn('read-only', visible(t).split('WHAT TO READ', 1)[1].split('CHECK, in this order', 1)[0])
+        self.assertIn('run folder', visible(t).split('WHAT TO READ', 1)[1].split('CHECK, in this order', 1)[0])
 
     def test_rubric_is_filled_into_a_copy_and_launched(self):
         text = '<!-- {{RUBRIC}} is filled -->\nYou are a read-only reviewer.\n==== RUBRIC ====\n{{RUBRIC}}\n==== END ====\nTag & go \\1 /x/'

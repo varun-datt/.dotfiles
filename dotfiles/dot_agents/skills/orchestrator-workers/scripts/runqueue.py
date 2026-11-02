@@ -18,6 +18,9 @@ is refused too), unless the one program it invokes is the skill's own route.py r
 nohup, timeout, env, assignments or a `sh|bash|zsh -c '...'` whose string is only that. Any ; && || | or $(...)
 loses the exemption. A false refusal is acceptable; --unrouted-reason says why it may run anyway and is kept with
 the item. A copilot call it still cannot see is caught afterwards by `mine.py --audit`.
+`add` and `run` refuse (exit 2) under caffeinate, which this Mac kills within seconds: `add` a command that runs it
+as a program (bare, after a wrapper, in $(...) or a `sh -c` string; a quoted mention is fine), and both when started
+by a caffeinate process. `run` marks an item queued before this check with such a command "exited 2", unlaunched.
 
 `run` launches ready items (highest priority first, then in the order added) while fewer than
 --slots slot items run; --no-slot items (reviews) do not count. Each item runs in its own process
@@ -43,6 +46,10 @@ PYTHON = re.compile(r'^python[\d.]*$')
 ASSIGN = re.compile(r'^[A-Za-z_]\w*=')
 REDIR = re.compile(r'\d*(?:>>?|<)(?:&?\d+\b|&-)?(?:\s*[^\s;&|()<>\'"`]+)?')
 SCRIPT = re.compile(r'\.(?:z|ba)?sh$|\.py$|\.command$')
+WRAPPERS = {'nohup', 'env', 'timeout', 'gtimeout', 'exec', 'command', 'nice', 'time', 'sudo', 'stdbuf', 'xargs',
+            'builtin', '{', '!', 'if', 'then', 'else', 'elif', 'do', 'while', 'until'}
+VALUED = {'-s', '-k', '--signal', '--kill-after', '-u', '-n', '-C', '-P'}
+DURATION = re.compile(r'^\d+(?:\.\d+)?[smhd]?$')
 
 
 def guard(cmd, cwd=None):
@@ -71,16 +78,95 @@ def ours(tok, name, cwd, search=False):
     return os.path.isfile(p) and own(p)
 
 
+def words(cmd):
+    """The command's words, redirections dropped and ; & | ( ) and newlines as their own tokens; None when unbalanced."""
+    lex = shlex.shlex(REDIR.sub(' ', cmd.replace('\\\n', ' ')), posix=True, punctuation_chars=';&|()\n')
+    lex.whitespace, lex.whitespace_split = ' \t\r', True
+    try:
+        return list(lex)
+    except ValueError:
+        return None
+
+
+def caffeinated(cmd, depth=0):
+    """True when caffeinate is a program the command runs: first in any part between ; & | ( ) or newlines, after
+    assignments and wrappers such as nohup, env and timeout with their options, or inside $(...), backticks or the
+    string of a sh|bash|zsh -c. A quoted argument that only mentions the word is not a program."""
+    if depth > 3:
+        return False
+    if any(caffeinated(a or b, depth + 1) for a, b in re.findall(r'\$\(([^()]*)\)|`([^`]*)`', cmd)):
+        return True
+    toks = words(cmd)
+    if toks is None:
+        return bool(re.search(r'(?<![\w.-])caffeinate(?![\w.-])', cmd))
+    part = []
+    for t in toks + [';']:
+        if not (t and set(t) <= SEP):
+            part.append(t)
+            continue
+        i = 0
+        while i < len(part):
+            prog = os.path.basename(part[i])
+            if prog == 'caffeinate':
+                return True
+            if prog in WRAPPERS or ASSIGN.match(part[i]) or DURATION.match(part[i]):
+                i += 1
+            elif part[i].startswith('-'):
+                i += 2 if part[i] in VALUED else 1
+            else:
+                break
+        if i < len(part) and os.path.basename(part[i]) in SHELLS:
+            flag = next((j for j in range(i + 1, len(part) - 1)
+                         if re.match(r'^-[a-zA-Z]*c[a-zA-Z]*$', part[j])), None)
+            if flag is not None and caffeinated(part[flag + 1], depth + 1):
+                return True
+        part = []
+    return False
+
+
+def caffeinated_ancestor(ps=None):
+    """'<pid> <program>' of the nearest ancestor process whose program is caffeinate, else None; also None, with a
+    warning, when the process table cannot be read."""
+    try:
+        out = (ps or (lambda: subprocess.run(['ps', '-A', '-o', 'pid=', '-o', 'ppid=', '-o', 'comm='],
+                                             capture_output=True, text=True, stdin=subprocess.DEVNULL,
+                                             timeout=10, check=True).stdout))()
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f'warning: could not read the process table, so a caffeinate parent was not checked: {e}',
+              file=sys.stderr)
+        return None
+    table = {}
+    for line in out.splitlines():
+        f = line.split(None, 2)
+        if len(f) == 3 and f[0].isdigit() and f[1].isdigit():
+            table[int(f[0])] = (int(f[1]), f[2].strip())
+    pid, seen = os.getppid(), set()
+    while pid > 1 and pid in table and pid not in seen:
+        seen.add(pid)
+        ppid, comm = table[pid]
+        if os.path.basename(comm.split()[0] if comm.split() else comm) == 'caffeinate':
+            return f'{pid} {comm}'
+        pid = ppid
+    return None
+
+
+def caffeinate_refusal(cmd=None, ps=None):
+    """The one-line refusal when the command, or a process this one runs under, is caffeinate; else None."""
+    where = 'this command runs caffeinate' if cmd is not None and caffeinated(cmd) else None
+    if where is None:
+        hit = caffeinated_ancestor(ps)
+        where = hit and f'this launcher runs under caffeinate (pid {hit})'
+    return where and (f'refused: {where}; this Mac kills caffeinate within seconds and the launch dies with it '
+                      '(references/lessons.md, "caffeinate was killed"): keep the Mac on AC power instead')
+
+
 def exempt(cmd, cwd, depth=0):
     """True when the only program the command invokes is the skill's route.py run or review.sh, bare or through nohup,
     timeout, env or a sh|bash|zsh -c wrapper whose string is itself only such a command."""
     if depth > 3 or re.search(r'\$\(|`|[<>]\(', cmd):
         return False
-    lex = shlex.shlex(REDIR.sub(' ', cmd.replace('\\\n', ' ')), posix=True, punctuation_chars=';&|()\n')
-    lex.whitespace, lex.whitespace_split = ' \t\r', True
-    try:
-        toks = list(lex)
-    except ValueError:
+    toks = words(cmd)
+    if toks is None:
         return False
     if toks and toks[-1] == '&':
         toks.pop()
@@ -272,6 +358,10 @@ def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
                 if it['slot'] and busy >= slots:
                     continue
                 with open(os.path.join(rd, f"{it['id']}.runner.log"), 'ab') as log:
+                    if caffeinated(it['cmd']):
+                        log.write(f"queue: {caffeinate_refusal(it['cmd'])}; not launched\n".encode())
+                        it.update(pid=None, start=now, end=now, exit=2)
+                        continue
                     p = subprocess.Popen(it['cmd'], shell=True, start_new_session=True, stdin=subprocess.DEVNULL,
                                          stdout=log, stderr=subprocess.STDOUT, env={**os.environ, 'OW_RUN_DIR': rd})
                 procs[it['id']] = p
@@ -319,6 +409,11 @@ def main(argv=None):
     r.add_argument('--chat-log', help='session transcript whose mtime counts as chat activity')
     args = ap.parse_args(argv)
     rd = run_dir(args.run_dir)
+    if args.cmd in ('add', 'run'):
+        refusal = caffeinate_refusal(args.shell if args.cmd == 'add' else None)
+        if refusal:
+            print(f'queue: {refusal}', file=sys.stderr)
+            return 2
 
     if args.cmd == 'run':
         pidfile = os.path.join(rd, 'queue.pid')

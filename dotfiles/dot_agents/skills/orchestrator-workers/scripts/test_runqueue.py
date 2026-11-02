@@ -4,6 +4,8 @@ from unittest import mock
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import runqueue as q  # noqa: E402
 
+ANCESTOR = q.caffeinated_ancestor
+
 S = os.path.dirname(os.path.abspath(q.__file__))
 
 
@@ -187,6 +189,87 @@ class QueueTest(unittest.TestCase):
             self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd), 0, cmd)
         items = self.items()
         self.assertEqual({items[f'r{n}']['unrouted_reason'] for n in range(len(refused))}, {'owner probe'})
+
+    def test_add_refuses_a_command_that_runs_caffeinate_with_no_way_round(self):
+        brief = os.path.join(self.tmp.name, 'b.md')
+        with open(brief, 'w') as f:
+            f.write('keep the Mac awake with caffeinate -i\n')
+        run = f'python3 -B {S}/route.py run a --kind build --brief {brief} --worktree w'
+        refused = [f'caffeinate -i {run}', f'nohup caffeinate -i {run} &', f'zsh -c "caffeinate -i {run}"',
+                   f'/usr/bin/caffeinate -dims {run}', f'timeout -s KILL 900 caffeinate -i {run}',
+                   f'env A=1 nice -n 5 caffeinate {run}', f'cd /tmp && caffeinate -w 1 {run}',
+                   f'nohup zsh -lc "cd /tmp; caffeinate -i {run} >log 2>&1" &', f'echo "$(caffeinate -u -t 1)"; {run}',
+                   f'"caffeinate" {run}', f'bash -c \'sh -c "caffeinate {run}"\'', 'sleep 1 | caffeinate -i cat']
+        for n, cmd in enumerate(refused):
+            err = io.StringIO()
+            with mock.patch('sys.stderr', err):
+                self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe'), 2, cmd)
+            self.assertIn('caffeinate', err.getvalue())
+            self.assertIn('references/lessons.md', err.getvalue())
+            self.assertEqual(err.getvalue().count('\n'), 1, err.getvalue())
+        allowed = [run, f'{run} --override "model=m,reason=no caffeinate here"', 'echo caffeinate', "echo 'caffeinate -i x'",
+                   'grep -n caffeinate notes.md', f'nohup zsh -c "{run} --override \'reason=caffeinate\'" &']
+        for n, cmd in enumerate(allowed):
+            self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe'), 0, cmd)
+        self.assertEqual(sorted(self.items()), sorted(f'ok{n}' for n in range(len(allowed))))
+
+    def test_add_and_run_refuse_when_started_by_a_caffeinate_process(self):
+        table = f'{os.getppid()} 1 /usr/bin/caffeinate\n'
+        with mock.patch.object(q, 'caffeinated_ancestor', lambda ps=None: ANCESTOR(lambda: table)):
+            for args in (('add', 'a', '--cmd', 'true'), ('run',)):
+                err = io.StringIO()
+                with mock.patch('sys.stderr', err):
+                    self.assertEqual(self.cli(*args), 2, args)
+                self.assertIn(f'runs under caffeinate (pid {os.getppid()} /usr/bin/caffeinate)', err.getvalue())
+        self.assertEqual(self.items(), {})
+        self.assertEqual(self.cli('add', 'a', '--cmd', 'true'), 0)
+
+    def test_an_ancestor_further_up_counts_and_a_caffeinate_child_does_not(self):
+        me, parent = os.getpid(), os.getppid()
+        up = f'{me} {parent} python3\n{parent} 4242 /bin/zsh\n4242 1 caffeinate\n'
+        self.assertEqual(ANCESTOR(lambda: up), '4242 caffeinate')
+        down = f'{parent} 1 /bin/zsh\n{me} {parent} python3\n5151 {me} /usr/bin/caffeinate\n'
+        self.assertIsNone(ANCESTOR(lambda: down))
+        loop = f'{parent} 4242 /bin/zsh\n4242 {parent} /bin/zsh\n'
+        self.assertIsNone(ANCESTOR(lambda: loop))
+
+    def test_an_unreadable_process_table_warns_and_does_not_refuse(self):
+        def broken():
+            raise OSError('no ps here')
+        err = io.StringIO()
+        with mock.patch('sys.stderr', err):
+            self.assertIsNone(q.caffeinate_refusal('true', ps=broken))
+        self.assertIn('not checked', err.getvalue())
+
+    def test_a_real_caffeinate_named_parent_is_seen_through_ps(self):
+        import subprocess
+        under = ['bash', '-c', 'exec -a caffeinate /bin/bash -c "\\"\\$@\\"; exit \\$?" inner "$@"', 'outer']
+        p = subprocess.run(under + [sys.executable, '-B', os.path.join(S, 'runqueue.py'), 'add', 'a', '--cmd', 'true',
+                                    '--run-dir', self.rd], capture_output=True, text=True, timeout=60,
+                           stdin=subprocess.DEVNULL)
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertIn('runs under caffeinate (pid ', p.stderr)
+        self.assertEqual(self.items(), {})
+
+    def test_run_does_not_launch_a_caffeinate_item_queued_before_the_check(self):
+        fakebin = os.path.join(self.tmp.name, 'bin')
+        os.makedirs(fakebin)
+        with open(os.path.join(fakebin, 'caffeinate'), 'w') as f:
+            f.write('#!/bin/sh\nshift\n"$@"\n')
+        os.chmod(os.path.join(fakebin, 'caffeinate'), 0o755)
+        marker = os.path.join(self.tmp.name, 'ran')
+        self.cli('add', 'ok', '--cmd', 'true')
+        with q.locked(self.rd):
+            old = q.load(self.rd)
+            old['items'].append({**old['items'][0], 'id': 'old', 'cmd': f'PATH={fakebin}:$PATH caffeinate -i touch {marker}'})
+            q.save(self.rd, old)
+        t = self.start()
+        self.assertTrue(wait_until(lambda: all(it['end'] is not None for it in self.items().values())), self.items())
+        self.finish(t, ['ok', 'old'])
+        self.assertEqual(self.items()['old']['exit'], 2)
+        self.assertFalse(os.path.exists(marker))
+        with open(os.path.join(self.rd, 'old.runner.log')) as f:
+            self.assertIn('runs caffeinate', f.read())
 
 
 if __name__ == '__main__':

@@ -8,15 +8,20 @@
 #   options      passed to route.py run: --override "model=..,effort=..,cap=..,reason=.." (reason required),
 #                --author-model M (default: read from the author round's log), --timeout S (default: budgets.json
 #                <name> or "review" minutes x 60), --add-dir D, --load-wait MIN, --seed N, --no-classifier, --fresh
+#   --project D  a research critique (a prompt opening "You are a read-only critic") reads the run folder, and D, the
+#                project repository, when given; without it the critic reads the run folder only, said on stderr
+# Refuses (exit 2) when started under caffeinate, which this Mac kills within seconds.
 # Output: $OW_RUN_DIR/<name>.jsonl, <name>.err and <name>.txt (the verdict line of the last message, which
 # mine.py reads); prints the decision, start, end, exit code and result.py's summary.
 set -u
 
-opts=()
+opts=(); project=
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,12p' "$0" | cut -c3-; exit 0 ;;
+    -h|--help) sed -n '2,15p' "$0" | cut -c3-; exit 0 ;;
     --no-classifier|--fresh) opts+=("$1"); shift ;;
+    --project) [ $# -ge 2 ] && [ -d "$2" ] || { echo "review.sh: --project needs a folder" >&2; exit 2; }
+      project="$(cd "$2" && pwd)"; shift 2 ;;
     --*) [ $# -ge 2 ] || { echo "review.sh: $1 needs a value" >&2; exit 2; }; opts+=("$1" "$2"); shift 2 ;;
     *) break ;;
   esac
@@ -30,6 +35,8 @@ run="${OW_RUN_DIR:?set OW_RUN_DIR to the run folder}"
 prompt="${3:-$run/$name.md}"
 here="$(cd "$(dirname "$0")" && pwd)"
 
+python3 -B -c 'import sys; sys.path.insert(0, sys.argv[1]); import runqueue; r = runqueue.caffeinate_refusal()
+r and print("review.sh: " + r, file=sys.stderr); sys.exit(2 if r else 0)' "$here" </dev/null || exit 2
 [ -d "$wt" ] || { echo "review.sh: no worktree at $wt" >&2; exit 2; }
 [ -f "$prompt" ] || { echo "review.sh: no prompt at $prompt" >&2; exit 2; }
 prompt="$(python3 -B - "$prompt" "$here/../references/rubric.md" "$run/$name.filled.md" <<'EOF'
@@ -79,6 +86,15 @@ if out != src:
 print(out)
 EOF
 )" || exit 2
+critic="$(python3 -B -c 'import sys; sys.path.insert(0, sys.argv[1]); import brief
+t = open(sys.argv[2], encoding="utf-8").read()
+print(next((l for _, l in brief.outside_fences(brief.brief_lines(t)) if l.strip()), "").startswith("You are a read-only critic"))' \
+  "$here" "$prompt" </dev/null)"
+if [ "$critic" = True ]; then
+  opts+=(--add-dir "$(cd "$run" && pwd)")
+  [ -n "$project" ] || echo "review.sh: no --project given, so the critic reads the run folder only" >&2
+fi
+[ -z "$project" ] || opts+=(--add-dir "$project")
 rm -f "$run/$name.txt"
 python3 -B "$here/route.py" run "$name" --kind review --run "$run" --brief "$prompt" --worktree "$wt" \
   ${opts[@]+"${opts[@]}"} </dev/null

@@ -32,6 +32,8 @@ def rnd(model, ok, category='change-existing', tier='easy', kind='build', item='
 
 
 BRIEF = 'TASK: Tidy the colour of a diff view (branch `ow/x`)\n\nMUST\n1. Change one colour.\n'
+# A bash whose argv[0] is caffeinate stays the parent of what it runs; the real caffeinate is never started.
+UNDER_CAFFEINATE = ['bash', '-c', 'exec -a caffeinate /bin/bash -c "\\"\\$@\\"; exit \\$?" inner "$@"', 'outer']
 
 
 class Pick(unittest.TestCase):
@@ -369,11 +371,23 @@ class Launcher(unittest.TestCase):
         with open(self.brief, 'w') as f:
             f.write(BRIEF + 'TIME BUDGET: 20\n')
 
-    def launch(self, rnd='x', kind='small', *extra, mode='ok'):
+    def launch(self, rnd='x', kind='small', *extra, mode='ok', under=()):
         cmd = [sys.executable, '-B', os.path.join(HERE, 'route.py'), 'run', rnd, '--kind', kind, '--run', self.run_dir,
                '--brief', self.brief, '--worktree', self.wt, '--no-classifier', '--seed', '1', '--load-wait', '0', *extra]
-        return self.sp.run(cmd, capture_output=True, text=True, env={**self.env, 'FAKE_MODE': mode}, timeout=120,
-                           stdin=self.sp.DEVNULL)
+        return self.sp.run([*under, *cmd], capture_output=True, text=True, env={**self.env, 'FAKE_MODE': mode},
+                           timeout=120, stdin=self.sp.DEVNULL)
+
+    def test_run_refuses_when_started_by_a_caffeinate_process_and_launches_nothing(self):
+        with open(self.brief, 'a') as f:
+            f.write('Keep the Mac awake: caffeinate -i is killed here.\n')
+        p = self.launch(under=UNDER_CAFFEINATE)
+        self.assertEqual(p.returncode, 2, p.stdout + p.stderr)
+        self.assertIn('route.py run: refused: this launcher runs under caffeinate (pid ', p.stderr)
+        self.assertIn('references/lessons.md', p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+        self.assertEqual(os.listdir(self.run_dir), [])
+        p = self.launch()
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
 
     def decisions(self):
         return [d for d in route.read_decisions(self.run_dir) if d.get('event') not in ('launch', 'refuse')]
