@@ -167,6 +167,53 @@ def row(case_id, rank, space="work", caller="agent"):
             "caller": caller, "class": "identifier"}
 
 
+class TitleBoost(unittest.TestCase):
+    def test_half_the_querys_content_words_in_the_title_is_a_match(self):
+        self.assertTrue(kb.title_matches("dock retry policy", "Dock retry policy"))
+        self.assertTrue(kb.title_matches("how do we size the dock doors", "Dock door sizing"))
+        self.assertTrue(kb.title_matches("dock retry gate timing", "Dock retry"))
+
+    def test_under_half_is_not_a_match(self):
+        self.assertFalse(kb.title_matches("dock retry gate timing", "Dock overview"))
+        self.assertFalse(kb.title_matches("dock retry gate", "Dock overview"))
+
+    def test_a_query_of_stop_words_only_matches_nothing(self):
+        self.assertFalse(kb.title_matches("how do we do it", "How do we do it"))
+
+    def test_a_non_english_title_matches_its_own_words(self):
+        self.assertTrue(kb.title_matches("gestión de muelles", "Gestión de muelles"))
+        self.assertFalse(kb.title_matches("gestión de muelles", "Gesti n overview"))
+
+    def test_a_hit_with_no_title_is_not_boosted(self):
+        self.assertFalse(kb.title_matches("dock retry", None))
+        self.assertFalse(kb.title_matches("dock retry", ""))
+
+    def search(self, mode, engines, titles, query="dock retry policy"):
+        src = {"name": "s", "root": SOURCES[0]["root"]}
+        jobs = [(src, e, None if e == "regex" else "f") for e in engines]
+        found = {"regex": [{"path": "a.md", "score": 3.0}, {"path": "b.md", "score": 2.0}],
+                 "sem": [{"path": "a.md", "score": 0.9}, {"path": "b.md", "score": 0.8}]}
+        with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
+             mock.patch.object(kb, "run_rg", return_value=found["regex"]), \
+             mock.patch.object(kb, "run_ck", side_effect=lambda *a, **kw: found["sem"]), \
+             mock.patch.object(kb, "title_of", side_effect=lambda p: titles.get(os.path.basename(p))):
+            return kb.search(query, [src], mode, 10)
+
+    def test_a_title_match_scores_x1_2_before_the_final_ranking_on_every_route(self):
+        titles = {"a.md": "Gate overview", "b.md": "Dock retry policy"}
+        for mode, engines in (("regex", ["regex"]), ("sem", ["sem"]), ("fused", ["regex", "sem"])):
+            with self.subTest(mode=mode):
+                hits = self.search(mode, engines, titles)
+                self.assertEqual([h["path"] for h in hits], ["b.md", "a.md"])
+                self.assertAlmostEqual(hits[0]["score"], len(engines) * kb.TITLE_BOOST / (kb.RRF_K + 2))
+                self.assertAlmostEqual(hits[1]["score"], len(engines) / (kb.RRF_K + 1))
+                self.assertEqual(hits[0]["title"], "Dock retry policy")
+
+    def test_without_a_title_match_the_order_and_scores_are_reciprocal_rank_alone(self):
+        hits = self.search("regex", ["regex"], {"a.md": "Gate overview", "b.md": None})
+        self.assertEqual([(h["path"], h["score"]) for h in hits], [("a.md", 1 / (kb.RRF_K + 1)), ("b.md", 1 / (kb.RRF_K + 2))])
+
+
 class Report(unittest.TestCase):
     def test_hit_at_3_counts_ranks_one_to_three_in_every_cell(self):
         cells = suite.group([row("a", 1), row("b", 3), row("c", 4), row("d", None), row("e", 2, "wiki")], "cell")["cells"]

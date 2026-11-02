@@ -29,6 +29,10 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
   Outside every source, kb exits with status 2 and asks for one.
 - **Each hit:** `{source, path, line, end, title, snippet, score, engines}`. `path` is relative to
   the source's root; `line` and `end` bound the matching lines; `engines` says which engines found it.
+- **Ranking:** engines merge by reciprocal rank (k = 60); then a hit whose title (front-matter
+  `title`, first heading, else file name) holds at least half of the query's content words scores
+  ×1.2, on every route. It held every fixture cell and lifted hit@1 37 → 41 of 75; it is not
+  called better until a held-out suite proves it.
 
 ## Set up
 
