@@ -215,7 +215,8 @@ class PythonGateTest(GateCase):
         self.assertEqual("pass", self.row(r, "FAIL_TO_PASS", "pkg/test_calc.py::CalcTest.test_clamp_negative")["status"])
         p2p = self.row(r, "PASS_TO_PASS", "pkg/test_calc.py::CalcTest.test_add")
         self.assertEqual(("not checked", "not checked: no mutant runner"), (p2p["status"], p2p["reason"]))
-        self.assertEqual({"passed", "musts", "problems", "none", "FAIL_TO_PASS", "PASS_TO_PASS", "mutants_run", "minutes"},
+        self.assertEqual({"passed", "musts", "problems", "none", "FAIL_TO_PASS", "PASS_TO_PASS", "unmapped", "mutants_run",
+                          "mutant_statuses", "minutes"},
                          set(r) - {"printed", "code"})
         self.assertIn("PASS: 2 MUSTs", r["printed"])
 
@@ -242,6 +243,8 @@ class PythonGateTest(GateCase):
     def test_unmapped_must_fails_the_gate(self):
         r = self.gate([1, 2], ["- MUST 1: pkg/test_calc.py::CalcTest.test_clamp_negative [FAIL_TO_PASS]"], code=1)
         self.assertEqual(["MUST 2 has no line in the REQUIREMENTS MAP"], r["problems"])
+        self.assertEqual([{"must": "2", "status": "fail", "reason": "no line in the REQUIREMENTS MAP"}], r["unmapped"])
+        self.assertIn("MUST 2 | unmapped | - | fail | no line in the REQUIREMENTS MAP", r["printed"])
 
     def test_map_line_with_no_test_fails_the_gate(self):
         r = self.gate([1], ["- MUST 1: pkg/test_calc.py [FAIL_TO_PASS]"], code=1)
@@ -310,7 +313,9 @@ class VitestGateTest(GateCase):
         r = self.gate([1, 2], ["- MUST 1: src/calc.test.ts::calc > adds [FAIL_TO_PASS]",
                                "- MUST 2: src/calc.test.ts::|unit| src/calc.test.ts > calc > adds [PASS_TO_PASS]"], code=0)
         p2p = r["PASS_TO_PASS"][0]
-        self.assertEqual(("pass", {"covered": 2, "killed": 1, "survived": 1}), (p2p["status"], p2p["mutants"]))
+        self.assertEqual("pass", p2p["status"])
+        self.assertEqual({"attempted": 2, "Killed": 1, "Survived": 1}, {k: v for k, v in p2p["mutants"].items() if v})
+        self.assertIn("mutants attempted 2: Killed 1, Survived 1, Timeout 0", r["printed"])
         self.assertEqual(4, r["mutants_run"])
         stryker = self.logged("stryker")
         self.assertEqual(1, len(stryker))
@@ -321,8 +326,10 @@ class VitestGateTest(GateCase):
     def test_keeps_test_that_survives_every_mutant_fails_the_gate(self):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > keeps zero [PASS_TO_PASS]"], code=1)
         row = r["PASS_TO_PASS"][0]
-        self.assertEqual(("fail", {"covered": 3, "killed": 0, "survived": 3}), (row["status"], row["mutants"]))
-        self.assertIn("survived all 3", row["reason"])
+        self.assertEqual("fail", row["status"])
+        self.assertEqual({"attempted": 3, "Survived": 1, "Timeout": 1, "KilledByOtherTests": 1},
+                         {k: v for k, v in row["mutants"].items() if v})
+        self.assertIn("killed none of the 3", row["reason"])
 
     def test_keeps_test_covering_no_changed_line_is_reported(self):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > formats [PASS_TO_PASS]"], code=0)
@@ -340,7 +347,7 @@ class VitestGateTest(GateCase):
         self.assertTrue(r["PASS_TO_PASS"][0]["reason"].startswith("ambiguous at head"))
 
     def test_test_name_with_colons_quotes_and_brackets(self):
-        r = self.gate([1], ['- MUST 1: src/calc.test.ts::calc > parse ["a"] > reads a::b [PASS_TO_PASS]'], code=0)
+        r = self.gate([1], ['- MUST 1: src/calc.test.ts::calc > parse ["a"] > reads a::b [PASS_TO_PASS]'], "--mutants", "none", code=0)
         self.assertEqual('src/calc.test.ts::calc > parse ["a"] > reads a::b', r["PASS_TO_PASS"][0]["test"])
         args = self.logged("vitest")[0]
         self.assertEqual('calc(?: > | )parse \\["a"\\](?: > | )reads a::b', args[args.index("-t") + 1])
@@ -424,6 +431,71 @@ class StrykerErrorTest(GateCase):
     def test_stryker_error_fails_the_gate_with_its_message(self):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]"], code=1)
         self.assertIn("ConfigError: no test runner", r["PASS_TO_PASS"][0]["reason"])
+
+
+class NoTestFilesTest(GateCase):
+    base_files = {"src/calc.ts": TS_BASE, "src/calc.test.ts": "// t\n", "FAKE_VITEST": "vitest-head.json\n",
+                  "FAKE_STRYKER": "mutation-notestfiles.json\n", "stryker.config.json": "{}\n"}
+    head_files = {"src/calc.ts": TS_HEAD}
+
+    def test_report_without_test_files_fails_as_attribution_unavailable(self):
+        r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > formats [PASS_TO_PASS]"], code=1)
+        row = r["PASS_TO_PASS"][0]
+        self.assertEqual(("fail", "attribution unavailable: the Stryker report has no testFiles"), (row["status"], row["reason"]))
+
+
+def mutant(status, line=3, covered=None, killed=None):
+    m = {"id": status, "status": status, "location": {"start": {"line": line, "column": 1}}}
+    if covered is not None:
+        m["coveredBy"] = covered
+    if killed is not None:
+        m["killedBy"] = killed
+    return m
+
+
+class MutantCheckTest(unittest.TestCase):
+    me, other = "t#calc adds", "t#calc other"
+    ranges = {"src/calc.ts": [(3, 3)]}
+
+    def check(self, *mutants, test_files=True, name="calc > adds"):
+        report = {"files": {"src/calc.ts": {"mutants": list(mutants)}}}
+        if test_files:
+            report["testFiles"] = {"src/calc.test.ts": {"tests": [{"id": self.me, "name": "calc adds"},
+                                                                  {"id": self.other, "name": "calc other"}]}}
+        return reqgate.mutant_check(report, self.ranges, "src/calc.test.ts", name)
+
+    def test_no_test_files_is_attribution_unavailable(self):
+        check, reason, _ = self.check(mutant("Survived", covered=[self.me]), test_files=False)
+        self.assertEqual(("fail", "attribution unavailable: the Stryker report has no testFiles"), (check, reason))
+
+    def test_test_name_matching_no_id_is_attribution_unavailable(self):
+        check, reason, _ = self.check(mutant("Survived", covered=[self.me]), name="calc > nothing")
+        self.assertEqual("fail", check)
+        self.assertTrue(reason.startswith("attribution unavailable: no test"), reason)
+
+    def test_mutants_without_coverage_data_are_attribution_unavailable(self):
+        check, reason, _ = self.check(mutant("Survived"), mutant("Killed", killed=[self.other]))
+        self.assertEqual(("fail", "attribution unavailable: 2 mutants on changed lines carry no coveredBy data"), (check, reason))
+
+    def test_genuine_no_coverage_is_measured_and_not_checked(self):
+        check, reason, counts = self.check(mutant("NoCoverage", covered=[]), mutant("Survived", covered=[self.other], killed=[]),
+                                           mutant("Survived", line=9))
+        self.assertEqual(("not checked", "covers no changed line", 0), (check, reason, counts["attempted"]))
+
+    def test_one_mutant_of_each_status_is_counted_by_its_stryker_name(self):
+        mine = [self.me]
+        check, reason, counts = self.check(
+            mutant("Killed", covered=mine, killed=mine), mutant("Killed", covered=mine, killed=[self.other]),
+            mutant("Survived", covered=mine, killed=[]), mutant("Timeout", covered=mine, killed=mine),
+            mutant("NoCoverage", covered=[]), mutant("CompileError", covered=mine), mutant("RuntimeError", covered=mine),
+            mutant("Pending", covered=mine), mutant("Ignored", covered=mine))
+        self.assertEqual({"attempted": 7, "Killed": 1, "KilledByOtherTests": 1, "Survived": 1, "Timeout": 1, "NoCoverage": 0,
+                          "CompileError": 1, "RuntimeError": 1, "Pending": 1, "Ignored": 1}, counts)
+        self.assertEqual("pass", check)
+
+    def test_timeout_alone_is_not_a_kill(self):
+        check, _, counts = self.check(mutant("Timeout", covered=[self.me], killed=[self.me]))
+        self.assertEqual(("fail", 1, 0), (check, counts["Timeout"], counts["Killed"]))
 
 
 class NoSourceChangeTest(GateCase):

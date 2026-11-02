@@ -21,7 +21,10 @@ run on the base commit with only the branch's test files applied and must fail t
 assertion; failing to load, import, compile or collect shows only that the code is absent, and
 fails the gate. Extension to SWE-bench: when the head tree has a Stryker config, a PASS_TO_PASS
 test must kill at least one Stryker mutant on the changed source lines it covers; without a mutant
-runner it is reported "not checked: no mutant runner". A `none` line is reported and counted, and
+runner it is reported "not checked: no mutant runner". When the Stryker report cannot tell which
+mutants the test covers (no testFiles, no test of that name, or mutants with no coveredBy) the test
+fails as "attribution unavailable"; a measured "covers no changed line" is reported and not failed.
+Mutant counts use Stryker's status names. A `none` line is reported and counted, and
 is not a failure on its own. Every test runs in a temporary detached worktree, removed afterwards.
 
 Exit 0 when every check passes, 1 when any fails, 2 on a usage or setup error. --warn reports the
@@ -398,10 +401,22 @@ def test_ids(report, path, name):
             for t in tf.get("tests", []) if t.get("name") in names}
 
 
-def mutant_score(report, ranges, path, name):
-    """(covered, killed) among mutants on changed lines that the test covers; a kill needs status Killed."""
+STATUSES = ("Killed", "Survived", "Timeout", "NoCoverage", "CompileError", "RuntimeError", "Pending", "Ignored")
+NOT_RUN = ("Ignored", "NoCoverage", "Pending")
+
+
+def mutant_check(report, ranges, path, name):
+    """(check, reason, counts) for one PASS_TO_PASS test from the mutants on changed lines it covers.
+
+    Counts use Stryker's status names; Killed means killed by this test, KilledByOtherTests a covered
+    mutant whose status is Killed by other tests only, and attempted excludes Ignored."""
+    counts = dict.fromkeys(("attempted", *STATUSES, "KilledByOtherTests"), 0)
+    if not report.get("testFiles"):
+        return "fail", "attribution unavailable: the Stryker report has no testFiles", counts
     ids = test_ids(report, path, name)
-    covered = killed = 0
+    if not ids:
+        return "fail", f"attribution unavailable: no test in the Stryker report's testFiles is named {name}", counts
+    unknown = 0
     for f, result in report.get("files", {}).items():
         spans = next((rs for p, rs in ranges.items() if same_path(f, p)), None)
         if not spans:
@@ -410,11 +425,21 @@ def mutant_score(report, ranges, path, name):
             line = m.get("location", {}).get("start", {}).get("line", 0)
             if not any(s <= line <= e for s, e in spans):
                 continue
-            by_kill = ids & set(m.get("killedBy") or [])
+            status, by_kill = m.get("status"), ids & set(m.get("killedBy") or [])
             if by_kill or ids & set(m.get("coveredBy") or []):
-                covered += 1
-                killed += bool(by_kill and m.get("status") == "Killed")
-    return covered, killed
+                counts["attempted"] += status != "Ignored"
+                key = "KilledByOtherTests" if status == "Killed" and not by_kill else status
+                counts[key] = counts.get(key, 0) + 1
+            elif m.get("coveredBy") is None and status not in ("NoCoverage", "Ignored"):
+                unknown += 1
+    seen = ", ".join(f"{k} {v}" for k, v in counts.items() if v and k != "attempted")
+    if counts["Killed"]:
+        return "pass", f"killed {counts['Killed']} of {counts['attempted']} mutants it covers ({seen})", counts
+    if unknown:
+        return "fail", f"attribution unavailable: {unknown} mutants on changed lines carry no coveredBy data", counts
+    if not counts["attempted"]:
+        return "not checked", "covers no changed line", counts
+    return "fail", f"killed none of the {counts['attempted']} mutants it covers on changed lines ({seen})", counts
 
 
 def check(args):
@@ -457,7 +482,7 @@ def check(args):
             return "error", f"no runner for {e['file']}: pass --runner"
         return RUNNERS[runner](tree, e["file"], e["name"], args.timeout, **opts)
 
-    mutants_run, stryker_error = 0, None
+    mutants_run, stryker_error, statuses = 0, None, {}
     with worktree(repo, head, node_modules) as tree:
         for e in runnable:
             e["head"], e["head_detail"] = run(tree, e)
@@ -468,7 +493,10 @@ def check(args):
         if keeps and mode == "stryker" and ranges:
             try:
                 report = stryker_run(tree, ranges, args.stryker_timeout, args.stryker_cmd)
-                mutants_run = sum(len(r.get("mutants", [])) for r in report.get("files", {}).values())
+                for r in report.get("files", {}).values():
+                    for m in r.get("mutants", []):
+                        statuses[m.get("status")] = statuses.get(m.get("status"), 0) + 1
+                mutants_run = sum(v for k, v in statuses.items() if k not in NOT_RUN)
             except SetupError as err:
                 stryker_error = str(err)
         for e in keeps:
@@ -479,14 +507,7 @@ def check(args):
             elif stryker_error:
                 e["check"], e["reason"] = "fail", stryker_error
             else:
-                covered, killed = mutant_score(report, ranges, e["file"], e["name"])
-                e["mutants"] = {"covered": covered, "killed": killed, "survived": covered - killed}
-                if not covered:
-                    e["check"], e["reason"] = "not checked", "covers no changed line"
-                elif killed:
-                    e["check"], e["reason"] = "pass", f"killed {killed} of {covered} mutants it covers"
-                else:
-                    e["check"], e["reason"] = "fail", f"survived all {covered} mutants it covers on changed lines"
+                e["check"], e["reason"], e["mutants"] = mutant_check(report, ranges, e["file"], e["name"])
     news = [e for e in runnable if e["kind"] == "FAIL_TO_PASS"]
     if news:
         with worktree(repo, base, node_modules) as tree:
@@ -517,7 +538,9 @@ def check(args):
         "none": [{"must": e["must"], "why": e["none"]} for e in nones],
         "FAIL_TO_PASS": [entry(e) for e in tests if e["kind"] == "FAIL_TO_PASS"],
         "PASS_TO_PASS": [entry(e) for e in tests if e["kind"] == "PASS_TO_PASS"],
+        "unmapped": [{"must": n, "status": "fail", "reason": "no line in the REQUIREMENTS MAP"} for n in unmapped],
         "mutants_run": mutants_run,
+        "mutant_statuses": statuses,
         "minutes": round((time.monotonic() - started) / 60, 2),
     }
 
@@ -529,10 +552,16 @@ def entry(e):
     return out
 
 
+def mutant_text(counts):
+    return f"; mutants attempted {counts['attempted']}: " + ", ".join(
+        f"{k} {v}" for k, v in counts.items() if k != "attempted" and (v or k in ("Killed", "Survived", "Timeout")))
+
+
 def table(result):
-    rows = [(f"MUST {r['must']}", kind, r["test"], r["status"], r["reason"])
+    rows = [(f"MUST {r['must']}", kind, r["test"], r["status"], r["reason"] + (mutant_text(r["mutants"]) if "mutants" in r else ""))
             for kind in KINDS for r in result[kind]]
     rows += [(f"MUST {n['must']}", "none", "-", "none", n["why"]) for n in result["none"]]
+    rows += [(f"MUST {n['must']}", "unmapped", "-", n["status"], n["reason"]) for n in result["unmapped"]]
     rows.sort(key=lambda r: int(r[0].split()[1]))
     lines = [" | ".join(r) for r in rows]
     lines += [f"problem: {p}" for p in result["problems"]]

@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "2",
+  "thresholds": {
+    "high": 80,
+    "low": 60
+  },
+  "projectRoot": "/work",
+  "framework": {
+    "name": "StrykerJS",
+    "version": "10.1.1"
+  },
+  "files": {
+    "src/calc.ts": {
+      "language": "typescript",
+      "source": "export const add = (a: number, b: number) => a + b;\n",
+      "mutants": [
+        {
+          "id": "1",
+          "mutatorName": "ArithmeticOperator",
+          "replacement": "a - b",
+          "location": {
+            "start": {
+              "line": 3,
+              "column": 10
+            },
+            "end": {
+              "line": 3,
+              "column": 15
+            }
+          },
+          "status": "Killed",
+          "killedBy": [
+            "src/calc.test.ts#calc adds"
+          ],
+          "coveredBy": [
+            "src/calc.test.ts#calc adds",
+            "src/calc.test.ts#calc keeps zero"
+          ],
+          "testsCompleted": 2
+        },
+        {
+          "id": "2",
+          "mutatorName": "ConditionalExpression",
+          "replacement": "true",
+          "location": {
+            "start": {
+              "line": 3,
+              "column": 20
+            },
+            "end": {
+              "line": 3,
+              "column": 26
+            }
+          },
+          "status": "Survived",
+          "killedBy": [],
+          "coveredBy": [
+            "src/calc.test.ts#calc adds",
+            "src/calc.test.ts#calc keeps zero"
+          ],
+          "testsCompleted": 2
+        },
+        {
+          "id": "3",
+          "mutatorName": "StringLiteral",
+          "replacement": "\"\"",
+          "location": {
+            "start": {
+              "line": 40,
+              "column": 1
+            },
+            "end": {
+              "line": 40,
+              "column": 9
+            }
+          },
+          "status": "Killed",
+          "killedBy": [
+            "src/calc.test.ts#calc keeps zero"
+          ],
+          "coveredBy": [
+            "src/calc.test.ts#calc keeps zero"
+          ],
+          "testsCompleted": 1
+        },
+        {
+          "id": "4",
+          "mutatorName": "BooleanLiteral",
+          "replacement": "false",
+          "location": {
+            "start": {
+              "line": 3,
+              "column": 30
+            },
+            "end": {
+              "line": 3,
+              "column": 34
+            }
+          },
+          "status": "Timeout",
+          "killedBy": [
+            "src/calc.test.ts#calc keeps zero"
+          ],
+          "coveredBy": [
+            "src/calc.test.ts#calc keeps zero"
+          ],
+          "testsCompleted": 1
+        }
+      ]
+    }
+  }
+}
