@@ -342,17 +342,21 @@ def fix_prompt(rd, it):
     return path
 
 
-def step_argv(rd, it, name):
+def step_argv(rd, it, s):
+    name = s['name']
     rnd, wt = round_name(it, name), it['worktree']
     if name in ('build', 'fix'):
         brief = it['brief'] if name == 'build' else fix_prompt(rd, it)
         if not os.path.isfile(brief):
             raise reviewprep.PrepError(f'no brief at {brief}')
+        s['brief'] = brief
         return [sys.executable, '-B', ROUTE, 'run', rnd, '--kind', name, '--run', rd, '--brief', brief,
                 '--worktree', wt, *it.get('route_args', [])]
     # route.py run rewrites <round>.base on every launch, so a retried round would hide its first attempt's commits.
-    head = next((s.get('head') for s in it['pipeline'] if s['name'] == ('build' if name == 'review' else 'fix')), None)
-    (reviewprep.review if name == 'review' else reviewprep.recheck)(rd, it['id'], wt, head)
+    author = next((t for t in it['pipeline'] if t['name'] == ('build' if name == 'review' else 'fix')), {})
+    brief = author.get('brief') or (it['brief'] if name == 'review' else None)
+    (reviewprep.review if name == 'review' else reviewprep.recheck)(rd, it['id'], wt, author.get('head'), brief,
+                                                                    author.get('report'))
     return ['bash', REVIEW, *it.get('review_args', []), rnd, wt]
 
 
@@ -364,7 +368,7 @@ def launch_step(rd, q, it, s):
     try:
         if s['name'] in ('build', 'fix') and not s.get('head'):
             s['head'] = reviewprep.git(it['worktree'], 'rev-parse', 'HEAD').strip()
-        argv = step_argv(rd, it, s['name'])
+        argv = step_argv(rd, it, s)
     except (reviewprep.PrepError, OSError) as ex:
         s.update(start=now, end=now, exit=2, pid=None, reason=str(ex)[:300])
         return None
@@ -520,6 +524,9 @@ def main(argv=None):
     t = sub.add_parser('retry', parents=[common], help="relaunch a pipeline item's failed step")
     t.add_argument('id')
     t.add_argument('--passed', action='store_true', help='mark the failed step passed instead (the chat finished it by hand)')
+    t.add_argument('--report', metavar='ROUND', help='with --passed: the round that finished it (a resume round), '
+                   'whose report the next review or re-check reads (default: the newest of the round and its '
+                   '<round>-resumeN rounds)')
     sub.add_parser('status', parents=[common], help='one line per item')
     w = sub.add_parser('wait', parents=[common], help='block until an item newly needs the chat, then print it')
     w.add_argument('--max-min', type=float, default=30, help='give up after this many minutes, exit 1 (default 30)')
@@ -604,8 +611,11 @@ def main(argv=None):
                 print(f'queue: {args.id} is not a pipeline item stopped by a failed step', file=sys.stderr)
                 return 2
             s = current(it)
+            if args.report and (not args.passed or not os.path.isfile(os.path.join(rd, args.report + '.jsonl'))):
+                print(f'queue: --report needs --passed and an existing {args.report}.jsonl', file=sys.stderr)
+                return 2
             if args.passed:
-                s.update(exit=0, passed_by='chat')
+                s.update(exit=0, passed_by='chat', **({'report': args.report} if args.report else {}))
             else:
                 s.update(start=None, end=None, exit=None, pid=None, reason=None)
             save(rd, q)

@@ -510,6 +510,135 @@ class PipelineTest(unittest.TestCase):
         self.cli('done', 'a')
         t.join(5)
 
+    def test_review_and_recheck_read_the_briefs_the_item_was_launched_with(self):
+        briefs = os.path.join(self.tmp.name, 'briefs')
+        os.makedirs(briefs)
+        custom = os.path.join(briefs, 'custom.prompt.md')
+        with open(custom, 'w') as f:
+            f.write('PREAMBLE\nTASK: the custom task\nRISK: paid calls\n')
+        self.add('a', FULL, '--brief', custom)
+        self.write('a.body.md', 'TASK: a stale task\nRISK: trust boundaries\n')
+        os.remove(os.path.join(self.rd, 'a.prompt.md'))
+        self.add('b', FULL, '--brief', custom)
+        for name in ('b.body.md', 'b.prompt.md'):
+            os.remove(os.path.join(self.rd, name))
+        t = self.start()
+        for i in ('a', 'b'):
+            self.at(i, 'suspend:rulings')
+            prompt = self.read(f'{i}-review.md')
+            self.assertIn('TASK: the custom task', prompt)
+            self.assertNotIn('stale', prompt)
+            self.assertIn('- Paid calls:', prompt)
+            self.assertNotIn('Trust boundaries', prompt)
+        self.write('a-fix1.prompt.md', 'PREAMBLE\n' + FIX_BODY.format(id='a'))
+        self.write('a-fix1.body.md', 'FIX THESE, one at a time:\n1. A stale finding. Where: `old.py` about 1. Done when: never.\n')
+        self.write('a.rulings.done', 'fix 1 and 2\n')
+        self.at('a', 'suspend:merge')
+        recheck = self.read('a-rereview.md')
+        self.assertIn('1. Lost rows on restart.', recheck)
+        self.assertNotIn('stale', recheck)
+        for i in ('a', 'b'):
+            self.cli('done', i)
+        t.join(5)
+
+    def test_a_resumed_build_or_fix_hands_its_report_to_the_next_step(self):
+        self.add('a')
+        self.add('b')
+        for rnd in ('a', 'a-fix1', 'b'):
+            self.write(f'{rnd}.fake-exit', '3')
+        t = self.start()
+        for i in ('a', 'b'):
+            self.at(i, 'build', 'failed 3')
+        self.write('a-resume1.jsonl', report_log('REPORT of a-resume1'))
+        self.write('b-resume2.jsonl', report_log('REPORT of b-resume2'))
+        self.write('b-resume1.jsonl', report_log('REPORT of b-resume1'))
+        with mock.patch('sys.stderr'):
+            self.assertEqual(self.cli('retry', 'b', '--passed', '--report', 'b-resume9'), 2)
+        self.assertEqual(self.cli('retry', 'a', '--passed'), 0)
+        self.assertEqual(self.cli('retry', 'b', '--passed', '--report', 'b-resume2'), 0)
+        for i in ('a', 'b'):
+            self.at(i, 'suspend:rulings')
+            with open(os.path.join(self.items()[i]['worktree'], 'REVIEW-REPORT.md')) as f:
+                self.assertEqual(f.read().strip(), f'REPORT of {i}-resume' + ('1' if i == 'a' else '2'))
+        self.write('a-fix1.body.md', FIX_BODY.format(id='a'))
+        self.write('a.rulings.done', 'fix 1 and 2\n')
+        self.at('a', 'fix', 'failed 3')
+        self.write('a-fix1-resume1.jsonl', report_log('REPORT of a-fix1-resume1'))
+        self.assertEqual(self.cli('retry', 'a', '--passed'), 0)
+        self.at('a', 'suspend:merge')
+        with open(os.path.join(self.items()['a']['worktree'], 'REVIEW-REPORT.md')) as f:
+            self.assertEqual(f.read().strip(), 'REPORT of a-fix1-resume1')
+        for i in ('a', 'b'):
+            self.cli('done', i)
+        t.join(5)
+
+
+def report_log(text):
+    return (json.dumps({'type': 'assistant.message', 'data': {'content': text}}) + '\n'
+            + json.dumps({'type': 'result', 'exitCode': 0}) + '\n')
+
+
+class ReviewPrepTest(unittest.TestCase):
+    write, read = PipelineTest.write, PipelineTest.read
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.rd = os.path.join(self.tmp.name, 'run')
+        os.makedirs(self.rd)
+        self.wt = os.path.join(self.tmp.name, 'wt')
+        self.git('init', '-q', '-b', 'ow/a', self.wt, at=None)
+        self.commit('README')
+
+    def git(self, *args, at=''):
+        import subprocess
+        pre = ['git'] + (['-C', self.wt] if at is not None else [])
+        return subprocess.run(pre + ['-c', 'core.hooksPath=/dev/null', '-c', 'user.name=t', '-c',
+                                     'user.email=t@example.invalid', *args],
+                              check=True, capture_output=True, text=True).stdout.strip()
+
+    def commit(self, name):
+        with open(os.path.join(self.wt, name), 'w') as f:
+            f.write(f'{name} {time.time()}\n')
+        self.git('add', name)
+        self.git('commit', '-qm', f'feat: {name}')
+        return self.git('rev-parse', 'HEAD')
+
+    def built(self, task):
+        self.write('a.base', self.git('rev-parse', 'HEAD'))
+        self.commit('a.txt')
+        self.write('a.prompt.md', 'PREAMBLE\n' + task)
+        self.write('a.jsonl', report_log('REPORT of a'))
+        return q.reviewprep.review(self.rd, 'a', self.wt)
+
+    def test_inserted_text_is_never_read_as_a_placeholder(self):
+        for quoted in ('{{TASK}}', '{{GATES_RUN}}', '{{WORD_LIMIT|900}}'):
+            with self.subTest(quoted=quoted):
+                task = f'TASK: quote {quoted} in the docs\nRISK: none\n'
+                prompt = self.read(os.path.basename(self.built(task)))
+                self.assertIn(task.strip(), prompt)
+                self.assertEqual(prompt.count('Under 900 words.'), 1)
+
+    def test_findings_after_blank_lines_reach_the_recheck(self):
+        self.write('a-fix1.base', self.git('rev-parse', 'HEAD'))
+        self.commit('a-fix1.txt')
+        self.write('a-fix1.jsonl', report_log('REPORT of a-fix1'))
+        self.write('a-fix1.prompt.md', (
+            'THIS IS A FIX ROUND.\n\nFIX THESE, one at a time:\n\n'
+            '1. First. Where: `one.py` about 1. Done when: one holds.\n\n'
+            '2. Second. Where: `two.py` about 2.\n   Done when: two holds.\n\n'
+            '3. Third. Where: `three.py` about 3. Done when: three holds.\n\n'
+            'NOT TO CHANGE (decided): 4. Not a finding.\n\nREUSE CHECK: not needed.\n'))
+        recheck = self.read(os.path.basename(q.reviewprep.recheck(self.rd, 'a', self.wt)))
+        self.assertIn('1. First. Where: `one.py` about 1. Done when: one holds.', recheck)
+        self.assertIn('2. Second. Where: `two.py` about 2. Done when: two holds.', recheck)
+        self.assertIn('3. Third. Where: `three.py` about 3. Done when: three holds.', recheck)
+        self.assertNotIn('Not a finding', recheck)
+        with open(os.path.join(S, '..', 'assets', 'fix.md')) as f:
+            fix = f.read()
+        self.assertEqual([n for n, *_ in q.reviewprep.findings(fix.replace('{{MORE_FINDINGS}}', '\n2. B. Where: x. Done when: y.'))],
+                         ['1', '2'])
+
 
 if __name__ == '__main__':
     unittest.main()

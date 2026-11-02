@@ -2,20 +2,24 @@
 """Write one item's review inputs, so a review or re-check launches without the chat.
 
 Usage:
-    python3 reviewprep.py review <item> --worktree DIR [--run-dir RUN]
-    python3 reviewprep.py recheck <item> --worktree DIR [--run-dir RUN]
+    python3 reviewprep.py review <item> --worktree DIR [--run-dir RUN] [--brief FILE] [--report ROUND]
+    python3 reviewprep.py recheck <item> --worktree DIR [--run-dir RUN] [--brief FILE] [--report ROUND]
     python3 reviewprep.py --help
 
 review: writes REVIEW-DIFF.patch (`git diff <base>...HEAD`; base from <run>/<item>.reviewbase, else --base (the
 queue runner passes the build step's HEAD at its first launch, which a retry keeps), else <item>.base, which
-route.py run rewrites at every launch) and REVIEW-REPORT.md (the build's last message, from result.py
-<item>.jsonl) into the worktree, uncommitted, and fills assets/review.md into <run>/<item>-review.md: the task from
-<item>.body.md (else <item>.prompt.md), one risk block per name on its RISK line (from the menu in review.md's
-own comment), prior rulings from <item>.rulings.md, project rules from <item>.security.md or security.md.
-recheck: writes the fix diff (`git diff <base>..HEAD`, base from --base, else <item>-fix1.base) and the fix report, and fills assets/rereview.md
-into <run>/<item>-rereview.md from the numbered findings under "FIX THESE" in <item>-fix1.body.md (else
-<item>-fix1.prompt.md). {{RUBRIC}} is left for review.sh. Exit 2, with the reason and nothing launched, when a
-base is missing or unknown to git, the diff is empty, a report or findings are missing, or a placeholder stays.
+route.py run rewrites at every launch) and REVIEW-REPORT.md (the build's last message, from result.py on the newest
+of <item>.jsonl and its resume rounds' <item>-resumeN.jsonl, or --report's) into the worktree, uncommitted, and
+fills assets/review.md into <run>/<item>-review.md: the task from the build's brief (--brief, else
+<item>.prompt.md, else <item>.body.md), cut to <item>.body.md when the brief holds it, one risk block per name on
+its RISK line (from the menu in review.md's own comment), prior rulings from <item>.rulings.md, project rules from
+<item>.security.md or security.md.
+recheck: writes the fix diff (`git diff <base>..HEAD`, base from --base, else <item>-fix1.base) and the fix report,
+and fills assets/rereview.md into <run>/<item>-rereview.md from the numbered findings under "FIX THESE" in the fix
+brief (--brief, else <item>-fix1.prompt.md, else <item>-fix1.body.md), up to the next section heading.
+Placeholders are filled in one pass over the template, so inserted text is never read as one. {{RUBRIC}} is left
+for review.sh. Exit 2, with the reason and nothing launched, when a base is missing or unknown to git, the diff is
+empty, a report or findings are missing, or a placeholder stays.
 """
 import argparse, os, re, subprocess, sys
 
@@ -76,7 +80,14 @@ def base_of(rd, wt, names, head=None):
     return base
 
 
-def report(rd, rnd):
+def report(rd, rnd, named=None):
+    """The final report of the round named (a resume round passed with `retry --passed`), else of whichever of <rnd>
+    and its resume rounds <rnd>-resumeN wrote its log last."""
+    if not named:
+        logs = [(os.path.getmtime(os.path.join(rd, f)), int(m.group(1) or 0), m.group(0)[:-6]) for f in os.listdir(rd)
+                for m in [re.fullmatch(re.escape(rnd) + r'(?:-resume(\d+))?\.jsonl', f)] if m]
+        named = max(logs)[2] if logs else rnd
+    rnd = named
     path = os.path.join(rd, rnd + '.jsonl')
     if not os.path.isfile(path):
         raise PrepError(f'no {rnd}.jsonl for the report')
@@ -93,12 +104,22 @@ def strip_head(text):
 
 
 def fill(text, fills):
-    for k, v in fills.items():
-        text = text.replace('{{' + k + '}}', v)
-    text = re.sub(r'\{\{[A-Z0-9_]+\|([^}]*)\}\}', lambda m: m.group(1), text)
-    left = sorted(set(re.findall(r'\{\{([^}]+)\}\}', text)) - {'RUBRIC'})
+    """Fill the template's {{NAME}} and {{NAME|default}} in one pass, so inserted text is never read as a placeholder."""
+    left = set()
+
+    def one(m):
+        whole, name, default = m.group(1), m.group(2), m.group(3)
+        for key in (whole, name):
+            if key in fills:
+                return fills[key]
+        if default is not None:
+            return default
+        if name != 'RUBRIC':
+            left.add(whole)
+        return m.group(0)
+    text = re.sub(r'\{\{(([^}|]+)(?:\|([^}]*))?)\}\}', one, text)
     if left:
-        raise PrepError(f"unfilled placeholders: {' '.join(left)}")
+        raise PrepError(f"unfilled placeholders: {' '.join(sorted(left))}")
     return text
 
 
@@ -128,15 +149,29 @@ def risk_blocks(template, body):
     return '\n'.join(out)
 
 
-def review(rd, item, wt, head=None):
+def task_text(rd, rnd, brief=None):
+    """The brief the round was launched with, or only its task when <rnd>.body.md is inside it: a body.md the brief
+    does not hold is stale. Without a brief, <rnd>.prompt.md, else <rnd>.body.md."""
+    body = first(os.path.join(rd, rnd + '.body.md'))
+    path = brief or first(os.path.join(rd, rnd + '.prompt.md'))
+    if not path or not os.path.isfile(path):
+        if brief:
+            raise PrepError(f'no brief at {brief}')
+        if not body:
+            raise PrepError(f'no {rnd}.body.md or {rnd}.prompt.md for the task')
+        return read(body)
+    text = read(path)
+    if body and read(body).strip() and read(body).strip() in text:
+        return read(body)
+    return text
+
+
+def review(rd, item, wt, head=None, brief=None, report_round=None):
     base = base_of(rd, wt, [item + '.reviewbase', item + '.base'], head)
     diff = git(wt, 'diff', f'{base}...HEAD')
     if not diff.strip():
         raise PrepError(f'empty diff from {base[:12]} to HEAD; nothing to review')
-    task_path = first(os.path.join(rd, item + '.body.md'), os.path.join(rd, item + '.prompt.md'))
-    if not task_path:
-        raise PrepError(f'no {item}.body.md or {item}.prompt.md for the task')
-    body, rep = read(task_path), report(rd, item)
+    body, rep = task_text(rd, item, brief), report(rd, item, report_round)
     template = read(os.path.join(ASSETS, 'review.md'))
     commits = git(wt, 'log', '--format=%h %s', f'{base}..HEAD').strip().replace('\n', '; ')
     branch = git(wt, 'rev-parse', '--abbrev-ref', 'HEAD').strip()
@@ -158,14 +193,27 @@ def review(rd, item, wt, head=None):
     return out
 
 
+HEADING = re.compile(r'#|[A-Z]{3,}(?:[ -][A-Z]+)*(?=[\s:,(]|$)|\S.*:$')
+
+
 def findings(text):
-    """(number, title, where, done when) for each numbered finding under the fix brief's "FIX THESE" line."""
-    if 'FIX THESE' not in text:
+    """(number, title, where, done when) for each numbered finding under the fix brief's "FIX THESE" line, up to
+    the next section heading (an unindented capitalised label such as NOT TO CHANGE, or a line ending in a colon);
+    blank lines do not end the list."""
+    head = re.search(r'^FIX THESE[^\n]*\n', text, re.M)
+    if not head:
         return []
-    block = re.split(r'^FIX THESE[^\n]*\n', text, maxsplit=1, flags=re.M)[-1]
-    block = re.split(r'\n[ \t]*\n', block, maxsplit=1)[0]
+    found = []
+    for line in text[head.end():].splitlines():
+        num = re.match(r'(\d+)\. (.+)', line)
+        if num:
+            found.append([num.group(1), num.group(2)])
+        elif line.strip() and not line[0].isspace() and HEADING.match(line):
+            break
+        elif line.strip() and found:
+            found[-1][1] += ' ' + line
     out = []
-    for n, f in re.findall(r'^(\d+)\. (.+?)(?=^\d+\. |\Z)', block, re.M | re.S):
+    for n, f in found:
         f = ' '.join(f.split())
         where = re.search(r'Where: (.+?)\.(?: What goes wrong:| Done when:|$)', f)
         done = re.search(r'Done when: (.+?)(?: Cases:|$)', f)
@@ -175,19 +223,16 @@ def findings(text):
     return out
 
 
-def recheck(rd, item, wt, head=None):
+def recheck(rd, item, wt, head=None, brief=None, report_round=None):
     fix = item + FIX_ROUND
     base = base_of(rd, wt, [fix + '.base'], head)
     diff = git(wt, 'diff', f'{base}..HEAD')
     if not diff.strip():
         raise PrepError(f'empty diff from {base[:12]} to HEAD; the fix round committed nothing')
-    brief = first(os.path.join(rd, fix + '.body.md'), os.path.join(rd, fix + '.prompt.md'))
-    if not brief:
-        raise PrepError(f'no {fix}.body.md or {fix}.prompt.md for the findings')
-    found = findings(read(brief))
+    found = findings(task_text(rd, fix, brief))
     if not found:
-        raise PrepError(f'no numbered findings under "FIX THESE" in {os.path.basename(brief)}')
-    rep = report(rd, fix)
+        raise PrepError(f'no numbered findings under "FIX THESE" in the {fix} brief')
+    rep = report(rd, fix, report_round)
     commits = git(wt, 'log', '--format=%h %s', f'{base}..HEAD').strip().replace('\n', '; ')
     n1, t1, w1, d1 = found[0]
     text = fill(strip_head(read(os.path.join(ASSETS, 'rereview.md'))), {
@@ -211,11 +256,14 @@ def main(argv=None):
     ap.add_argument('--worktree', required=True, help="the item's worktree")
     ap.add_argument('--run-dir', help='run folder (default: $OW_RUN_DIR)')
     ap.add_argument('--base', help='commit the diff starts from, unless <item>.reviewbase exists')
+    ap.add_argument('--brief', help='the brief the build (or fix) round was launched with')
+    ap.add_argument('--report', help='round whose final report to use (a resume round)')
     a = ap.parse_args(argv)
     rd = os.path.abspath(os.path.expanduser(a.run_dir or os.environ.get('OW_RUN_DIR') or '.'))
     try:
         out = (review if a.kind == 'review' else recheck)(rd, a.item, os.path.abspath(os.path.expanduser(a.worktree)),
-                                                          a.base)
+                                                          a.base, a.brief and os.path.abspath(os.path.expanduser(a.brief)),
+                                                          a.report)
     except (PrepError, OSError) as ex:
         print(f'reviewprep: {ex}', file=sys.stderr)
         return 2
