@@ -23,6 +23,7 @@ HARD RULES
 - Comments: only a WHY the code cannot show, in one short line. Follow the repository's own style; never run a formatter over whole files.
 - Read-only against every external system unless your task says otherwise.
 - {{INSTALL_STEP}}
+- Before writing any new functionality, research and analyse the well-known, established libraries, frameworks, skills, tools, industry standards and patterns that could be used, extended or taken as inspiration, not only those your REUSE CHECK names or the repository has. Your report lists each with what it would cover and why you used it or not.
 - Add a dependency only if your task's ALLOWED DEPENDENCIES line names it; record its name, version, licence and audit result. "Use a library if one fits" alone is not permission: report the library you would add instead of writing your own.
 - Never truncate output you draw a conclusion from (`head`, `tail`); count instead.
 - Run every long command (test suites, builds, mutation runs) in the FOREGROUND and wait for it; never start a gate as a background shell. When you end your turn the session ends, so a turn that ends "waiting for" anything loses your report.
