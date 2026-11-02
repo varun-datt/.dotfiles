@@ -61,6 +61,19 @@ class EngineTest(unittest.TestCase):
         )
         self.assertEqual({("DATED_FILENAME", "notes/misnamed.md")}, self.errors(dated_month_ok=True))
 
+    def test_a_summary_older_than_a_note_it_links_is_a_warning(self) -> None:
+        summary = "---\ntitle: Hub\ntype: moc\nupdated: 2026-10-01\n---\n\n[[fresh]] [[close]] [[notes/old]]\n"
+        write(self.root / "notes/hub.md", summary)
+        write(self.root / "notes/fresh.md", "---\ntitle: Fresh\ntype: note\nupdated: 2026-10-20\n---\n")
+        write(self.root / "notes/close.md", "---\ntitle: Close\ntype: note\nupdated: 2026-10-05\n---\n")
+        write(self.root / "notes/old.md", "---\ntitle: Old\ntype: note\nupdated: 2026-09-01\n---\n")
+        rules = {"types": ["note", "moc"], "summaries": {"types": ["moc"], "grace_days": 7}}
+        stale = [f for f in self.findings(**rules) if f.rule == "SUMMARY_STALE"]
+        self.assertEqual([("warning", "notes/hub.md")], [(f.severity, f.path) for f in stale])
+        self.assertIn("1 note(s)", stale[0].message)
+        self.assertIn("notes/fresh.md", stale[0].message)
+        self.assertEqual([], [f for f in self.findings(types=["note", "moc"]) if f.rule == "SUMMARY_STALE"])
+
     def test_baseline_downgrades_only_the_listed_finding(self) -> None:
         write(self.root / "notes/a.md", "---\ntype: note\n---\n")
         write(self.root / "notes/b.md", "---\ntype: note\n---\n")

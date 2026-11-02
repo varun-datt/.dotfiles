@@ -35,12 +35,20 @@ A decision note uses MADR's sections: context, decision, why (with the options p
 
 **Postmortem option.** For an event that is an incident, the agent offers Google SRE's postmortem template instead of the short event note when the incident meets any of the common postmortem triggers: user-visible downtime or degradation beyond a threshold, data loss of any kind, on-call intervention (rollback, rerouting traffic), resolution time above a threshold, or a monitoring failure, usually meaning the incident was found by hand ([Google SRE book](https://sre.google/sre-book/postmortem-culture/)). Any stakeholder may also ask for one (same page). Otherwise the short event note is enough.
 
+## The wiki is the front door
+
+The wiki is the one place where I get at least a high-level view of everything in my life (owner, 2026-11-02). Every project, area and system I have (an application such as AMC, the skills and knowledge set-up, a home, a health topic) has a summary note in the wiki that reads on its own: what it is, where it stands, the key decisions and what comes next, with links to the full detail wherever it lives (a repository's `docs/` and `research/`, the dotfiles' skills and knowledge master, the work knowledge repository).
+
+- A summary restates enough to be understood without opening anything else. The detail of each fact keeps one home, and the summary links to it rather than copying it.
+- Work appears in the wiki only in general terms (roles, kinds of work, how I work), with a pointer to the work knowledge repository, which keeps its own readable summaries by the same rule. The commit guard stays on the wiki.
+- Summaries are kept current by steps that already run, not by a new chore. `distill` captures a `summary` line when a session changed what a summary says or found something with no summary yet, and the wiki's inbox triage applies it. The validator's `summaries` rule warns (`SUMMARY_STALE`) when a summary note is older than a wiki note it links to, and the weekly review lists those warnings. Detail outside the wiki has no date the validator can read, so for it `distill` is the only signal.
+
 ## Which layer owns what
 
 | Knowledge | Goes to |
 | --- | --- |
 | What a program or agent reads to act: rules, skills, settings | dotfiles (this repository) |
-| What I read to think, learn or grow | the wiki |
+| What I read to think, learn or grow, and a readable summary of everything else | the wiki |
 | A preference | its setting in dotfiles; its reasoning in the wiki |
 | Machine state and caches | neither |
 | Anything private or from work | never this public repository |

@@ -48,6 +48,7 @@ Read the repository's `Layout:` line in its `AGENTS.md` first; its own named hom
 | Procedures | `.agents/skills/` | `.agents/skills/` |
 
 - Rules and settings an agent reads go to the dotfiles; what I read to think or learn goes to the wiki inbox; machine state and caches go to neither; nothing private or from work goes in the public dotfiles.
+- The wiki is my front door to everything: each project, area and system has a summary there that reads on its own and links to its detail. When work changes what one says, capture a `summary` line (knowledge layout, "The wiki is the front door").
 - For an incident that meets a Google SRE postmortem trigger (user-visible outage, data loss, on-call intervention, long resolution, monitoring failure), offer the postmortem template.
 - Full layout: `~/.local/share/chezmoi/docs/knowledge-layout.md`. Ending a session: the `distill` skill.
 

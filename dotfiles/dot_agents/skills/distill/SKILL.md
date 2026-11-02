@@ -95,6 +95,7 @@ True for this repository but unsafe to commit there (private, employer or person
 2. Append each line with the wiki's own command: `make -C ~/sandbox/wiki capture M="<line>"`. One line per item: `[distill <mode> <date and time>] <kind>: <claim> (why: <reason>; source: <repository alias>, <path, commit or URL>) #distilled`.
 3. Write the raw line before any rewording, and report the path the command prints. Do not file into wiki notes, and never commit the wiki; its triage files the inbox later.
 4. If the wiki is missing, append the same lines to `~/.agents/state/<workspace>/distilled-personal.md` and say so.
+5. The wiki holds a summary of every project, area and system (`~/.local/share/chezmoi/docs/knowledge-layout.md`, "The wiki is the front door"). When the source changed what one says, or found a project, area or system with none, capture one line of kind `summary`: `summary: [[<note>]] <what changed or what it is>`. Work only in general terms.
 
 ## 6. Finish
 

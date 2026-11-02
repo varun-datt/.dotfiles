@@ -229,6 +229,7 @@ class VaultValidator:
         self._collect_notes()
         self._validate_notes()
         self._validate_wikilinks()
+        self._validate_summaries()
         self._validate_tasks_and_retention()
         self._validate_workflows()
         self._validate_bootstrap()
@@ -542,6 +543,59 @@ class VaultValidator:
 
         ranked = sorted((rank(path), path) for path in matches)
         return len(ranked) == 1 or ranked[-1][0] != ranked[-2][0]
+
+    def _validate_summaries(self) -> None:
+        settings = self.rules.get("summaries")
+        if not settings:
+            return
+        types = set(settings.get("types", []))
+        grace = int(settings.get("grace_days", 0))
+        by_path = {note.path.resolve(): note for note in self.notes}
+        by_stem: dict[str, list[ParsedMarkdown]] = {}
+        for note in self.notes:
+            by_stem.setdefault(note.path.stem.casefold(), []).append(note)
+        for note in self.notes:
+            own = note.frontmatter.get("updated")
+            if note.frontmatter.get("type") not in types or not valid_date(own):
+                continue
+            own_date = dt.date.fromisoformat(own)
+            newer: set[str] = set()
+            visible = self._mask_non_rendered_wikilinks(note.text)
+            for match in WIKILINK_RE.finditer(visible):
+                target = match.group(1).split("|", 1)[0].split("#", 1)[0].strip()
+                linked = self._linked_note(target, note.path, by_path, by_stem)
+                if linked is None or linked is note:
+                    continue
+                updated = linked.frontmatter.get("updated")
+                if valid_date(updated) and (dt.date.fromisoformat(updated) - own_date).days > grace:
+                    newer.add(linked.relative)
+            if newer:
+                first = sorted(newer)[0]
+                self.add(
+                    "warning",
+                    "SUMMARY_STALE",
+                    note.relative,
+                    f"summary is older than {len(newer)} note(s) it links to, such as {first}",
+                )
+
+    def _linked_note(
+        self,
+        target: str,
+        source: Path,
+        by_path: dict[Path, ParsedMarkdown],
+        by_stem: dict[str, list[ParsedMarkdown]],
+    ) -> ParsedMarkdown | None:
+        normalized = target.lstrip("/").replace("\\", "/")
+        if not normalized:
+            return None
+        name = normalized if normalized.endswith(".md") else f"{normalized}.md"
+        if "/" in normalized:
+            for path in (source.parent / name, self.root / name):
+                if path.resolve() in by_path:
+                    return by_path[path.resolve()]
+            return None
+        matches = by_stem.get(PurePosixPath(name).stem.casefold(), [])
+        return matches[0] if len(matches) == 1 else None
 
     def _validate_tasks_and_retention(self) -> None:
         retention = self.rules.get("retention_tags")
