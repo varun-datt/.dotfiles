@@ -6,9 +6,13 @@
 """Score search engines on the mock cases, for every space and caller, and guard a baseline.
 
 Usage:
-    eval.py [--engine kb:fused --engine kb:regex ...] [--by class] [--json OUT]
+    eval.py [--engine kb:fused --engine kb:regex ...] [--by class] [--json OUT] [--compare RUN]
     eval.py --check                 exit 1 when the default engine falls below the baseline in any cell
     eval.py --write-baseline        record the engines just run as the baseline
+
+Each cell reports hit@5, hit@1, hit@3 and latency. Given several engines, each after the first is paired
+with the first, case by case by reciprocal rank, in a two-sided sign test over the cases that differ;
+--compare RUN pairs each engine with the same engine in RUN, a run saved earlier with --json.
 
 Engines:
     kb:<mode>     this skill's kb.py in that mode (fused, regex, lex, sem, hybrid)
@@ -17,7 +21,7 @@ Engines:
 The corpus is copied to a temporary folder, which also holds its indexes, so nothing is written into
 the fixtures or ~/.cache.
 """
-import argparse, io, json, os, re, shlex, shutil, statistics, subprocess, sys, tempfile, time
+import argparse, io, json, math, os, re, shlex, shutil, statistics, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FIXTURES = os.path.join(HERE, "fixtures")
@@ -75,7 +79,8 @@ def score_case(case, hits, prefix, corpus):
 def cell_summary(rows):
     n = len(rows)
     anchors = [r["anchored"] for r in rows if r["anchored"] is not None]
-    return {"n": n, "hit1": sum(r["rank"] == 1 for r in rows), "hit5": sum(bool(r["rank"]) and r["rank"] <= 5 for r in rows),
+    return {"n": n, "hit1": sum(r["rank"] == 1 for r in rows), "hit3": sum(bool(r["rank"]) and r["rank"] <= 3 for r in rows),
+            "hit5": sum(bool(r["rank"]) and r["rank"] <= 5 for r in rows),
             "mrr": round(sum(1 / r["rank"] for r in rows if r["rank"]) / n, 2) if n else 0,
             "anchor_ok": f"{sum(anchors)}/{len(anchors)}" if anchors else "-",
             "mustNot": sum(r["mustNot_violated"] for r in rows),
@@ -134,10 +139,47 @@ def print_table(results):
     print("| --- | --- | " + " | ".join("---" for _ in engines) + " |")
     for k in keys + ["ALL"]:
         cells = [results[e]["all"] if k == "ALL" else results[e]["cells"].get(k, {}) for e in engines]
-        print(f"| {k} | {cells[0].get('n', 0)} | " + " | ".join(f"{c.get('hit5', '-')} (top1 {c.get('hit1', '-')}, {c.get('p50_ms', '-')} ms)" for c in cells) + " |")
+        print(f"| {k} | {cells[0].get('n', 0)} | " + " | ".join(f"{c.get('hit5', '-')} (top1 {c.get('hit1', '-')}, top3 {c.get('hit3', '-')}, "
+                                                               f"{c.get('p50_ms', '-')} ms)" for c in cells) + " |")
     for e in engines:
         a = results[e]["all"]
         print(f"{e}: MRR {a['mrr']}, anchors {a['anchor_ok']}, mustNot violations {a['mustNot']}")
+
+
+def ranks_of(rows):
+    ranks = {}
+    for r in rows:
+        if r["id"] in ranks:
+            raise SystemExit(f"case id {r['id']} appears twice, so runs cannot be paired")
+        ranks[r["id"]] = r["rank"]
+    return ranks
+
+
+def sign_test(wins, losses):
+    """Two-sided exact binomial sign test over the cases that differ; ties are dropped before it."""
+    n, k = wins + losses, min(wins, losses)
+    return 1.0 if n == 0 else min(1.0, 2 * sum(math.comb(n, i) for i in range(k + 1)) / 2 ** n)
+
+
+def paired(base, new):
+    """Case by case by reciprocal rank, over the case ids both runs scored; a miss counts as 0."""
+    rr = lambda rank: 1 / rank if rank else 0.0  # noqa: E731
+    both = [i for i in new if i in base]
+    wins = sum(rr(new[i]) > rr(base[i]) for i in both)
+    losses = sum(rr(new[i]) < rr(base[i]) for i in both)
+    return {"wins": wins, "losses": losses, "ties": len(both) - wins - losses, "p": sign_test(wins, losses),
+            "only_base": sorted(i for i in base if i not in new), "only_new": sorted(i for i in new if i not in base)}
+
+
+def print_paired(new_name, base_name, r):
+    if r["wins"] + r["losses"] == 0:
+        print(f"paired, {new_name} against {base_name}: no case differs ({r['ties']} tied), so the sign test has nothing to weigh: p = 1")
+    else:
+        print(f"paired, {new_name} against {base_name}: {r['wins']} better, {r['losses']} worse, {r['ties']} tied and dropped; "
+              f"two-sided sign test p = {r['p']:.4g}")
+    for side, ids in ((base_name, r["only_base"]), (new_name, r["only_new"])):
+        if ids:
+            print(f"  {len(ids)} case(s) only in {side}, not paired: {', '.join(ids)}")
 
 
 def main(argv=None):
@@ -145,9 +187,16 @@ def main(argv=None):
     p.add_argument("--engine", action="append")
     p.add_argument("--by", choices=["cell", "class"], default="cell")
     p.add_argument("--json")
+    p.add_argument("--compare", metavar="RUN", help="a run saved with --json: pair each engine in both, case by case, with a sign test")
     p.add_argument("--check", action="store_true")
     p.add_argument("--write-baseline", action="store_true")
     a = p.parse_args(argv)
+    earlier = None
+    if a.compare:
+        with open(a.compare) as f:
+            earlier = json.load(f)
+        if not isinstance(earlier, dict) or not all(isinstance(r, dict) and "ranks" in r for r in earlier.values()):
+            raise SystemExit(f"{a.compare} has no per-case ranks: save the run with this eval.py's --json")
     base = None
     if os.path.exists(BASELINE):
         with open(BASELINE) as f:
@@ -157,11 +206,19 @@ def main(argv=None):
         engines = [e for e in engines if not e.startswith("kb:") or e == "kb:regex"] or ["kb:regex"]
         print("ck not found: only regex runs", file=sys.stderr)
     rows = run(engines)
-    results = {e: group(r, "cell") for e, r in rows.items()}
+    results = {e: {**group(r, "cell"), "ranks": ranks_of(r)} for e, r in rows.items()}
     print_table(results)
     if a.by == "class":
         print()
         print_table({e: group(r, "class") for e, r in rows.items()})
+    for e in engines[1:]:
+        print_paired(e, engines[0], paired(results[engines[0]]["ranks"], results[e]["ranks"]))
+    if earlier is not None:
+        for e in engines:
+            if e in earlier:
+                print_paired(e, f"{e} in {a.compare}", paired(earlier[e]["ranks"], results[e]["ranks"]))
+            else:
+                print(f"paired: {e} is not in {a.compare}, so it is not compared")
     if a.json:
         with open(a.json, "w") as f:
             json.dump(results, f, indent=1)

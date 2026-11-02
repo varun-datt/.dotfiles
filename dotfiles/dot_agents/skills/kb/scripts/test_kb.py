@@ -162,6 +162,77 @@ class Scenarios(unittest.TestCase):
         self.assertEqual(suite.main(["--check"]), 0)
 
 
+def row(case_id, rank, space="work", caller="agent"):
+    return {"id": case_id, "rank": rank, "anchored": None, "mustNot_violated": False, "ms": 1.0, "space": space,
+            "caller": caller, "class": "identifier"}
+
+
+class Report(unittest.TestCase):
+    def test_hit_at_3_counts_ranks_one_to_three_in_every_cell(self):
+        cells = suite.group([row("a", 1), row("b", 3), row("c", 4), row("d", None), row("e", 2, "wiki")], "cell")["cells"]
+        self.assertEqual((cells["work/agent"]["hit3"], cells["work/agent"]["hit5"], cells["wiki/agent"]["hit3"]), (2, 3, 1))
+
+    def test_the_sign_test_matches_the_binomial_by_hand(self):
+        self.assertEqual(suite.sign_test(0, 0), 1.0)
+        self.assertEqual(suite.sign_test(5, 0), 2 / 32)
+        self.assertEqual(suite.sign_test(0, 5), 2 / 32)
+        self.assertEqual(suite.sign_test(6, 1), 2 * (1 + 7) / 128)
+        self.assertEqual(suite.sign_test(3, 14), 2 * (1 + 17 + 136 + 680) / 2 ** 17)
+        self.assertEqual(suite.sign_test(3, 3), 1.0)
+        self.assertEqual(suite.sign_test(1, 0), 1.0)
+
+    def test_pairing_drops_ties_and_counts_a_miss_as_the_worst_rank(self):
+        r = suite.paired({"a": 1, "b": 2, "c": None, "d": 3}, {"a": 1, "b": 1, "c": 9, "d": None})
+        self.assertEqual((r["wins"], r["losses"], r["ties"]), (2, 1, 1))
+        self.assertEqual(r["p"], 1.0)
+
+    def test_all_wins(self):
+        r = suite.paired({str(i): 2 for i in range(6)}, {str(i): 1 for i in range(6)})
+        self.assertEqual((r["wins"], r["losses"], r["ties"], r["p"]), (6, 0, 0, 2 / 64))
+
+    def test_no_case_differs_says_p_is_1_plainly(self):
+        r = suite.paired({"a": 1, "b": None}, {"a": 1, "b": None})
+        self.assertEqual((r["wins"], r["losses"], r["ties"], r["p"]), (0, 0, 2, 1.0))
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            suite.print_paired("new", "old", r)
+        self.assertIn("no case differs (2 tied)", out.getvalue())
+        self.assertIn("p = 1", out.getvalue())
+
+    def test_a_case_missing_from_one_run_is_reported_not_paired(self):
+        r = suite.paired({"a": 1, "gone": 1}, {"a": 2, "added": 1})
+        self.assertEqual((r["wins"], r["losses"], r["ties"], r["only_base"], r["only_new"]), (0, 1, 0, ["gone"], ["added"]))
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            suite.print_paired("new", "old", r)
+        self.assertIn("1 case(s) only in old, not paired: gone", out.getvalue())
+        self.assertIn("1 case(s) only in new, not paired: added", out.getvalue())
+
+    def test_compare_pairs_a_saved_run_and_a_second_engine(self):
+        rows = {"kb:auto": [row("a", 2), row("b", 1), row("c", None)], "kb:fused": [row("a", 1), row("b", 1), row("c", 1)]}
+        with tempfile.TemporaryDirectory() as d:
+            saved = os.path.join(d, "run.json")
+            with mock.patch.object(suite, "run", return_value=rows), mock.patch.object(suite.kb, "ck_binary", return_value="ck"), \
+                 mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+                self.assertEqual(suite.main(["--engine", "kb:auto", "--engine", "kb:fused", "--json", saved]), 0)
+                with open(saved) as f:
+                    self.assertEqual(json.load(f)["kb:auto"]["ranks"], {"a": 2, "b": 1, "c": None})
+                self.assertEqual(suite.main(["--engine", "kb:auto", "--compare", saved]), 0)
+        text = out.getvalue()
+        self.assertIn("| work/agent | 3 | 2 (top1 1, top3 2, 1 ms) | 3 (top1 3, top3 3, 1 ms) |", text)
+        self.assertIn("paired, kb:fused against kb:auto: 2 better, 0 worse, 1 tied and dropped; two-sided sign test p = 0.5", text)
+        self.assertIn(f"paired, kb:auto against kb:auto in {saved}: no case differs (3 tied)", text)
+
+    def test_compare_refuses_a_run_saved_without_ranks(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump({"kb:auto": {"cells": {}, "all": {}}}, f)
+        try:
+            with mock.patch.object(suite, "run") as run, self.assertRaises(SystemExit) as stop:
+                suite.main(["--compare", f.name])
+        finally:
+            os.remove(f.name)
+        run.assert_not_called()
+        self.assertIn("no per-case ranks", str(stop.exception))
+
+
 class UseMeasure(unittest.TestCase):
     def test_kb_first_then_a_returned_file_opened(self):
         import kb_use

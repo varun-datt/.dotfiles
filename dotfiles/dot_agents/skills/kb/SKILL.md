@@ -55,8 +55,10 @@ below, from the skill's folder in the chezmoi source, `$(chezmoi source-path)/do
 
 - `python3 -B scripts/test_kb.py`: the contract, the routing and, when ck is present, the scenario
   suite against its baseline.
-- `python3 -B scripts/eval.py --by class`: hit@1, hit@5, MRR and latency for every space (wiki,
-  work, product) and caller (palette, agent, request), and for each case class.
+- `python3 -B scripts/eval.py --by class`: hit@1, hit@3, hit@5, MRR and latency for every space (wiki,
+  work, product) and caller (palette, agent, request), and for each case class. Each engine after
+  the first is paired with the first case by case, in a two-sided sign test over the cases whose
+  rank differs; `--compare RUN` pairs each engine with a run saved earlier by `--json`.
 - The cases and corpus in `scripts/fixtures/` are invented (a fictional freight company); their mix
   copies measured real usage. Never add real content to them.
 
