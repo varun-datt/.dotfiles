@@ -248,8 +248,11 @@ class ReviewShTest(unittest.TestCase):
     def test_the_critique_template_launch_line_names_the_project(self):
         t = read('assets', 'critique-research.md')
         self.assertIn('--project <project repository>', t)
-        self.assertIn('read-only', visible(t).split('WHAT TO READ', 1)[1].split('CHECK, in this order', 1)[0])
-        self.assertIn('run folder', visible(t).split('WHAT TO READ', 1)[1].split('CHECK, in this order', 1)[0])
+        reads = visible(t).split('WHAT TO READ', 1)[1].split('CHECK, in this order', 1)[0]
+        line = next((x for x in reads.split('\n') if 'run folder' in x), '')
+        for part in ('You can also read the run folder', 'the project repository', "check the note's claims",
+                     'against them, read-only'):
+            self.assertIn(part, line)
 
     def test_rubric_is_filled_into_a_copy_and_launched(self):
         text = '<!-- {{RUBRIC}} is filled -->\nYou are a read-only reviewer.\n==== RUBRIC ====\n{{RUBRIC}}\n==== END ====\nTag & go \\1 /x/'

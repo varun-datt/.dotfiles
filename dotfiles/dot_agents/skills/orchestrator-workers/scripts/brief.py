@@ -192,14 +192,14 @@ def number_warnings(text):
     return found
 
 
-RELIES = re.compile(rf"(?i:\bfixed in|\bafter)\s+(?:commit\s+)?`?({COMMIT})`?")
+RELIES = re.compile(rf"(?i:\bfixed in|\bafter)\s+(?:(?i:commit)\s+`?([0-9a-fA-F]{{7,40}})\b|`?({COMMIT}))`?")
 HEX = re.compile(r"\b[0-9a-fA-F]{7,40}\b")
 
 
 def relied_on(text):
     named = []
     for n, line in outside_fences(brief_lines(text)):
-        ids = HEX.findall(line[len("RELIES ON:"):]) if line.startswith("RELIES ON:") else RELIES.findall(line)
+        ids = HEX.findall(line[len("RELIES ON:"):]) if line.startswith("RELIES ON:") else [a or b for a, b in RELIES.findall(line)]
         named += [(n, c) for c in ids if (n, c) not in named]
     return named
 

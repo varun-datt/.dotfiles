@@ -295,16 +295,21 @@ class ReliesOnTest(unittest.TestCase):
             os.chdir(old)
 
     def test_an_ancestor_passes_in_every_form(self):
-        for line in (f"RELIES ON: {self.fixed[:7]} the import fix", f"The crash was fixed in {self.fixed[:9]}.",
-                     f"Build after `{self.base[:7]}` landed.", f"Fixed in commit {self.fixed}.",
+        for line in (f"RELIES ON: {self.fixed[:7]} the import fix", f"The crash was fixed in {self.fixed}.",
+                     f"Build after `{self.base}` landed.", f"Fixed in commit {self.fixed[:7]}.",
                      f"RELIES ON: {self.base[:7]} and {self.fixed[:8]}"):
             self.assertEqual(self.found(line), [], line)
+
+    def test_which_words_name_a_commit(self):
+        named = brief.relied_on(worker() + "Fixed in commit 1234567. Build after `a1b2c3d4`.\nRELIES ON: 7654321 abcdef0\n"
+                                "Run after 1234567 rows; fixed in deadbeefcafe; after 2026-11-02.\n")
+        self.assertEqual([c for _, c in named], ["1234567", "a1b2c3d4", "7654321", "abcdef0"])
 
     def test_a_commit_on_another_branch_is_refused(self):
         found = self.found(f"RELIES ON: {self.side[:7]} the side fix")
         self.assertEqual(len(found), 1, found)
         self.assertRegex(found[0], rf"^line \d+: relies on {self.side[:7]}, which is not in main of ")
-        self.assertEqual(self.found(f"It was fixed in {self.side[:7]}."), found[:0] + [found[0]])
+        self.assertEqual(self.found(f"It was fixed in {self.side}."), [found[0].replace(self.side[:7], self.side)])
 
     def test_an_unknown_id_is_refused(self):
         found = self.found("RELIES ON: 1234abcd5678 the missing fix")
