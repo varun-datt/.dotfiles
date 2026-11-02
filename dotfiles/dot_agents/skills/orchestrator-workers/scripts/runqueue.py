@@ -32,10 +32,30 @@ notification to the owner and appends the line to <run>/ALERT.log, at most once 
 minutes while it stays true. --idle-alert 0 turns it off.
 
 States: waiting (on an item not done), ready, running, exited N, done.
+
+Pipeline: `add <id> --pipeline build,review,suspend:rulings,fix,recheck,suspend:merge --worktree DIR` runs the
+steps in order, each when the one before ended with exit 0, through the skill's own launchers: build and fix with
+route.py run (rounds <id> and <id>-fix1, briefs <run>/<id>.prompt.md and <id>-fix1.prompt.md), review and recheck
+with review.sh (<id>-review, <id>-rereview) after reviewprep.py writes their inputs. Reviews never take a slot.
+A step that exits non-zero (or whose prep fails, exit 2) stops the pipeline: it waits on the chat with its exit
+code, until `retry <id>` relaunches it or `retry <id> --passed` marks it passed. `suspend:<name>` waits on the
+chat until <run>/<id>.<name>.done exists; a rulings.done whose first word is `none` skips the fix and recheck.
+The last step must be a suspend; when it resumes, the item is done. A step's exit code also goes to
+<run>/<round>.queue-exit, so a restarted runner never relaunches a step that started.
+States of a pipeline item: waiting, ready, running, failed N, suspended, done (status names the step).
+
+    python3 runqueue.py wait [--max-min 30]   # the chat's one blocking call: returns when something needs it
 """
 import argparse, contextlib, fcntl, filecmp, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import reviewprep  # noqa: E402
+
+ROUTE = os.path.join(HERE, 'route.py')
+REVIEW = os.path.join(HERE, 'review.sh')
+STEPS = ('build', 'review', 'fix', 'recheck')
+SUSPEND = re.compile(r'^suspend:([A-Za-z0-9_-]+)$')
 OWN = ('route.py', 'review.sh')
 SEP = set(';&|()\n')
 SHELLS = {'sh', 'bash', 'zsh'}
@@ -197,14 +217,68 @@ def blockers(it, by_id):
     return [a for a in it['after'] if not by_id.get(a, {}).get('done')]
 
 
+def round_name(it, name):
+    return it['id'] + {'build': '', 'review': '-review', 'fix': reviewprep.FIX_ROUND, 'recheck': '-rereview'}[name]
+
+
+def passed(s):
+    return bool(s.get('skipped')) or (s.get('end') is not None and s.get('exit') == 0)
+
+
+def current(it):
+    return next((s for s in it['pipeline'] if not passed(s)), None)
+
+
+def done_file(rd, it, name):
+    return os.path.join(rd, f"{it['id']}.{name}.done")
+
+
+def exit_file(rd, rnd):
+    return os.path.join(rd, rnd + '.queue-exit')
+
+
 def state(it, by_id):
     if it.get('done'):
         return 'done'
+    if 'pipeline' in it:
+        s = current(it)
+        if s is None:
+            return 'done'
+        if s.get('end') is not None:
+            return f"failed {'?' if s.get('exit') is None else s['exit']}"
+        if blockers(it, by_id):
+            return 'waiting'
+        if SUSPEND.match(s['name']):
+            return 'suspended'
+        return 'running' if s.get('start') is not None else 'ready'
     if it.get('end') is not None:
         return f"exited {'?' if it.get('exit') is None else it['exit']}"
     if it.get('start') is not None:
         return 'running'
     return 'waiting' if blockers(it, by_id) else 'ready'
+
+
+def takes_slot(it):
+    return it['slot'] and ('pipeline' not in it or (current(it) or {}).get('name') in ('build', 'fix'))
+
+
+def needs(items):
+    """(key, line, since) for each item waiting on the chat: a plain item that exited, or a pipeline item
+    suspended or stopped by a failed step. The key changes when the item reaches a new such point."""
+    by_id = {it['id']: it for it in items}
+    for it in items:
+        st = state(it, by_id)
+        if 'pipeline' not in it:
+            if st.startswith('exited'):
+                yield f"{it['id']}:exit:{it['end']}", f"{it['id']} {st}", it['end']
+            continue
+        s = current(it)
+        if st == 'suspended' and s.get('start') is not None:
+            yield (f"{it['id']}:{s['name']}:{s['start']}",
+                   f"{it['id']} {s['name']}: write {it['id']}.{s['name'][8:]}.done", s['start'])
+        elif st.startswith('failed'):
+            why = f": {s['reason']}" if s.get('reason') else ''
+            yield f"{it['id']}:{s['name']}:{s['end']}", f"{it['id']} {s['name']} {st}{why}", s['end']
 
 
 def alive(pid):
@@ -240,11 +314,120 @@ def last_activity(rd, chat_log, fallback):
 def waiting_on_chat(items, since):
     by_id = {it['id']: it for it in items}
     states = {it['id']: state(it, by_id) for it in items}
-    out = [f"{it['id']} {states[it['id']]}" for it in items
-           if states[it['id']].startswith('exited') and it['end'] > since]
+    out = [line for _, line, t in needs(items) if t > since]
     if not any(s == 'running' for s in states.values()):
         out += [f"{it['id']} waits on {','.join(blockers(it, by_id))}" for it in items if states[it['id']] == 'waiting']
     return out
+
+
+WRAP = '"$@" </dev/null; rc=$?; echo $rc > "$0.tmp" && mv "$0.tmp" "$0"; exit $rc'
+
+
+def fix_prompt(rd, it):
+    """<id>-fix1.prompt.md, else the build's prompt with its body swapped for <id>-fix1.body.md."""
+    fix = round_name(it, 'fix')
+    path = os.path.join(rd, fix + '.prompt.md')
+    if os.path.isfile(path):
+        return path
+    body_path, build_body = os.path.join(rd, fix + '.body.md'), os.path.join(rd, it['id'] + '.body.md')
+    if not os.path.isfile(body_path):
+        raise reviewprep.PrepError(f'no {fix}.prompt.md or {fix}.body.md')
+    try:
+        prompt, body = reviewprep.read(it['brief']), reviewprep.read(build_body)
+    except OSError:
+        raise reviewprep.PrepError(f"no {fix}.prompt.md, and no {it['id']}.body.md to swap in the build's prompt")
+    if not body.strip() or prompt.count(body) != 1:
+        raise reviewprep.PrepError(f"no {fix}.prompt.md, and {it['id']}.body.md is not once in the build's prompt")
+    reviewprep.write(path, prompt.replace(body, reviewprep.read(body_path)))
+    return path
+
+
+def step_argv(rd, it, name):
+    rnd, wt = round_name(it, name), it['worktree']
+    if name in ('build', 'fix'):
+        brief = it['brief'] if name == 'build' else fix_prompt(rd, it)
+        if not os.path.isfile(brief):
+            raise reviewprep.PrepError(f'no brief at {brief}')
+        return [sys.executable, '-B', ROUTE, 'run', rnd, '--kind', name, '--run', rd, '--brief', brief,
+                '--worktree', wt, *it.get('route_args', [])]
+    # route.py run rewrites <round>.base on every launch, so a retried round would hide its first attempt's commits.
+    head = next((s.get('head') for s in it['pipeline'] if s['name'] == ('build' if name == 'review' else 'fix')), None)
+    (reviewprep.review if name == 'review' else reviewprep.recheck)(rd, it['id'], wt, head)
+    return ['bash', REVIEW, *it.get('review_args', []), rnd, wt]
+
+
+def launch_step(rd, q, it, s):
+    """Start the item's current step; a prep failure ends it at once with exit 2 and the reason."""
+    rnd, now = round_name(it, s['name']), time.time()
+    with contextlib.suppress(FileNotFoundError):
+        os.remove(exit_file(rd, rnd))
+    try:
+        if s['name'] in ('build', 'fix') and not s.get('head'):
+            s['head'] = reviewprep.git(it['worktree'], 'rev-parse', 'HEAD').strip()
+        argv = step_argv(rd, it, s['name'])
+    except (reviewprep.PrepError, OSError) as ex:
+        s.update(start=now, end=now, exit=2, pid=None, reason=str(ex)[:300])
+        return None
+    s.update(start=now, end=None, exit=None, pid=None, reason=None)
+    save(rd, q)
+    try:
+        with open(os.path.join(rd, f"{it['id']}.runner.log"), 'ab') as log:
+            p = subprocess.Popen(['/bin/sh', '-c', WRAP, exit_file(rd, rnd), *argv], start_new_session=True,
+                                 stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
+                                 env={**os.environ, 'OW_RUN_DIR': rd})
+    except OSError as ex:
+        s.update(end=time.time(), exit=127, reason=str(ex)[:300])
+        return None
+    s['pid'] = p.pid
+    return p
+
+
+def poll_step(rd, it, s, procs, now):
+    rnd = round_name(it, s['name'])
+    p = procs.get(rnd)
+    if p is not None:
+        rc = p.poll()
+        if rc is None:
+            return
+        procs.pop(rnd)
+    else:
+        try:
+            with open(exit_file(rd, rnd)) as f:
+                rc = int(f.read().strip())
+        except (OSError, ValueError):
+            if s.get('pid') and alive(s['pid']):
+                return
+            rc = None
+    s['end'], s['exit'] = now, rc
+
+
+def advance(rd, it, by_id, now):
+    """Start each suspend that comes due, resume it when its done file exists, and mark the item done when its
+    last step passes. A rulings.done whose first word is none skips the steps up to the next suspend."""
+    while not it.get('done') and not blockers(it, by_id):
+        s = current(it)
+        if s is None:
+            it['done'] = True
+            return
+        m = SUSPEND.match(s['name'])
+        if not m or s.get('end') is not None:
+            return
+        if s.get('start') is None:
+            s['start'] = now
+        path = done_file(rd, it, m.group(1))
+        if not os.path.exists(path):
+            return
+        s['end'], s['exit'] = now, 0
+        try:
+            with open(path, encoding='utf-8', errors='replace') as f:
+                word = (f.read().split() or [''])[0].lower().strip('.')
+        except OSError:
+            word = ''
+        if m.group(1) == 'rulings' and word == 'none':
+            for t in it['pipeline'][it['pipeline'].index(s) + 1:]:
+                if SUSPEND.match(t['name']):
+                    break
+                t['skipped'] = True
 
 
 def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
@@ -255,6 +438,12 @@ def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
             items = q['items']
             now = time.time()
             for it in items:
+                if 'pipeline' in it:
+                    s = current(it)
+                    if not it.get('done') and s and s.get('start') is not None and s.get('end') is None \
+                            and not SUSPEND.match(s['name']):
+                        poll_step(rd, it, s, procs, now)
+                    continue
                 if it.get('start') is not None and it.get('end') is None:
                     p = procs.get(it['id'])
                     if p is not None:
@@ -264,12 +453,22 @@ def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
                     if rc is not None:
                         it['end'], it['exit'] = now, None if rc == 'gone' else rc
             by_id = {it['id']: it for it in items}
-            busy = sum(1 for it in items if it['slot'] and state(it, by_id) == 'running')
+            for it in items:
+                if 'pipeline' in it:
+                    advance(rd, it, by_id, now)
+            busy = sum(1 for it in items if takes_slot(it) and state(it, by_id) == 'running')
             ready = sorted((i for i, it in enumerate(items) if state(it, by_id) == 'ready'),
                            key=lambda i: (-items[i]['priority'], i))
             for i in ready:
                 it = items[i]
-                if it['slot'] and busy >= slots:
+                if takes_slot(it) and busy >= slots:
+                    continue
+                if 'pipeline' in it:
+                    s = current(it)
+                    p = launch_step(rd, q, it, s)
+                    if p is not None:
+                        procs[round_name(it, s['name'])] = p
+                        busy += takes_slot(it)
                     continue
                 with open(os.path.join(rd, f"{it['id']}.runner.log"), 'ab') as log:
                     p = subprocess.Popen(it['cmd'], shell=True, start_new_session=True, stdin=subprocess.DEVNULL,
@@ -304,14 +503,28 @@ def main(argv=None):
     sub = ap.add_subparsers(dest='cmd', required=True)
     a = sub.add_parser('add', parents=[common], help='append an item')
     a.add_argument('id')
-    a.add_argument('--cmd', required=True, dest='shell', help='shell command that runs the item')
+    how = a.add_mutually_exclusive_group(required=True)
+    how.add_argument('--cmd', dest='shell', help='shell command that runs the item')
+    how.add_argument('--pipeline', help='steps run in order, e.g. build,review,suspend:rulings,fix,recheck,suspend:merge '
+                     '(build, review, fix, recheck, suspend:<name>; the last must be a suspend)')
+    a.add_argument('--worktree', help="with --pipeline: the item's worktree")
+    a.add_argument('--brief', help='with --pipeline: the build prompt (default <run>/<id>.prompt.md)')
+    a.add_argument('--route-args', default='', help='with --pipeline: extra route.py run options for build and fix')
+    a.add_argument('--review-args', default='', help='with --pipeline: extra review.sh options for review and recheck')
     a.add_argument('--after', default='', help='comma-separated ids that must be done first')
     a.add_argument('--no-slot', action='store_true', help='does not count against --slots (reviews)')
     a.add_argument('--priority', type=int, default=0, help='higher launches first (default 0)')
     a.add_argument('--unrouted-reason', help='why a command that runs copilot skips route.py run (logged with the item)')
     d = sub.add_parser('done', parents=[common], help='mark an item merged or closed')
     d.add_argument('id')
+    t = sub.add_parser('retry', parents=[common], help="relaunch a pipeline item's failed step")
+    t.add_argument('id')
+    t.add_argument('--passed', action='store_true', help='mark the failed step passed instead (the chat finished it by hand)')
     sub.add_parser('status', parents=[common], help='one line per item')
+    w = sub.add_parser('wait', parents=[common], help='block until an item newly needs the chat, then print it')
+    w.add_argument('--max-min', type=float, default=30, help='give up after this many minutes, exit 1 (default 30)')
+    w.add_argument('--settle', type=float, default=30, help='seconds to wait for others once one is seen (default 30)')
+    w.add_argument('--poll', type=float, default=20, help='seconds between checks (default 20)')
     r = sub.add_parser('run', parents=[common], help='the long-running loop')
     r.add_argument('--slots', type=int, default=3, help='slot items running at once (default 3)')
     r.add_argument('--poll', type=float, default=30, help='seconds between checks (default 30)')
@@ -342,6 +555,8 @@ def main(argv=None):
                 os.remove(pidfile)
 
     touch(rd)
+    if args.cmd == 'wait':
+        return wait(rd, args.max_min, args.settle, args.poll)
     with locked(rd):
         q = load(rd)
         items = q['items']
@@ -355,6 +570,15 @@ def main(argv=None):
             if unknown:
                 print(f"queue: unknown --after id: {', '.join(unknown)}", file=sys.stderr)
                 return 2
+            if args.pipeline is not None:
+                item, err = pipeline_item(rd, args)
+                if err:
+                    print(f'queue: {err}', file=sys.stderr)
+                    return 2
+                items.append({'id': args.id, 'after': after, 'slot': not args.no_slot, 'priority': args.priority,
+                              'added': time.time(), 'done': False, **item})
+                save(rd, q)
+                return 0
             reason = (args.unrouted_reason or '').strip()
             verdict = guard(args.shell)
             if verdict and not reason:
@@ -374,15 +598,117 @@ def main(argv=None):
                 return 2
             by_id[args.id]['done'] = True
             save(rd, q)
+        elif args.cmd == 'retry':
+            it = by_id.get(args.id)
+            if it is None or 'pipeline' not in it or not state(it, by_id).startswith('failed'):
+                print(f'queue: {args.id} is not a pipeline item stopped by a failed step', file=sys.stderr)
+                return 2
+            s = current(it)
+            if args.passed:
+                s.update(exit=0, passed_by='chat')
+            else:
+                s.update(start=None, end=None, exit=None, pid=None, reason=None)
+            save(rd, q)
     if args.cmd == 'status':
         now = time.time()
         for it in items:
             st = state(it, by_id)
+            if 'pipeline' in it:
+                print(pipeline_status(it, st, by_id, now))
+                continue
             since = it['start'] if it.get('start') is not None else it['added']
             mins = ((it.get('end') or now) - since) / 60
-            wait = blockers(it, by_id)
-            print(f"{it['id']}  {st}  {mins:.0f}m" + (f"  waits on {','.join(wait)}" if st == 'waiting' else ''))
+            after = blockers(it, by_id)
+            print(f"{it['id']}  {st}  {mins:.0f}m" + (f"  waits on {','.join(after)}" if st == 'waiting' else ''))
     return 0
+
+
+def pipeline_item(rd, args):
+    """(the item's pipeline fields, None), or (None, why it is refused)."""
+    names = [n.strip() for n in args.pipeline.split(',') if n.strip()]
+    bad = [n for n in names if n not in STEPS and not SUSPEND.match(n)]
+    if not names or bad:
+        return None, f"unknown pipeline step: {', '.join(bad) or '(none given)'}; use {', '.join(STEPS)} or suspend:<name>"
+    if not SUSPEND.match(names[-1]):
+        return None, 'the last pipeline step must be a suspend (such as suspend:merge), so the chat ends the item'
+    if len(set(names)) != len(names):
+        return None, 'a pipeline step appears twice; one review, one fix round and one re-check per item'
+    if 'recheck' in names and ('fix' not in names or names.index('fix') > names.index('recheck')):
+        return None, 'recheck needs a fix step before it'
+    if not args.worktree or not os.path.isdir(os.path.expanduser(args.worktree)):
+        return None, f'--pipeline needs --worktree naming an existing folder (got {args.worktree!r})'
+    stale = [p for p in (os.path.join(rd, f'{args.id}.{n[8:]}.done') for n in names if SUSPEND.match(n))
+             if os.path.exists(p)]
+    if stale:
+        return None, f"remove the done file left from before, or it resumes its suspend at once: {', '.join(stale)}"
+    try:
+        route_args, review_args = shlex.split(args.route_args), shlex.split(args.review_args)
+    except ValueError as ex:
+        return None, f'cannot split --route-args or --review-args: {ex}'
+    return {'pipeline': [{'name': n, 'start': None, 'end': None, 'exit': None, 'pid': None} for n in names],
+            'worktree': os.path.abspath(os.path.expanduser(args.worktree)),
+            'brief': os.path.abspath(os.path.expanduser(args.brief or os.path.join(rd, args.id + '.prompt.md'))),
+            'route_args': route_args, 'review_args': review_args}, None
+
+
+def pipeline_status(it, st, by_id, now):
+    s = current(it)
+    if s is None:
+        return f"{it['id']}  done"
+    k = it['pipeline'].index(s)
+    head = f"{it['id']}  {s['name']} ({k + 1}/{len(it['pipeline'])})"
+    since = s['start'] if s.get('start') is not None else it['added']
+    if st == 'running':
+        what = f"running {round_name(it, s['name'])}"
+    elif st == 'suspended':
+        what = f"waits on the chat: {it['id']}.{s['name'][8:]}.done"
+    elif st.startswith('failed'):
+        what = f"{st}, waits on the chat" + (f": {s['reason']}" if s.get('reason') else '')
+        now = s['end']
+    elif st == 'waiting':
+        what = f"waiting  waits on {','.join(blockers(it, by_id))}"
+    else:
+        what = st
+    return f"{head}  {what}  {(now - since) / 60:.0f}m"
+
+
+def wait(rd, max_min, settle, poll):
+    """Block until an item reaches a point that needs the chat which no earlier call printed (kept in
+    <run>/queue.seen), print one line each and exit 0; exit 1 after max_min minutes, printing a tick each minute."""
+    path = os.path.join(rd, 'queue.seen')
+
+    def fresh():
+        try:
+            with open(path, encoding='utf-8') as f:
+                seen = set(f.read().split('\n'))
+        except FileNotFoundError:
+            seen = set()
+        with locked(rd):
+            items = load(rd)['items']
+        return [(k, line) for k, line, _ in needs(items) if k not in seen], items
+
+    t0 = tick = time.time()
+    while True:
+        new, items = fresh()
+        if new:
+            if settle:
+                time.sleep(settle)
+                new, items = fresh()
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(''.join(k + '\n' for k, _ in new))
+            for _, line in new:
+                print(line, flush=True)
+            return 0
+        if items and all(it.get('done') for it in items):
+            print('all items done', flush=True)
+            return 0
+        if time.time() - t0 >= max_min * 60:
+            print(time.strftime('%H:%M'), 'nothing needs the chat yet', flush=True)
+            return 1
+        time.sleep(poll)
+        if time.time() - tick >= 60:
+            tick = time.time()
+            print(time.strftime('%H:%M'), 'waiting', flush=True)
 
 
 if __name__ == '__main__':
