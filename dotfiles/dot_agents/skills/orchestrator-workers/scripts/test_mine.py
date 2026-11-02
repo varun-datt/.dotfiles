@@ -654,3 +654,20 @@ class AuditTest(Base):
         self.run.round('a', credits=10, premium=1)
         j = json.loads(self.cli(self.run.dir, '--json').stdout)
         self.assertEqual(j['audit']['counts'], {'routed': 0, 'overridden': 0, 'unrouted': 1})
+
+
+class CausesTest(unittest.TestCase):
+    def test_the_rubric_format_is_read_with_its_class(self):
+        report = ('2 blocking\n**Blocking.**\n'
+                  'B1. [Major] REL L2/I2 FAIL: Migration recovery can abort startup  \n'
+                  'Class: unprotected transaction lifecycle. When SQLite rolls back...\n'
+                  '**B2. [Blocker] SEC L1/I1 BOUND: outside text reaches the prompt**\n'
+                  '**Minor.**\n- UX L2/I3 UIQ: focus lost on close, src/ui/a.tsx:3; class: focus on close\n'
+                  'Not a tag: COR L9/I9 MUST, and the word cause alone.\n')
+        self.assertEqual(mine.causes(report), [
+            ('FAIL', 'unprotected transaction lifecycle. When SQLite rolls back...'),
+            ('BOUND', None), ('UIQ', 'focus on close')])
+
+    def test_older_formats_still_read(self):
+        self.assertEqual(mine.causes('| B1 | Major | ORDER | late events |\ncause: TEST\n'),
+                         [('ORDER', 'late events'), ('TEST', None)])

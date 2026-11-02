@@ -749,6 +749,9 @@ RULING_KINDS = ('accepted', 'demoted', 'promoted', 'rejected', 'not-reproduced')
 CAUSES = ('MUST', 'SPEC', 'ADJ', 'ORDER', 'FAIL', 'BOUND', 'EDGE', 'PLAT', 'DESIGN', 'READ', 'REUSE', 'UIQ',
           'CONV', 'TEST', 'PRE')
 CAUSE_TAG = re.compile(r'\bcause\s*:\s*[*_`]*(' + '|'.join(CAUSES) + r')\b', re.I)
+GRADED_TAG = re.compile(r'\b(?:COR|DATA|SEC|PERF|REL|UX|COMP|COST|VERIF|MAINT|REPORT)\s+L[1-3]/I[1-4]\s+[*_`]*('
+                        + '|'.join(CAUSES) + r')\b')
+CLASS_LINE = re.compile(r'^[*_`]*class[*_`]*\s*:\s*[*_`]*(.+?)[*_`]*\s*$', re.I)
 
 
 def read_rulings(run):
@@ -829,11 +832,18 @@ def rulings_text(run, rows, rounds):
 
 
 def causes(report):
-    """(cause, class) per tag in a review's report."""
+    """(cause, class) per tag in a review's report: table cells, "cause: CODE", or the rubric's "AREA L1/I2 CODE"."""
     tags = []
-    for line in (report or '').splitlines():
+    lines = (report or '').splitlines()
+    for i, line in enumerate(lines):
         s = line.strip()
-        if s.startswith('|'):
+        graded = GRADED_TAG.search(s)
+        if graded:
+            inline = re.search(r';\s*class\s*:\s*(.+)$', s, re.I)
+            nxt = CLASS_LINE.match(lines[i + 1].strip()) if i + 1 < len(lines) else None
+            cls = inline.group(1).strip() if inline else nxt.group(1).strip() if nxt else None
+            tags.append((graded.group(1), cls))
+        elif s.startswith('|'):
             cells = [c.strip().strip('*_`').strip() for c in s.strip('|').split('|')]
             for i, c in enumerate(cells):
                 if c.upper() in CAUSES:
