@@ -1107,16 +1107,19 @@ def main(argv=None):
     if a.sarif and not a.findings:
         print('mine.py: --sarif needs --findings', file=sys.stderr)
         return 2
-    if a.findings:
-        import findings
-        print(findings.write(run, a.out and os.path.abspath(os.path.expanduser(a.out)), a.sarif)[0])
-        return 0
     since = None
     if a.since:
         since = parse_time(a.since)
         if since is None:
             print(f'mine.py: --since {a.since!r} is not an ISO date or time', file=sys.stderr)
             return 2
+    if a.findings:
+        if a.since:
+            print('mine.py: --findings records the whole run; --since is refused with it', file=sys.stderr)
+            return 2
+        import findings
+        print(findings.write(run, a.out and os.path.abspath(os.path.expanduser(a.out)), a.sarif)[0])
+        return 0
     merge_rows = None
     if a.repo:
         try:
