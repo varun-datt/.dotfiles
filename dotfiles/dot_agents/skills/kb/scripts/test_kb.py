@@ -1,4 +1,4 @@
-import glob, io, json, os, subprocess, sys, tempfile, time, unittest
+import glob, inspect, io, json, os, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
 sys.dont_write_bytecode = True
@@ -95,17 +95,28 @@ class Routing(unittest.TestCase):
         b = [{"source": "s", "path": "y"}, {"source": "s", "path": "z"}]
         self.assertEqual([h["path"] for h in kb.fuse([("regex", a), ("sem", b)])], ["y", "x", "z"])
 
-    def test_a_file_that_two_overlapping_folders_both_return_counts_once_per_engine(self):
+    def overlapping_folders(self, regex_hits):
         src = {"name": "s", "root": SOURCES[0]["root"]}
         jobs = [(src, "sem", "a"), (src, "sem", "b"), (src, "regex", None)]
         sem = {"a": [{"path": "x.md", "score": 0.9}, {"path": "y.md", "score": 0.5}], "b": [{"path": "x.md", "score": 0.8}]}
+        real = inspect.signature(kb.run_ck)
+        # Bound by name, so a parameter kb adds to run_ck does not break the stand-in.
+        stand_in = lambda *a, **kw: sem[real.bind(*a, **kw).arguments["folder"]]  # noqa: E731
         with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
-             mock.patch.object(kb, "run_ck", side_effect=lambda engine, q, root, folder, limit, ck, exclude: sem[folder]), \
-             mock.patch.object(kb, "run_rg", return_value=[{"path": "z.md", "score": 1.0}]), \
+             mock.patch.object(kb, "run_ck", side_effect=stand_in), \
+             mock.patch.object(kb, "run_rg", return_value=regex_hits), \
              mock.patch.object(kb, "title_of", return_value=""):
-            hits = {h["path"]: h for h in kb.search("q", [src], "fused", 3)}
+            return {h["path"]: h for h in kb.search("q", [src], "fused", 3)}
+
+    def test_a_file_that_two_overlapping_folders_both_return_counts_once_per_engine(self):
+        hits = self.overlapping_folders([{"path": "z.md", "score": 1.0}])
         self.assertEqual(set(hits), {"x.md", "y.md", "z.md"})
         self.assertEqual(hits["x.md"]["score"], hits["z.md"]["score"])
+
+    def test_a_file_that_two_engines_return_counts_once_for_each_engine(self):
+        hits = self.overlapping_folders([{"path": "x.md", "score": 1.0}])
+        self.assertEqual(hits["x.md"]["engines"], ["sem", "regex"])
+        self.assertAlmostEqual(hits["x.md"]["score"], 2 / (kb.RRF_K + 1))
 
     def test_a_folder_without_its_own_index_is_searched_by_regex(self):
         product = {"name": "product", "root": os.path.realpath(os.path.join(CORPUS, "product")), "paths": ["dock-scheduler", "route-planner"]}
