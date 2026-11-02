@@ -55,7 +55,7 @@ class FormatTest(unittest.TestCase):
         b1 = fs['1']
         self.assertEqual((b1['cause'], b1['area'], b1['likelihood'], b1['impact'], b1['grade']),
                          ('FAIL', 'REL', 'L2', 'I2', 'Major'))
-        self.assertTrue(b1['class'].startswith('unprotected transaction lifecycle'), b1['class'])
+        self.assertEqual((b1['class'] or '')[:33], 'unprotected transaction lifecycle')
         self.assertEqual((b1['file'], b1['line']), ('src/store/db.ts', 288))
         self.assertTrue(b1['blocking'])
         self.assertEqual(b1['title'], 'Restore can abort start-up')
@@ -63,7 +63,7 @@ class FormatTest(unittest.TestCase):
     def test_emphasis_around_tags_and_no_location(self):
         b2 = {f['n']: f for f in findings.parse(RUBRIC)}['2']
         self.assertEqual((b2['cause'], b2['grade'], b2['file'], b2['line']), ('ADJ', 'Blocker', None, None))
-        self.assertTrue(b2['class'].startswith('reuse of a failed transaction'), b2['class'])
+        self.assertEqual((b2['class'] or '')[:29], 'reuse of a failed transaction')
 
     def test_minor_and_pre_existing_do_not_block(self):
         fs = {f['n']: f for f in findings.parse(RUBRIC)}
@@ -272,6 +272,8 @@ class OlderFormsTest(unittest.TestCase):
         write(self.run, 'a-fix1.prompt.md', 'TASK\n1. a must\n\nTHIS ROUND\nFix all.\n\n1. `x.py` about 3: guard fails.\n2. Rename: do NOT build it. Record it as a known limit.\n')
         write(self.run, 'b-fix1.prompt.md', 'Fix round 1 for b. Fix 1.\n1. BLOCKING — `y.py:4`: a leak.\n')
         a, b = findings.brief(self.run.dir, 'a-fix1'), findings.brief(self.run.dir, 'b-fix1')
+        self.assertIsNotNone(a)
+        self.assertIsNotNone(b)
         self.assertEqual((len(a['accepted']), len(a['recorded'])), (1, 1))
         self.assertTrue(a['accepted'][0].startswith('1. `x.py`'))
         self.assertEqual((len(b['accepted']), b['recorded']), (1, []))
@@ -279,7 +281,9 @@ class OlderFormsTest(unittest.TestCase):
     def test_original_task_marker_quoted_in_prose_does_not_cut_the_brief(self):
         write(self.run, 'c-fix1.prompt.md', 'The brief is after "==== ORIGINAL TASK ====".\n\nACCEPTED, fix these:\n1. one\n\n'
               '==== ORIGINAL TASK ====\nACCEPTED, fix these:\n1. from the task\n2. also\n')
-        self.assertEqual(findings.brief(self.run.dir, 'c-fix1')['accepted'], ['1. one'])
+        b = findings.brief(self.run.dir, 'c-fix1')
+        self.assertIsNotNone(b)
+        self.assertEqual(b['accepted'], ['1. one'])
 
     def test_fix_round_of_a_research_run_still_rules(self):
         self.assertTrue(findings.is_fix({'kind': 'research', 'name': 'dr1-fix1'}))
