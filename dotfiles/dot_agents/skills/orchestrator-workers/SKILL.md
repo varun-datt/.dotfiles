@@ -203,7 +203,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   its cases; other cases the fixer sees go to the debt list, and a kind in 3 or more items goes to
   the owner as a structural fix. One round per item; a further round goes on the owner's list.
 - **Resume rounds** (`<item>-resumeN`, a stopped worker): `copilot -r ow-<item>` with the same
-  flags; `python3 -B scripts/resume.py <item> <round> <cap> <timeout>` does it from the item's
+  flags; `python3 -B scripts/resume.py <item> <round> <stop|none> <timeout>` does it from the item's
   last launch in `routes.jsonl`, with the prompt in `$OW_RUN_DIR/<round>.prompt.md`. Credit caps
   for both: [routing](references/routing.md#credit-caps).
 - **Before merging a note or page,** `python3 -B scripts/merge_check.py --patterns <file> <files>`

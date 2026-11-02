@@ -12,15 +12,15 @@ LAUNCH = ['copilot', '-C', '/w', '-n', 'ow-x', '--model', 'm', '-p']
 
 
 class ResumeTest(unittest.TestCase):
-    def test_new_session_becomes_resume_and_gains_a_cap(self):
-        argv = resume_argv(LAUNCH, 'x', 300, 'go on')
-        self.assertEqual(['copilot', '-C', '/w', '-r', 'ow-x', '--model', 'm',
-                          '--max-ai-credits', '300', '-p', 'go on'], argv)
+    def test_new_session_becomes_resume_with_no_visible_cap(self):
+        argv = resume_argv(LAUNCH, 'x', 'go on')
+        self.assertEqual(['copilot', '-C', '/w', '-r', 'ow-x', '--model', 'm', '-p', 'go on'], argv)
 
-    def test_an_existing_cap_is_replaced(self):
-        argv = resume_argv(LAUNCH[:-1] + ['--max-ai-credits', '1200', '-p'], 'x', 250, 'p')
-        self.assertEqual('250', argv[argv.index('--max-ai-credits') + 1])
-        self.assertEqual(1, argv.count('--max-ai-credits'))
+    def test_an_old_launch_s_visible_cap_is_removed(self):
+        argv = resume_argv(LAUNCH[:-1] + ['--max-ai-credits', '1200', '-p'], 'x', 'p')
+        self.assertNotIn('--max-ai-credits', argv)
+        self.assertNotIn('1200', argv)
+        self.assertEqual(['-p', 'p'], argv[-2:])
 
     def test_the_item_s_last_launch_is_used(self):
         with tempfile.TemporaryDirectory() as tmp:
