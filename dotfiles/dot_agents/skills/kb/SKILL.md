@@ -12,7 +12,7 @@ command and get the same fields back, so the engine behind it can change without
 ## Use it
 
 ```sh
-python3 ~/.agents/skills/kb/scripts/kb.py search "<query>" [--source NAME ...] [--json]
+python3 ~/.agents/skills/kb/scripts/kb.py search "<query>" [--source NAME ...] [--kind KIND ...] [--json]
 python3 ~/.agents/skills/kb/scripts/kb.py sources
 python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
 ```
@@ -27,8 +27,21 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
   folder holds the current directory, so work content does not end up in wiki notes or the
   reverse. Name any other source with `--source`, repeated for more; `kb.py sources` lists them.
   Outside every source, kb exits with status 2 and asks for one.
-- **Each hit:** `{source, path, line, end, title, snippet, score, engines}`. `path` is relative to
+- **Each hit:** `{source, path, line, end, title, snippet, score, engines, kind}`. `path` is relative to
   the source's root; `line` and `end` bound the matching lines; `engines` says which engines found it.
+  - **Contract change, 2026-11-02:** `kind` was added; nothing was removed or renamed, and the output is
+    still a JSON list of hits. A caller that ignores keys it does not know (AMC's `parseHits`,
+    `kb_hook.py`) reads it unchanged; one that checks the exact key set must add `kind`.
+- **Kind:** `note`, `code`, `test` or `data`, from the file's extension and path (the table in
+  [`scripts/kb.py`](scripts/kb.py)'s help): `.md`, `.rst`, `.txt`, `.html` and a bare `README` are
+  notes, wherever they sit; any other file under a `test`, `tests`, `__tests__` or `spec` folder, or
+  named like `test_*`, `*.test.*`, `*.spec.*` or `*Test.*`, is a test; `.json`, `.yaml`, `.csv`, images
+  and archives are data; the rest, a file with no extension included, is code. A source's `kinds`
+  overrides it by path glob.
+- **`--kind note`** (repeat, or `note,data`) keeps only those kinds, before the limit cuts: with
+  `--limit 3 --kind note` you get up to three notes even when code ranks above them. They come from
+  the same candidate pool, in the same order as without the filter. An unknown kind is refused with
+  the valid list.
 - **Ranking:** each engine hands up to 50 candidates (more when `--limit` asks for more), whatever
   the limit; they merge by reciprocal rank (k = 60); then a hit whose title (front-matter
   `title`, first heading, else file name) holds at least half of the query's content words scores
@@ -41,7 +54,9 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
   [`scripts/sources.example.json`](scripts/sources.example.json). It is data, not code: adding a
   source changes no script. Each source is searched in place and its ignore rules are honoured.
   `paths` limits a source to some of its folders, for a root that holds other repositories;
-  `exclude` skips folders under the root, such as test fixtures.
+  `exclude` skips folders under the root, such as test fixtures; `kinds` (`{"exports/*": "data"}`)
+  sets the kind of the files whose root-relative path matches a glob, where `*` crosses folders and the
+  first match wins.
 - **Engines:** `rg` is required. `ck` (BM25 and embeddings) is found on `PATH` or through `KB_CK`;
   without it every mode falls back to regex and says so.
 - **Indexes:** ck keeps one index per folder (the root, or each folder in `paths`) under
@@ -64,8 +79,16 @@ below, from the skill's folder in the chezmoi source, `$(chezmoi source-path)/do
   work, product) and caller (palette, agent, request), and for each case class. Each engine after
   the first is paired with the first case by case, in a two-sided sign test over the cases whose
   rank differs; `--compare RUN` pairs each engine with a run saved earlier by `--json`.
-- The cases and corpus in `scripts/fixtures/` are invented (a fictional freight company); their mix
-  copies measured real usage. Never add real content to them.
+- The cases and corpus in `scripts/fixtures/` (`cases.json`, `corpus/`) are invented (a fictional
+  freight company); their mix copies measured real usage. Never add real content to them.
+- `python3 -B scripts/eval.py --cases FILE [--check]` scores another case file the same way, against
+  its own baseline beside it (`FILE` with `.baseline.json`); `--write-baseline` records hit@1, hit@3,
+  hit@5 and MRR per cell. The file names its corpus: a folder, or a git repository at a pinned commit.
+  A case whose expected file is not in the corpus is reported and not scored, so its cell falls short
+  under `--check`. `scripts/fixtures/amc-probe-cases.json` holds AMC's 30 probe questions on AMC's own
+  repository, the one real file in `fixtures/`: questions and paths only, no content and nothing from
+  work. They picked the title boost, so they guard against regressions and never prove a gain; run
+  them where AMC's repository is checked out at `~/sandbox/personal/agent-mission-control`.
 
 ## Change the engine
 

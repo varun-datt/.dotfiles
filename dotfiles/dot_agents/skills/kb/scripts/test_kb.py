@@ -494,6 +494,128 @@ class CheckGate(unittest.TestCase):
                 self.assertEqual(suite.main(["--check"]), 1)
 
 
+def case(cid, q, *paths):
+    return {"id": cid, "space": "t", "caller": "palette", "class": "note", "q": q, "scope": ["s"], "expect": [{"path": p} for p in paths]}
+
+
+class CaseFiles(unittest.TestCase):
+    """A second case file over corpus/s: 'larch' ranks src/larch.ts (3 lines) first and notes/larch.md second."""
+
+    def setUp(self):
+        self.d = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-rf", self.d]))
+        for rel, text in (("corpus/s/notes/larch.md", "larch\n"), ("corpus/s/src/larch.ts", "larch\nlarch\nlarch\n")):
+            os.makedirs(os.path.dirname(os.path.join(self.d, rel)), exist_ok=True)
+            with open(os.path.join(self.d, rel), "w") as f:
+                f.write(text)
+        self.cases = os.path.join(self.d, "more.json")
+        self.write([case("note", "larch", "s/notes/larch.md"), case("code", "larch", "s/src/larch.ts")])
+
+    def write(self, queries, **top):
+        with open(self.cases, "w") as f:
+            json.dump({"version": 1, **top, "queries": queries}, f, indent=1)
+
+    def main(self, *args):
+        with mock.patch.object(suite, "BASELINE", os.path.join(self.d, "fixture-baseline.json")), \
+             mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            code = suite.main(["--cases", self.cases, "--engine", "kb:regex", *args])
+        return code, out.getvalue()
+
+    def test_the_fixture_file_loads_as_before(self):
+        cases, corpus = suite.load_cases(suite.CASES)
+        self.assertEqual((len(cases), corpus), (75, {"dir": "corpus"}))
+
+    def test_a_second_file_is_scored_by_mrr_hit_at_1_and_hit_at_3(self):
+        with mock.patch("sys.stdout", new_callable=io.StringIO):
+            rows = suite.run(["kb:regex"], self.cases)["kb:regex"]
+        self.assertEqual({r["id"]: r["rank"] for r in rows}, {"note": 2, "code": 1})
+        cell = suite.group(rows, "cell")["cells"]["t/palette"]
+        self.assertEqual((cell["n"], cell["hit1"], cell["hit3"], cell["mrr"]), (2, 1, 2, 0.75))
+
+    def test_its_baseline_sits_beside_it_and_holds_every_cell_under_check(self):
+        self.assertEqual(self.main("--write-baseline")[0], 0)
+        with open(os.path.join(self.d, "more.baseline.json")) as f:
+            stored = json.load(f)
+        self.assertFalse(os.path.exists(os.path.join(self.d, "fixture-baseline.json")))
+        self.assertEqual(stored["engines"]["kb:regex"], {"t/palette": {"hit5": 2, "hit1": 1, "hit3": 2, "mrr": 0.75}})
+        stored["default"] = "kb:regex"
+        with open(os.path.join(self.d, "more.baseline.json"), "w") as f:
+            json.dump(stored, f)
+        code, out = self.main("--check")
+        self.assertEqual(code, 0)
+        self.assertIn("kb:regex holds every cell", out)
+        for metric, floor, shown in (("mrr", 0.76, "mrr 0.75 < 0.76"), ("hit1", 2, "hit1 1 < 2"), ("hit3", 3, "hit3 2 < 3")):
+            with self.subTest(metric=metric):
+                bumped = json.loads(json.dumps(stored))
+                bumped["engines"]["kb:regex"]["t/palette"][metric] = floor
+                with open(os.path.join(self.d, "more.baseline.json"), "w") as f:
+                    json.dump(bumped, f)
+                code, out = self.main("--check")
+                self.assertEqual(code, 1)
+                self.assertIn(f"t/palette: {shown}", out)
+
+    def test_a_file_without_a_baseline_is_refused_under_check(self):
+        with self.assertRaises(SystemExit) as stop:
+            self.main("--check")
+        self.assertIn(f"no baseline at {os.path.join(self.d, 'more.baseline.json')}", str(stop.exception))
+
+    def test_a_case_whose_expected_file_is_gone_is_reported_and_not_scored(self):
+        self.write([case("note", "larch", "s/notes/larch.md"), case("moved", "larch", "s/notes/gone.md")])
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            rows = suite.run(["kb:regex"], self.cases)["kb:regex"]
+        self.assertEqual([r["id"] for r in rows], ["note"])
+        self.assertIn("case moved: s/notes/gone.md is not in the corpus, so the case is not scored", out.getvalue())
+
+    def test_a_malformed_file_is_refused_with_its_line(self):
+        with open(self.cases, "w") as f:
+            f.write('{"queries": [\n {"id": "a",\n  "q": }\n]}\n')
+        with self.assertRaises(SystemExit) as stop:
+            suite.load_cases(self.cases)
+        self.assertTrue(str(stop.exception).startswith(f"{self.cases}:3:"), stop.exception)
+        bad = case("broken", "larch", "s/notes/larch.md")
+        del bad["expect"]
+        self.write([case("note", "larch", "s/notes/larch.md"), bad])
+        with self.assertRaises(SystemExit) as stop:
+            suite.load_cases(self.cases)
+        with open(self.cases) as f:
+            line = next(i for i, l in enumerate(f, 1) if '"broken"' in l)
+        self.assertEqual(str(stop.exception), f"{self.cases}:{line}: case broken: lacks expect")
+        self.write([case("note", "larch", "s/notes/larch.md"), case("note", "larch", "s/src/larch.ts")])
+        with self.assertRaises(SystemExit) as stop:
+            suite.load_cases(self.cases)
+        with open(self.cases) as f:
+            line = [i for i, l in enumerate(f, 1) if '"id": "note"' in l][1]
+        self.assertEqual(str(stop.exception), f"{self.cases}:{line}: case note: id note appears twice")
+        self.write([case("note", "larch", "s/notes/larch.md")], corpus={"git": "x"})
+        with self.assertRaises(SystemExit) as stop:
+            suite.load_cases(self.cases)
+        self.assertIn('corpus must be {"dir": FOLDER} or {"git": REPOSITORY, "commit": ID}', str(stop.exception))
+
+    def test_a_git_corpus_is_read_at_its_commit(self):
+        repo = os.path.join(self.d, "corpus")
+        env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.com", "GIT_COMMITTER_NAME": "t",
+               "GIT_COMMITTER_EMAIL": "t@example.com"}
+        git = lambda *a: subprocess.run(["git", "-C", repo, *a], env=env, capture_output=True, text=True, check=True,  # noqa: E731
+                                        stdin=subprocess.DEVNULL).stdout.strip()
+        git("init", "-q")
+        git("add", "s")
+        commit = git("commit-tree", git("write-tree"), "-m", "corpus")
+        with open(os.path.join(repo, "s", "notes", "larch.md"), "w") as f:
+            f.write("larch\n" * 9)
+        self.write([case("note", "larch", "s/notes/larch.md")], corpus={"git": "corpus", "commit": commit})
+        with mock.patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual([r["rank"] for r in suite.run(["kb:regex"], self.cases)["kb:regex"]], [2])
+        self.write([case("note", "larch", "s/notes/larch.md")], corpus={"git": "corpus", "commit": "0" * 40})
+        with self.assertRaises(SystemExit) as stop:
+            suite.run(["kb:regex"], self.cases)
+        self.assertIn(f"corpus corpus at {'0' * 40}:", str(stop.exception))
+
+    def test_named_sources_with_a_root_path_score_as_root_relative_paths(self):
+        self.write([case("note", "larch", "notes/larch.md")], corpus={"dir": "corpus/s", "sources": [{"name": "s", "path": "."}]})
+        with mock.patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual([r["rank"] for r in suite.run(["kb:regex"], self.cases)["kb:regex"]], [2])
+
+
 class UseMeasure(unittest.TestCase):
     def test_kb_first_then_a_returned_file_opened(self):
         import kb_use

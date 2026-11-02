@@ -1,0 +1,20 @@
+{
+ "default": "kb:auto",
+ "engines": {
+  "kb:auto": {
+   "amc/palette": {
+    "hit5": 10,
+    "hit1": 6,
+    "hit3": 9,
+    "mrr": 0.67
+   },
+   "amc/request": {
+    "hit5": 12,
+    "hit1": 8,
+    "hit3": 11,
+    "mrr": 0.53
+   }
+  }
+ },
+ "recorded": "2026-11-02"
+}
