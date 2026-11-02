@@ -75,7 +75,7 @@
     ["public repository", "\\b(publish(?:ed|ing)? to (?:a )?public|public repo(?:sitory)?)\\b"]
   ],
   "floors": [
-    {"name": "owner-2026-10-29-sessions-ts", "when": {"text": "src/host/sessions\\.ts", "text_unless": "do not edit|not edit|out of scope|do not touch|don't touch|off limits"}, "model": "strongest", "effort": "high"},
+    {"name": "owner-2026-10-29-sessions-ts", "when": {"text": "src/host/sessions\\.ts", "text_unless": "do not edit|not edit|out of scope|do not touch|don't touch|off limits|not here", "text_skip": "^(?:TECH DEBT|CASES THE ORCHESTRATOR KNOWS|SOURCES TO READ|OUT OF SCOPE|FACTS TO VERIFY|REUSE CHECK|OWNER RULINGS[^:]*):", "risk_line": "^RISK:.*\\bhost-state\\b(?!:?\\s*none\\b)"}, "model": "strongest", "effort": "high"},
     {"name": "risk-area", "when": {"risk": true}, "model": "strongest", "effort": "high", "review_effort": "max"}
   ],
   "static": {

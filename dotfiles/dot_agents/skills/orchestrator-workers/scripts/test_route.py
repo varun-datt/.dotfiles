@@ -52,6 +52,32 @@ class Pick(unittest.TestCase):
         rec = self.pick(text=BRIEF + 'Files another session is changing, do not edit: src/host/sessions.ts\n')
         self.assertNotEqual(rec['floor'], 'owner-2026-10-29-sessions-ts')
 
+    def test_only_the_task_part_is_judged(self):
+        preamble = 'Turn and state handling (`src/host/sessions.ts`): list the event orders.\nNever print a secret.\n'
+        part = route.task_part(preamble + BRIEF)
+        self.assertEqual(part, BRIEF)
+        rec = self.pick(text=part)
+        self.assertIsNone(rec['floor'])
+        fix = preamble + 'THIS IS A FIX ROUND in a fresh session.\n' + BRIEF
+        self.assertTrue(route.task_part(fix).startswith('THIS IS A FIX ROUND'))
+        review = ('You are a read-only reviewer.\n==== THE AUTHOR\'S TASK ====\n' + preamble + BRIEF
+                  + '==== END OF TASK ====\n==== RUBRIC ====\nA secret goes where it should not.\n==== END OF RUBRIC ====\n')
+        self.assertNotIn('secret', route.task_part(review))
+        rereview = 'You are a read-only reviewer.\n==== RUBRIC ====\nA secret leaks.\n==== END OF RUBRIC ====\nCheck B1.\n'
+        self.assertNotIn('secret', route.task_part(rereview))
+        self.assertIn('sessions.ts', route.task_part(preamble + BRIEF + 'Change src/host/sessions.ts.\n'))
+        for ref in ('TECH DEBT: TD-41 (`src/host/sessions.ts`) if open', 'CASES THE ORCHESTRATOR KNOWS: `validSpecial` in `src/host/sessions.ts`',
+                    'RISK: none; TD-44 on `src/host/sessions.ts` belongs to another item: not here'):
+            self.assertIsNone(route.sessions_touch(BRIEF + ref + '\n', CFG), ref)
+        self.assertIsNotNone(route.sessions_touch(BRIEF + 'RISK: host-state (`src/host/sessions.ts`: switches against running turns)\n', CFG))
+        self.assertIsNotNone(route.sessions_touch(BRIEF + 'RISK: host-state (a command result changes the turn), UI.\n', CFG))
+        self.assertIsNone(route.sessions_touch(BRIEF + 'RISK: UI (rows), data (stored times).\n', CFG))
+        self.assertIsNone(route.sessions_touch(BRIEF + 'RISK: UI (one panel), host-state none (no change to how sessions send).\n', CFG))
+        diff = 'diff --git a/src/host/sessions.ts b/src/host/sessions.ts\n--- a/src/host/sessions.ts\n+++ b/src/host/sessions.ts\n'
+        self.assertEqual(route.sessions_touch(BRIEF, CFG, route.changed_files(diff)), 'changed: src/host/sessions.ts')
+        self.assertEqual(self.pick('review', call=stub('review'), author=OPUS, changed=['src/host/sessions.ts'])['floor'],
+                         'owner-2026-10-29-sessions-ts')
+
     def test_risk_area_gets_strongest_high_and_review_max_other_family(self):
         text = BRIEF + 'It stores the sign-in token in the session.\n'
         rec = self.pick(text=text)

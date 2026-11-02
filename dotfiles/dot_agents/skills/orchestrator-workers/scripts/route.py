@@ -81,14 +81,36 @@ def risk_hits(text, cfg):
             for m in [re.search(pat, low)] if m]
 
 
-def sessions_touch(text, cfg):
+TASK_START = re.compile(r"^(?:TASK:|THIS IS A FIX ROUND)", re.M)
+
+
+def task_part(text):
+    """The item's own task; shared preambles and the rubric name sessions.ts and risk words in every prompt."""
+    text = re.sub(r"^==== RUBRIC ====$.*?^==== END OF RUBRIC ====$", "", text, flags=re.S | re.M)
+    m = re.search(r"^==== THE AUTHOR'S TASK ====$(.*?)^==== END OF TASK ====$", text, re.S | re.M)
+    if m:
+        text = m.group(1)
+    m = TASK_START.search(text)
+    return text[m.start():] if m else text
+
+
+def changed_files(diff):
+    return re.findall(r'^\+\+\+ b/(\S+)', diff, re.M) + re.findall(r'^--- a/(\S+)', diff, re.M)
+
+
+def sessions_touch(text, cfg, changed=()):
     floor = next((f for f in cfg['floors'] if 'text' in f['when']), None)
     if not floor:
         return None
+    w = floor['when']
     for line in text.splitlines():
-        if re.search(floor['when']['text'], line) and not re.search(floor['when']['text_unless'], line, re.I):
+        if w.get('risk_line') and re.match(w['risk_line'], line):
             return line.strip()[:160]
-    return None
+        if w.get('text_skip') and re.match(w['text_skip'], line):
+            continue
+        if re.search(w['text'], line) and not re.search(w['text_unless'], line, re.I):
+            return line.strip()[:160]
+    return next((f'changed: {p}' for p in changed if re.search(w['text'], p)), None)
 
 
 def candidates(kind, cfg):
@@ -368,7 +390,7 @@ def context_signals(text, grades, cfg):
 
 
 def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None, run_fraction=None, rng=None,
-         seed=None, call=None, resumed_model=None):
+         seed=None, call=None, resumed_model=None, changed=()):
     rng = rng or random.Random(seed)
     cls = classify(text, kind, cfg, call)
     category = cls['category']
@@ -376,7 +398,7 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
     hits = risk_hits(text + '\n' + diff, cfg)
     if cls['grades']['risk']['grade'] >= cfg['tier_cutoffs']['hard_risk']:
         hits.append({'area': 'classifier risk grade', 'quote': cls['grades']['risk']['quote']})
-    sess = sessions_touch(text, cfg)
+    sess = sessions_touch(text, cfg, changed_files(diff) + list(changed))
     avoid = family(author, cfg) if kind == 'review' and author else None
     same = resumed_model or author or next((r['model'] for r in reversed(history['rounds'])
                                            if r['item'] == item and r['kind'] != 'review'), None)
@@ -687,6 +709,10 @@ def run_round(a, cfg):
         return 5
     with open(brief, encoding='utf-8') as f:
         text = f.read()
+    review_diff = os.path.join(wt, 'REVIEW-DIFF.patch')
+    if kind in ('review', 'fix') and os.path.isfile(review_diff):
+        with open(review_diff, encoding='utf-8', errors='replace') as f:
+            a.changed = changed_files(f.read())
     author_src = 'argument' if a.author_model else None
     if kind == 'review' and not a.author_model:
         a.author_model, fn = author_from_log(run, rnd)
@@ -947,6 +973,7 @@ def main(argv=None):
 
 
 def draw(a, run, item, kind, text, cfg):
+    text = task_part(text)
     history = load_history(run, a.history_root)
     diff = ''
     if a.diff:
@@ -968,7 +995,8 @@ def draw(a, run, item, kind, text, cfg):
             return out
     seed = a.seed if a.seed is not None else random.SystemRandom().randrange(2 ** 31)
     rec = pick(item, kind, text, history, cfg, a.author_model, diff, a.budget_left, a.run_fraction,
-               random.Random(seed), seed, call, a.author_model if kind == 'resume' else None)
+               random.Random(seed), seed, call, a.author_model if kind == 'resume' else None,
+               getattr(a, 'changed', ()))
     return rec
 
 
