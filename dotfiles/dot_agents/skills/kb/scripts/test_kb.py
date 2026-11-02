@@ -17,7 +17,7 @@ class Contract(unittest.TestCase):
         hits = kb.search("SlotConflictException", SOURCES, "regex")
         self.assertTrue(hits)
         for h in hits:
-            self.assertEqual(set(h), {"source", "path", "line", "end", "title", "snippet", "score", "engines"})
+            self.assertEqual(set(h), {"source", "path", "line", "end", "title", "snippet", "score", "engines", "kind"})
             root = next(s["root"] for s in SOURCES if s["name"] == h["source"])
             self.assertTrue(os.path.isfile(os.path.join(root, h["path"])))
 
@@ -52,7 +52,7 @@ class Contract(unittest.TestCase):
         finally:
             os.remove(sources)
         hits = json.loads(out.stdout)
-        self.assertEqual(set(hits[0]), {"source", "path", "line", "end", "title", "snippet", "score", "engines"})
+        self.assertEqual(set(hits[0]), {"source", "path", "line", "end", "title", "snippet", "score", "engines", "kind"})
         self.assertIn(("dock-scheduler", "src/scheduler.ts"), [(h["source"], h["path"]) for h in hits])
 
 
@@ -262,6 +262,121 @@ class CandidatePool(unittest.TestCase):
         top = "src/main/java/com/larkspur/route/RetryPolicy.java"
         self.assertEqual(kb.search("RetryPolicy", planner, "regex", 10)[0]["path"], top)
         self.assertEqual([h["path"] for h in kb.search("RetryPolicy", planner, "regex", 1)], [top])
+
+
+def kind_corpus(test):
+    """A source with a note, code, a test, data, a folder of exported .md, and the word 'larch' in each."""
+    d = tempfile.mkdtemp()
+    test.addCleanup(lambda: subprocess.run(["rm", "-rf", d]))
+    for rel in ("docs/guide.md", "src/larch.ts", "tests/larch.test.ts", "data/larch.json", "exports/2026/larch.md"):
+        os.makedirs(os.path.join(d, os.path.dirname(rel)), exist_ok=True)
+        with open(os.path.join(d, rel), "w") as f:
+            f.write("larch\n" * (5 if rel.startswith("src/") else 1) + ("spruce\n" if rel == "docs/guide.md" else ""))
+    sources = os.path.join(d, "sources.json")
+    with open(sources, "w") as f:
+        json.dump({"sources": [{"name": "s", "root": d, "exclude": ["sources.json"], "kinds": {"exports/*": "data"}}]}, f)
+    return d, sources
+
+
+def kb_cli(args, sources, cwd):
+    return subprocess.run([sys.executable, "-B", os.path.join(HERE, "kb.py"), *args, "--sources-file", sources], cwd=cwd,
+                          capture_output=True, text=True, stdin=subprocess.DEVNULL)
+
+
+class Kinds(unittest.TestCase):
+    def test_the_extension_and_path_table(self):
+        for path, kind in (("notes/a.md", "note"), ("src/api/handlers.ts", "code"), ("tests/x.test.ts", "test"),
+                           ("data/x.json", "data"), ("docs/guide/setup.md", "note"), ("Makefile", "code"), ("bin/deploy", "code"),
+                           ("README", "note"), (".gitignore", "data"), ("src/test_util.py", "test"), ("pkg/a_test.go", "test"),
+                           ("src/test/java/com/x/EtaEstimatorTest.java", "test"), ("web/a.spec.js", "test"),
+                           ("tests/fixtures/x.json", "test"), ("tests/README.md", "note"), ("docs/test_plan.md", "note"),
+                           ("src/Contest.java", "code"), ("conf/A.YAML", "data"), ("design/page.html", "note")):
+            with self.subTest(path=path):
+                self.assertEqual(kb.kind_of(path), kind)
+
+    def test_an_override_turns_a_folders_md_into_data_and_the_first_match_wins(self):
+        rules = [("exports/*", "data"), ("exports/*.md", "note")]
+        self.assertEqual(kb.kind_of("exports/2026/report.md", rules), "data")
+        self.assertEqual(kb.kind_of("docs/report.md", rules), "note")
+        self.assertEqual(kb.kind_of("exports/2026/report.md", {"exports/*": "data"}), "data")
+
+    def test_a_sources_file_with_an_unknown_kind_is_refused_with_the_valid_list(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump({"sources": [{"name": "s", "root": "/tmp", "kinds": {"exports/*": "notes"}}]}, f)
+        self.addCleanup(os.remove, f.name)
+        with self.assertRaises(SystemExit) as stop:
+            kb.load_sources(f.name)
+        self.assertIn("unknown kind 'notes' for 'exports/*'; use one of note, code, test, data", str(stop.exception))
+
+    def test_every_hit_carries_its_kind_and_the_sources_override_applies(self):
+        d, sources = kind_corpus(self)
+        out = kb_cli(["search", "larch", "--mode", "regex", "--json"], sources, d)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual({h["path"]: h["kind"] for h in json.loads(out.stdout)},
+                         {"docs/guide.md": "note", "src/larch.ts": "code", "tests/larch.test.ts": "test", "data/larch.json": "data",
+                          "exports/2026/larch.md": "data"})
+
+
+class KindFilter(unittest.TestCase):
+    RANKED = ["c0.ts", "c1.ts", "c2.ts", "c3.ts", "n4.md", "t5.test.ts", "n6.md", "d7.json", "n8.md", "n9.md"]
+
+    def search(self, limit, kinds=None, ranked=RANKED):
+        src = {"name": "s", "root": SOURCES[0]["root"]}
+        found = [{"path": p, "score": float(len(ranked) - i)} for i, p in enumerate(ranked)]
+        with mock.patch.object(kb, "ck_binary", return_value="ck"), \
+             mock.patch.object(kb, "plan", return_value=([(src, "regex", None)], [])), \
+             mock.patch.object(kb, "run_rg", return_value=found), mock.patch.object(kb, "title_of", return_value="Gate overview"):
+            return [h["path"] for h in kb.search("dock retry policy", [src], "regex", limit, kinds)]
+
+    def test_limit_3_of_notes_returns_three_notes_though_code_ranks_above_them(self):
+        self.assertEqual(self.search(3, ["note"]), ["n4.md", "n6.md", "n8.md"])
+
+    def test_two_kinds_keep_both_in_rank_order(self):
+        self.assertEqual(self.search(3, ["note", "data"]), ["n4.md", "n6.md", "d7.json"])
+
+    def test_the_filter_keeps_the_unfiltered_order(self):
+        full = self.search(50)
+        for kinds in (["note"], ["code", "test"], ["data"]):
+            with self.subTest(kinds=kinds):
+                self.assertEqual(self.search(4, kinds), [p for p in full if kb.kind_of(p) in kinds][:4])
+
+    def test_a_kind_with_no_hits_returns_nothing(self):
+        self.assertEqual(self.search(3, ["test"], ["c0.ts", "n1.md"]), [])
+
+    def test_without_kinds_nothing_is_filtered(self):
+        self.assertEqual(self.search(10), self.RANKED)
+
+    def test_search_refuses_an_unknown_kind(self):
+        with self.assertRaises(ValueError):
+            self.search(3, ["notes"])
+
+    def test_the_command_line_takes_a_repeated_or_comma_list(self):
+        d, sources = kind_corpus(self)
+        paths = lambda out: [h["path"] for h in json.loads(out.stdout)]  # noqa: E731
+        one = kb_cli(["search", "larch", "--mode", "regex", "--json", "--limit", "1", "--kind", "note"], sources, d)
+        self.assertEqual((one.returncode, paths(one)), (0, ["docs/guide.md"]))
+        comma = kb_cli(["search", "larch", "--mode", "regex", "--json", "--kind", "note,test"], sources, d)
+        repeated = kb_cli(["search", "larch", "--mode", "regex", "--json", "--kind", "note", "--kind", "test"], sources, d)
+        self.assertEqual(sorted(paths(comma)), ["docs/guide.md", "tests/larch.test.ts"])
+        self.assertEqual(paths(comma), paths(repeated))
+
+    def test_the_command_line_gives_an_empty_list_for_a_kind_with_no_hits(self):
+        d, sources = kind_corpus(self)
+        found = kb_cli(["search", "spruce", "--mode", "regex", "--json"], sources, d)
+        self.assertEqual([h["path"] for h in json.loads(found.stdout)], ["docs/guide.md"])
+        out = kb_cli(["search", "spruce", "--mode", "regex", "--json", "--kind", "code"], sources, d)
+        self.assertEqual((out.returncode, json.loads(out.stdout)), (0, []))
+
+    def test_the_command_line_refuses_an_unknown_kind_with_the_valid_list(self):
+        d, sources = kind_corpus(self)
+        out = kb_cli(["search", "larch", "--kind", "note,notes"], sources, d)
+        self.assertEqual(out.returncode, 2)
+        self.assertIn("unknown kind: 'notes'; use one of note, code, test, data", out.stderr)
+
+    def test_the_text_output_is_unchanged_without_kind(self):
+        d, sources = kind_corpus(self)
+        out = kb_cli(["search", "larch", "--mode", "regex", "--limit", "1"], sources, d)
+        self.assertEqual(out.stdout, "s:src/larch.ts:1  larch.ts — larch\n")
 
 
 class Report(unittest.TestCase):
@@ -487,6 +602,17 @@ class Hook(unittest.TestCase):
             else:
                 os.kill(child, 9)
                 self.fail("kb's child process outlived the hook's timeout")
+
+    def test_hits_with_the_kind_field_read_as_before(self):
+        hit = {"source": "wiki", "path": "a.md", "line": 3, "end": 4, "title": "Dock retry", "snippet": "Retry the dock.",
+               "score": 0.1, "engines": ["sem"], "kind": "note"}
+        with tempfile.TemporaryDirectory() as fake:
+            with open(os.path.join(fake, "kb.py"), "w") as f:
+                f.write(f"print({json.dumps(json.dumps([hit]))})\n")
+            with mock.patch.object(self.hook, "HERE", fake):
+                text = self.hook.kb_hits("why does the dock retry fail", fake)
+        self.assertEqual(text, "Knowledge search (kb) ran on this message; leads to read, not answers:\n"
+                               "- wiki:a.md:3 Dock retry — Retry the dock.")
 
     def test_a_log_that_cannot_be_written_still_gets_the_agent_an_answer(self):
         with mock.patch.dict(os.environ, {"KB_HOOK_LOG": self.state}):

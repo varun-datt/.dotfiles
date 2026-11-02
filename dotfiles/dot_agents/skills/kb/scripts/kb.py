@@ -6,21 +6,31 @@
 """Search the wiki, work knowledge and product repos named in a sources file, through one contract.
 
 Usage:
-    kb.py search QUERY [--source NAME ...] [--mode auto|fused|regex|lex|sem|hybrid] [--limit N] [--json]
+    kb.py search QUERY [--source NAME ...] [--mode auto|fused|regex|lex|sem|hybrid] [--kind KIND ...] [--limit N] [--json]
     kb.py index [--source NAME ...]     build or refresh ck's index of each folder (default: every source)
     kb.py sources
 
 Sources come from $KB_SOURCES, else ~/.config/kb/sources.json:
     {"sources": [{"name": "wiki", "root": "~/sandbox/wiki"}, {"name": "my-service", "root": "~/src/my-service"}]}
 A source may add "paths": ["docs", "notes"] to search only those parts of its root, and
-"exclude": ["tests/fixtures"] to skip folders under its root.
+"exclude": ["tests/fixtures"] to skip folders under its root, and "kinds": {"exports/*": "data"} to set
+the kind of the files whose root-relative path matches a glob (* crosses folders; the first match wins).
 Without --source, search covers only the sources whose root holds the current folder, so content
 from one space does not leak into another; outside every source, name the ones to search.
 ck keeps one index per folder (the root, or each folder in paths) under $KB_INDEX_DIR, else
 ~/.cache/kb/ck, and writes nothing into the folder. A folder without an index yet, and a file listed
 in paths, are searched by regex instead.
 
-Each hit is {source, path, line, end, title, snippet, score, engines}; path is relative to the source root.
+Each hit is {source, path, line, end, title, snippet, score, engines, kind}; path is relative to the source root.
+kind is one of note, code, test, data: the source's "kinds" glob that matches first, else
+    note    .md .markdown .mdx .rst .adoc .txt .org .html .htm, and README, LICENSE, CHANGELOG,
+            CONTRIBUTING, NOTICE, AUTHORS without an extension
+    test    any other file under a test, tests, __tests__, spec or specs folder, or named test_*,
+            *_test.*, *.test.*, *.spec.*, *Test.*, *Tests.* or conftest.py
+    data    .json .jsonl .ndjson .yaml .yml .toml .csv .tsv .xml .ini .cfg .conf .properties .lock,
+            images, media, archives and databases, and a name that starts with a dot and has no other extension
+    code    everything else, a file with no extension included (Makefile, Dockerfile, scripts)
+--kind (repeat, or comma-separate) keeps only those kinds, before --limit cuts the ranking.
 Modes:
     auto    by the query's shape: a regex goes to regex; up to three words to regex and lex; a
             longer message to sem (the default)
@@ -33,7 +43,7 @@ Results merge across engines and sources by reciprocal rank, k=60; then a hit wh
 title, first heading, else file name) holds half or more of the query's content words scores x1.2; the
 limit cuts that ranking last.
 """
-import argparse, glob, json, os, re, shutil, subprocess, sys, time
+import argparse, fnmatch, glob, json, os, re, shutil, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 
 RRF_K = 60
@@ -53,6 +63,41 @@ CK_EXCLUDES = ("*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp", "*.svg", "*.ico", "
                "*.exe", "*.dll", "*.so", "*.dylib", "*.a", "*.lib", "*.obj", "*.o", "*.zip", "*.tar", "*.tar.gz",
                "*.tgz", "*.rar", "*.7z", "*.bz2", "*.gz", "*.db", "*.sqlite", "*.sqlite3", "*.parquet", "*.arrow",
                "*.json", "*.yaml", "*.yml", "*.jsonl")
+FIELDS = ("source", "path", "line", "end", "title", "snippet", "score", "engines", "kind")
+KINDS = ("note", "code", "test", "data")
+NOTE_EXT = frozenset(".md .markdown .mdx .rst .adoc .txt .org .html .htm".split())
+NOTE_NAMES = frozenset("README LICENSE CHANGELOG CONTRIBUTING NOTICE AUTHORS".split())
+DATA_EXT = frozenset(".json .jsonl .ndjson .yaml .yml .toml .csv .tsv .xml .ini .cfg .conf .properties .lock .png .jpg "
+                     ".jpeg .gif .bmp .svg .ico .webp .tiff .pdf .mp4 .avi .mov .mkv .webm .mp3 .wav .flac .ogg .m4a "
+                     ".zip .tar .gz .tgz .bz2 .7z .rar .db .sqlite .sqlite3 .parquet .arrow".split())
+TEST_DIRS = frozenset("test tests __tests__ spec specs".split())
+TEST_NAMES = ("test_*", "*_test.*", "*.test.*", "*.spec.*", "*Test.*", "*Tests.*", "conftest.py")
+
+
+def kind_of(path, overrides=()):
+    """note, code, test or data for a root-relative path; overrides are (glob, kind) pairs, the first match wins."""
+    for pattern, kind in overrides.items() if isinstance(overrides, dict) else overrides:
+        if fnmatch.fnmatchcase(path, pattern):
+            return kind
+    parts = path.replace(os.sep, "/").split("/")
+    name = parts[-1]
+    ext = os.path.splitext(name)[1].lower()
+    if ext in NOTE_EXT or (not ext and name.upper() in NOTE_NAMES):
+        return "note"
+    if TEST_DIRS.intersection(parts[:-1]) or any(fnmatch.fnmatchcase(name, t) for t in TEST_NAMES):
+        return "test"
+    if ext in DATA_EXT or (not ext and name.startswith(".")):
+        return "data"
+    return "code"
+
+
+def kind_overrides(kinds, where):
+    if not isinstance(kinds, dict):
+        raise SystemExit(f"kb: {where}: kinds is an object of path glob to kind")
+    bad = {p: k for p, k in kinds.items() if k not in KINDS}
+    if bad:
+        raise SystemExit(f"kb: {where}: unknown kind {', '.join(f'{k!r} for {p!r}' for p, k in bad.items())}; use one of {', '.join(KINDS)}")
+    return list(kinds.items())
 
 
 def load_sources(path=None):
@@ -60,7 +105,8 @@ def load_sources(path=None):
     with open(path) as f:
         data = json.load(f)
     return [{"name": s["name"], "root": os.path.realpath(os.path.expanduser(s["root"])), "paths": s.get("paths") or ["."],
-             "exclude": [os.path.normpath(e).strip("/") for e in s.get("exclude") or []]}
+             "exclude": [os.path.normpath(e).strip("/") for e in s.get("exclude") or []],
+             "kinds": kind_overrides(s.get("kinds") or {}, f"{path}: source {s['name']}")}
             for s in data["sources"]]
 
 
@@ -222,9 +268,11 @@ def plan(query, sources, mode, ck):
     return jobs, unindexed
 
 
-def search(query, sources, mode="auto", limit=10):
+def search(query, sources, mode="auto", limit=10, kinds=None):
     if mode not in MODES:
         raise ValueError(f"mode is one of {', '.join(MODES)}")
+    if kinds and set(kinds) - set(KINDS):
+        raise ValueError(f"kind is one of {', '.join(KINDS)}")
     ck = ck_binary()
     jobs, _ = plan(query, sources, mode, ck)
     depth = max(limit, POOL)
@@ -247,16 +295,18 @@ def search(query, sources, mode="auto", limit=10):
             if key not in best or h["score"] > best[key]["score"]:
                 best[key] = h
     rankings = [(engine, sorted(best.values(), key=lambda h: -h["score"])[:depth]) for engine, best in merged.items()]
-    roots = {}
+    roots, overrides = {}, {}
     for s in sources:
         roots.setdefault(s["name"], s["root"])
+        overrides.setdefault(s["name"], s.get("kinds") or ())
     fused = fuse(rankings)
     for h in fused:
         h["title"] = title_of(os.path.join(roots[h["source"]], h["path"]))
         if title_matches(query, h["title"]):
             h["score"] *= TITLE_BOOST
-    hits = sorted(fused, key=lambda h: -h["score"])[:limit]
-    return [{k: h.get(k) for k in ("source", "path", "line", "end", "title", "snippet", "score", "engines")} for h in hits]
+        h["kind"] = kind_of(h["path"], overrides[h["source"]])
+    hits = sorted((h for h in fused if not kinds or h["kind"] in kinds), key=lambda h: -h["score"])[:limit]
+    return [{k: h.get(k) for k in FIELDS} for h in hits]
 
 
 def index(sources, ck, out):
@@ -293,6 +343,8 @@ def main(argv=None):
     s.add_argument("query")
     s.add_argument("--source", action="append", help="a source name; repeat for more; default: the sources holding the current folder")
     s.add_argument("--mode", default="auto", choices=MODES)
+    s.add_argument("--kind", action="append", metavar="KIND",
+                   help=f"keep only these kinds ({', '.join(KINDS)}); repeat or comma-separate; applied before --limit")
     s.add_argument("--limit", type=int, default=10)
     s.add_argument("--json", action="store_true")
     s.add_argument("--sources-file")
@@ -301,6 +353,10 @@ def main(argv=None):
     ix.add_argument("--sources-file")
     sub.add_parser("sources").add_argument("--sources-file")
     a = p.parse_args(argv)
+    kinds = [k.strip() for v in getattr(a, "kind", None) or [] for k in v.split(",")]
+    unknown_kinds = [k for k in kinds if k not in KINDS]
+    if unknown_kinds:
+        p.error(f"unknown kind: {', '.join(map(repr, unknown_kinds))}; use one of {', '.join(KINDS)}")
     sources = load_sources(a.sources_file)
     if a.cmd == "sources":
         for src in sources:
@@ -323,7 +379,7 @@ def main(argv=None):
     unindexed = plan(a.query, sources, a.mode, ck_binary())[1]
     if unindexed:
         print(f"kb: searched by regex only, until `kb.py index` covers them: {', '.join(unindexed)}", file=sys.stderr)
-    hits = search(a.query, sources, a.mode, a.limit)
+    hits = search(a.query, sources, a.mode, a.limit, kinds or None)
     if a.json:
         print(json.dumps(hits, indent=1))
     else:
