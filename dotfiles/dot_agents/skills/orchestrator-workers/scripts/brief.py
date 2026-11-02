@@ -14,11 +14,13 @@ it, has no "SHALL", or when its RISK, CASES THE ORCHESTRATOR KNOWS or FACTS TO V
 missing or empty; each may say "none" with a reason, not "none" alone. A bare "none" in backticks,
 bold, italics or with trailing punctuation counts as alone. A worker brief whose TIME BUDGET is over
 45 minutes gets a warning, and the exit code is unchanged. So does each number of 3 or more digits, percentage
-or "N of M" count in its GOAL, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY section with no source on the same
-line or bullet: a command in backticks, a file:line, a commit id, a URL or a dated owner ruling. Years, dates,
-times, versions such as 10.1.1, and numbers inside paths, URLs or backticks are not claims.
+or "N of M" count in the GOAL, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY section of a worker or fix-round
+brief with no source on the same line or bullet: a command in backticks (a number alone in backticks is not one), a
+file:line, a commit id, a URL or a dated owner ruling. Years, dates, times, versions such as 10.1.1 or v1.105, and
+numbers inside paths or URLs are not claims; a rate such as 994/s is.
 
-Any prompt naming a commit it relies on ("fixed in <commit>", "after <commit>", or a "RELIES ON: <commit> ..." line)
+Any prompt naming a commit it relies on ("fixed in <commit>", "after <commit>", either with "commit" before the id,
+or a "RELIES ON: <commit> ..." line; an id is 7 to 40 hex characters, all digits or all letters included)
 fails unless the commit is an ancestor of HEAD of --repo (the worktree), or of main in the current folder's
 repository when --repo is not given.
 
@@ -143,24 +145,25 @@ def brief_problems(text):
 
 
 def warnings(text, kind=None):
-    if (kind or prompt_kind(text)) != "build":
+    kind = kind or prompt_kind(text)
+    if kind not in ("build", "fix"):
         return []
     found = number_warnings(text)
     m = re.search(r"^TIME BUDGET:\s*(\d+)", "\n".join(brief_lines(text)), re.M)
-    if m and int(m.group(1)) > SPLIT_MINUTES:
+    if kind == "build" and m and int(m.group(1)) > SPLIT_MINUTES:
         found.insert(0, f"TIME BUDGET of {m.group(1)} minutes is over {SPLIT_MINUTES}: split an item expected over {SPLIT_MINUTES} minutes into two (SKILL.md, Start)")
     return found
 
 
 CLAIM_SECTIONS = ("GOAL", "CASES THE ORCHESTRATOR KNOWS", "FACTS TO VERIFY")
 BULLET = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s")
-FILE_LINE = r"[\w./~-]+\.\w+:\d+(?:-\d+)?"
+FILE_LINE = r"(?<![\w./~-])(?=[\w./~-]*[A-Za-z])[\w./~-]+:\d+(?:-\d+)?"
 COMMIT = r"\b(?=[0-9a-fA-F]*\d)(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{7,40}\b"
 DATE = r"\b\d{4}-\d{2}-\d{2}\b"
-SOURCE = re.compile("|".join((r"`[^`\n]*\s[^`\n]*`", FILE_LINE, COMMIT, r"https?://\S+",
+SOURCE = re.compile("|".join((r"`(?![\d.,%\s]*`)[^`\n]+`", FILE_LINE, COMMIT, r"https?://\S+",
                               rf"\b(?:owner|ruled|ruling)\b[^\n]{{0,40}}?{DATE}", rf"{DATE}[^\n]{{0,15}}?\bowner\b")), re.I)
-NOT_A_CLAIM = re.compile("|".join((r"`[^`\n]*`", r"https?://\S+", FILE_LINE, r"\S*/\S*", COMMIT, DATE,
-                                   r"\b\d{1,2}:\d{2}\b", r"\bv?\d+(?:\.\d+){2,}\b")))
+NOT_A_CLAIM = re.compile("|".join((r"https?://\S+", FILE_LINE, r"(?<!\S)(?![(\[\"'`]?\d[\d.,]*/)\S*/\S*", COMMIT, DATE,
+                                   r"\b\d{1,2}:\d{2}\b", r"\bv\d+(?:\.\d+)*\b", r"\b\d+(?:\.\d+){2,}\b")))
 CLAIM = re.compile(r"\b\d+(?:\.\d+)?\s?%|\b\d+ of \d+\b|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b\d{3,}(?:\.\d+)?\b")
 YEAR = re.compile(r"^(?:19|20)\d{2}$")
 
@@ -192,14 +195,14 @@ def number_warnings(text):
     return found
 
 
-RELIES = re.compile(rf"(?i:\bfixed in|\bafter)\s+(?:(?i:commit)\s+`?([0-9a-fA-F]{{7,40}})\b|`?({COMMIT}))`?")
+RELIES = re.compile(r"(?i:\bfixed in|\bafter)\s+(?:(?i:commit)\s+)?`?([0-9a-fA-F]{7,40})\b`?")
 HEX = re.compile(r"\b[0-9a-fA-F]{7,40}\b")
 
 
 def relied_on(text):
     named = []
     for n, line in outside_fences(brief_lines(text)):
-        ids = HEX.findall(line[len("RELIES ON:"):]) if line.startswith("RELIES ON:") else [a or b for a, b in RELIES.findall(line)]
+        ids = HEX.findall(line[len("RELIES ON:"):]) if line.startswith("RELIES ON:") else RELIES.findall(line)
         named += [(n, c) for c in ids if (n, c) not in named]
     return named
 

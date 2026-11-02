@@ -256,8 +256,29 @@ class NumberSourceTest(unittest.TestCase):
     def test_numbers_outside_the_three_sections_and_in_other_kinds_are_not_checked(self):
         text = worker(must=MUST + "2. WHEN 994 rows load, the view SHALL stay under 120 ms.\n")
         self.assertEqual(brief.number_warnings(text), [])
-        fix = "You are a worker session.\nTHIS IS A FIX ROUND\nGOAL\n994 credits.\nTASK: x\n"
-        self.assertEqual(brief.warnings(fix), [])
+        review = "You are a read-only reviewer.\nGOAL\n994 credits.\nTASK: x\n"
+        self.assertEqual(brief.warnings(review), [])
+
+    def test_a_number_alone_in_backticks_is_a_claim(self):
+        self.assertEqual(claims(worker(must="GOAL\nCosts `994` credits.\n\n" + MUST)), ["994"])
+
+    def test_a_rate_is_a_claim(self):
+        self.assertEqual(claims(worker(must="GOAL\nRate is 994/s.\n\n" + MUST)), ["994"])
+
+    def test_an_unsourced_goal_in_a_fix_round_brief_warns(self):
+        fix = "You are a worker session.\nTHIS IS A FIX ROUND\nGOAL\n994 credits.\nTASK: x\nTIME BUDGET: 90 minutes.\n"
+        found = brief.warnings(fix)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('"994" has no source', found[0])
+
+    def test_a_one_word_command_in_backticks_is_a_source(self):
+        self.assertEqual(claims(worker(must="GOAL\n994 tests passed (`pytest`).\n\n" + MUST)), [])
+
+    def test_a_file_line_without_an_extension_is_a_source(self):
+        self.assertEqual(claims(worker(must="GOAL\n994 tests (Makefile:120).\n\n" + MUST)), [])
+
+    def test_a_version_with_one_dot_and_a_v_is_not_a_claim(self):
+        self.assertEqual(claims(worker(must="GOAL\nThe CLI is v1.105 now.\n\n" + MUST)), [])
 
     def test_the_task_body_says_where_every_number_comes_from(self):
         body = (Path(__file__).parent.parent / "assets" / "task-body.md").read_text()
@@ -302,8 +323,34 @@ class ReliesOnTest(unittest.TestCase):
 
     def test_which_words_name_a_commit(self):
         named = brief.relied_on(worker() + "Fixed in commit 1234567. Build after `a1b2c3d4`.\nRELIES ON: 7654321 abcdef0\n"
-                                "Run after 1234567 rows; fixed in deadbeefcafe; after 2026-11-02.\n")
-        self.assertEqual([c for _, c in named], ["1234567", "a1b2c3d4", "7654321", "abcdef0"])
+                                "Run after 1234568 rows; fixed in deadbeefcafe; after 2026-11-02; after the fix.\n")
+        self.assertEqual([c for _, c in named], ["1234567", "a1b2c3d4", "7654321", "abcdef0", "1234568", "deadbeefcafe"])
+
+    def assert_checked(self, line, cid):
+        found = self.found(line)
+        self.assertEqual(len(found), 1, (line, found))
+        self.assertRegex(found[0], rf"^line \d+: relies on {cid}, which the repository at .* does not know")
+
+    def test_fixed_in_an_all_digit_id_is_checked(self):
+        self.assert_checked("It was fixed in 1234567.", "1234567")
+
+    def test_after_an_all_digit_id_in_backticks_is_checked(self):
+        self.assert_checked("Build after `1234567` lands.", "1234567")
+
+    def test_fixed_in_an_all_letter_id_is_checked(self):
+        self.assert_checked("It was fixed in deadbeef.", "deadbeef")
+
+    def test_after_an_all_letter_id_in_backticks_is_checked(self):
+        self.assert_checked("Build after `deadbeef` lands.", "deadbeef")
+
+    def test_relies_on_all_digit_and_all_letter_ids_are_checked(self):
+        found = self.found("RELIES ON: 1234567 deadbeef")
+        self.assertEqual([re.search(r"relies on (\w+), which the repository .* does not know", f).group(1)
+                          for f in found], ["1234567", "deadbeef"])
+
+    def test_commit_before_an_all_digit_or_all_letter_id_is_checked(self):
+        self.assert_checked("Fixed in commit 1234567.", "1234567")
+        self.assert_checked("Build after commit `deadbeef`.", "deadbeef")
 
     def test_a_commit_on_another_branch_is_refused(self):
         found = self.found(f"RELIES ON: {self.side[:7]} the side fix")
@@ -319,7 +366,7 @@ class ReliesOnTest(unittest.TestCase):
 
     def test_no_such_line_passes_and_runs_no_git(self):
         with unittest.mock.patch.object(brief.subprocess, "run", side_effect=AssertionError("git ran")):
-            self.assertEqual(self.found("Build after the merge; fixed in time; after deadbeef."), [])
+            self.assertEqual(self.found("Build after the merge; fixed in time; after decade."), [])
 
     def test_repo_means_the_worktree_s_head_not_main(self):
         self.assertEqual(self.found(f"RELIES ON: {self.side[:7]}", repo=self.wt), [])
