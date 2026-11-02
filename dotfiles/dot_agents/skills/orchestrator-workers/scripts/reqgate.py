@@ -191,6 +191,9 @@ def run_cmd(cmd, cwd, timeout):
 UNITTEST_HELPER = r"""
 import json, sys, unittest
 mod, name, out = sys.argv[1:4]
+def last(tb):
+    lines = [x for x in (tb or "").strip().splitlines() if x.strip()]
+    return lines[-1].strip() if lines else ""
 def done(status, detail=""):
     with open(out, "w") as f:
         json.dump({"status": status, "detail": detail}, f)
@@ -211,11 +214,19 @@ if any(type(t).__name__ == "_FailedTest" for t in tests):
 result = unittest.TestResult()
 suite.run(result)
 if result.errors and any(type(t).__name__ == "_ErrorHolder" for t, _ in result.errors):
-    done("load", result.errors[0][1])
-if result.failures:
-    done("failed", result.failures[0][1])
+    done("load", " | ".join(last(tb) for _, tb in result.errors))
+found = ([("error", t, tb) for t, tb in result.errors] + [("failure", t, tb) for t, tb in result.failures]
+         + [("unexpected success", t, "") for t in result.unexpectedSuccesses]
+         + [("expected failure", t, tb) for t, tb in result.expectedFailures])
+detail = " | ".join(f"{k} in {t.id()[len(mod) + 1:]}: {last(tb)}".rstrip(": ") for k, t, tb in found)
 if result.errors:
-    done("error", result.errors[0][1])
+    done("error", detail)
+if result.failures:
+    done("failed", detail)
+if result.unexpectedSuccesses:
+    done("unexpected success", detail)
+if result.expectedFailures:
+    done("expected failure", detail)
 if result.testsRun == 0:
     done("missing", "no test ran")
 if result.skipped and len(result.skipped) == result.testsRun:
@@ -254,15 +265,21 @@ def run_unittest(tree, path, name, timeout, **_):
         if got is None:
             return "timeout", f"no result after {timeout} s"
         if not os.path.exists(out):
-            return "load", last_lines(got[2]) or "the test process ended without a result"
+            return "error", f"the test process exited {got[0]} without a result: " + (last_lines(got[2]) or "no output")
         with open(out, encoding="utf-8") as f:
             r = json.load(f)
     return r["status"], last_lines(r["detail"])
 
 
+def split_project(name):
+    """(project, rest) of a Vitest test name that may start with `|project|`."""
+    m = re.match(r"^\|([^|]*)\|\s*(.*)$", name.strip(), re.S)
+    return (m.group(1).strip(), m.group(2)) if m else (None, name)
+
+
 def title_parts(name, path):
     """Split a Vitest test title (`describe > test`, optionally `|project| file > ...`) into its titles."""
-    name = re.sub(r"^\|[^|]*\|\s*", "", name.strip())
+    name = split_project(name)[1].strip()
     parts = [p for p in name.split(" > ")]
     if parts and parts[0].strip() in (path, os.path.basename(path)):
         parts = parts[1:]
@@ -273,41 +290,60 @@ def js_escape(text):
     return re.sub(r"[\\^$.*+?()[\]{}|/]", lambda m: "\\" + m.group(), text)
 
 
-def vitest_outcome(report, tree, path, parts):
-    """Read Vitest's JSON reporter output for one test file and title."""
+def first_line(text):
+    return next((x.strip() for x in (text or "").splitlines() if x.strip()), "")
+
+
+def vitest_outcome(report, tree, path, parts, code=0, err=""):
+    """Read Vitest's JSON reporter output for one test file and title; code and err are Vitest's exit and stderr."""
     want = os.path.realpath(os.path.join(tree, path))
-    files = [r for r in report.get("testResults", []) if os.path.realpath(r.get("name", "")) == want]
+    results = report.get("testResults", [])
+    files = [r for r in results if os.path.realpath(r.get("name", "")) == want]
+    exited = f"Vitest exited {code}: " + (last_lines(err) or "no output")
     if not files:
-        return "load", "Vitest did not report the file"
-    hits = []
+        return ("error", exited + "; it did not report the file") if code else ("load", "Vitest did not report the file")
+    hits, suite_errors = [], []
     for r in files:
         if not r.get("assertionResults") and r.get("status") == "failed":
             return "load", last_lines(r.get("message")) or "the file failed to load"
-        mine = [a for a in r["assertionResults"]
-                if [t for t in a.get("ancestorTitles", []) if t and t != path] + [a.get("title")] == parts]
-        if len(mine) > 1:
-            return "ambiguous", f"{' > '.join(parts)} matches {len(mine)} tests"
-        hits += mine
+        hits += [a for a in r["assertionResults"]
+                 if [t for t in a.get("ancestorTitles", []) if t and t != path] + [a.get("title")] == parts]
+        if r.get("message"):
+            suite_errors.append(first_line(r["message"]))
+    if len(hits) > 1:
+        where = f" across {len(files)} projects: start the name with |project|" if len(files) > 1 else ""
+        return "ambiguous", f"{' > '.join(parts)} matches {len(hits)} tests{where}"
     if not hits:
-        return "missing", f"no test {' > '.join(parts)} in {path}"
-    failed = [a for a in hits if a.get("status") == "failed"]
-    if failed:
-        msg = (failed[0].get("failureMessages") or [""])[0]
+        return ("error", f"{exited}; no result for {' > '.join(parts)}") if code else \
+            ("missing", f"no test {' > '.join(parts)} in {path}")
+    hit = hits[0]
+    msgs = [m for m in hit.get("failureMessages") or [] if m]
+    detail = " | ".join(first_line(m) for m in msgs + suite_errors)
+    if suite_errors:
+        return "error", f"the suite failed: {detail}"
+    if hit.get("status") == "failed":
         # Vitest's expect throws chai's AssertionError; any other error class is not an assertion.
-        return ("failed" if msg.lstrip().startswith("AssertionError") else "error"), last_lines(msg)
-    if any(a.get("status") == "passed" for a in hits):
+        return ("failed" if msgs and all(m.lstrip().startswith("AssertionError") for m in msgs) else "error"), detail
+    if hit.get("status") == "passed":
+        explained = any(a.get("status") == "failed" for r in results for a in r.get("assertionResults", [])) or \
+            any(r.get("status") == "failed" for r in results)
+        if code and not explained:
+            return "error", exited + "; the test passed"
         return "passed", ""
-    return "skipped", f"status {hits[0].get('status')}"
+    return "skipped", f"status {hit.get('status')}"
 
 
 def run_vitest(tree, path, name, timeout, vitest_cmd="npx --no-install vitest", **_):
     if not os.path.isfile(os.path.join(tree, path)):
         return "missing", f"{path} does not exist"
+    project = split_project(name)[0]
     parts = title_parts(name, path)
     pattern = "(?: > | )".join(js_escape(p) for p in parts)
     with tempfile.TemporaryDirectory(prefix="reqgate-out-") as tmp:
         out = os.path.join(tmp, "vitest.json")
         cmd = shlex.split(vitest_cmd) + ["run", path, "-t", pattern, "--reporter=json", f"--outputFile={out}"]
+        if project:
+            cmd += ["--project", project]
         got = run_cmd(cmd, tree, timeout)
         if got is None:
             return "timeout", f"no result after {timeout} s"
@@ -315,7 +351,7 @@ def run_vitest(tree, path, name, timeout, vitest_cmd="npx --no-install vitest", 
             return "error", "Vitest wrote no JSON report: " + (last_lines(got[2]) or f"exit {got[0]}")
         with open(out, encoding="utf-8") as f:
             report = json.load(f)
-    return vitest_outcome(report, tree, path, parts)
+    return vitest_outcome(report, tree, path, parts, got[0], got[2])
 
 
 RUNNERS = {"unittest": run_unittest, "vitest": run_vitest}

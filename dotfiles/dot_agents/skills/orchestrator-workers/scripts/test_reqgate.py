@@ -78,6 +78,32 @@ class SlowTest(unittest.TestCase):
         self.assertEqual(2, calc.double(1))
 """
 TS_BASE = "// calc\nexport const add = (a: number, b: number) =>\n  a + b;\nexport const zero = 0;\n"
+ODD_TEST = """import os
+import unittest
+
+
+class OddTest(unittest.TestCase):
+    def tearDown(self):
+        if self._testMethodName == "test_assert_and_teardown":
+            raise RuntimeError("teardown broke")
+
+    def test_assert_and_teardown(self):
+        self.assertEqual(1, 2)
+
+    def test_subtest_error(self):
+        for i in (1, 2):
+            with self.subTest(i=i):
+                self.assertEqual(1, 1)
+                if i == 2:
+                    raise KeyError("sub")
+
+    @unittest.expectedFailure
+    def test_unexpected_success(self):
+        pass
+
+    def test_exits(self):
+        os._exit(3)
+"""
 TS_HEAD = TS_BASE.replace("  a + b;", "  a + b + zero;")
 
 
@@ -168,7 +194,20 @@ class GateCase(unittest.TestCase):
 class PythonGateTest(GateCase):
     base_files = {"pkg/calc.py": CALC_BASE, "pkg/test_calc.py": TEST_BASE, "README.md": "x\n"}
     head_files = {"pkg/calc.py": CALC_HEAD, "pkg/test_calc.py": TEST_HEAD, "pkg/fmt.py": "def label(x):\n    return f'#{x}'\n",
-                  "pkg/test_fmt.py": FMT_TEST, "pkg/test_slow.py": SLOW_TEST}
+                  "pkg/test_fmt.py": FMT_TEST, "pkg/test_slow.py": SLOW_TEST, "pkg/test_odd.py": ODD_TEST}
+
+    def test_every_unittest_error_and_failure_of_the_test_is_kept(self):
+        r = self.gate([1, 2, 3, 4], ["- MUST 1: pkg/test_odd.py::OddTest.test_assert_and_teardown [PASS_TO_PASS]",
+                                     "- MUST 2: pkg/test_odd.py::OddTest.test_subtest_error [PASS_TO_PASS]",
+                                     "- MUST 3: pkg/test_odd.py::OddTest.test_unexpected_success [PASS_TO_PASS]",
+                                     "- MUST 4: pkg/test_odd.py::OddTest.test_exits [PASS_TO_PASS]"], code=1)
+        reasons = [x["reason"] for x in r["PASS_TO_PASS"]]
+        self.assertTrue(reasons[0].startswith("error at head"), reasons[0])
+        self.assertIn("RuntimeError: teardown broke", reasons[0])
+        self.assertIn("AssertionError: 1 != 2", reasons[0])
+        self.assertTrue(reasons[1].startswith("error at head") and "KeyError: 'sub'" in reasons[1] and "(i=2)" in reasons[1], reasons[1])
+        self.assertTrue(reasons[2].startswith("unexpected success at head"), reasons[2])
+        self.assertTrue(reasons[3].startswith("error at head: the test process exited 3 without a result"), reasons[3])
 
     def test_correct_branch_passes(self):
         r = self.gate([1, 2], ["- MUST 1: pkg/test_calc.py::CalcTest.test_clamp_negative [FAIL_TO_PASS]",
@@ -309,6 +348,62 @@ class VitestGateTest(GateCase):
     def test_missing_vitest_test_fails(self):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > nope [PASS_TO_PASS]"], code=1)
         self.assertTrue(r["PASS_TO_PASS"][0]["reason"].startswith("missing at head"))
+
+    def test_named_project_runs_only_that_project(self):
+        self.gate([1, 2], ["- MUST 1: src/calc.test.ts::|unit| src/calc.test.ts > calc > adds [PASS_TO_PASS]",
+                           "- MUST 2: src/calc.test.ts::calc > formats [PASS_TO_PASS]"], "--mutants", "none", code=0)
+        named, plain = self.logged("vitest")
+        self.assertEqual("unit", named[named.index("--project") + 1])
+        self.assertNotIn("--project", plain)
+
+
+def vitest_file(path, *tests, status="passed", message=""):
+    return {"name": path, "status": status, "message": message,
+            "assertionResults": [{"ancestorTitles": ["calc"], "title": t, "status": s, "failureMessages": m}
+                                 for t, s, m in tests]}
+
+
+class VitestOutcomeTest(unittest.TestCase):
+    path = "src/calc.test.ts"
+
+    def outcome(self, *files, code=0, err=""):
+        tree = tempfile.gettempdir()
+        report = {"testResults": [dict(f, name=os.path.join(tree, f["name"])) for f in files]}
+        return reqgate.vitest_outcome(report, tree, self.path, ["calc", "adds"], code, err)
+
+    def test_one_project_passes(self):
+        self.assertEqual(("passed", ""), self.outcome(vitest_file(self.path, ("adds", "passed", []))))
+
+    def test_same_test_in_two_projects_is_ambiguous(self):
+        status, detail = self.outcome(vitest_file(self.path, ("adds", "passed", [])), vitest_file(self.path, ("adds", "passed", [])))
+        self.assertEqual("ambiguous", status)
+        self.assertIn("across 2 projects", detail)
+
+    def test_suite_failure_with_a_passing_test_is_an_error(self):
+        status, detail = self.outcome(vitest_file(self.path, ("adds", "passed", []), status="failed",
+                                                  message="Error: afterAll hook broke"), code=1)
+        self.assertEqual(("error", "the suite failed: Error: afterAll hook broke"), (status, detail))
+
+    def test_suite_failure_with_an_assertion_is_not_an_assertion(self):
+        status, _ = self.outcome(vitest_file(self.path, ("adds", "failed", ["AssertionError: expected 1 to be 2"]),
+                                             status="failed", message="Error: beforeAll broke"), code=1)
+        self.assertEqual("error", status)
+
+    def test_assertion_with_a_second_error_is_an_error_and_keeps_both(self):
+        status, detail = self.outcome(vitest_file(self.path, ("adds", "failed", ["AssertionError: expected 1 to be 2\n  at x",
+                                                                                 "TypeError: cleanup broke\n  at y"]), status="failed"), code=1)
+        self.assertEqual(("error", "AssertionError: expected 1 to be 2 | TypeError: cleanup broke"), (status, detail))
+
+    def test_non_zero_exit_with_no_result_is_an_error(self):
+        status, detail = self.outcome(vitest_file(self.path, ("other", "passed", [])), code=1, err="Error: config broke")
+        self.assertEqual("error", status)
+        self.assertIn("Vitest exited 1: Error: config broke", detail)
+        self.assertEqual("error", self.outcome(code=1, err="boom")[0])
+
+    def test_non_zero_exit_with_only_passing_results_is_an_error(self):
+        status, detail = self.outcome(vitest_file(self.path, ("adds", "passed", [])), code=1, err="Unhandled Rejection")
+        self.assertEqual("error", status)
+        self.assertIn("Unhandled Rejection", detail)
 
 
 class VitestLoadOnBaseTest(GateCase):
