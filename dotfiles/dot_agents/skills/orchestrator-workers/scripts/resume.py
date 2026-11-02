@@ -6,12 +6,11 @@ writes <round>.start, <round>.jsonl and <round>.err there, then prints result.py
 A round's credits are its cumulative ai_credits minus the previous round's.
 The worker sees no credit cap (owner, 2026-11-02): <stop> is the unseen stop route.py uses, read from
 the session's usage records; past it the round ends with exit 3 and writes <round>.stopped.
-Refuses (exit 2) when the launch argv runs caffeinate or this process runs under it: this Mac kills caffeinate.
+Refuses (exit 2) when this process runs under caffeinate, however it was started: this Mac kills caffeinate.
 """
 import json
 import os
 import pathlib
-import shlex
 import subprocess
 import sys
 import time
@@ -57,7 +56,7 @@ def main(args):
     if not (run / 'routes.jsonl').is_file():
         raise SystemExit('set OW_RUN_DIR to the run folder holding routes.jsonl')
     launch = last_launch(run / 'routes.jsonl', item)
-    refusal = runqueue.caffeinate_refusal(shlex.join(launch['argv']))
+    refusal = runqueue.caffeinate_refusal()
     if refusal:
         print(f'resume.py: {refusal}', file=sys.stderr)
         return 2

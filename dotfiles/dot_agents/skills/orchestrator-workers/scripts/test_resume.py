@@ -40,32 +40,47 @@ UNDER_CAFFEINATE = ['bash', '-c', 'exec -a caffeinate /bin/bash -c "\\"\\$@\\"; 
 
 
 class CaffeinateTest(unittest.TestCase):
-    def resume(self, argv, under=()):
+    def resume(self, under=()):
         with tempfile.TemporaryDirectory() as tmp:
-            run = pathlib.Path(tmp)
+            run, wt, bin_ = pathlib.Path(tmp, 'run'), pathlib.Path(tmp, 'wt'), pathlib.Path(tmp, 'bin')
+            for d in (run, wt, bin_):
+                d.mkdir()
+            (bin_ / 'copilot').write_text('#!/bin/sh\nprintf "%s\\n" "$@" > "$PWD/worker-ran"\n')
+            (bin_ / 'caffeinate').write_text('#!/bin/bash\nwhile [ "${1#-}" != "$1" ]; do shift; done\n'
+                                            'exec -a caffeinate /bin/bash -c \'"$@"; exit $?\' caffeinate "$@"\n')
+            for f in bin_.iterdir():
+                f.chmod(0o755)
+            argv = ['copilot', '-C', str(wt), '-n', 'ow-x', '--model', 'm', '-p']
             (run / 'routes.jsonl').write_text(json.dumps({'event': 'launch', 'round': 'x', 'argv': argv}) + '\n')
             (run / 'x-r1.prompt.md').write_text('go on; caffeinate was killed last time\n')
-            env = {**os.environ, 'OW_RUN_DIR': tmp, 'PATH': '/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'}
-            p = subprocess.run([*under, sys.executable, '-B', str(SCRIPTS / 'resume.py'), 'x', 'x-r1', 'none', '5'],
+            env = {**os.environ, 'OW_RUN_DIR': str(run), 'PATH': f'{bin_}:/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'}
+            p = subprocess.run([*under, sys.executable, '-B', str(SCRIPTS / 'resume.py'), 'x', 'x-r1', 'none', '30'],
                                capture_output=True, text=True, env=env, timeout=60, stdin=subprocess.DEVNULL)
-            return p, (run / 'x-r1.start').exists()
+            ran = wt / 'worker-ran'
+            return p, (run / 'x-r1.start').exists(), ran.read_text().split('\n') if ran.exists() else None
 
-    def test_a_launch_argv_that_runs_caffeinate_is_refused_before_anything_starts(self):
-        p, started = self.resume(['caffeinate', '-i'] + LAUNCH)
-        self.assertEqual(p.returncode, 2, p.stderr)
-        self.assertIn('resume.py: refused: this command runs caffeinate', p.stderr)
-        self.assertFalse(started)
+    def test_a_plain_launch_starts_the_worker_with_the_resume_argv(self):
+        p, started, worker = self.resume()
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertNotIn('caffeinate', p.stderr)
+        self.assertTrue(started)
+        self.assertEqual(worker[0], '-C')
+        self.assertEqual(pathlib.Path(worker[1]).name, 'wt')
+        self.assertEqual(worker[2:8], ['-r', 'ow-x', '--model', 'm', '-p', 'go on; caffeinate was killed last time'])
 
     def test_resume_started_by_a_caffeinate_process_is_refused(self):
-        p, started = self.resume(LAUNCH, under=UNDER_CAFFEINATE)
+        p, started, worker = self.resume(under=UNDER_CAFFEINATE)
         self.assertEqual(p.returncode, 2, p.stderr)
         self.assertIn('resume.py: refused: this launcher runs under caffeinate (pid ', p.stderr)
         self.assertFalse(started)
+        self.assertIsNone(worker)
 
-    def test_a_plain_launch_is_not_refused(self):
-        p, started = self.resume(LAUNCH)
-        self.assertNotIn('caffeinate', p.stderr)
-        self.assertTrue(started)
+    def test_resume_reached_through_env_s_caffeinate_is_refused(self):
+        p, started, worker = self.resume(under=['env', '-S', 'caffeinate -i'])
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertIn('resume.py: refused: this launcher runs under caffeinate (pid ', p.stderr)
+        self.assertFalse(started)
+        self.assertIsNone(worker)
 
 
 if __name__ == '__main__':

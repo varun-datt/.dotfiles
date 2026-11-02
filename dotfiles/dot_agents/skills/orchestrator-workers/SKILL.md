@@ -82,6 +82,9 @@ which answers you inferred from the repository.
 9. **Power:** will the machine stay on AC power and awake? On battery, every worker stalls.
    For unattended work, check it rather than ask: `pmset -g custom` must show `sleep 0` under
    AC Power. A Mac with AC `sleep 1` went to idle sleep while plugged in, and every worker froze.
+   Never wrap a launch in `caffeinate`: this Mac kills it within seconds. A queued item that runs it fails
+   at launch, where `route.py run`, `review.sh` and `resume.py` refuse (exit 2) because they find caffeinate
+   among their ancestor processes. Command text is not checked: a program inside shell text has no end of forms.
 10. **Anything** the plan leaves unclear.
 
 **After the answers:**
