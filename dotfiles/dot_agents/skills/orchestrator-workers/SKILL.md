@@ -82,6 +82,9 @@ which answers you inferred from the repository.
 9. **Power:** will the machine stay on AC power and awake? On battery, every worker stalls.
    For unattended work, check it rather than ask: `pmset -g custom` must show `sleep 0` under
    AC Power. A Mac with AC `sleep 1` went to idle sleep while plugged in, and every worker froze.
+   Never wrap a launch in `caffeinate`: this Mac kills it within seconds. A queued item that runs it fails
+   at launch, where `route.py run`, `review.sh` and `resume.py` refuse (exit 2) because they find caffeinate
+   among their ancestor processes. Command text is not checked: a program inside shell text has no end of forms.
 10. **Anything** the plan leaves unclear.
 
 **After the answers:**
@@ -128,8 +131,9 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   minutes: its `TECH DEBT:` line lists the ids it fixes with their lines, or says why not, and
   `route.py run` warns (exit unchanged) for each open row on a named path whose id the brief leaves out; the worktree's root folder itself is not matched, since every brief names it in YOUR RESOURCES. A class seen 3 times becomes a planned item; past about 30 open rows, each run plans one
   debt item; `debt.py stale` lists rows untouched for 3 runs, to close "won't fix" or keep.
-- Fixes made after the re-review go to a **post-merge review (commit-then-review)** on main, so
-  nothing lands unreviewed. Anything still open is recorded for the owner.
+- A finding the re-review leaves open pauses the item for the owner (owner, 2026-10-31, confirmed
+  2026-11-02): one fix round, then the owner decides. A fix made after the re-review, once the owner
+  approves it, goes to a **post-merge review (commit-then-review)** on main, so nothing lands unreviewed.
 - **Parallelism** is decided per item, from its dependencies and the files it touches.
 - **Finish before starting** (owner, 2026-10-13). A freed slot goes first to the oldest started
   item's next step: a fix round, a catch-up with main, then the merge. A new build starts only

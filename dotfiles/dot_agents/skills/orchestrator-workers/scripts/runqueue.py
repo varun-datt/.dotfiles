@@ -18,6 +18,9 @@ is refused too), unless the one program it invokes is the skill's own route.py r
 nohup, timeout, env, assignments or a `sh|bash|zsh -c '...'` whose string is only that. Any ; && || | or $(...)
 loses the exemption. A false refusal is acceptable; --unrouted-reason says why it may run anyway and is kept with
 the item. A copilot call it still cannot see is caught afterwards by `mine.py --audit`.
+`add` and `run` refuse (exit 2) when started by a caffeinate process, which this Mac kills within seconds. Command
+text is not checked for caffeinate: an item that runs it fails at launch, where route.py run and review.sh refuse
+because caffeinate is then their ancestor process.
 
 `run` launches ready items (highest priority first, then in the order added) while fewer than
 --slots slot items run; --no-slot items (reviews) do not count. Each item runs in its own process
@@ -71,16 +74,69 @@ def ours(tok, name, cwd, search=False):
     return os.path.isfile(p) and own(p)
 
 
+def words(cmd):
+    """The command's words, redirections dropped and ; & | ( ) and newlines as their own tokens; None when unbalanced."""
+    lex = shlex.shlex(REDIR.sub(' ', cmd.replace('\\\n', ' ')), posix=True, punctuation_chars=';&|()\n')
+    lex.whitespace, lex.whitespace_split = ' \t\r', True
+    try:
+        return list(lex)
+    except ValueError:
+        return None
+
+
+def read_ps():
+    # ucomm is the executable's file name, which `exec -a` cannot hide; comm is argv[0].
+    return ''.join(subprocess.run(['ps', '-A', '-o', 'pid=', '-o', 'ppid=', '-o', f'{col}='], capture_output=True,
+                                  text=True, stdin=subprocess.DEVNULL, timeout=10, check=True).stdout
+                   for col in ('ucomm', 'comm'))
+
+
+def processes(ps=None):
+    """{pid: (ppid, [names])} from lines of '<pid> <ppid> <name>'; a pid may have several lines, one per name."""
+    table = {}
+    for line in (ps or read_ps)().splitlines():
+        f = line.split(None, 2)
+        if len(f) == 3 and f[0].isdigit() and f[1].isdigit():
+            table.setdefault(int(f[0]), (int(f[1]), []))[1].append(f[2].strip())
+    return table
+
+
+def caffeinated_ancestor(ps=None):
+    """'<pid> <program>' of the nearest ancestor process whose program is caffeinate, else None; also None, with a
+    warning, when the process table cannot be read."""
+    try:
+        table = processes(ps)
+    except (OSError, subprocess.SubprocessError) as e:
+        print(f'warning: could not read the process table, so a caffeinate parent was not checked: {e}',
+              file=sys.stderr)
+        return None
+    pid, seen = os.getppid(), set()
+    while pid > 1 and pid in table and pid not in seen:
+        seen.add(pid)
+        ppid, names = table[pid]
+        for comm in names:
+            if os.path.basename(comm.split()[0] if comm.split() else comm) == 'caffeinate':
+                return f'{pid} {comm}'
+        pid = ppid
+    return None
+
+
+def caffeinate_refusal(ps=None):
+    """The one-line refusal when a process this one runs under is caffeinate, however it was started; else None.
+    Command text is not read: a program inside shell text has no end of forms."""
+    hit = caffeinated_ancestor(ps)
+    where = hit and f'this launcher runs under caffeinate (pid {hit})'
+    return where and (f'refused: {where}; this Mac kills caffeinate within seconds and the launch dies with it '
+                      '(references/lessons.md, "caffeinate was killed"): keep the Mac on AC power instead')
+
+
 def exempt(cmd, cwd, depth=0):
     """True when the only program the command invokes is the skill's route.py run or review.sh, bare or through nohup,
     timeout, env or a sh|bash|zsh -c wrapper whose string is itself only such a command."""
     if depth > 3 or re.search(r'\$\(|`|[<>]\(', cmd):
         return False
-    lex = shlex.shlex(REDIR.sub(' ', cmd.replace('\\\n', ' ')), posix=True, punctuation_chars=';&|()\n')
-    lex.whitespace, lex.whitespace_split = ' \t\r', True
-    try:
-        toks = list(lex)
-    except ValueError:
+    toks = words(cmd)
+    if toks is None:
         return False
     if toks and toks[-1] == '&':
         toks.pop()
@@ -319,6 +375,11 @@ def main(argv=None):
     r.add_argument('--chat-log', help='session transcript whose mtime counts as chat activity')
     args = ap.parse_args(argv)
     rd = run_dir(args.run_dir)
+    if args.cmd in ('add', 'run'):
+        refusal = caffeinate_refusal()
+        if refusal:
+            print(f'queue: {refusal}', file=sys.stderr)
+            return 2
 
     if args.cmd == 'run':
         pidfile = os.path.join(rd, 'queue.pid')

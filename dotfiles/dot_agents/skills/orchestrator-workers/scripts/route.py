@@ -11,7 +11,8 @@ Usage:
     python3 route.py report --run RUN
     python3 route.py eval-classifier --run RUN [--models a,b,c] [--max-credits N]
 
-run is the one way to launch a worker or review round: it checks the brief (brief.py check, exit 5), picks or
+run is the one way to launch a worker or review round: it refuses to start under caffeinate (exit 2; this Mac kills
+caffeinate, and the round with it), checks the brief (brief.py check, exit 5), picks or
 takes the override (whose reason is required), logs the decision with the CLI version, waits for load
 (sweep.py load --wait 15, exit 12), writes ROUND.start, ROUND.base and the time budget, launches `copilot -p`
 with exactly the logged model, effort, context and cap under a timeout, sweeps leftovers on exit, and exits
@@ -769,6 +770,11 @@ REVIEW_TAIL = '\n\nYour LAST message is the only one read: repeat every finding 
 
 
 def run_round(a, cfg):
+    import runqueue
+    refusal = runqueue.caffeinate_refusal()
+    if refusal:
+        print(f'route.py run: {refusal}', file=sys.stderr)
+        return 2
     run = os.path.abspath(os.path.expanduser(a.run or os.environ.get('OW_RUN_DIR') or ''))
     rnd, kind, wt = a.round, a.kind, os.path.abspath(os.path.expanduser(a.worktree))
     if not a.run and not os.environ.get('OW_RUN_DIR') or not os.path.isdir(run):

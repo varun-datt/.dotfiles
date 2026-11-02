@@ -2,6 +2,9 @@
 whose MUST lines are not testable statements, or that lacks a RISK, CASES or FACTS TO VERIFY line.
 Split an item the orchestrator expects to take over 45 minutes, or one that touches two of the
 project's hot spots (turn and run state, file containment, a shared view's state), into two items. -->
+<!-- Every number in a brief (a count, a percentage, anything of 3 or more digits) comes from a command's output,
+named beside it in backticks, or from a file:line, commit, URL or dated owner ruling beside it; brief.py check warns
+on one in GOAL, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY without a source. -->
 TASK: {{ITEM_TITLE}} (branch `{{BRANCH}}`, worktree `{{WORKTREE}}`, based on `{{BASE_COMMIT}}`)
 
 GOAL
@@ -19,6 +22,8 @@ RISK: {{ONE_OR_MORE_OF host-state, boundary, data, UI, dotfiles, test-suite}}
 CASES THE ORCHESTRATOR KNOWS: {{SIBLING_PATHS_EVENT_ORDERS_OLD_RECORD_FORMATS_AND_EARLIER_FINDINGS_IN_THESE_FILES_OR_NONE}}
 
 FACTS TO VERIFY: {{LIBRARY_PLATFORM_OR_VENDOR_BEHAVIOUR_THE_DESIGN_RESTS_ON_WITH_WHERE_TO_CHECK_EACH_OR_NONE}}
+
+RELIES ON: {{COMMITS_OF_FIXES_THIS_ITEM_NEEDS_ON_ITS_BASE_OR_DELETE_THE_LINE}} <!-- brief.py check refuses the brief if one is not in the worktree's HEAD -->
 
 SOURCES TO READ: {{PLAN_SECTIONS_DECISIONS_PROPOSALS_AND_THE_CONVENTIONS_THAT_APPLY}}
 
