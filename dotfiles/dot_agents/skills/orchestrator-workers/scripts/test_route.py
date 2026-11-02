@@ -1,4 +1,4 @@
-import json, os, random, sys, tempfile, unittest
+import json, os, random, subprocess, sys, tempfile, unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -185,9 +185,10 @@ class Pick(unittest.TestCase):
         self.assertEqual(rec['choice']['cap'], 1234)
         self.assertEqual(self.pick('fix', call=stub('review-fix'))['choice']['cap'], CFG['default_cap'])
 
-    def test_research_has_no_visible_cap(self):
+    def test_research_stop_comes_from_history_or_none(self):
         hist = history(caps={('research', SONNET): 1234, ('research', OPUS): 1234})
-        self.assertIsNone(self.pick('research', call=stub('docs-research'), hist=hist)['choice']['cap'])
+        self.assertEqual(self.pick('research', call=stub('docs-research'), hist=hist)['choice']['cap'], 1234)
+        self.assertIsNone(self.pick('research', call=stub('docs-research'))['choice']['cap'])
 
     def test_resume_keeps_the_model(self):
         rec = self.pick('resume', call=stub('resume'), resumed_model=OPUS)
@@ -389,8 +390,9 @@ class Launcher(unittest.TestCase):
         c, argv = d['choice'], self.argv()
         self.assertEqual((d['cli_version'], d['model_id']), ('9.9.9-fake', c['model']))
         for flag, val in (('--model', c['model']), ('--reasoning-effort', c['effort']), ('--context', c['context']),
-                          ('--max-ai-credits', str(c['cap'])), ('-C', self.wt), ('--output-format', 'json')):
+                          ('-C', self.wt), ('--output-format', 'json')):
             self.assertEqual(argv[argv.index(flag) + 1], val)
+        self.assertNotIn('--max-ai-credits', argv)
         for flag in ('--no-ask-user', '--disable-builtin-mcps', 'shell(git push)'):
             self.assertIn(flag, argv)
         with open(self.brief) as f:
@@ -504,7 +506,7 @@ class Launcher(unittest.TestCase):
         [d] = self.decisions()
         self.assertEqual((d['override'], d['choice']['cap']), ({'cap': 77, 'reason': 'owner caps this one'}, 77))
         argv = self.argv()
-        self.assertEqual(argv[argv.index('--max-ai-credits') + 1], '77')
+        self.assertNotIn('--max-ai-credits', argv)
 
     def test_each_configured_mcp_server_is_disabled(self):
         os.makedirs(os.path.join(self.tmp, '.copilot'))
@@ -610,6 +612,46 @@ class Outcome(unittest.TestCase):
         self.assertFalse(route.round_ok(dict(base, capped=True), {}))
         self.assertFalse(route.round_ok(base, {'blocking': 2, 'fix_rounds': 0}))
         self.assertFalse(route.round_ok(base, {'blocking': 0, 'fix_rounds': 2}))
+
+
+class UnseenStop(unittest.TestCase):
+    PRICES = {OPUS: {'inputPrice': 400, 'outputPrice': 2000, 'cacheReadPrice': 20, 'cacheWritePrice': 500}}
+
+    def session(self, root, name, records):
+        d = os.path.join(root, name + '-id')
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, 'workspace.yaml'), 'w') as f:
+            f.write(f'id: x\nname: {name}\n')
+        with open(os.path.join(d, 'events.jsonl'), 'a') as f:
+            for r in records:
+                f.write(json.dumps({'type': 'session.usage_record', 'data': {'usage': {'model': OPUS, **r}}}) + '\n')
+
+    def test_spend_prices_usage_records_as_they_grow_and_only_for_its_session(self):
+        with tempfile.TemporaryDirectory() as root:
+            self.session(root, 'ow-x', [{'inputTokens': 1_000_000, 'cacheReadTokens': 0, 'cacheWriteTokens': 1_000_000,
+                                         'outputTokens': 0}])
+            self.session(root, 'ow-other', [{'inputTokens': 9_000_000, 'outputTokens': 9_000_000}])
+            spend = route.Spend('ow-x', self.PRICES, root)
+            self.assertAlmostEqual(spend.read(), 500.0)
+            self.session(root, 'ow-x', [{'inputTokens': 1000, 'cacheReadTokens': 0, 'cacheWriteTokens': 0, 'outputTokens': 1000}])
+            self.assertAlmostEqual(spend.read(), 502.4)
+
+    def test_a_round_past_its_stop_is_ended_and_one_under_it_is_not(self):
+        class Fake:
+            def __init__(self, values):
+                self.values = list(values)
+
+            def read(self):
+                return self.values.pop(0) if len(self.values) > 1 else self.values[0]
+
+        p = subprocess.Popen(['sleep', '30'], start_new_session=True)
+        rc, used = route.wait_round(p, 20, 10, Fake([100, 100, 150]), poll=0.1)
+        self.assertEqual((rc, used), (route.STOPPED, 50))
+        self.assertIsNotNone(p.poll())
+        p = subprocess.Popen(['sleep', '0.3'], start_new_session=True)
+        self.assertEqual(route.wait_round(p, 20, 10, Fake([0, 5]), poll=0.1), (0, None))
+        p = subprocess.Popen(['sleep', '30'], start_new_session=True)
+        self.assertEqual(route.wait_round(p, 0.5, None, Fake([0]), poll=0.1), (124, None))
 
 
 if __name__ == '__main__':

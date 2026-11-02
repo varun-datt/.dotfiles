@@ -300,9 +300,10 @@ def load_history(run, root=None):
 
 
 def cap_for(kind, model, history, cfg):
+    measured = history['caps'].get((mine_kind(kind), model))
     if kind in cfg.get('uncapped_kinds', ()):
-        return None
-    return history['caps'].get((mine_kind(kind), model), cfg['default_cap'])
+        return measured
+    return measured or cfg['default_cap']
 
 
 def posterior(model, kind, category, tier, hist, cfg):
@@ -640,8 +641,6 @@ def cli_version():
 def launch_argv(rnd, kind, wt, choice, add_dirs, prompt):
     argv = ['copilot', '-C', wt, '-n', os.environ.get('OW_PREFIX', 'ow-') + rnd, '--model', choice['model'],
             '--reasoning-effort', choice['effort'], '--context', choice.get('context') or 'default']
-    if choice.get('cap') is not None:
-        argv += ['--max-ai-credits', str(choice['cap'])]
     argv += ['--no-ask-user', '--allow-all-tools', '--deny-tool', 'shell(git push)']
     if kind == 'review':
         argv += ['--deny-tool', 'shell(git commit)', '--deny-tool', 'shell(npm)', '--deny-tool=url']
@@ -673,9 +672,86 @@ def sweep(*args):
     return subprocess.run([sys.executable, '-B', os.path.join(HERE, 'sweep.py'), *args], stdin=subprocess.DEVNULL).returncode
 
 
+SESSION_STATE = os.environ.get('OW_SESSION_STATE') or os.path.expanduser('~/.copilot/session-state')
+
+
+class Spend:
+    """Credits a named CLI session has spent, priced from its usage records; unlike --max-ai-credits the worker never sees it."""
+
+    def __init__(self, name, prices, root=SESSION_STATE):
+        self.name, self.prices, self.root, self.offsets, self.credits = name, prices, root, {}, 0.0
+
+    def dirs(self):
+        try:
+            entries = os.listdir(self.root)
+        except OSError:
+            return []
+        found = []
+        for d in entries:
+            try:
+                with open(os.path.join(self.root, d, 'workspace.yaml'), encoding='utf-8') as f:
+                    if re.search(rf'^name: {re.escape(self.name)}\s*$', f.read(), re.M):
+                        found.append(os.path.join(self.root, d))
+            except OSError:
+                continue
+        return found
+
+    def read(self):
+        import mine
+        for d in self.dirs():
+            path = os.path.join(d, 'events.jsonl')
+            try:
+                with open(path, 'rb') as f:
+                    f.seek(self.offsets.get(path, 0))
+                    data = f.read()
+            except OSError:
+                continue
+            end = data.rfind(b'\n') + 1
+            self.offsets[path] = self.offsets.get(path, 0) + end
+            for line in data[:end].splitlines():
+                if b'session.usage_record' not in line:
+                    continue
+                try:
+                    u = json.loads(line)['data']['usage']
+                except (ValueError, KeyError, TypeError):
+                    continue
+                cr, cw = u.get('cacheReadTokens') or 0, u.get('cacheWriteTokens') or 0
+                tokens = {'input': max(0, (u.get('inputTokens') or 0) - cr - cw), 'output': u.get('outputTokens') or 0,
+                          'cache_read': cr, 'cache_write': cw}
+                self.credits += sum(mine.price_tokens(tokens, self.prices.get(u.get('model'))).values())
+        return self.credits
+
+
+def wait_round(p, secs, stop, spend, poll=30):
+    """(rc, credits when stopped or None): wait for the round, ending it at its time limit or past its credit stop."""
+    deadline, base = datetime.datetime.now().timestamp() + secs, spend.read() if stop is not None else 0
+    while True:
+        try:
+            return p.wait(timeout=max(1, min(poll, deadline - datetime.datetime.now().timestamp()))), None
+        except subprocess.TimeoutExpired:
+            pass
+        used = spend.read() - base if stop is not None else 0
+        over = stop is not None and used > stop
+        if over or datetime.datetime.now().timestamp() >= deadline:
+            for sig in (signal.SIGTERM, signal.SIGKILL):
+                with contextlib.suppress(ProcessLookupError, PermissionError):
+                    os.killpg(p.pid, sig)
+                try:
+                    p.wait(timeout=10)
+                    break
+                except subprocess.TimeoutExpired:
+                    pass
+            return (STOPPED, round(used, 1)) if over else (124, None)
+
+
+STOPPED = 3
+
+
 def outcome(rc, path):
     """The launcher's exit code: copilot's own when non-zero, 3 when the round hit its cap, 4 when it errored or has no result."""
     import mine
+    if rc == STOPPED:
+        return STOPPED
     r = mine.read_round(path) if os.path.exists(path) else None
     if rc != 0:
         return 128 - rc if rc < 0 else rc
@@ -765,18 +841,13 @@ def run_round(a, cfg):
             except OSError as ex:
                 print(f'route.py run: cannot start copilot: {ex}', file=sys.stderr)
                 return 127
-            try:
-                rc = p.wait(timeout=secs)
-            except subprocess.TimeoutExpired:
-                for sig in (signal.SIGTERM, signal.SIGKILL):
-                    with contextlib.suppress(ProcessLookupError, PermissionError):
-                        os.killpg(p.pid, sig)
-                    try:
-                        p.wait(timeout=10)
-                        break
-                    except subprocess.TimeoutExpired:
-                        pass
-                rc = 124
+            import mine
+            spend = Spend(os.environ.get('OW_PREFIX', 'ow-') + rnd, mine.load_prices(run))
+            rc, stopped_at = wait_round(p, secs, c.get('cap'), spend)
+            if stopped_at is not None:
+                write_json(os.path.join(run, rnd + '.stopped'), {'credits': stopped_at, 'stop': c.get('cap'),
+                           'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds')})
+                print(f'STOPPED: {rnd} spent {stopped_at} credits, past its stop of {c.get("cap")}; resumable', flush=True)
     finally:
         sweep('leftovers', wt, '--kill')
     code = outcome(rc, jsonl)
