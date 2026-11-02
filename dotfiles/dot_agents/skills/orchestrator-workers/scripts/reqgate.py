@@ -5,7 +5,8 @@ Usage:
     python3 -B reqgate.py check --repo DIR --base SHA --head REF --brief prompt.md --report report.md
         [--runner vitest|unittest] [--mutants auto|stryker|none] [--json out.json] [--warn] [--timeout S]
 
-The brief's numbered MUSTs come from brief.py's must_items(); the report's REQUIREMENTS MAP holds
+The brief's numbered MUSTs come from brief.py's must_items(); the report's REQUIREMENTS MAP, the lines
+under a heading or numbered item named REQUIREMENTS MAP (fenced and `>`-quoted lines are ignored), holds
 one line per test:
     - MUST <n>: <test file>::<test name> [FAIL_TO_PASS|PASS_TO_PASS]
     - MUST <n>: none (<why>)
@@ -46,6 +47,10 @@ KINDS = ("FAIL_TO_PASS", "PASS_TO_PASS")
 MAP_LINE = re.compile(r"^\s*[-*]\s*MUST\s+(\d+)\s*:\s*(.*?)\s*$")
 TEST_REF = re.compile(r"^(?P<file>[^\s:][^:]*?)::(?P<name>.+?)\s+\[(?P<kind>FAIL_TO_PASS|PASS_TO_PASS)\]$")
 NONE_REF = re.compile(r"^none\s*\((?P<why>.*)\)$", re.S)
+MAP_HEADING = re.compile(r"^\s{0,3}(?:#{1,6}\s+)?(?:\*\*)?(?:\d+[.)]\s*)?(?:\*\*)?requirements map\b", re.I)
+SECTION = re.compile(r"^(?:\s{0,3}#{1,6}\s|\d+[.)]\s|\*\*[^*]+\*\*:?\s*$)")
+FENCE = re.compile(r"^\s{0,3}(?:```|~~~)")
+QUOTE = re.compile(r"^\s*>")
 JS_SUFFIXES = (".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".mts", ".cts")
 TEST_DIRS = {"test", "tests", "__tests__", "fixtures", "__fixtures__", "__snapshots__"}
 TEST_NAME = re.compile(r"(^test_.*\.py$|_test\.py$|\.(test|spec)\.[cm]?[jt]sx?$)")
@@ -70,10 +75,27 @@ def last_lines(text, n=DETAIL_LINES):
     return " | ".join(lines[-n:])
 
 
+def map_lines(text):
+    """(line number, line) under a REQUIREMENTS MAP heading or numbered item, outside fences and quotes."""
+    inside = fenced = False
+    for n, line in enumerate(text.splitlines(), 1):
+        if FENCE.match(line):
+            fenced = not fenced
+            continue
+        if fenced or QUOTE.match(line):
+            continue
+        if SECTION.match(line) or MAP_HEADING.match(line):
+            inside = bool(MAP_HEADING.match(line))
+            if inside:
+                continue
+        if inside:
+            yield n, line
+
+
 def parse_map(text):
     """Return (entries, problems, found); an entry is a dict with must and either file/name/kind or none."""
     entries, problems = [], []
-    for n, line in enumerate(text.splitlines(), 1):
+    for n, line in map_lines(text):
         m = MAP_LINE.match(line)
         if not m:
             continue

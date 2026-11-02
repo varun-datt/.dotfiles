@@ -244,6 +244,11 @@ class PythonGateTest(GateCase):
         r = self.gate([1], ["nothing here"], code=1)
         self.assertIn("no REQUIREMENTS MAP", r["problems"][0])
 
+    def test_report_whose_only_map_is_fenced_fails_as_no_map(self):
+        r = self.gate([1], ["```", "- MUST 1: pkg/test_calc.py::CalcTest.test_clamp_negative [FAIL_TO_PASS]", "```"], code=1)
+        self.assertIn("no REQUIREMENTS MAP", r["problems"][0])
+        self.assertEqual([], r["FAIL_TO_PASS"])
+
     def test_warn_reports_the_same_and_exits_zero(self):
         r = self.gate([1], ["- MUST 1: pkg/test_calc.py::CalcTest.test_clamp_positive [FAIL_TO_PASS]"], "--warn", code=0)
         self.assertFalse(r["passed"])
@@ -340,6 +345,7 @@ class NoSourceChangeTest(GateCase):
 class ParseMapTest(unittest.TestCase):
     def test_forms(self):
         entries, problems, found = parse_map(
+            "## REQUIREMENTS MAP\n"
             "- MUST 1: a/b.test.ts::x > y [\"z\"] :: w [FAIL_TO_PASS]\n- MUST 2: none (docs only)\n"
             "- MUST 3: a.py::T.t\n- MUST <n>: <test file>::<name> [PASS_TO_PASS]\n")
         self.assertTrue(found)
@@ -348,6 +354,19 @@ class ParseMapTest(unittest.TestCase):
         self.assertEqual("docs only", entries[1]["none"])
         self.assertEqual(1, len(problems))
         self.assertFalse(parse_map("REQUIREMENTS MAP\n(none)\n")[2])
+
+    def test_fenced_example_alone_is_no_map(self):
+        text = ("9. REQUIREMENTS MAP\n```\n- MUST 1: a/test_x.py::XTest.test_y [FAIL_TO_PASS]\n```\n"
+                "- MUST 2: a/test_x.py::XTest.test_z [PASS_TO_PASS]\n")
+        self.assertEqual(["2"], [e["must"] for e in parse_map(text)[0]])
+        self.assertEqual(([], [], False), parse_map("9. REQUIREMENTS MAP\n```\n- MUST 1: a/test_x.py::XTest.test_y [FAIL_TO_PASS]\n```\n"))
+
+    def test_quoted_example_and_lines_outside_the_map_are_ignored(self):
+        text = ("1. What changed\n- MUST 3: a/test_x.py::XTest.test_q [PASS_TO_PASS]\n"
+                "9. REQUIREMENTS MAP\n> - MUST 1: a/test_x.py::XTest.test_y [FAIL_TO_PASS]\n"
+                "- MUST 2: a/test_x.py::XTest.test_z [PASS_TO_PASS]\n## Notes\n- MUST 4: none (after the map)\n")
+        entries, problems, found = parse_map(text)
+        self.assertEqual((["2"], [], True), ([e["must"] for e in entries], problems, found))
 
     def test_help_exits_zero(self):
         with contextlib.redirect_stdout(io.StringIO()):
@@ -367,7 +386,7 @@ class TemplateFormTest(unittest.TestCase):
         for kind in ("FAIL_TO_PASS", "PASS_TO_PASS"):
             line = form.strip("`").replace("<n>", "3").replace("<test file path>", "a/test_x.py") \
                 .replace("<test name>", "XTest.test_y").replace("FAIL_TO_PASS|PASS_TO_PASS", kind)
-            entries, problems, _ = parse_map(line)
+            entries, problems, _ = parse_map("REQUIREMENTS MAP\n" + line)
             self.assertEqual(([], "a/test_x.py", "XTest.test_y", kind),
                              (problems, entries[0]["file"], entries[0]["name"], entries[0]["kind"]))
         with open(os.path.join(skill, "SKILL.md"), encoding="utf-8") as f:
