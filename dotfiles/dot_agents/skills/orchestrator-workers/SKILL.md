@@ -88,7 +88,7 @@ which answers you inferred from the repository.
 - record the rulings, dated;
 - create the run folder and copy [scripts/budgets.example.json](scripts/budgets.example.json) into it
   as `budgets.json`;
-- start `watch.py` in an async terminal, and `runqueue.py run` in another ([queue runner](#queue-runner));
+- start `runqueue.py run` in an async terminal and `watch.py` in another as a stall watchdog; wait with `runqueue.py wait` ([queue runner](#queue-runner));
 - run `python3 ~/.agents/skills/orchestrator-workers/scripts/state.py init --title "<goal>" --client vscode|cli --session-id <id>`; it writes `<run>/orchestrator.json` and registers the run for the dashboard. Record each item, the queue and every question for the owner only through `state.py item|queue|ask|answered` ([details](references/details.md#state-file));
 - work autonomously.
 
@@ -244,9 +244,9 @@ Standing owner rules are appended to the preambles as soon as they are made.
 longer stops the run. (It is not `queue.py`, which would hide Python's own `queue` module from
 every script in the folder.)
 
-- **Start it** in an async terminal alongside `watch.py`:
-  `timeout 172800 python3 scripts/runqueue.py run --slots 3`. When the client is VS Code, add
-  `--chat-log <session transcript>`; the transcript grows on every tool call.
+- **Start it** in an async terminal: `timeout 172800 python3 scripts/runqueue.py run --slots 3`. When the
+  client is VS Code, add `--chat-log <session transcript>`; the transcript grows on every tool call. The chat
+  waits on it with `runqueue.py wait` (below); start `watch.py` beside it only as a stall watchdog.
 - **Queue every approved item** with `runqueue.py add <id> --cmd "<launch command>" [--after <ids>]`
   instead of launching it by hand. `--after` names only queued ids, so queue an item that waits on
   one started by hand after that one merges. Queue reviews with `--no-slot` and a `review.sh` command.
@@ -277,9 +277,16 @@ every script in the folder.)
   - **A failed step stops the pipeline**: a non-zero exit (3 capped, 4 errored, 5 brief refused, 12 load,
     124 timed out) or a prep failure (exit 2: no base, an empty diff, no report or findings) waits on the chat
     with its reason. `runqueue.py retry <id>` relaunches it; `retry <id> --passed` marks it passed after the
-    chat finished it by hand (a resume round). A further fix round is never automatic.
+    chat finished it by hand, and `--report <round>` names the resume round whose report the next review or
+    re-check reads (by default the newest of `<round>.jsonl` and `<round>-resumeN.jsonl`). `retry` refuses
+    while the step's round may still run. A further fix round is never automatic.
+  - **Briefs:** review and re-check read the task and risks from the brief the build or fix was launched with
+    (`--brief`, or the fix brief above).
   - **Restarts are safe:** a step that started is never relaunched; its exit code is kept in
-    `<run>/<round>.queue-exit`, and one that vanished without it shows `failed ?`.
+    `<run>/<round>.queue-exit`. A restarted runner finds a round still running by its pid, its
+    `<run>/<round>.queue-pid` or its command line; one that vanished without an exit code shows `failed ?`.
+  - **Finish before starting:** a ready fix, re-check or other later step of a started item takes a freed slot
+    before any new build, oldest started first, whatever the build's priority.
   - **Wait in one blocking call:** `runqueue.py wait [--max-min 30]` returns when an item newly needs the chat
     (a suspend, a failed step, a plain item that exited), printing one line each, and exits 1 on timeout.
     Run it in a foreground terminal; it prints a tick each minute.
@@ -297,12 +304,13 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **Status table:** `status.py`. Its states are running, STALLED, DIED, ERRORED, CAPPED, done and
   superseded. A capped round shows its credits against the cap. A died or errored round
   reads superseded once a later round of the same item starts.
-- **Watchdog:** `watch.py`, in an async terminal. It exits on:
+- **Watchdog:** `watch.py`, in an async terminal; with the queue runner it is only a stall watchdog, and the
+  chat waits with `runqueue.py wait`. It exits on:
   - a stall: 20 awake minutes without output;
   - a death;
   - a round that hit its credit cap (CAPPED);
   - a budget overrun, once per worker;
-  - no worker running;
+  - no worker running, unless the queue runner has a pipeline step ready or launching;
   - the heartbeat.
 
   Restart it after every report. Sleep resets the stall clock.

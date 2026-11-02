@@ -11,7 +11,8 @@ It exits, with a reason, as soon as:
     ALERT     a worker died (no result event) or its output has not grown for OW_STALL_MIN awake minutes;
     ALERT     a worker hit its --max-ai-credits cap (CAPPED; its result event still says exitCode 0);
     ALERT     a running worker passed its time budget (once per worker; recorded in <run>/over-alerted.txt);
-    IDLE      no worker is running;
+    IDLE      no worker is running, and the queue runner (<run>/queue.pid alive) has no pipeline step ready or
+              launching in <run>/queue.json;
     HEARTBEAT HEARTBEAT_MIN awake minutes have passed.
 Restart it after every report. A pidfile (<run>/watch.pid) stops a second copy from running.
 
@@ -28,9 +29,22 @@ Environment: OW_RUN_DIR, OW_PREFIX, OW_STALL_MIN (see status.py); OW_REGISTRY (s
 import argparse, json, os, signal, sys, time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import state, status
+import runqueue, state, status
 
 TICK = 60
+
+
+def queued():
+    """Pipeline items whose next mechanical step the running queue runner will launch or is launching."""
+    try:
+        with open(os.path.join(status.RUN, 'queue.pid')) as f:
+            if not runqueue.alive(int(f.read())):
+                return []
+        items = runqueue.load(status.RUN).get('items', [])
+        by_id = {it['id']: it for it in items}
+        return [it['id'] for it in items if 'pipeline' in it and runqueue.state(it, by_id) in ('ready', 'running')]
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        return []
 
 
 def alerted():
@@ -118,7 +132,7 @@ def main(argv=None):
                     f.write(''.join(r['name'] + '\n' for r in over))
                 reason = 'ALERT: over time budget: ' + ', '.join(
                     f"{r['name']} {r['elapsed']:.0f}m/{r['budget']}m" for r in over)
-            elif not any(r['state'] in ('running', 'STALLED') for r in rs):
+            elif not any(r['state'] in ('running', 'STALLED') for r in rs) and not queued():
                 reason = 'IDLE: no worker running'
             elif awake >= args.heartbeat_min * 60:
                 reason = f'HEARTBEAT: {args.heartbeat_min:.0f} awake minutes'

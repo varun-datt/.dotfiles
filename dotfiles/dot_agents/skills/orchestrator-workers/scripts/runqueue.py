@@ -263,7 +263,8 @@ def takes_slot(it):
 
 
 def continues(it):
-    """True for a pipeline item past its first step: finishing it comes before starting another."""
+    """True for a pipeline item past its first step: finishing it, oldest started first, comes before starting
+    another."""
     return 'pipeline' in it and current(it) is not it['pipeline'][0]
 
 
@@ -503,7 +504,8 @@ def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
                     advance(rd, it, by_id, now)
             busy = sum(1 for it in items if takes_slot(it) and state(it, by_id) == 'running')
             ready = sorted((i for i, it in enumerate(items) if state(it, by_id) == 'ready'),
-                           key=lambda i: (not continues(items[i]), -items[i]['priority'], i))
+                           key=lambda i: (0, items[i]['pipeline'][0].get('start') or items[i]['added'], i)
+                           if continues(items[i]) else (1, -items[i]['priority'], i))
             for i in ready:
                 it = items[i]
                 if takes_slot(it) and busy >= slots:
