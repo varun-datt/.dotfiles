@@ -85,6 +85,11 @@ class Pick(unittest.TestCase):
         rec = self.pick('review', text=text, author=OPUS, call=stub('review'))
         self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (GPT, 'max'))
 
+    def test_short_rereview_runs_at_medium_in_another_family_even_on_a_floor(self):
+        text = 'You are a read-only reviewer. This is a SHORT RE-REVIEW.\n1. Late event after Stop. Where: src/host/sessions.ts:10.\n'
+        rec = self.pick('review', text=text, author=OPUS, call=stub('review'), changed=['src/host/sessions.ts'])
+        self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (GPT, 'medium'))
+
     def test_risk_in_the_diff_counts(self):
         rec = self.pick(diff='+ fs.rmSync(dir); // deletion of the data files\n')
         self.assertEqual(rec['floor'], 'risk-area')

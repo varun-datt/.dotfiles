@@ -1,34 +1,30 @@
 <!-- Fix-round prompt for a fresh session: prepend preamble-worker.md. Name the session
 <prefix><item>-fix<N>, and write the worktree's HEAD to <run>/<item>-fix<N>.base for the re-review diff.
-A finding names one case; in the 2026-10-27 to 10-30 runs, 31 of 133 accepted blocking findings were a
-sibling an earlier fix had left (22) or a regression a fix introduced (9), so this round fixes the class. -->
-THIS IS A FIX ROUND in a fresh session. Branch `{{BRANCH}}` in worktree `{{WORKTREE}}` already holds the item's build: start with `git log --oneline {{ITEM_BASE}}..HEAD` and `git diff --stat {{ITEM_BASE}}`, then read the files the findings name. The item's original brief follows for context.
+Narrow by ruling (owner, 2026-11-02): fix rounds cost more than builds (6,569 against 6,421 credits)
+because each re-read the item and redid the whole build method; a kind with no end of cases goes to
+the structural fix and the owner, not to another round. -->
+THIS IS A FIX ROUND in a fresh session, for {{ITEM_TITLE}}. Branch `{{BRANCH}}` in worktree `{{WORKTREE}}` already holds the item's build. Read only the files the findings name and the tests next to them; do not re-read the item's brief or the build's report.
 
-ORIGINAL BRIEF
-{{ORIGINAL_TASK_BODY}}
+THIS ROUND REPLACES the preamble's "HOW TO BUILD" and "REPORT" sections: no impact map, no case table, no facts survey and no mutation runs. Everything else in the preamble holds.
 
-THE BUILD'S REPORT, with its impact map and case table: `{{BUILD_REPORT_PATH}}` (read-only; the orchestrator copied it from the build round).
-
-THIS ROUND
-A review of the branch is in.
-
-ACCEPTED, fix these, each as a class:
-1. {{FINDING}}. Evidence: {{FILE_LINE}}. Class: {{CLASS_FOR_EXAMPLE_ANOTHER_SEND_PATH_A_LATE_EVENT_AFTER_STOP_A_ROOT_SPELLED_ANOTHER_WAY}}. Expected: {{WHAT_DONE_LOOKS_LIKE}}.
-{{MORE_ACCEPTED}}
+FIX THESE, one at a time:
+1. {{FINDING}}. Where: {{FILE_LINE}}. What goes wrong: {{SCENARIO}}. Done when: {{WHAT_DONE_LOOKS_LIKE}}. {{CLOSED_CLASS_LIST_OR_DELETE}}
+{{MORE_FINDINGS}}
 
 For each finding:
-- Reproduce it first: a test that fails on the current branch for the reason the finding gives.
-- Name its class and list every member your impact map finds (the other paths, orders, spellings or record formats where the same fault can occur), each with a test or a line saying why it cannot happen.
-- Fix the class, then prove each test fails with its fix removed (mutation check).
-- Re-run the case table from the build's report for what your change touches, and say which rows changed.
-Do not change behaviour outside these classes.
+1. Write one test that fails on the current branch for the reason the finding gives, and show it failing.
+2. Fix the code, and show the same test passing.
+3. When the finding lists every case of its kind ("Cases:"), cover each listed case the same way. Otherwise fix only the case named; if you see other cases of the same kind, list them in your report under "Same kind, not fixed" with file:line, and do not hunt for more.
+Do not change behaviour outside these findings.
+{{UI_RENDER_STEP_OR_DELETE}}
 
-REJECTED by the orchestrator, do not change: {{REJECTED_WITH_ONE_LINE_REASON_OR_NONE}}
+NOT TO CHANGE (rejected by the orchestrator): {{REJECTED_WITH_ONE_LINE_REASON_OR_NONE}}
 
-ALSO: {{MERGE_MAIN_INTO_BRANCH_OR_INSTALL_STEP_OR_DELETE}}
+REUSE CHECK: not needed: this round fixes named findings and adds no new functionality; if a fix would need one, stop that finding and say so.
+ALLOWED DEPENDENCIES: none
 
-Corrections to the build's report from the review: {{REPORT_CORRECTIONS_OR_NONE}}
+CHECKS: run on the final tree, in the foreground: the type check, lint on the files you changed, and the test files for the modules you changed ({{CHECK_COMMANDS}}). The merge gate runs the full suite after you.
 
 YOUR RESOURCES: worktree `{{WORKTREE}}`, branch `{{BRANCH}}`, ports {{PORTS}}.
 
-Run every gate on the final tree in the foreground and give a labelled report, with the class list for each finding. Mark every claim VERIFIED, INFERRED or OPEN.
+REPORT, your final message, plain words: per finding, the test's name, its failing and passing output in one line each, and the commit; "Same kind, not fixed" with file:line; the checks with their numbers and commands; anything you could not do and why. Mark every claim VERIFIED, INFERRED or OPEN.

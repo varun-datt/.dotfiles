@@ -195,12 +195,13 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 - **Bring main into a branch before its review** when main has moved under the files the item
   touches, so the reviewer reads the code that will merge (one stale selector, 2026-10-30).
 - **Fix rounds** start a fresh session named `<prefix><item>-fixN` (owner, 2026-10-29: resumed
-  rounds averaged 92k tokens per request against 75k for builds). Its brief carries the accepted
-  findings, the files they name and the branch state, with the item's brief for context. It fixes
-  each finding's class, not only the case named ([fix.md](assets/fix.md)). Before it, save the
-  build's report with `python3 scripts/result.py "$OW_RUN_DIR/<item>.jsonl" >
-  "$OW_RUN_DIR/<item>.report.md"` and fill `{{BUILD_REPORT_PATH}}` with that path. One
-  round per item; a further round goes on the owner's list.
+  rounds averaged 92k tokens per request against 75k for builds) and are narrow (owner,
+  2026-11-02, after fix rounds cost more than builds): the brief carries only the blocking findings,
+  each with where, what goes wrong and what done looks like; one test per finding that fails first;
+  only the checks for the changed files; no impact map, case table or mutation runs, and screenshots
+  only for a UI finding ([fix.md](assets/fix.md)). A whole kind is fixed only when the finding lists
+  its cases; other cases the fixer sees go to the debt list, and a kind in 3 or more items goes to
+  the owner as a structural fix. One round per item; a further round goes on the owner's list.
 - **Resume rounds** (`<item>-resumeN`, a stopped worker): `copilot -r ow-<item>` with the same
   flags; `python3 -B scripts/resume.py <item> <round> <cap> <timeout>` does it from the item's
   last launch in `routes.jsonl`, with the prompt in `$OW_RUN_DIR/<round>.prompt.md`. Credit caps
@@ -208,7 +209,8 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 - **Before merging a note or page,** `python3 -B scripts/merge_check.py --patterns <file> <files>`
   checks the redaction patterns on word boundaries and literal `\u` escapes.
 - **A `result` event is not success.** Check `exitCode` and `session.error`; `scripts/result.py`
-  shows both, plus spend and the report. A round that hit its credit cap also exits 0 ([details](references/details.md#failure-modes-and-recoveries)).
+  shows both, plus spend and the report. A round past its unseen credit stop exits 3 and leaves
+  `<round>.stopped` ([routing](references/routing.md#credit-caps)).
 
 **Prompts** ([assets/](assets/)); placeholders are `{{NAME}}` or `{{NAME|default}}`:
 - **Worker:** [preamble-worker.md](assets/preamble-worker.md) + [task-body.md](assets/task-body.md).
@@ -221,9 +223,10 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   critiqued by another model family with [critique-research.md](assets/critique-research.md),
   against a snapshot of the note, page, task and report; the critic also asks whether the note
   builds what already exists (owner, 2026-11-01).
-- **Reviews:** [review.md](assets/review.md) and the fixes-only [rereview.md](assets/rereview.md),
-  which grade on [references/rubric.md](references/rubric.md) (`review.sh` fills `{{RUBRIC}}`) and
-  tag each finding's cause and class; the re-review checks each fix covered its whole class.
+- **Reviews:** [review.md](assets/review.md), which grades on [references/rubric.md](references/rubric.md)
+  (`review.sh` fills `{{RUBRIC}}`) and tags each finding's cause and class, and the short
+  [rereview.md](assets/rereview.md), which only checks each named finding was fixed, its test, and
+  harm the fix itself adds, at medium effort.
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
   fresh session, so it names the branch, worktree, base commit and ports.
 - **Resume round, sent with `-r`:** [resume.md](assets/resume.md); short, because the session

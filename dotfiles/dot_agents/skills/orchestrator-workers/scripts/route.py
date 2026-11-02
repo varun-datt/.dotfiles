@@ -82,6 +82,7 @@ def risk_hits(text, cfg):
 
 
 TASK_START = re.compile(r"^(?:TASK:|THIS IS A FIX ROUND)", re.M)
+SHORT_REREVIEW = 'This is a SHORT RE-REVIEW'
 
 
 def task_part(text):
@@ -460,6 +461,8 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
         reason += f" [{scores[model]['level']} n={scores[model]['n']}]"
     if kind == 'review' and avoid and family(model, cfg) == avoid:
         model = strongest(cfg, avoid)
+    if kind == 'review' and SHORT_REREVIEW in text:
+        effort, effort_why = 'medium', 'a short re-review (owner, 2026-11-02)'
     cap = cap_for(kind, model, history, cfg)
     if not quality_on:
         reason += ' | budget: spend ahead of time, quality rule off'
