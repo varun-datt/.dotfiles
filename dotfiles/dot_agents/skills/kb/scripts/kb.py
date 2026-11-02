@@ -30,7 +30,10 @@ kind is one of note, code, test, data: the source's "kinds" glob that matches fi
     data    .json .jsonl .ndjson .yaml .yml .toml .csv .tsv .xml .ini .cfg .conf .properties .lock,
             images, media, archives and databases, and a name that starts with a dot and has no other extension
     code    everything else, a file with no extension included (Makefile, Dockerfile, scripts)
---kind (repeat, or comma-separate) keeps only those kinds, before --limit cuts the ranking.
+--kind (repeat, or comma-separate) keeps only those kinds, before any cut: each engine ranks deep enough to hold
+the limit in those kinds (ck is asked for four times as many until it does or runs out), the hits fuse at their
+unfiltered ranks, and the other kinds drop after fusion, so the kept hits keep their unfiltered order; a hit found
+only below the unfiltered pool scores 0 and comes after them.
 Modes:
     auto    by the query's shape: a regex goes to regex; up to three words to regex and lex; a
             longer message to sem (the default)
@@ -179,7 +182,7 @@ def title_matches(query, title):
     return bool(terms) and 2 * sum(w in words or w.rstrip("s") in words for w in terms) >= len(terms)
 
 
-def run_rg(query, root, limit, paths=(".",), exclude=()):
+def run_rg(query, root, limit, paths=(".",), exclude=(), keep=None):
     base = ["rg", "--json", "-i", "--hidden", *sum((["-g", g] for g in (*SKIP, *(f"!/{e}" for e in exclude))), [])]
     out = subprocess.run([*base, "-e", query, *paths], cwd=root, capture_output=True, text=True, stdin=subprocess.DEVNULL)
     if out.returncode == 2 and "regex parse error" in out.stderr:
@@ -194,38 +197,58 @@ def run_rg(query, root, limit, paths=(".",), exclude=()):
         hit = files.setdefault(rel, {"path": rel, "line": d["line_number"], "end": d["line_number"],
                                      "snippet": d["lines"].get("text", "").strip()[:240], "count": 0})
         hit["count"] += 1
-    ranked = sorted(files.values(), key=lambda h: (-h["count"], h["path"]))[:limit]
+    ranked = through(sorted(files.values(), key=lambda h: (-h["count"], h["path"])), limit, keep)
     return [{**h, "score": float(h.pop("count"))} for h in ranked]
 
 
-def run_ck(mode, query, root, folder, limit, ck, exclude=()):
-    out = ck_cmd(ck, [f"--{mode}", "--jsonl", "--topk", str(limit * 3), "--threshold", "0"], folder, query,
-                 ck_excludes(exclude, root, folder))
-    seen, hits = set(), []
-    for line in out.stdout.splitlines():
-        try:
-            r = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        rel = os.path.relpath(os.path.realpath(os.path.join(folder, r["path"])), root)
-        # ck's --exclude keeps files out of an index; one built before the exclude still returns them.
-        if rel in seen or under(rel, exclude):
-            continue
-        seen.add(rel)
-        span = r.get("span") or {}
-        hits.append({"path": rel, "line": span.get("line_start"), "end": span.get("line_end"),
-                     "snippet": " ".join((r.get("snippet") or "").split())[:240], "score": float(r.get("score") or 0)})
-    return hits[:limit]
+def through(ranked, limit, keep=None):
+    """The top limit hits; with keep, the unfiltered ranking down to the hit where limit of them pass keep."""
+    if not keep:
+        return ranked[:limit]
+    kept = 0
+    for n, h in enumerate(ranked, 1):
+        kept += bool(keep(h["path"]))
+        if kept >= limit:
+            return ranked[:max(n, limit)]
+    return ranked
 
 
-def fuse(rankings):
-    """Merge ranked lists of hits by reciprocal rank; the first list's line and snippet win."""
+def run_ck(mode, query, root, folder, limit, ck, exclude=(), keep=None):
+    """ck's top chunks as one hit per file; with keep, ck is asked for more until limit files pass keep or ck runs out,
+    and the hits that fail keep stay in, so their ranks are those of the unfiltered search."""
+    topk = limit * 3
+    while True:
+        out = ck_cmd(ck, [f"--{mode}", "--jsonl", "--topk", str(topk), "--threshold", "0"], folder, query,
+                     ck_excludes(exclude, root, folder))
+        seen, hits, rows = set(), [], 0
+        for line in out.stdout.splitlines():
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            rows += 1
+            rel = os.path.relpath(os.path.realpath(os.path.join(folder, r["path"])), root)
+            # ck's --exclude keeps files out of an index; one built before the exclude still returns them.
+            if rel in seen or under(rel, exclude):
+                continue
+            seen.add(rel)
+            span = r.get("span") or {}
+            hits.append({"path": rel, "line": span.get("line_start"), "end": span.get("line_end"),
+                         "snippet": " ".join((r.get("snippet") or "").split())[:240], "score": float(r.get("score") or 0)})
+        if not keep or sum(bool(keep(h["path"])) for h in hits) >= limit or rows < topk:
+            return through(hits, limit, keep)
+        topk *= 4
+
+
+def fuse(rankings, depth=None):
+    """Merge ranked lists of hits by reciprocal rank; the first list's line and snippet win. A rank below depth adds to
+    deep, not score, so a list ranked deeper for a filter gives the hits above depth the scores of the unfiltered search."""
     merged = {}
     for engine, hits in rankings:
         for rank, h in enumerate(hits, 1):
             key = (h["source"], h["path"])
-            m = merged.setdefault(key, {**h, "score": 0.0, "engines": []})
-            m["score"] += 1 / (RRF_K + rank)
+            m = merged.setdefault(key, {**h, "score": 0.0, "deep": 0.0, "engines": []})
+            m["score" if depth is None or rank <= depth else "deep"] += 1 / (RRF_K + rank)
             if engine not in m["engines"]:
                 m["engines"].append(engine)
     return sorted(merged.values(), key=lambda h: -h["score"])
@@ -276,13 +299,18 @@ def search(query, sources, mode="auto", limit=10, kinds=None):
     ck = ck_binary()
     jobs, _ = plan(query, sources, mode, ck)
     depth = max(limit, POOL)
+    overrides = {}
+    for s in sources:
+        overrides.setdefault(s["name"], s.get("kinds") or ())
+    keeper = lambda name: (lambda path: kind_of(path, overrides[name]) in kinds) if kinds else None  # noqa: E731
 
     def one(job):
         src, engine, folder = job
+        keep = keeper(src["name"])
         if engine == "regex":
-            found = run_rg(query, src["root"], depth, src.get("paths") or ["."], src.get("exclude") or [])
+            found = run_rg(query, src["root"], depth, src.get("paths") or ["."], src.get("exclude") or [], keep=keep)
         else:
-            found = run_ck(engine, query, src["root"], folder, depth, ck, src.get("exclude") or [])
+            found = run_ck(engine, query, src["root"], folder, depth, ck, src.get("exclude") or [], keep=keep)
         return (src["name"], engine), [{**h, "source": src["name"]} for h in found]
 
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(jobs)))) as pool:
@@ -294,18 +322,22 @@ def search(query, sources, mode="auto", limit=10, kinds=None):
             key = (h["source"], h["path"])
             if key not in best or h["score"] > best[key]["score"]:
                 best[key] = h
-    rankings = [(engine, sorted(best.values(), key=lambda h: -h["score"])[:depth]) for engine, best in merged.items()]
-    roots, overrides = {}, {}
+    rankings = [(engine, sorted(best.values(), key=lambda h: -h["score"])[:None if kinds else depth])
+                for engine, best in merged.items()]
+    roots = {}
     for s in sources:
         roots.setdefault(s["name"], s["root"])
-        overrides.setdefault(s["name"], s.get("kinds") or ())
-    fused = fuse(rankings)
-    for h in fused:
+    fused = []
+    for h in fuse(rankings, depth):
+        h["kind"] = kind_of(h["path"], overrides[h["source"]])
+        if kinds and h["kind"] not in kinds:
+            continue
         h["title"] = title_of(os.path.join(roots[h["source"]], h["path"]))
         if title_matches(query, h["title"]):
             h["score"] *= TITLE_BOOST
-        h["kind"] = kind_of(h["path"], overrides[h["source"]])
-    hits = sorted((h for h in fused if not kinds or h["kind"] in kinds), key=lambda h: -h["score"])[:limit]
+            h["deep"] *= TITLE_BOOST
+        fused.append(h)
+    hits = sorted(fused, key=lambda h: (-h["score"], 0 if h["score"] else -h["deep"]))[:limit]
     return [{k: h.get(k) for k in FIELDS} for h in hits]
 
 

@@ -38,9 +38,12 @@ python3 ~/.agents/skills/kb/scripts/kb.py index [--source NAME ...]
   named like `test_*`, `*.test.*`, `*.spec.*` or `*Test.*`, is a test; `.json`, `.yaml`, `.csv`, images
   and archives are data; the rest, a file with no extension included, is code. A source's `kinds`
   overrides it by path glob.
-- **`--kind note`** (repeat, or `note,data`) keeps only those kinds, before the limit cuts: with
-  `--limit 3 --kind note` you get up to three notes even when code ranks above them. They come from
-  the same candidate pool, in the same order as without the filter. An unknown kind is refused with
+- **`--kind note`** (repeat, or `note,data`) keeps only those kinds, before any cut: each engine ranks
+  deep enough to hold the limit in those kinds, and ck is asked for four times as many until it does
+  or runs out, so with `--limit 3 --kind note` you get up to three notes even when code ranks above
+  them. Hits fuse at their unfiltered ranks and the other kinds drop after, so they keep the order
+  they have without the filter; a hit found only below the unfiltered pool scores 0 and comes after
+  them. An unknown kind is refused with
   the valid list.
 - **Ranking:** each engine hands up to 50 candidates (more when `--limit` asks for more), whatever
   the limit; they merge by reciprocal rank (k = 60); then a hit whose title (front-matter

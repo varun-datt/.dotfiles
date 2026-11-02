@@ -1,4 +1,4 @@
-import glob, inspect, io, json, os, subprocess, sys, tempfile, time, unittest
+import glob, inspect, io, json, os, random, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
 sys.dont_write_bytecode = True
@@ -343,6 +343,34 @@ class KindFilter(unittest.TestCase):
     def test_a_kind_with_no_hits_returns_nothing(self):
         self.assertEqual(self.search(3, ["test"], ["c0.ts", "n1.md"]), [])
 
+    def test_on_random_rankings_the_filter_keeps_the_unfiltered_order_across_engines_and_title_boosts(self):
+        rng = random.Random(7)
+        src = {"name": "s", "root": SOURCES[0]["root"]}
+        exts = (".md", ".ts", ".test.ts", ".json")
+        for trial in range(300):
+            paths = [f"f{i}{rng.choice(exts)}" for i in range(rng.randint(1, 90))]
+            ranked = {e: rng.sample(paths, rng.randint(1, len(paths))) for e in rng.sample(["regex", "lex", "sem"], rng.randint(1, 3))}
+            boosted = {p for p in paths if rng.random() < 0.2}
+            found = lambda e: [{"path": p, "score": float(len(ranked[e]) - i)} for i, p in enumerate(ranked[e])]  # noqa: E731
+            jobs = [(src, e, None if e == "regex" else "f") for e in ranked]
+
+            def search(limit, kinds=None):
+                with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
+                     mock.patch.object(kb, "run_rg", side_effect=lambda *a, **kw: found("regex")), \
+                     mock.patch.object(kb, "run_ck", side_effect=lambda mode, *a, **kw: found(mode)), \
+                     mock.patch.object(kb, "title_of", side_effect=lambda p: "Dock retry policy" if os.path.basename(p) in boosted
+                                       else "Gate overview"):
+                    return [h["path"] for h in kb.search("dock retry policy", [src], "fused", limit, kinds)]
+
+            full = search(kb.POOL)
+            kinds = rng.sample(["note", "code", "test", "data"], rng.randint(1, 2))
+            limit = rng.randint(1, kb.POOL)
+            expected = [p for p in full if kb.kind_of(p) in kinds][:limit]
+            with self.subTest(trial=trial, kinds=kinds, limit=limit):
+                got = search(limit, kinds)
+                self.assertEqual(got[:len(expected)], expected)
+                self.assertTrue(all(kb.kind_of(p) in kinds and p not in full for p in got[len(expected):]))
+
     def test_without_kinds_nothing_is_filtered(self):
         self.assertEqual(self.search(10), self.RANKED)
 
@@ -377,6 +405,65 @@ class KindFilter(unittest.TestCase):
         d, sources = kind_corpus(self)
         out = kb_cli(["search", "larch", "--mode", "regex", "--limit", "1"], sources, d)
         self.assertEqual(out.stdout, "s:src/larch.ts:1  larch.ts — larch\n")
+
+
+FAKE_CK = """import json, os, sys
+a = sys.argv[1:]
+topk = int(a[a.index("--topk") + 1])
+with open(os.environ["FAKE_CK_LOG"], "a") as f:
+    f.write(f"{topk}\\n")
+ranked = [f"src/c{i}.ts" for i in range(200)] + [f"notes/n{i}.md" for i in range(3)]
+for i, p in enumerate(ranked[:topk]):
+    print(json.dumps({"path": p, "span": {"line_start": 1, "line_end": 1}, "snippet": "larch", "score": 1 - i / 1000}))
+"""
+
+
+class KindStarvation(unittest.TestCase):
+    """50 .ts files that rg ranks above three .md, and a ck that ranks 200 .ts above them and honours --topk."""
+
+    def setUp(self):
+        self.d = os.path.realpath(tempfile.mkdtemp())
+        self.addCleanup(lambda: subprocess.run(["rm", "-rf", self.d]))
+        for rel, n in [(f"src/c{i}.ts", 5) for i in range(50)] + [(f"notes/n{i}.md", 1) for i in range(3)]:
+            os.makedirs(os.path.join(self.d, os.path.dirname(rel)), exist_ok=True)
+            with open(os.path.join(self.d, rel), "w") as f:
+                f.write("larch\n" * n)
+        self.ck = os.path.join(tempfile.mkdtemp(), "ck")
+        self.addCleanup(lambda: subprocess.run(["rm", "-rf", os.path.dirname(self.ck)]))
+        with open(self.ck, "w") as f:
+            f.write(f"#!{sys.executable}\n" + FAKE_CK)
+        os.chmod(self.ck, 0o755)
+        self.log = os.path.join(os.path.dirname(self.ck), "calls")
+        self.src = {"name": "s", "root": self.d}
+
+    def search(self, mode, engines, limit, kinds):
+        jobs = [(self.src, e, None if e == "regex" else self.d) for e in engines]
+        with mock.patch.object(kb, "ck_binary", return_value=self.ck), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
+             mock.patch.dict(os.environ, {"FAKE_CK_LOG": self.log, "KB_INDEX_DIR": os.path.join(os.path.dirname(self.ck), "ix")}):
+            return [h["path"] for h in kb.search("larch", [self.src], mode, limit, kinds)]
+
+    def calls(self):
+        with open(self.log) as f:
+            return [int(n) for n in f.read().split()]
+
+    def test_limit_3_of_notes_returns_the_three_notes_on_every_route(self):
+        for mode, engines in (("regex", ["regex"]), ("lex", ["lex"]), ("sem", ["sem"]), ("hybrid", ["hybrid"]),
+                              ("fused", ["regex", "sem"]), ("auto", ["regex", "lex"])):
+            with self.subTest(mode=mode):
+                self.assertEqual(sorted(self.search(mode, engines, 3, ["note"])), ["notes/n0.md", "notes/n1.md", "notes/n2.md"])
+
+    def test_ck_is_asked_for_more_only_while_a_filter_is_short_and_stops_when_it_runs_out(self):
+        self.search("sem", ["sem"], 3, None)
+        self.assertEqual(self.calls(), [150])
+        os.remove(self.log)
+        self.search("sem", ["sem"], 3, ["note"])
+        self.assertEqual(self.calls(), [150, 600])
+        os.remove(self.log)
+        self.assertEqual(self.search("sem", ["sem"], 3, ["test"]), [])
+        self.assertEqual(self.calls(), [150, 600])
+
+    def test_without_kind_the_code_still_ranks_first(self):
+        self.assertTrue(all(p.startswith("src/c") for p in self.search("regex", ["regex"], 3, None)))
 
 
 class Report(unittest.TestCase):
