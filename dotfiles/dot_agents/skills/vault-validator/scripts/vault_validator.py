@@ -550,6 +550,7 @@ class VaultValidator:
             return
         types = set(settings.get("types", []))
         grace = int(settings.get("grace_days", 0))
+        skip = tuple(settings.get("skip_prefixes", []))
         by_path = {note.path.resolve(): note for note in self.notes}
         by_stem: dict[str, list[ParsedMarkdown]] = {}
         for note in self.notes:
@@ -564,7 +565,7 @@ class VaultValidator:
             for match in WIKILINK_RE.finditer(visible):
                 target = match.group(1).split("|", 1)[0].split("#", 1)[0].strip()
                 linked = self._linked_note(target, note.path, by_path, by_stem)
-                if linked is None or linked is note:
+                if linked is None or linked is note or linked.relative.startswith(skip):
                     continue
                 updated = linked.frontmatter.get("updated")
                 if valid_date(updated) and (dt.date.fromisoformat(updated) - own_date).days > grace:

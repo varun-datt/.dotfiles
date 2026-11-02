@@ -73,6 +73,8 @@ class EngineTest(unittest.TestCase):
         self.assertIn("1 note(s)", stale[0].message)
         self.assertIn("notes/fresh.md", stale[0].message)
         self.assertEqual([], [f for f in self.findings(types=["note", "moc"]) if f.rule == "SUMMARY_STALE"])
+        rules["summaries"]["skip_prefixes"] = ["notes/fresh"]
+        self.assertEqual([], [f for f in self.findings(**rules) if f.rule == "SUMMARY_STALE"])
 
     def test_baseline_downgrades_only_the_listed_finding(self) -> None:
         write(self.root / "notes/a.md", "---\ntype: note\n---\n")

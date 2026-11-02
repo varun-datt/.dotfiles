@@ -31,7 +31,7 @@ A section that is absent switches its check off. The wiki's file is the full exa
 | `contexts`, `mixed_context` | Allowed `context:` values, and where an exception applies |
 | `dated_types`, `dated_month_ok` | Dated notes are named after their `date:`; `YYYY-MM` allowed when the day is unknown |
 | `read_later`, `inbox`, `retention_tags` | Wiki workflow warnings |
-| `summaries` | Warns (`SUMMARY_STALE`) when a note of a listed type is older than a note it links to by more than `grace_days` |
+| `summaries` | Warns (`SUMMARY_STALE`) when a note of a listed type is older than a note it links to by more than `grace_days`; links under `skip_prefixes` are not counted |
 | `skills` | Required skills, name and description checks, required references |
 | `required_files`, `obsidian_plugins`, `operator_guide`, `tend_state` | Repository furniture |
 | `baseline` | Default accepted-debt file |
