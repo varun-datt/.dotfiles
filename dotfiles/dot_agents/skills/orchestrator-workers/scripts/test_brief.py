@@ -37,6 +37,15 @@ class BriefTest(unittest.TestCase):
     def test_a_filled_worker_prompt_passes(self):
         self.assertEqual(brief.problems(worker()), [])
 
+    def test_naming_the_turn_state_file_needs_a_host_state_answer(self):
+        names = FIELDS.replace("none, a new view", "`validSpecial` in `src/host/sessions.ts`; a new view")
+        found = brief.problems(worker(fields=names))
+        self.assertEqual(len(found), 1)
+        self.assertIn("host-state none (why)", found[0])
+        for risk in ("RISK: UI, host-state none (no change to how sessions send)", "RISK: host-state (late events)"):
+            self.assertEqual(brief.problems(worker(fields=names.replace("RISK: UI", risk))), [], risk)
+        self.assertEqual(brief.problems("Turn state lives in `src/host/sessions.ts`.\n" + worker()), [])
+
     def test_an_unfilled_placeholder_fails_outside_comments_and_inline_code(self):
         self.assertEqual(brief.problems(worker() + "YOUR RESOURCES: ports {{PORTS}}\n"), ["unfilled placeholder {{PORTS}}"])
         self.assertEqual(brief.problems(worker() + "Placeholders look like `{{NAME}}`.\n"), [])

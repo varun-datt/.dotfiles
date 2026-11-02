@@ -26,6 +26,7 @@ the reviewer, research or worker preamble's opening. A worker prompt with a line
 "THIS IS A FIX ROUND" before its first "TASK:" line is a fix round. Anything else is "other".
 """
 import argparse
+import json
 import os
 import re
 import sys
@@ -105,11 +106,31 @@ def field_problem(numbered, field, hint, bare_none_ok=False):
     return None
 
 
+def hot_spot_problem(lines):
+    """The router's strongest-model rule reads RISK: host-state, so a brief naming the file must say yes or none."""
+    try:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "references", "routes.json"),
+                  encoding="utf-8") as f:
+            floor = next((x for x in json.load(f)["floors"] if "text" in x["when"]), None)
+    except (OSError, ValueError, KeyError):
+        return None
+    if not floor:
+        return None
+    start = next((i for i, line in enumerate(lines) if line.startswith("TASK:")), 0)
+    named = next((n for n, line in enumerate(lines, 1) if n > start and re.search(floor["when"]["text"], line)), None)
+    risk = next((line for line in lines if line.startswith("RISK:")), "")
+    if named and not re.search(r"\bhost-state\b", risk):
+        return (f"line {named} names {floor['when']['text'].replace(chr(92), '')}: say on the RISK line "
+                f"\"host-state (what changes)\" or \"host-state none (why)\", so the router can pick the model")
+    return None
+
+
 def brief_problems(text):
     lines = brief_lines(text)
     found = [f"line {n}: MUST {num} has no SHALL: write it as \"WHEN <event or state>, <part> SHALL <response>\""
              for num, n, body in must_items(lines) if not re.search(r"\bSHALL\b", body)]
     found += [p for p in (field_problem(outside_fences(lines), f, "name it, or say \"none\" and why") for f in BRIEF_FIELDS) if p]
+    found += [p for p in (hot_spot_problem(lines),) if p]
     return found
 
 
