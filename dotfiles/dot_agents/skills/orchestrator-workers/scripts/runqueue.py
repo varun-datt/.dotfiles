@@ -501,7 +501,7 @@ def main(argv=None):
     common.add_argument('--run-dir', help='run folder (default: $OW_RUN_DIR)')
     ap = argparse.ArgumentParser(description='Queue approved items and launch each when a slot frees.')
     sub = ap.add_subparsers(dest='cmd', required=True)
-    a = sub.add_parser('add', parents=[common], help='append an item')
+    a = sub.add_parser('add', parents=[common], help='append an item: a --cmd, or a --pipeline of steps')
     a.add_argument('id')
     how = a.add_mutually_exclusive_group(required=True)
     how.add_argument('--cmd', dest='shell', help='shell command that runs the item')
