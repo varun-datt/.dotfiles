@@ -20,4 +20,6 @@ Known findings that did not block a merge, kept by `debt.py` (the orchestrator-w
 | TD-14 | 2026-10-31 | orchestrator-workers | Minor | dotfiles/dot_agents/skills/orchestrator-workers/references/routing.md | routing.md:49 still says a round's kind comes from its name suffix only; since p4 it comes from the routes.jsonl launch record first | p4-rereview2, 2026-10-31 | 5 | open |
 | TD-15 | 2026-10-31 | orchestrator-workers | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/brief.py | brief check --repo reads docs/tech-debt.md through a docs/ symlink, so a linked docs folder lets a register outside the repository be read (containment is lexical) | p6 reviews, 2026-10-31 | 15 | open |
 | TD-16 | 2026-10-31 | orchestrator-workers | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/debt.py | brief check takes about 4 s on a large register (estimated, not remeasured after the fix) | p6 reviews, 2026-10-31 | 20 | open |
-<!-- debt.py next id: 17 -->
+| TD-17 | 2026-11-02 | queue | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/runqueue.py | runqueue.py wait records an acknowledgment before printing, so an interrupted wait can hide a suspend until status is read | qs-review | 10 | open |
+| TD-18 | 2026-11-02 | records | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/mine.py | two concurrent mine.py --findings rebuilds of one run folder share temporary file names and can publish mismatched findings and defects files (r1, unmerged) | r1-review | 15 | open |
+<!-- debt.py next id: 19 -->
