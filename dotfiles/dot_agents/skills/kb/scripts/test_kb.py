@@ -1,4 +1,4 @@
-import glob, io, json, os, subprocess, sys, tempfile, time, unittest
+import glob, inspect, io, json, os, subprocess, sys, tempfile, time, unittest
 from unittest import mock
 
 sys.dont_write_bytecode = True
@@ -95,17 +95,28 @@ class Routing(unittest.TestCase):
         b = [{"source": "s", "path": "y"}, {"source": "s", "path": "z"}]
         self.assertEqual([h["path"] for h in kb.fuse([("regex", a), ("sem", b)])], ["y", "x", "z"])
 
-    def test_a_file_that_two_overlapping_folders_both_return_counts_once_per_engine(self):
+    def overlapping_folders(self, regex_hits):
         src = {"name": "s", "root": SOURCES[0]["root"]}
         jobs = [(src, "sem", "a"), (src, "sem", "b"), (src, "regex", None)]
         sem = {"a": [{"path": "x.md", "score": 0.9}, {"path": "y.md", "score": 0.5}], "b": [{"path": "x.md", "score": 0.8}]}
+        real = inspect.signature(kb.run_ck)
+        # Bound by name, so a parameter kb adds to run_ck does not break the stand-in.
+        stand_in = lambda *a, **kw: sem[real.bind(*a, **kw).arguments["folder"]]  # noqa: E731
         with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
-             mock.patch.object(kb, "run_ck", side_effect=lambda engine, q, root, folder, limit, ck, exclude: sem[folder]), \
-             mock.patch.object(kb, "run_rg", return_value=[{"path": "z.md", "score": 1.0}]), \
+             mock.patch.object(kb, "run_ck", side_effect=stand_in), \
+             mock.patch.object(kb, "run_rg", return_value=regex_hits), \
              mock.patch.object(kb, "title_of", return_value=""):
-            hits = {h["path"]: h for h in kb.search("q", [src], "fused", 3)}
+            return {h["path"]: h for h in kb.search("q", [src], "fused", 3)}
+
+    def test_a_file_that_two_overlapping_folders_both_return_counts_once_per_engine(self):
+        hits = self.overlapping_folders([{"path": "z.md", "score": 1.0}])
         self.assertEqual(set(hits), {"x.md", "y.md", "z.md"})
         self.assertEqual(hits["x.md"]["score"], hits["z.md"]["score"])
+
+    def test_a_file_that_two_engines_return_counts_once_for_each_engine(self):
+        hits = self.overlapping_folders([{"path": "x.md", "score": 1.0}])
+        self.assertEqual(hits["x.md"]["engines"], ["sem", "regex"])
+        self.assertAlmostEqual(hits["x.md"]["score"], 2 / (60 + 1))
 
     def test_a_folder_without_its_own_index_is_searched_by_regex(self):
         product = {"name": "product", "root": os.path.realpath(os.path.join(CORPUS, "product")), "paths": ["dock-scheduler", "route-planner"]}
@@ -149,6 +160,223 @@ class Indexing(unittest.TestCase):
 class Scenarios(unittest.TestCase):
     def test_the_default_engine_holds_its_baseline_in_every_space_and_caller(self):
         self.assertEqual(suite.main(["--check"]), 0)
+
+
+def row(case_id, rank, space="work", caller="agent"):
+    return {"id": case_id, "rank": rank, "anchored": None, "mustNot_violated": False, "ms": 1.0, "space": space,
+            "caller": caller, "class": "identifier"}
+
+
+class TitleBoost(unittest.TestCase):
+    def test_half_the_querys_content_words_in_the_title_is_a_match(self):
+        self.assertTrue(kb.title_matches("dock retry policy", "Dock retry policy"))
+        self.assertTrue(kb.title_matches("how do we size the dock doors", "Dock door sizing"))
+        self.assertTrue(kb.title_matches("dock retry gate timing", "Dock retry"))
+
+    def test_under_half_is_not_a_match(self):
+        self.assertFalse(kb.title_matches("dock retry gate timing", "Dock overview"))
+        self.assertFalse(kb.title_matches("dock retry gate", "Dock overview"))
+
+    def test_a_query_of_stop_words_only_matches_nothing(self):
+        self.assertFalse(kb.title_matches("how do we do it", "How do we do it"))
+
+    def test_a_non_english_title_matches_its_own_words(self):
+        self.assertTrue(kb.title_matches("gestión de muelles", "Gestión de muelles"))
+        self.assertFalse(kb.title_matches("gestión de muelles", "Gesti n overview"))
+
+    def test_a_hit_with_no_title_is_not_boosted(self):
+        self.assertFalse(kb.title_matches("dock retry", None))
+        self.assertFalse(kb.title_matches("dock retry", ""))
+
+    def search(self, mode, engines, titles, query="dock retry policy"):
+        src = {"name": "s", "root": SOURCES[0]["root"]}
+        jobs = [(src, e, None if e == "regex" else "f") for e in engines]
+        found = {"regex": [{"path": "a.md", "score": 3.0}, {"path": "b.md", "score": 2.0}],
+                 "sem": [{"path": "a.md", "score": 0.9}, {"path": "b.md", "score": 0.8}]}
+        with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
+             mock.patch.object(kb, "run_rg", return_value=found["regex"]), \
+             mock.patch.object(kb, "run_ck", side_effect=lambda *a, **kw: found["sem"]), \
+             mock.patch.object(kb, "title_of", side_effect=lambda p: titles.get(os.path.basename(p))):
+            return kb.search(query, [src], mode, 10)
+
+    def test_a_title_match_scores_x1_2_before_the_final_ranking_on_every_route(self):
+        titles = {"a.md": "Gate overview", "b.md": "Dock retry policy"}
+        for mode, engines in (("regex", ["regex"]), ("sem", ["sem"]), ("fused", ["regex", "sem"])):
+            with self.subTest(mode=mode):
+                hits = self.search(mode, engines, titles)
+                self.assertEqual([h["path"] for h in hits], ["b.md", "a.md"])
+                self.assertAlmostEqual(hits[0]["score"], len(engines) * 1.2 / (60 + 2))
+                self.assertAlmostEqual(hits[1]["score"], len(engines) / (60 + 1))
+                self.assertEqual(hits[0]["title"], "Dock retry policy")
+
+    def test_without_a_title_match_the_order_and_scores_are_reciprocal_rank_alone(self):
+        hits = self.search("regex", ["regex"], {"a.md": "Gate overview", "b.md": None})
+        self.assertEqual([(h["path"], h["score"]) for h in hits], [("a.md", 1 / (60 + 1)), ("b.md", 1 / (60 + 2))])
+
+
+class CandidatePool(unittest.TestCase):
+    ROUTES = (("regex", ["regex"]), ("lex", ["lex"]), ("sem", ["sem"]), ("hybrid", ["hybrid"]), ("fused", ["regex", "sem"]),
+              ("auto", ["regex", "lex"]))
+
+    def search(self, mode, engines, depth, limit, boosted_at):
+        """Every engine ranks n0..n{depth-1}; only the file at boosted_at has a matching title. The stand-ins return
+        no more than the limit kb hands them, as rg and ck do."""
+        src = {"name": "s", "root": SOURCES[0]["root"]}
+        jobs = [(src, e, None if e == "regex" else "f") for e in engines]
+        found = [{"path": f"n{i}.md", "score": float(depth - i)} for i in range(depth)]
+        rg_sig, ck_sig = inspect.signature(kb.run_rg), inspect.signature(kb.run_ck)
+        rg = lambda *a, **kw: found[:rg_sig.bind(*a, **kw).arguments["limit"]]  # noqa: E731
+        ck = lambda *a, **kw: found[:ck_sig.bind(*a, **kw).arguments["limit"]]  # noqa: E731
+        title = lambda p: "Dock retry policy" if os.path.basename(p) == f"n{boosted_at}.md" else "Gate overview"  # noqa: E731
+        with mock.patch.object(kb, "ck_binary", return_value="ck"), mock.patch.object(kb, "plan", return_value=(jobs, [])), \
+             mock.patch.object(kb, "run_rg", side_effect=rg), mock.patch.object(kb, "run_ck", side_effect=ck), \
+             mock.patch.object(kb, "title_of", side_effect=title):
+            return kb.search("dock retry policy", [src], mode, limit)
+
+    def test_at_limit_1_the_boost_still_ranks_a_title_match_below_the_cut_first_on_every_route(self):
+        for mode, engines in self.ROUTES:
+            with self.subTest(mode=mode):
+                hits = self.search(mode, engines, 20, 1, 2)
+                self.assertEqual([(h["path"], round(h["score"], 6)) for h in hits], [("n2.md", round(len(engines) * 1.2 / 63, 6))])
+
+    def test_the_deepest_rank_the_boost_can_lift_to_first_is_retrieved_at_limit_1(self):
+        # 1.2/(60+13) beats 1/(60+1); 1.2/(60+14) does not.
+        for mode, engines in self.ROUTES:
+            with self.subTest(mode=mode):
+                self.assertEqual([h["path"] for h in self.search(mode, engines, 20, 1, 12)], ["n12.md"])
+                self.assertEqual([h["path"] for h in self.search(mode, engines, 20, 1, 13)], ["n0.md"])
+
+    def test_every_limit_cuts_the_same_ranking(self):
+        for mode, engines in self.ROUTES:
+            with self.subTest(mode=mode):
+                full = [h["path"] for h in self.search(mode, engines, 60, 50, 7)]
+                self.assertEqual(len(full), 50)
+                for limit in (1, 3, 10):
+                    self.assertEqual([h["path"] for h in self.search(mode, engines, 60, limit, 7)], full[:limit])
+
+    def test_a_limit_over_the_pool_returns_that_many(self):
+        self.assertEqual(len(self.search("regex", ["regex"], 80, 70, 7)), 70)
+
+    def test_regex_at_limit_1_returns_the_boosted_source_file_over_its_test(self):
+        planner = [{"name": "route-planner", "root": os.path.realpath(os.path.join(CORPUS, "product", "route-planner"))}]
+        top = "src/main/java/com/larkspur/route/RetryPolicy.java"
+        self.assertEqual(kb.search("RetryPolicy", planner, "regex", 10)[0]["path"], top)
+        self.assertEqual([h["path"] for h in kb.search("RetryPolicy", planner, "regex", 1)], [top])
+
+
+class Report(unittest.TestCase):
+    def test_hit_at_3_counts_ranks_one_to_three_in_every_cell(self):
+        cells = suite.group([row("a", 1), row("b", 3), row("c", 4), row("d", None), row("e", 2, "wiki")], "cell")["cells"]
+        self.assertEqual((cells["work/agent"]["hit3"], cells["work/agent"]["hit5"], cells["wiki/agent"]["hit3"]), (2, 3, 1))
+
+    def test_the_sign_test_matches_the_binomial_by_hand(self):
+        self.assertEqual(suite.sign_test(0, 0), 1.0)
+        self.assertEqual(suite.sign_test(5, 0), 2 / 32)
+        self.assertEqual(suite.sign_test(0, 5), 2 / 32)
+        self.assertEqual(suite.sign_test(6, 1), 2 * (1 + 7) / 128)
+        self.assertEqual(suite.sign_test(3, 14), 2 * (1 + 17 + 136 + 680) / 2 ** 17)
+        self.assertEqual(suite.sign_test(3, 3), 1.0)
+        self.assertEqual(suite.sign_test(1, 0), 1.0)
+
+    def test_pairing_drops_ties_and_counts_a_miss_as_the_worst_rank(self):
+        r = suite.paired({"a": 1, "b": 2, "c": None, "d": 3}, {"a": 1, "b": 1, "c": 9, "d": None})
+        self.assertEqual((r["wins"], r["losses"], r["ties"]), (2, 1, 1))
+        self.assertEqual(r["p"], 1.0)
+
+    def test_all_wins(self):
+        r = suite.paired({str(i): 2 for i in range(6)}, {str(i): 1 for i in range(6)})
+        self.assertEqual((r["wins"], r["losses"], r["ties"], r["p"]), (6, 0, 0, 2 / 64))
+
+    def test_no_case_differs_says_p_is_1_plainly(self):
+        r = suite.paired({"a": 1, "b": None}, {"a": 1, "b": None})
+        self.assertEqual((r["wins"], r["losses"], r["ties"], r["p"]), (0, 0, 2, 1.0))
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            suite.print_paired("new", "old", r)
+        self.assertIn("no case differs (2 tied)", out.getvalue())
+        self.assertIn("p = 1", out.getvalue())
+
+    def test_a_case_missing_from_one_run_is_reported_not_paired(self):
+        r = suite.paired({"a": 1, "gone": 1}, {"a": 2, "added": 1})
+        self.assertEqual((r["wins"], r["losses"], r["ties"], r["only_base"], r["only_new"]), (0, 1, 0, ["gone"], ["added"]))
+        with mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            suite.print_paired("new", "old", r)
+        self.assertIn("1 case(s) only in old, not paired: gone", out.getvalue())
+        self.assertIn("1 case(s) only in new, not paired: added", out.getvalue())
+
+    def test_compare_pairs_a_saved_run_and_a_second_engine(self):
+        rows = {"kb:auto": [row("a", 2), row("b", 1), row("c", None)], "kb:fused": [row("a", 1), row("b", 1), row("c", 1)]}
+        with tempfile.TemporaryDirectory() as d:
+            saved = os.path.join(d, "run.json")
+            with mock.patch.object(suite, "run", return_value=rows), mock.patch.object(suite.kb, "ck_binary", return_value="ck"), \
+                 mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+                self.assertEqual(suite.main(["--engine", "kb:auto", "--engine", "kb:fused", "--json", saved]), 0)
+                with open(saved) as f:
+                    self.assertEqual(json.load(f)["kb:auto"]["ranks"], {"a": 2, "b": 1, "c": None})
+                self.assertEqual(suite.main(["--engine", "kb:auto", "--compare", saved]), 0)
+        text = out.getvalue()
+        self.assertIn("| work/agent | 3 | 2 (top1 1, top3 2, 1 ms) | 3 (top1 3, top3 3, 1 ms) |", text)
+        self.assertIn("paired, kb:fused against kb:auto: 2 better, 0 worse, 1 tied and dropped; two-sided sign test p = 0.5", text)
+        self.assertIn(f"paired, kb:auto against kb:auto in {saved}: no case differs (3 tied)", text)
+
+    def test_compare_refuses_a_run_saved_without_ranks(self):
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
+            json.dump({"kb:auto": {"cells": {}, "all": {}}}, f)
+        try:
+            with mock.patch.object(suite, "run") as run, self.assertRaises(SystemExit) as stop:
+                suite.main(["--compare", f.name])
+        finally:
+            os.remove(f.name)
+        run.assert_not_called()
+        self.assertIn("no per-case ranks", str(stop.exception))
+
+
+class CheckGate(unittest.TestCase):
+    """Cell work/agent of the run below scores hit@1 2, hit@3 3, hit@5 4, MRR 0.52 (ranks 1, 1, 3, 4, miss)."""
+
+    def check(self, stored):
+        rows = {"kb:auto": [row("a", 1), row("b", 1), row("c", 3), row("d", 4), row("e", None)]}
+        with tempfile.TemporaryDirectory() as d:
+            base = os.path.join(d, "baseline.json")
+            with open(base, "w") as f:
+                json.dump({"default": "kb:auto", "engines": {"kb:auto": {"work/agent": stored}}}, f)
+            with mock.patch.object(suite, "BASELINE", base), mock.patch.object(suite, "run", return_value=rows), \
+                 mock.patch.object(suite.kb, "ck_binary", return_value="ck"), mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+                code = suite.main(["--check"])
+        return code, out.getvalue()
+
+    def test_a_run_that_meets_every_stored_metric_holds(self):
+        code, out = self.check({"hit1": 2, "hit3": 3, "hit5": 4, "mrr": 0.52})
+        self.assertEqual(code, 0)
+        self.assertIn("kb:auto holds every cell", out)
+
+    def test_a_drop_in_any_one_stored_metric_fails_and_is_named(self):
+        for metric, floor, shown in (("hit1", 3, "hit1 2 < 3"), ("hit3", 4, "hit3 3 < 4"), ("hit5", 5, "hit5 4 < 5"),
+                                     ("mrr", 0.53, "mrr 0.52 < 0.53")):
+            with self.subTest(metric=metric):
+                code, out = self.check({"hit1": 2, "hit3": 3, "hit5": 4, "mrr": 0.52, metric: floor})
+                self.assertEqual(code, 1)
+                self.assertIn(f"work/agent: {shown}", out)
+                self.assertNotIn("holds every cell", out)
+
+    def test_hit_at_1_below_its_floor_fails_while_hit_at_5_holds(self):
+        code, out = self.check({"hit5": 4, "hit1": 3})
+        self.assertEqual(code, 1)
+        self.assertIn("work/agent: hit1 2 < 3", out)
+
+    def test_a_stored_metric_this_run_does_not_measure_fails(self):
+        code, out = self.check({"hit5": 4, "ndcg": 0.5})
+        self.assertEqual(code, 1)
+        self.assertIn("work/agent: ndcg not measured", out)
+
+    def test_a_stored_cell_this_run_lacks_fails(self):
+        rows = {"kb:auto": [row("a", 1, "wiki")]}
+        with tempfile.TemporaryDirectory() as d:
+            base = os.path.join(d, "baseline.json")
+            with open(base, "w") as f:
+                json.dump({"default": "kb:auto", "engines": {"kb:auto": {"work/agent": {"hit5": 1}}}}, f)
+            with mock.patch.object(suite, "BASELINE", base), mock.patch.object(suite, "run", return_value=rows), \
+                 mock.patch.object(suite.kb, "ck_binary", return_value="ck"), mock.patch("sys.stdout", new_callable=io.StringIO):
+                self.assertEqual(suite.main(["--check"]), 1)
 
 
 class UseMeasure(unittest.TestCase):
