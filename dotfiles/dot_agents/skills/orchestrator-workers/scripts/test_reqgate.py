@@ -2,6 +2,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -20,6 +21,8 @@ from reqgate import main, parse_map  # noqa: E402
 FIXTURES = os.path.join(HERE, "fixtures", "reqgate")
 VITEST = f"{sys.executable} -B {os.path.join(FIXTURES, 'fake_vitest.py')}"
 STRYKER = f"{sys.executable} -B {os.path.join(FIXTURES, 'fake_stryker.py')}"
+# MutantStatus enum of the mutation-testing-elements schema (mutation-testing-report-schema 3.8.4).
+SCHEMA_STATUSES = ("Killed", "Survived", "NoCoverage", "CompileError", "RuntimeError", "Timeout", "Ignored", "Pending")
 
 BRIEF = """You are a worker session for a made-up project.
 
@@ -316,8 +319,9 @@ class VitestGateTest(GateCase):
                                "- MUST 2: src/calc.test.ts::|unit| src/calc.test.ts > calc > adds [PASS_TO_PASS]"], code=0)
         p2p = r["PASS_TO_PASS"][0]
         self.assertEqual("pass", p2p["status"])
-        self.assertEqual({"attempted": 2, "Killed": 1, "Survived": 1}, {k: v for k, v in p2p["mutants"].items() if v})
-        self.assertIn("mutants attempted 2: Killed 1, Survived 1, Timeout 0", r["printed"])
+        self.assertEqual({"attempted": 2, "killedByThisTest": 1, "statuses": {"Killed": 1, "Survived": 1}},
+                         dict(p2p["mutants"], statuses={k: v for k, v in p2p["mutants"]["statuses"].items() if v}))
+        self.assertIn("mutants attempted 2, killed by this test 1: Killed 1, Survived 1, Timeout 0", r["printed"])
         self.assertEqual(4, r["mutants_run"])
         stryker = self.logged("stryker")
         self.assertEqual(1, len(stryker))
@@ -329,9 +333,23 @@ class VitestGateTest(GateCase):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > keeps zero [PASS_TO_PASS]"], code=1)
         row = r["PASS_TO_PASS"][0]
         self.assertEqual("fail", row["status"])
-        self.assertEqual({"attempted": 3, "Survived": 1, "Timeout": 1, "KilledByOtherTests": 1},
-                         {k: v for k, v in row["mutants"].items() if v})
+        self.assertEqual((3, 0, {"Survived": 1, "Timeout": 1, "Killed": 1}),
+                         (row["mutants"]["attempted"], row["mutants"]["killedByThisTest"],
+                          {k: v for k, v in row["mutants"]["statuses"].items() if v}))
         self.assertIn("killed none of the 3", row["reason"])
+
+    def test_every_status_the_gate_prints_is_a_stryker_mutant_status(self):
+        r = self.gate([1, 2], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]",
+                               "- MUST 2: src/calc.test.ts::calc > keeps zero [PASS_TO_PASS]"], code=1)
+        printed = [m.group(1) for line in r["printed"].splitlines() for part in line.split(" | ")[4:]
+                   for m in re.finditer(r"\b([A-Z][A-Za-z]+) \d+", part)]
+        self.assertTrue(printed)
+        self.assertLessEqual(set(printed), set(SCHEMA_STATUSES), printed)
+        self.assertEqual(set(SCHEMA_STATUSES), set(reqgate.STATUSES))
+        for row in r["PASS_TO_PASS"]:
+            self.assertEqual(set(SCHEMA_STATUSES), set(row["mutants"]["statuses"]))
+            self.assertEqual({"attempted", "killedByThisTest", "statuses"}, set(row["mutants"]))
+        self.assertLessEqual(set(r["mutant_statuses"]), set(SCHEMA_STATUSES))
 
     def test_keeps_test_covering_no_changed_line_is_reported(self):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > formats [PASS_TO_PASS]"], code=0)
@@ -491,13 +509,18 @@ class MutantCheckTest(unittest.TestCase):
             mutant("Survived", covered=mine, killed=[]), mutant("Timeout", covered=mine, killed=mine),
             mutant("NoCoverage", covered=[]), mutant("CompileError", covered=mine), mutant("RuntimeError", covered=mine),
             mutant("Pending", covered=mine), mutant("Ignored", covered=mine))
-        self.assertEqual({"attempted": 7, "Killed": 1, "KilledByOtherTests": 1, "Survived": 1, "Timeout": 1, "NoCoverage": 0,
-                          "CompileError": 1, "RuntimeError": 1, "Pending": 1, "Ignored": 1}, counts)
+        self.assertEqual({"attempted": 7, "killedByThisTest": 1,
+                          "statuses": {"Killed": 2, "Survived": 1, "Timeout": 1, "NoCoverage": 0, "CompileError": 1,
+                                       "RuntimeError": 1, "Pending": 1, "Ignored": 1}}, counts)
         self.assertEqual("pass", check)
 
     def test_timeout_alone_is_not_a_kill(self):
         check, _, counts = self.check(mutant("Timeout", covered=[self.me], killed=[self.me]))
-        self.assertEqual(("fail", 1, 0), (check, counts["Timeout"], counts["Killed"]))
+        self.assertEqual(("fail", 1, 0), (check, counts["statuses"]["Timeout"], counts["killedByThisTest"]))
+
+    def test_kill_by_another_test_only_is_not_a_kill_by_this_test(self):
+        check, _, counts = self.check(mutant("Killed", covered=[self.me, self.other], killed=[self.other]))
+        self.assertEqual(("fail", 1, 0), (check, counts["statuses"]["Killed"], counts["killedByThisTest"]))
 
 
 class NoSourceChangeTest(GateCase):

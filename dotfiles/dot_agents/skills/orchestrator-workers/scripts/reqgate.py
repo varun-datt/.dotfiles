@@ -24,7 +24,7 @@ test must kill at least one Stryker mutant on the changed source lines it covers
 runner it is reported "not checked: no mutant runner". When the Stryker report cannot tell which
 mutants the test covers (no testFiles, no test of that name, or mutants with no coveredBy) the test
 fails as "attribution unavailable"; a measured "covers no changed line" is reported and not failed.
-Mutant counts use Stryker's status names. A `none` line is reported and counted, and
+Mutant counts use only Stryker's MutantStatus names; killedByThisTest is a separate count. A `none` line is reported and counted, and
 is not a failure on its own. Every test runs in a temporary detached worktree, removed afterwards.
 
 Exit 0 when every check passes, 1 when any fails, 2 on a usage or setup error, an internal error or a
@@ -450,11 +450,11 @@ NOT_RUN = ("Ignored", "NoCoverage", "Pending")
 
 
 def mutant_check(report, ranges, path, name):
-    """(check, reason, counts) for one PASS_TO_PASS test from the mutants on changed lines it covers.
+    """(check, reason, counts) for one test from the mutants on changed lines it covers.
 
-    Counts use Stryker's status names; Killed means killed by this test, KilledByOtherTests a covered
-    mutant whose status is Killed by other tests only, and attempted excludes Ignored."""
-    counts = dict.fromkeys(("attempted", *STATUSES, "KilledByOtherTests"), 0)
+    counts["statuses"] counts those mutants by Stryker's MutantStatus; counts["killedByThisTest"] those
+    Killed with this test in killedBy; counts["attempted"] all but Ignored."""
+    counts = {"attempted": 0, "killedByThisTest": 0, "statuses": dict.fromkeys(STATUSES, 0)}
     if not report.get("testFiles"):
         return "fail", "attribution unavailable: the Stryker report has no testFiles", counts
     ids = test_ids(report, path, name)
@@ -472,13 +472,13 @@ def mutant_check(report, ranges, path, name):
             status, by_kill = m.get("status"), ids & set(m.get("killedBy") or [])
             if by_kill or ids & set(m.get("coveredBy") or []):
                 counts["attempted"] += status != "Ignored"
-                key = "KilledByOtherTests" if status == "Killed" and not by_kill else status
-                counts[key] = counts.get(key, 0) + 1
+                counts["killedByThisTest"] += status == "Killed" and bool(by_kill)
+                counts["statuses"][status] = counts["statuses"].get(status, 0) + 1
             elif m.get("coveredBy") is None and status not in ("NoCoverage", "Ignored"):
                 unknown += 1
-    seen = ", ".join(f"{k} {v}" for k, v in counts.items() if v and k != "attempted")
-    if counts["Killed"]:
-        return "pass", f"killed {counts['Killed']} of {counts['attempted']} mutants it covers ({seen})", counts
+    seen = ", ".join(f"{k} {v}" for k, v in counts["statuses"].items() if v)
+    if counts["killedByThisTest"]:
+        return "pass", f"this test killed {counts['killedByThisTest']} of the {counts['attempted']} mutants it covers ({seen})", counts
     if unknown:
         return "fail", f"attribution unavailable: {unknown} mutants on changed lines carry no coveredBy data", counts
     if not counts["attempted"]:
@@ -597,8 +597,8 @@ def entry(e):
 
 
 def mutant_text(counts):
-    return f"; mutants attempted {counts['attempted']}: " + ", ".join(
-        f"{k} {v}" for k, v in counts.items() if k != "attempted" and (v or k in ("Killed", "Survived", "Timeout")))
+    return f"; mutants attempted {counts['attempted']}, killed by this test {counts['killedByThisTest']}: " + ", ".join(
+        f"{k} {v}" for k, v in counts["statuses"].items() if v or k in ("Killed", "Survived", "Timeout"))
 
 
 def table(result):
