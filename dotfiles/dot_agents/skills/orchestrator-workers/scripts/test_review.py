@@ -269,12 +269,41 @@ class ReviewShTest(unittest.TestCase):
         with open(os.path.join(self.run_dir, 'x-review.txt')) as f:
             self.assertEqual(f.read(), 'Blocking: none\n')
 
-    def test_a_prompt_without_rubric_launches_unchanged(self):
+    def test_a_prompt_without_rubric_launches_with_the_scope_line_appended(self):
         text = 'You are a read-only reviewer. Check `{{NOT_A_FIELD}}` and <!-- {{NOTE}} -->.\n'
         p = self.review(text)
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertFalse(os.path.exists(os.path.join(self.run_dir, 'x-review.filled.md')))
-        self.assertTrue(self.launched_prompt().startswith(text))
+        self.assertEqual(self.filled(), text + '\nScope of this change: product (no REVIEW-DIFF.patch in the worktree).'
+                         " Grade with the review rubric's Scope rule: " + scope_rule() + '\n')
+        self.assertTrue(self.launched_prompt().startswith(self.filled()))
+
+    def tail_line(self, extra=(), template='rereview.md'):
+        text = re.sub(r'\{\{[^{}\n]+\}\}', 'made-up value', read('assets', template))
+        if os.path.exists(self.args):
+            os.remove(self.args)
+        p = self.review(text, extra=extra)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue(self.filled().startswith(text.rstrip('\n') + '\n\n'))
+        self.assertTrue(self.launched_prompt().startswith(self.filled()))
+        line = self.filled()[len(text.rstrip('\n')) + 2:]
+        self.assertEqual(self.filled().count('Scope of this change:'), 1)
+        return line
+
+    def test_every_rereview_and_critique_prompt_carries_the_scope_line(self):
+        rule = " Grade with the review rubric's Scope rule: " + scope_rule() + '\n'
+        self.patch('src/app.ts')
+        self.assertEqual(self.tail_line(('--scope', 'tool')), 'Scope of this change: tool (given by --scope).' + rule)
+        self.patch(TOOL_A)
+        self.assertEqual(self.tail_line(), 'Scope of this change: tool (every changed file is under'
+                                           ' dotfiles/dot_agents/skills/*/scripts/).' + rule)
+        self.assertEqual(self.tail_line(('--scope', 'product')), 'Scope of this change: product (given by --scope).' + rule)
+        self.patch('src/app.ts', TOOL_A)
+        self.assertEqual(self.tail_line(), 'Scope of this change: product (some changed files are outside'
+                                           ' dotfiles/dot_agents/skills/*/scripts/). Graded as tool whatever the scope,'
+                                           f' being check tools: {TOOL_A}.' + rule)
+        os.remove(os.path.join(self.wt, 'REVIEW-DIFF.patch'))
+        self.assertEqual(self.tail_line(template='critique-research.md'),
+                         'Scope of this change: product (no REVIEW-DIFF.patch in the worktree).' + rule)
 
     def test_another_unfilled_placeholder_is_refused_and_nothing_launches(self):
         for text in ('{{RUBRIC}}\n{{TASK}}\n', 'no rubric here {{FINDING_1}}\n'):
@@ -385,8 +414,10 @@ class ReviewShTest(unittest.TestCase):
     def test_an_explicit_scope_wins_and_a_bad_one_is_refused(self):
         self.patch(TOOL_A)
         line, _ = self.scope_line(extra=('--scope', 'product'))
-        self.assertEqual(line, 'Scope of this change: product (given by --scope). Grade with the Scope rule in section 4.'
-                               f' Graded as tool whatever the scope, being check tools: {TOOL_A}.')
+        self.assertEqual(line, 'Scope of this change: product (given by --scope). Grade with the Scope rule in section 4.')
+        self.patch('src/app.ts', TOOL_A)
+        line, _ = self.scope_line(extra=('--scope', 'product'))
+        self.assertEqual(line, 'Scope of this change: product (given by --scope). Grade with the Scope rule in section 4.')
         self.patch('src/app.ts')
         line, _ = self.scope_line(extra=('--scope', 'tool'))
         self.assertEqual(line, 'Scope of this change: tool (given by --scope). Grade with the Scope rule in section 4.')
@@ -425,6 +456,11 @@ TOOL_B = 'dotfiles/dot_agents/skills/kb/scripts/kb.py'
 def filled_rubric():
     return (read('references', 'rubric.md').rstrip('\n') + '\n\nScope of this change: product (no REVIEW-DIFF.patch in the'
             ' worktree). Grade with the Scope rule in section 4.')
+
+
+def scope_rule():
+    [line] = [x for x in read('references', 'rubric.md').split('\n') if x.startswith('- **Scope.** ')]
+    return line[len('- **Scope.** '):]
 
 
 if __name__ == '__main__':

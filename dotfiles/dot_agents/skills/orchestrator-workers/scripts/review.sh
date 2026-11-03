@@ -4,15 +4,17 @@
 #
 # Usage: bash review.sh [route.py run options] <name> <worktree> [prompt-file]
 #   prompt-file  default: $OW_RUN_DIR/<name>.md; each bare {{RUBRIC}} (not in `code`, a fence, a > quote or a comment)
-#                is filled from references/rubric.md into $OW_RUN_DIR/<name>.filled.md, launched instead. Any {{...}} left outside `code` and comments is refused.
+#                is filled from references/rubric.md into $OW_RUN_DIR/<name>.filled.md, launched instead; a prompt
+#                with no {{RUBRIC}} gets the scope line and the rubric's Scope rule appended there. Any {{...}} left outside `code` and comments is refused.
 #   options      passed to route.py run: --override "model=..,effort=..,cap=..,reason=.." (reason required),
 #                --author-model M (default: read from the author round's log), --timeout S (default: budgets.json
 #                <name> or "review" minutes x 60), --add-dir D, --load-wait MIN, --seed N, --no-classifier, --fresh
 #   --project D  a research critique (a prompt opening "You are a read-only critic") reads the run folder, and D, the
 #                project repository, when given; without it the critic reads the run folder only, said on stderr
-#   --scope S    product or tool, the rubric's blocking scope, filled in after the rubric. Default: tool when every
-#                changed file in <worktree>/REVIEW-DIFF.patch is under dotfiles/dot_agents/skills/*/scripts/, else
-#                product (no patch, or a mixed diff, whose check-tool files the line lists to be graded as tool)
+#   --scope S    product or tool, the rubric's blocking scope, filled in after the rubric, and wins over the default.
+#                Default: tool when every changed file in <worktree>/REVIEW-DIFF.patch is under
+#                dotfiles/dot_agents/skills/*/scripts/, else product (no patch, or a mixed diff, whose check-tool files
+#                the line lists to be graded as tool)
 # Refuses (exit 2) when started under caffeinate, which this Mac kills within seconds.
 # Output: $OW_RUN_DIR/<name>.jsonl, <name>.err and <name>.txt (the verdict line of the last message, which
 # mine.py reads); prints the decision, start, end, exit code and result.py's summary.
@@ -21,7 +23,7 @@ set -u
 opts=(); project=; scope=
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,18p' "$0" | cut -c3-; exit 0 ;;
+    -h|--help) sed -n '2,20p' "$0" | cut -c3-; exit 0 ;;
     --no-classifier|--fresh) opts+=("$1"); shift ;;
     --project) [ $# -ge 2 ] && [ -d "$2" ] || { echo "review.sh: --project needs a folder" >&2; exit 2; }
       project="$(cd "$2" && pwd)"; shift 2 ;;
@@ -68,30 +70,33 @@ for line in masked.split('\n'):
     spans = [s.span() for s in re.finditer(r'`[^`]*`', line)]
     slots += [at + s.start() for s in re.finditer(r'\{\{RUBRIC\}\}', line)
               if not any(a <= s.start() < b for a, b in spans)]
-if slots:
-    if os.path.realpath(src) == os.path.realpath(out):
-        sys.exit(f'review.sh: {src} would be overwritten by its filled copy; rename it; nothing launched')
-    if not os.path.isfile(rubric):
-        sys.exit(f'review.sh: {src} needs {{{{RUBRIC}}}} but there is no rubric at {rubric}')
+if os.path.realpath(src) == os.path.realpath(out):
+    sys.exit(f'review.sh: {src} would be overwritten by its filled copy; rename it; nothing launched')
+sys.path.insert(0, here)
+import route
+patch = os.path.join(wt, 'REVIEW-DIFF.patch')
+diff = open(patch, encoding='utf-8', errors='replace').read() if os.path.isfile(patch) else None
+scope, tools, note = route.review_scope(diff)
+if given:
+    scope, tools, note = given, [], 'given by --scope'
+elif diff is None:
+    print(f'review.sh: no REVIEW-DIFF.patch in {wt}, so the review is graded at scope product', file=sys.stderr)
+listed = ' Graded as tool whatever the scope, being check tools: ' + ', '.join(tools) + '.' if scope == 'product' and tools else ''
+rule = ''
+if os.path.isfile(rubric):
     with open(rubric, encoding='utf-8') as f:
         body = f.read().rstrip('\n')
-    sys.path.insert(0, here)
-    import route
-    patch = os.path.join(wt, 'REVIEW-DIFF.patch')
-    diff = open(patch, encoding='utf-8', errors='replace').read() if os.path.isfile(patch) else None
-    scope, tools, note = route.review_scope(diff)
-    if given:
-        scope, note = given, 'given by --scope'
-    elif diff is None:
-        print(f'review.sh: no REVIEW-DIFF.patch in {wt}, so the review is graded at scope product', file=sys.stderr)
-    body += f'\n\nScope of this change: {scope} ({note}). Grade with the Scope rule in section 4.'
-    if scope == 'product' and tools:
-        body += ' Graded as tool whatever the scope, being check tools: ' + ', '.join(tools) + '.'
+    rule = next((l[len('- **Scope.** '):] for l in body.split('\n') if l.startswith('- **Scope.** ')), '')
+if slots:
+    if not os.path.isfile(rubric):
+        sys.exit(f'review.sh: {src} needs {{{{RUBRIC}}}} but there is no rubric at {rubric}')
+    body += f'\n\nScope of this change: {scope} ({note}). Grade with the Scope rule in section 4.' + listed
     filled = text
     for p in reversed(slots):
         filled = filled[:p] + body + filled[p + len('{{RUBRIC}}'):]
 else:
-    filled, out = text, src
+    filled = text.rstrip('\n') + f'\n\nScope of this change: {scope} ({note}).' + listed + \
+        (f" Grade with the review rubric's Scope rule: {rule}" if rule else '') + '\n'
 visible = re.sub(r'`[^`\n]*`', '', re.sub(r'<!--.*?-->', '', filled, flags=re.S))
 left = sorted(set(re.findall(r'\{\{[^{}\n]+\}\}', visible)))
 if left:
