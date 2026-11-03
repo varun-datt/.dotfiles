@@ -63,7 +63,7 @@
   "default_cap": 3000,
   "uncapped_kinds": ["research"],
   "kind_min_effort": {"resume": "high", "merge": "high"},
-  "effort": {"calm_max_grade": 2, "calm": "medium", "else": "high", "risk_review": "max", "risk": "high"},
+  "effort": {"calm_max_grade": 2, "calm": "medium", "else": "high", "risk_review": "high", "risk": "high"},
   "risk_patterns": [
     ["credentials", "\\b(credential|secret|api key|password|oauth|sign-?in|login|bearer|pat token|access token)s?\\b"],
     ["outside systems", "\\b(azure devops|ado write|webhook|post to|write to (?:the )?(?:remote|server|service)|external system)\\b"],
@@ -76,7 +76,7 @@
   ],
   "floors": [
     {"name": "owner-2026-10-29-sessions-ts", "when": {"text": "src/host/sessions\\.ts", "text_unless": "do not edit|not edit|out of scope|do not touch|don't touch|off limits|not here", "text_skip": "^(?:TECH DEBT|CASES THE ORCHESTRATOR KNOWS|SOURCES TO READ|OUT OF SCOPE|FACTS TO VERIFY|REUSE CHECK|OWNER RULINGS[^:]*):", "risk_line": "^RISK:.*\\bhost-state\\b(?!:?\\s*none\\b)"}, "model": "strongest", "effort": "high"},
-    {"name": "risk-area", "when": {"risk": true}, "model": "strongest", "effort": "high", "review_effort": "max"}
+    {"name": "risk-area", "when": {"risk": true}, "model": "strongest", "effort": "high", "review_effort": "high"}
   ],
   "static": {
     "build": {"model": "strongest", "effort": "high"},
@@ -84,7 +84,7 @@
     "fix": {"model": "claude-sonnet-5.5", "effort": "medium"},
     "resume": {"model": "same", "effort": "high"},
     "merge": {"model": "claude-sonnet-5.5", "effort": "high", "risk_model": "strongest"},
-    "review": {"model": "strongest-other-family", "effort": "high", "risk_effort": "max"},
+    "review": {"model": "strongest-other-family", "effort": "high", "risk_effort": "high"},
     "research": {"model": "claude-sonnet-5.5", "effort": "medium"}
   }
 }

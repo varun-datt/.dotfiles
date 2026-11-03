@@ -3,7 +3,7 @@
 
 Usage:
     python3 route.py run ROUND --kind K --brief FILE --worktree DIR [--run RUN] [--author-model M]
-                          [--override "model=..,effort=..,context=..,cap=N|none,reason=.."] [--add-dir DIR ...]
+                          [--override "model=..,effort=..,context=..,cap=N|none,owner_approved=..,reason=.."] [--add-dir DIR ...]
                           [--timeout S] [--fresh] [pick's options]
     python3 route.py pick --run RUN --item ID --kind build|fix|review|research|small|resume|merge --prompt FILE
                           [--author-model M] [--diff FILE] [--budget-left F] [--run-fraction F] [--seed N] [--fresh]
@@ -23,6 +23,12 @@ A review without --author-model takes the model of the item's latest author roun
 (picked, overridden or reused) is in the author's family is refused (exit 2, logged as a refuse event) unless the
 override says same_family=yes: the fallback after a 422 refusal, which the audit then shows as overridden. A reused
 decision falls back on the author saved with it; a review whose author is unknown from all three is refused the same way.
+A review, re-review or critique runs at high effort unless the override names another; every run of one logs what it
+reads on its launch line, and on a decision it draws, as diff_chars and diff_source: the worktree's REVIEW-DIFF.patch,
+else a critique's snapshot folders named by --add-dir (text files only), else null.
+A second fix round for an item (named <item>-fixN with N >= 2, or after a fix launch for it in routes.jsonl) is
+refused (exit 2, a refuse event) unless the override carries owner_approved=<where the owner said so>, logged with
+the launch. resume.py continues a round and is not checked.
 The policies (categories, floors, targets) and the model mapping live in ../references/routes.json.
 Design and reading guide: ../references/routing.md.
 """
@@ -83,7 +89,8 @@ def risk_hits(text, cfg):
 
 
 TASK_START = re.compile(r"^(?:TASK:|THIS IS A FIX ROUND)", re.M)
-SHORT_REREVIEW = 'This is a SHORT RE-REVIEW'
+REVIEW_EFFORT = 'high'
+FIX_N = re.compile(r'-fix(\d+)$')
 
 
 def task_part(text):
@@ -98,6 +105,45 @@ def task_part(text):
 
 def changed_files(diff):
     return re.findall(r'^\+\+\+ b/(\S+)', diff, re.M) + re.findall(r'^--- a/(\S+)', diff, re.M)
+
+
+TOOL_PATH = re.compile(r'dotfiles/dot_agents/skills/[^/]+/scripts/')
+
+
+def patch_paths(diff):
+    """Every path a git patch names, old and new, including renames and binary or mode-only changes."""
+    paths = []
+    for line in diff.splitlines():
+        m = re.match(r'(?:\+\+\+ b/|--- a/|rename (?:from|to) |copy (?:from|to) )(.+)', line)
+        if m:
+            paths.append(m.group(1).split('\t')[0].strip('"'))
+            continue
+        if line.startswith('diff --git '):
+            rest = line[len('diff --git '):]
+            q = re.fullmatch(r'"a/(.+)" "b/(.+)"', rest)
+            if q:
+                paths += [q.group(1), q.group(2)]
+                continue
+            h = (len(rest) - 1) // 2
+            if rest[:2] == 'a/' and rest[h:h + 3] == ' b/' and rest[2:h] == rest[h + 3:]:
+                paths.append(rest[2:h])
+            else:
+                paths += re.findall(r'(?:^| )[ab]/(\S+)', rest)
+    return sorted(set(p for p in paths if p))
+
+
+def review_scope(diff):
+    """(scope, tool files, note): tool when every changed file is a skill script, else product; a mixed diff's
+    tool files are graded as tool whatever the scope."""
+    if diff is None:
+        return 'product', [], 'no REVIEW-DIFF.patch in the worktree'
+    paths = patch_paths(diff)
+    if not paths:
+        return 'product', [], 'REVIEW-DIFF.patch names no file'
+    tools = [p for p in paths if TOOL_PATH.match(p)]
+    if len(tools) == len(paths):
+        return 'tool', tools, 'every changed file is under dotfiles/dot_agents/skills/*/scripts/'
+    return 'product', tools, 'some changed files are outside dotfiles/dot_agents/skills/*/scripts/'
 
 
 def sessions_touch(text, cfg, changed=()):
@@ -462,8 +508,8 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
         reason += f" [{scores[model]['level']} n={scores[model]['n']}]"
     if kind == 'review' and avoid and family(model, cfg) == avoid:
         model = strongest(cfg, avoid)
-    if kind == 'review' and SHORT_REREVIEW in text:
-        effort, effort_why = 'medium', 'a short re-review (owner, 2026-11-02)'
+    if kind == 'review':
+        effort, effort_why = REVIEW_EFFORT, 'reviews, re-reviews and critiques at high (owner, 2026-11-02, batch 2)'
     cap = cap_for(kind, model, history, cfg)
     if not quality_on:
         reason += ' | budget: spend ahead of time, quality rule off'
@@ -558,6 +604,11 @@ def parse_override(spec):
                 raise ValueError('same_family takes only yes (the fallback after a 422 refusal)')
             out[k] = True
             continue
+        if k == 'owner_approved':
+            if not v:
+                raise ValueError('owner_approved needs where the owner said so, for example "PLAN 2026-11-02 batch 2 8a"')
+            out[k] = v
+            continue
         if not eq or k not in OVERRIDE_KEYS or not v:
             raise ValueError(f'bad override field {part!r}; use {", ".join(OVERRIDE_KEYS)}')
         if k == 'model' and v == 'auto':
@@ -574,8 +625,8 @@ def parse_override(spec):
             else:
                 v = int(v)
         out[k] = v
-    if not any(k in out for k in OVERRIDE_KEYS):
-        raise ValueError(f'an override sets at least one of {", ".join(OVERRIDE_KEYS)} before reason=')
+    if not any(k in out for k in OVERRIDE_KEYS + ('owner_approved',)):
+        raise ValueError(f'an override sets at least one of {", ".join(OVERRIDE_KEYS + ("owner_approved",))} before reason=')
     out['reason'] = reason
     return out
 
@@ -605,6 +656,61 @@ def same_family_refused(run, rnd, kind, rec, author, cfg):
           'pass --author-model, or only for the fallback after a 422, --override "...,same_family=yes,reason=.."',
           file=sys.stderr)
     return True
+
+
+def earlier_fix_round(run, rnd, kind):
+    """Why rnd would be an item's second fix round (its name is <item>-fixN with N >= 2, or routes.jsonl already
+    has a fix launch for the item), else None. A resume continues a round, so it is never a new fix round."""
+    import mine
+    item, name_kind = mine.split_name(rnd)
+    if kind == 'resume' or (kind != 'fix' and name_kind != 'fix'):
+        return None
+    m = FIX_N.search(rnd)
+    if name_kind == 'fix' and m and int(m.group(1)) >= 2:
+        return f'{rnd} is fix round {int(m.group(1))} of {item}'
+    for _, d in mine.read_routes(run):
+        r = d.get('round')
+        if d.get('event') == 'launch' and isinstance(r, str) and mine.split_name(r)[0] == item and \
+                (d.get('kind') == 'fix' or mine.split_name(r)[1] == 'fix'):
+            return f'{item} already had fix round {r} (launched {d.get("at")})'
+    return None
+
+
+def fix_round_refused(run, rnd, kind, ov):
+    """Log and report a second fix round for an item without owner_approved in the override (owner, 2026-10-31:
+    one review, one fix round, then the owner decides)."""
+    why = earlier_fix_round(run, rnd, kind)
+    if not why or (ov or {}).get('owner_approved'):
+        return False
+    log(run, {'event': 'refuse', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'), 'round': rnd,
+              'kind': kind, 'reason': f'second fix round without the owner: {why}'})
+    print(f'route.py run: refused: {why}; one fix round, then the owner decides; with their approval pass '
+          '--override "owner_approved=<where the owner said so>,reason=.."', file=sys.stderr)
+    return True
+
+
+def review_input(run, wt, add_dirs):
+    """(chars, source) of what a review reads: the worktree's REVIEW-DIFF.patch, else the text files of the snapshot
+    folders --add-dir names (not the run folder, not a git repository), else (None, None)."""
+    patch = os.path.join(wt, 'REVIEW-DIFF.patch')
+    if os.path.isfile(patch):
+        with open(patch, encoding='utf-8', errors='replace') as f:
+            return len(f.read()), patch
+    skip = {os.path.realpath(run), os.path.realpath(wt)}
+    snaps = [p for p in (os.path.abspath(os.path.expanduser(d)) for d in add_dirs)
+             if os.path.isdir(p) and os.path.realpath(p) not in skip and not os.path.exists(os.path.join(p, '.git'))]
+    if not snaps:
+        return None, None
+    total = 0
+    for s in snaps:
+        for root, dirs, files in os.walk(s):
+            for fn in files:
+                with contextlib.suppress(OSError):
+                    with open(os.path.join(root, fn), 'rb') as f:
+                        data = f.read()
+                    if b'\0' not in data:
+                        total += len(data.decode('utf-8', 'replace'))
+    return total, ', '.join(snaps)
 
 
 def author_from_log(run, rnd):
@@ -788,6 +894,8 @@ def run_round(a, cfg):
     except ValueError as ex:
         print(f'route.py run: override refused: {ex}', file=sys.stderr)
         return 2
+    if fix_round_refused(run, rnd, kind, ov):
+        return 2
     brief = os.path.abspath(os.path.expanduser(a.brief))
     if subprocess.run([sys.executable, '-B', os.path.join(HERE, 'brief.py'), 'check', '--repo', wt, brief],
                       stdin=subprocess.DEVNULL).returncode:
@@ -816,6 +924,9 @@ def run_round(a, cfg):
             return 2
         if new is not None:
             rec = new
+            if kind == 'review' and not a.diff:
+                size, src = review_input(run, wt, a.add_dir or [])
+                rec['inputs'] = {**rec.get('inputs', {}), 'diff_chars': size, 'diff_source': src}
             rec.update(cli_version=version, model_id=rec['choice']['model'], worktree=wt)
             log(run, rec)
     c = rec['choice']
@@ -827,6 +938,9 @@ def run_round(a, cfg):
         return 12
     argv = launch_argv(rnd, kind, wt, c, a.add_dir or [], text + (REVIEW_TAIL if kind == 'review' else ''))
     jsonl = os.path.join(run, rnd + '.jsonl')
+    measured = {}
+    if kind == 'review':
+        measured = dict(zip(('diff_chars', 'diff_source'), review_input(run, wt, a.add_dir or [])))
     try:
         with open(os.path.join(run, rnd + '.start'), 'w') as f:
             f.write(f'{int(datetime.datetime.now().timestamp())}\n')
@@ -838,7 +952,8 @@ def run_round(a, cfg):
             print(f'route.py run: no git HEAD in {wt}; {rnd}.base not written', file=sys.stderr)
         log(run, {'event': 'launch', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
                   'round': rnd, 'kind': kind, 'decision_at': rec['at'], 'cli_version': version, 'model_id': c['model'],
-                  'timeout_s': secs, 'brief': brief, 'argv': argv[:-1]})
+                  'timeout_s': secs, 'brief': brief, 'argv': argv[:-1], **measured,
+                  **({'owner_approved': ov['owner_approved']} if (ov or {}).get('owner_approved') else {})})
         env = {**os.environ, 'COPILOT_TASK_WAIT_TIMEOUT_SECONDS': str(min(5400, secs)), 'GIT_CONFIG_COUNT': '1',
                'GIT_CONFIG_KEY_0': 'url.blocked-by-orchestrator://.pushInsteadOf', 'GIT_CONFIG_VALUE_0': ''}
         print(f"launch {rnd} {c['model']}/{c['effort']}/{c.get('context', 'default')} cap {c.get('cap')} timeout {secs}s "
@@ -985,7 +1100,7 @@ def main(argv=None):
     n.add_argument('--run', help='run folder (default: $OW_RUN_DIR)')
     n.add_argument('--brief', required=True)
     n.add_argument('--worktree', required=True)
-    n.add_argument('--override', help='"model=..,effort=..,context=..,cap=N|none,reason=.." (reason required, last)')
+    n.add_argument('--override', help='"model=..,effort=..,context=..,cap=N|none,owner_approved=..,reason=.." (reason required, last)')
     n.add_argument('--add-dir', action='append', help='passed to copilot; repeatable')
     n.add_argument('--timeout', type=int, help='seconds (default: from the time budget)')
     n.add_argument('--load-wait', type=float, default=15, help='minutes sweep.py load waits; 0 skips it (default 15)')
@@ -1077,6 +1192,8 @@ def draw(a, run, item, kind, text, cfg):
     rec = pick(item, kind, text, history, cfg, a.author_model, diff, a.budget_left, a.run_fraction,
                random.Random(seed), seed, call, a.author_model if kind == 'resume' else None,
                getattr(a, 'changed', ()))
+    if a.diff:
+        rec['inputs']['diff_source'] = os.path.abspath(os.path.expanduser(a.diff))
     return rec
 
 

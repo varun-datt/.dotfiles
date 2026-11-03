@@ -7,6 +7,7 @@ import unittest
 
 import brief
 import mine
+import route
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
@@ -80,9 +81,33 @@ REREVIEW_REPORT = [
     'with what would confirm it, and a fix in one line.',
     '4. **Corrections** to the fix report: one line each.',
 ]
+SCOPE_RULE = [
+    "In a product's own code (scope product), a finding blocks only when it has an owner-visible effect: user "
+    'experience, data, security, spend, performance, or a broken workflow; an unmet MUST and a missing or weak test are '
+    'Minor unless they cause one of those, and then keep their matrix grade.',
+    'In check tools (scope tool: a gate, a findings record, a router, a queue, any script that grades or launches work), '
+    'an unmet MUST and a missing, weak or unfailable test stay Major as below, since a wrong tool gives the owner wrong '
+    'numbers.',
+    'In a diff with both, a finding in a file the prompt lists as a check tool is graded as tool.',
+]
 
 
 class PromptTextTest(unittest.TestCase):
+    def test_the_rubric_s_scope_rule_keeps_its_required_content(self):
+        r = read('references', 'rubric.md')
+        scope = [x for x in r.split('\n') if x.startswith('- **Scope.** ')]
+        self.assertEqual(len(scope), 1, 'the rubric has one Scope rule')
+        for part in SCOPE_RULE:
+            self.assertIn(part, scope[0])
+        tests = [x for x in r.split('\n') if x.startswith('- **Tests.** ')]
+        self.assertEqual(len(tests), 1, 'the rubric has one Tests rule')
+        self.assertIn('then Major, in scope product only with an owner-visible effect (Scope).', tests[0])
+        for row in ('a MUST in the brief or an owner ruling is unmet (in scope product, see Scope in section 4)',
+                    '| COR | Correctness against the brief | A MUST or owner ruling is unmet (in scope product, only with an '
+                    'owner-visible effect), or a normal input gives a wrong result |',
+                    '| VERIF | The checks | A check cannot fail, an existing test breaks or flakes, or a test the brief names is '
+                    'missing (in scope product, only with an owner-visible effect) |'):
+            self.assertIn(row, r)
     def test_the_rubric_holds_the_grades_and_the_d1_matrix(self):
         r = read('references', 'rubric.md')
         for word in ('Blocker', 'Major', 'Minor', 'Nit', 'L1 ', 'L2 ', 'L3 ', 'I1 ', 'I2 ', 'I3 '):
@@ -261,19 +286,50 @@ class ReviewShTest(unittest.TestCase):
         filled = os.path.join(self.run_dir, 'x-review.filled.md')
         with open(filled, encoding='utf-8') as f:
             body = f.read()
-        rubric = read('references', 'rubric.md').rstrip('\n')
+        rubric = filled_rubric()
         self.assertEqual(body, text.replace('\n{{RUBRIC}}\n', '\n' + rubric + '\n'))
         self.assertIn('<!-- {{RUBRIC}} is filled -->', body)
         self.assertTrue(self.launched_prompt().startswith(body))
         with open(os.path.join(self.run_dir, 'x-review.txt')) as f:
             self.assertEqual(f.read(), 'Blocking: none\n')
 
-    def test_a_prompt_without_rubric_launches_unchanged(self):
+    def test_a_prompt_without_rubric_launches_with_the_scope_line_appended(self):
         text = 'You are a read-only reviewer. Check `{{NOT_A_FIELD}}` and <!-- {{NOTE}} -->.\n'
         p = self.review(text)
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertFalse(os.path.exists(os.path.join(self.run_dir, 'x-review.filled.md')))
-        self.assertTrue(self.launched_prompt().startswith(text))
+        self.assertEqual(self.filled(), text + '\nScope of this change: product (no REVIEW-DIFF.patch in the worktree).'
+                         " Grade with the review rubric's Scope rule: " + scope_rule() + '\n')
+        self.assertTrue(self.launched_prompt().startswith(self.filled()))
+
+    def tail_line(self, extra=(), template='rereview.md'):
+        text = re.sub(r'\{\{[^{}\n]+\}\}', 'made-up value', read('assets', template))
+        if os.path.exists(self.args):
+            os.remove(self.args)
+        p = self.review(text, extra=extra)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue(self.filled().startswith(text.rstrip('\n') + '\n\n'))
+        self.assertTrue(self.launched_prompt().startswith(self.filled()))
+        line = self.filled()[len(text.rstrip('\n')) + 2:]
+        self.assertEqual(self.filled().count('Scope of this change:'), 1)
+        for part in SCOPE_RULE:
+            self.assertIn(part, line)
+        return line
+
+    def test_every_rereview_and_critique_prompt_carries_the_scope_line(self):
+        rule = " Grade with the review rubric's Scope rule: " + scope_rule() + '\n'
+        self.patch('src/app.ts')
+        self.assertEqual(self.tail_line(('--scope', 'tool')), 'Scope of this change: tool (given by --scope).' + rule)
+        self.patch(TOOL_A)
+        self.assertEqual(self.tail_line(), 'Scope of this change: tool (every changed file is under'
+                                           ' dotfiles/dot_agents/skills/*/scripts/).' + rule)
+        self.assertEqual(self.tail_line(('--scope', 'product')), 'Scope of this change: product (given by --scope).' + rule)
+        self.patch('src/app.ts', TOOL_A)
+        self.assertEqual(self.tail_line(), 'Scope of this change: product (some changed files are outside'
+                                           ' dotfiles/dot_agents/skills/*/scripts/). Graded as tool whatever the scope,'
+                                           f' being check tools: {TOOL_A}.' + rule)
+        os.remove(os.path.join(self.wt, 'REVIEW-DIFF.patch'))
+        self.assertEqual(self.tail_line(template='critique-research.md'),
+                         'Scope of this change: product (no REVIEW-DIFF.patch in the worktree).' + rule)
 
     def test_another_unfilled_placeholder_is_refused_and_nothing_launches(self):
         for text in ('{{RUBRIC}}\n{{TASK}}\n', 'no rubric here {{FINDING_1}}\n'):
@@ -297,7 +353,7 @@ class ReviewShTest(unittest.TestCase):
             return f.read()
 
     def test_quoted_placeholder_examples_are_left_as_written(self):
-        rubric = read('references', 'rubric.md').rstrip('\n')
+        rubric = filled_rubric()
         examples = ('Say `{{RUBRIC}} {{TASK}}` here.', '| slot | `{{RUBRIC}}` | `{{TASK}}` |',
                     'Spans: `` `{{RUBRIC}}` `` and `{{TASK}}`.', '> quoted: `{{RUBRIC}}` and `{{TASK}}`',
                     '> {{RUBRIC}} `{{TASK}}`'.replace('{{RUBRIC}}', '`{{RUBRIC}}`'),
@@ -328,7 +384,7 @@ class ReviewShTest(unittest.TestCase):
             self.assertFalse(os.path.exists(self.args), ex)
 
     def test_a_bare_slot_outside_fences_and_code_is_filled(self):
-        rubric = read('references', 'rubric.md').rstrip('\n')
+        rubric = filled_rubric()
         for head, tail in (('````\n```\n````\n', '\n'), ('    ```\n', '\n'), ('```a`b\n', '\n'),
                            ('   ~~~ md\n`x`\n   ~~~\n', '\n'), ('x ` ', ' y\n'), ('<!-- ```\n-->\n', '\n'),
                            ('`a` ', ' `{{TASK}}`\n'), ('', ' and {{RUBRIC}} twice\n'), ('`` ', ' ``\n'),
@@ -348,6 +404,91 @@ class ReviewShTest(unittest.TestCase):
         self.assertNotEqual(p.returncode, 0)
         self.assertIn('would be overwritten', p.stderr)
         self.assertFalse(os.path.exists(self.args))
+
+    def patch(self, *paths):
+        with open(os.path.join(self.wt, 'REVIEW-DIFF.patch'), 'w', encoding='utf-8') as f:
+            f.writelines(f'diff --git a/{p} b/{p}\n--- a/{p}\n+++ b/{p}\n@@ -1 +1 @@\n-a\n+b\n' for p in paths)
+
+    def scope_line(self, extra=(), want_rc=0):
+        p = self.review('==== RUBRIC ====\n{{RUBRIC}}\n==== END ====\n', extra=extra)
+        self.assertEqual(p.returncode, want_rc, p.stderr)
+        body = self.filled().split('==== END ====')[0].rstrip('\n')
+        self.assertTrue(body.startswith('==== RUBRIC ====\n' + read('references', 'rubric.md').rstrip('\n') + '\n\nScope'))
+        for part in SCOPE_RULE:
+            self.assertEqual(body.count(part), 1, part)
+        self.assertTrue(self.launched_prompt().startswith(self.filled()))
+        return body.rsplit('\n', 1)[1], p.stderr
+
+    def test_a_tool_diff_is_graded_at_scope_tool(self):
+        self.patch(TOOL_A, TOOL_B)
+        line, err = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: tool (every changed file is under dotfiles/dot_agents/skills/*/scripts/).'
+                               ' Grade with the Scope rule in section 4.')
+        self.assertNotIn('REVIEW-DIFF', err)
+
+    def test_a_product_diff_is_graded_at_scope_product(self):
+        self.patch('src/app.ts', 'dotfiles/dot_agents/skills/kb/SKILL.md', 'scripts/route.py')
+        line, _ = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: product (some changed files are outside'
+                               ' dotfiles/dot_agents/skills/*/scripts/). Grade with the Scope rule in section 4.')
+
+    def test_a_mixed_diff_is_product_with_its_check_tool_files_listed_as_tool(self):
+        self.patch('src/app.ts', TOOL_B, TOOL_A)
+        line, _ = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: product (some changed files are outside'
+                               ' dotfiles/dot_agents/skills/*/scripts/). Grade with the Scope rule in section 4.'
+                               f' Graded as tool whatever the scope, being check tools: {TOOL_B}, {TOOL_A}.')
+
+    def test_an_explicit_scope_wins_and_a_bad_one_is_refused(self):
+        self.patch(TOOL_A)
+        line, _ = self.scope_line(extra=('--scope', 'product'))
+        self.assertEqual(line, 'Scope of this change: product (given by --scope). Grade with the Scope rule in section 4.')
+        self.patch('src/app.ts', TOOL_A)
+        line, _ = self.scope_line(extra=('--scope', 'product'))
+        self.assertEqual(line, 'Scope of this change: product (given by --scope). Grade with the Scope rule in section 4.')
+        self.patch('src/app.ts')
+        line, _ = self.scope_line(extra=('--scope', 'tool'))
+        self.assertEqual(line, 'Scope of this change: tool (given by --scope). Grade with the Scope rule in section 4.')
+        os.remove(self.args)
+        for bad in (('--scope', 'Tool'), ('--scope',)):
+            p = self.review('{{RUBRIC}}\n', extra=bad)
+            self.assertEqual(p.returncode, 2, bad)
+            self.assertIn('review.sh: --scope takes product or tool', p.stderr)
+            self.assertFalse(os.path.exists(self.args))
+
+    def test_no_patch_is_graded_at_scope_product_and_said_on_stderr(self):
+        line, err = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: product (no REVIEW-DIFF.patch in the worktree). Grade with the Scope rule'
+                               ' in section 4.')
+        self.assertIn('review.sh: no REVIEW-DIFF.patch in ', err)
+        with open(os.path.join(self.wt, 'REVIEW-DIFF.patch'), 'w') as f:
+            f.write('')
+        line, err = self.scope_line()
+        self.assertIn('product (REVIEW-DIFF.patch names no file)', line)
+        self.assertNotIn('REVIEW-DIFF', err)
+
+    def test_patch_paths_reads_renames_binaries_quoted_and_spaced_names(self):
+        diff = ('diff --git a/old name.py b/old name.py\nindex 1..2 100644\nBinary files differ\n'
+                'diff --git a/x.py b/y.py\nsimilarity index 90%\nrename from x.py\nrename to y.py\n'
+                'diff --git "a/caf\\303\\251.py" "b/caf\\303\\251.py"\nold mode 100644\nnew mode 100755\n'
+                'diff --git a/n.py b/n.py\nnew file mode 100644\n--- /dev/null\n+++ b/n.py\t\n')
+        self.assertEqual(route.patch_paths(diff), ['caf\\303\\251.py', 'n.py', 'old name.py', 'x.py', 'y.py'])
+        self.assertEqual(route.review_scope('diff --git a/x.py b/' + TOOL_A + '\nrename from x.py\nrename to ' + TOOL_A + '\n')[0],
+                         'product')
+
+
+TOOL_A = 'dotfiles/dot_agents/skills/orchestrator-workers/scripts/route.py'
+TOOL_B = 'dotfiles/dot_agents/skills/kb/scripts/kb.py'
+
+
+def filled_rubric():
+    return (read('references', 'rubric.md').rstrip('\n') + '\n\nScope of this change: product (no REVIEW-DIFF.patch in the'
+            ' worktree). Grade with the Scope rule in section 4.')
+
+
+def scope_rule():
+    return next((x[len('- **Scope.** '):] for x in read('references', 'rubric.md').split('\n')
+                 if x.startswith('- **Scope.** ')), '')
 
 
 if __name__ == '__main__':

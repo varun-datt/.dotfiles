@@ -656,6 +656,61 @@ class AuditTest(Base):
         self.assertEqual(j['audit']['counts'], {'routed': 0, 'overridden': 0, 'unrouted': 1})
 
 
+class FixRoundsTest(Base):
+    def write(self, *ds):
+        with open(os.path.join(self.run.dir, 'routes.jsonl'), 'w', encoding='utf-8') as f:
+            f.writelines(json.dumps(d) + '\n' for d in ds)
+
+    def launch(self, rnd, kind='fix', approved=None):
+        return {'event': 'launch', 'round': rnd, 'kind': kind, **({'owner_approved': approved} if approved else {})}
+
+    def test_quality_lists_each_item_s_fix_rounds_and_flags_a_second_without_the_owner(self):
+        for i, name in enumerate(('a', 'a-fix1', 'b', 'b-fix1', 'b-fix2', 'c', 'c-fix1', 'c-fix3')):
+            self.run.round(name, at=T0 + i * 1000, credits=10 + i, premium=1)
+        self.write(self.launch('a-fix1'), self.launch('b-fix1'), self.launch('b-fix2', approved='PLAN 2026-11-02 batch 2 8a'),
+                   self.launch('c-fix1'), self.launch('c-fix3', approved=''),
+                   {'event': 'pick', 'item': 'c-fix3', 'kind': 'fix', 'choice': {}, 'override': {'reason': 'owner said yes'}})
+        q = mine.quality(self.run.dir, mine.load_rounds(self.run.dir), [])
+        self.assertEqual([(f['item'], [(x['round'], x['owner_approved']) for x in f['rounds']], f['unapproved'])
+                          for f in q['fix_rounds']],
+                         [('a', [('a-fix1', None)], []),
+                          ('b', [('b-fix1', None), ('b-fix2', 'PLAN 2026-11-02 batch 2 8a')], []),
+                          ('c', [('c-fix1', None), ('c-fix3', None)], ['c-fix3'])])
+        out = self.cli(self.run.dir, '--quality').stdout
+        self.assertIn('fix rounds by item: 3 items, 1 flagged (each fix launch after the first needs owner_approved)\n', out)
+        self.assertRegex(out, r'\n  a\s+a-fix1\n')
+        self.assertRegex(out, r'\n  b\s+b-fix1, b-fix2 \(owner_approved: PLAN 2026-11-02 batch 2 8a\)\n')
+        self.assertIn('\n  FLAGGED c: c-fix3 launched without owner_approved', out)
+        self.assertNotIn('FLAGGED a', out)
+        self.assertNotIn('FLAGGED b', out)
+
+    def test_quality_with_no_routes_file_flags_every_later_fix_round(self):
+        for i, name in enumerate(('d', 'd-fix1', 'd-fix2')):
+            self.run.round(name, at=T0 + i * 1000, credits=10 + i, premium=1)
+        out = self.cli(self.run.dir, '--quality').stdout
+        self.assertIn('fix rounds by item: 1 items, 1 flagged', out)
+        self.assertIn('FLAGGED d: d-fix2 (no launch line) launched without owner_approved', out)
+
+    def test_quality_counts_each_launch_and_checks_the_approval_on_each(self):
+        for i, name in enumerate(('x', 'x-fix1', 'x-fix2', 'y', 'y-fix1')):
+            self.run.round(name, at=T0 + i * 1000, credits=10 + i, premium=1)
+        at = lambda s: mine.datetime.datetime.fromtimestamp(T0 + s, mine.UTC).isoformat()
+        ok = 'PLAN 2026-11-02 batch 2 8a'
+        self.write({**self.launch('x-fix1'), 'at': at(990)}, {**self.launch('x-fix2', approved=ok), 'at': at(1990)},
+                   {**self.launch('x-fix2'), 'at': at(2500)}, {**self.launch('x-fix1-r1', 'resume'), 'at': at(2600)},
+                   {**self.launch('x-fix1', 'resume'), 'at': at(2700)},
+                   {**self.launch('y-fix1'), 'at': at(4000)}, {**self.launch('y-fix1'), 'at': at(4500)})
+        q = mine.quality(self.run.dir, mine.load_rounds(self.run.dir), [])
+        self.assertEqual([(f['item'], [(x['label'], x['owner_approved']) for x in f['rounds']], f['unapproved'])
+                          for f in q['fix_rounds']],
+                         [('x', [('x-fix1', None), ('x-fix2', ok), ('x-fix2 (launch 2)', None)], ['x-fix2 (launch 2)']),
+                          ('y', [('y-fix1', None), ('y-fix1 (launch 2)', None)], ['y-fix1 (launch 2)'])])
+        out = self.cli(self.run.dir, '--quality').stdout
+        self.assertIn('fix rounds by item: 2 items, 2 flagged', out)
+        self.assertIn(f'\n  FLAGGED x: x-fix2 (launch 2) launched without owner_approved', out)
+        self.assertIn('\n  FLAGGED y: y-fix1 (launch 2) launched without owner_approved', out)
+
+
 class CausesTest(unittest.TestCase):
     def test_the_rubric_format_is_read_with_its_class(self):
         report = ('2 blocking\n**Blocking.**\n'

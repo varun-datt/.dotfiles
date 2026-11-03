@@ -136,7 +136,8 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   `route.py run` warns (exit unchanged) for each open row on a named path whose id the brief leaves out; the worktree's root folder itself is not matched, since every brief names it in YOUR RESOURCES. A class seen 3 times becomes a planned item; past about 30 open rows, each run plans one
   debt item; `debt.py stale` lists rows untouched for 3 runs, to close "won't fix" or keep.
 - A finding the re-review leaves open pauses the item for the owner (owner, 2026-10-31, confirmed
-  2026-11-02): one fix round, then the owner decides. A fix made after the re-review, once the owner
+  2026-11-02): one fix round, then the owner decides. `route.py run` refuses any fix round after an item's first (exit 2) unless `--override` carries `owner_approved=<where the owner said so>`, and `mine.py --quality` flags one launched without it.
+  A fix made after the re-review, once the owner
   approves it, goes to a **post-merge review (commit-then-review)** on main, so nothing lands unreviewed.
 - **Parallelism** is decided per item, from its dependencies and the files it touches.
 - **Finish before starting** (owner, 2026-10-13). A freed slot goes first to the oldest started
@@ -190,6 +191,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   The router picks another model family from the author's model, read from the author round's
   log when `--author-model` is not given. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
   shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
+  It runs at high effort, and fills the rubric's blocking scope from `--scope product|tool`, which wins over the default, by default `tool` only when every changed file is under `dotfiles/dot_agents/skills/*/scripts/` (owner, 2026-11-02); a re-review or critique prompt, which has no rubric, gets the scope line and the rubric's Scope rule at its end.
   A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"
   filter on gpt-6.1-sol, or a sub-agent that refuses (2026-10-29: 3 rounds, 131 credits, no
   verdict). Tell the reviewer to work in its own session, and after one 422 fall back to Opus at
@@ -234,7 +236,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 - **Reviews:** [review.md](assets/review.md), which grades on [references/rubric.md](references/rubric.md)
   (`review.sh` fills `{{RUBRIC}}`) and tags each finding's cause and class, and the short
   [rereview.md](assets/rereview.md), which only checks each named finding was fixed, its test, and
-  harm the fix itself adds, at medium effort.
+  harm the fix itself adds, at high effort.
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
   fresh session, so it names the branch, worktree, base commit and ports.
 - **Resume round, sent with `-r`:** [resume.md](assets/resume.md); short, because the session
