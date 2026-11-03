@@ -81,9 +81,33 @@ REREVIEW_REPORT = [
     'with what would confirm it, and a fix in one line.',
     '4. **Corrections** to the fix report: one line each.',
 ]
+SCOPE_RULE = [
+    "In a product's own code (scope product), a finding blocks only when it has an owner-visible effect: user "
+    'experience, data, security, spend, performance, or a broken workflow; an unmet MUST and a missing or weak test are '
+    'Minor unless they cause one of those, and then keep their matrix grade.',
+    'In check tools (scope tool: a gate, a findings record, a router, a queue, any script that grades or launches work), '
+    'an unmet MUST and a missing, weak or unfailable test stay Major as below, since a wrong tool gives the owner wrong '
+    'numbers.',
+    'In a diff with both, a finding in a file the prompt lists as a check tool is graded as tool.',
+]
 
 
 class PromptTextTest(unittest.TestCase):
+    def test_the_rubric_s_scope_rule_keeps_its_required_content(self):
+        r = read('references', 'rubric.md')
+        scope = [x for x in r.split('\n') if x.startswith('- **Scope.** ')]
+        self.assertEqual(len(scope), 1, 'the rubric has one Scope rule')
+        for part in SCOPE_RULE:
+            self.assertIn(part, scope[0])
+        tests = [x for x in r.split('\n') if x.startswith('- **Tests.** ')]
+        self.assertEqual(len(tests), 1, 'the rubric has one Tests rule')
+        self.assertIn('then Major, in scope product only with an owner-visible effect (Scope).', tests[0])
+        for row in ('a MUST in the brief or an owner ruling is unmet (in scope product, see Scope in section 4)',
+                    '| COR | Correctness against the brief | A MUST or owner ruling is unmet (in scope product, only with an '
+                    'owner-visible effect), or a normal input gives a wrong result |',
+                    '| VERIF | The checks | A check cannot fail, an existing test breaks or flakes, or a test the brief names is '
+                    'missing (in scope product, only with an owner-visible effect) |'):
+            self.assertIn(row, r)
     def test_the_rubric_holds_the_grades_and_the_d1_matrix(self):
         r = read('references', 'rubric.md')
         for word in ('Blocker', 'Major', 'Minor', 'Nit', 'L1 ', 'L2 ', 'L3 ', 'I1 ', 'I2 ', 'I3 '):
@@ -287,6 +311,8 @@ class ReviewShTest(unittest.TestCase):
         self.assertTrue(self.launched_prompt().startswith(self.filled()))
         line = self.filled()[len(text.rstrip('\n')) + 2:]
         self.assertEqual(self.filled().count('Scope of this change:'), 1)
+        for part in SCOPE_RULE:
+            self.assertIn(part, line)
         return line
 
     def test_every_rereview_and_critique_prompt_carries_the_scope_line(self):
@@ -388,6 +414,8 @@ class ReviewShTest(unittest.TestCase):
         self.assertEqual(p.returncode, want_rc, p.stderr)
         body = self.filled().split('==== END ====')[0].rstrip('\n')
         self.assertTrue(body.startswith('==== RUBRIC ====\n' + read('references', 'rubric.md').rstrip('\n') + '\n\nScope'))
+        for part in SCOPE_RULE:
+            self.assertEqual(body.count(part), 1, part)
         self.assertTrue(self.launched_prompt().startswith(self.filled()))
         return body.rsplit('\n', 1)[1], p.stderr
 
@@ -459,8 +487,8 @@ def filled_rubric():
 
 
 def scope_rule():
-    [line] = [x for x in read('references', 'rubric.md').split('\n') if x.startswith('- **Scope.** ')]
-    return line[len('- **Scope.** '):]
+    return next((x[len('- **Scope.** '):] for x in read('references', 'rubric.md').split('\n')
+                 if x.startswith('- **Scope.** ')), '')
 
 
 if __name__ == '__main__':
