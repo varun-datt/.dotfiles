@@ -234,12 +234,22 @@ class PythonGateTest(GateCase):
     def test_new_test_that_fails_on_base_only_by_import_fails_the_gate(self):
         r = self.gate([1], ["- MUST 1: pkg/test_fmt.py::FmtTest.test_label [FAIL_TO_PASS]"], code=1)
         row = self.row(r, "FAIL_TO_PASS", "pkg/test_fmt.py::FmtTest.test_label")
-        self.assertEqual("fail", row["status"])
-        self.assertTrue(row["reason"].startswith("load on base"), row["reason"])
+        self.assertEqual(("fail", "new on the branch (module pkg/fmt.py), so not run on the base: "
+                                  "needs a killed mutant, and there is no mutant runner"), (row["status"], row["reason"]))
 
     def test_new_test_that_raises_a_non_assertion_on_base_fails_the_gate(self):
         r = self.gate([1], ["- MUST 1: pkg/test_calc.py::CalcTest.test_double [FAIL_TO_PASS]"], code=1)
-        self.assertTrue(self.row(r, "FAIL_TO_PASS", "pkg/test_calc.py::CalcTest.test_double")["reason"].startswith("error on base"))
+        reason = self.row(r, "FAIL_TO_PASS", "pkg/test_calc.py::CalcTest.test_double")["reason"]
+        self.assertTrue(reason.startswith("new on the branch (export double), so not run on the base: needs a killed mutant"), reason)
+
+    def test_load_failure_naming_a_module_or_export_the_branch_does_not_add_is_not_new_code(self):
+        changed = reqgate.changed_files(self.repo, self.base, "ow/x")
+        new = lambda detail: reqgate.new_on_branch(self.repo, self.base, "ow/x", changed, detail)
+        self.assertEqual("module pkg/fmt.py", new("ModuleNotFoundError: No module named 'pkg.fmt'"))
+        self.assertIsNone(new("ModuleNotFoundError: No module named 'pkg.fmtt'"))
+        self.assertEqual("export double", new("AttributeError: module 'pkg.calc' has no attribute 'double'"))
+        self.assertIsNone(new("AttributeError: module 'pkg.calc' has no attribute 'doubel'"))
+        self.assertIsNone(new("AttributeError: module 'pkg.calc' has no attribute 'clamp'"))
 
     def test_timeout_on_base_fails_the_gate_and_cleans_up(self):
         r = self.gate([1], ["- MUST 1: pkg/test_slow.py::SlowTest.test_waits [FAIL_TO_PASS]"], "--timeout", "3", code=1)
@@ -498,7 +508,51 @@ class VitestLoadOnBaseTest(GateCase):
     def test_vitest_file_that_fails_to_load_on_base_fails_the_gate(self):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [FAIL_TO_PASS]"], code=1)
         reason = r["FAIL_TO_PASS"][0]["reason"]
-        self.assertTrue(reason.startswith("load on base, not an assertion: Failed to load url ./format"), reason)
+        self.assertTrue(reason.startswith("new on the branch (module src/format.ts), so not run on the base: needs a killed mutant"), reason)
+
+
+class VitestNewModuleTest(GateCase):
+    base_files = {"src/calc.ts": TS_BASE, "src/calc.test.ts": "// none\n", "FAKE_VITEST": "vitest-load.json\n",
+                  "FAKE_STRYKER": "mutation-new.json\n", "stryker.config.json": "{}\n"}
+    head_files = {"src/calc.test.ts": "// calc tests\n", "src/format.ts": "export const format = (x: number) => `#${x}`;\n",
+                  "FAKE_VITEST": "vitest-head.json\n"}
+
+    def test_test_of_a_new_module_must_kill_a_mutant_of_it(self):
+        r = self.gate([1, 2], ["- MUST 1: src/calc.test.ts::calc > adds [FAIL_TO_PASS]",
+                               "- MUST 2: src/calc.test.ts::calc > formats [FAIL_TO_PASS]"], code=1)
+        adds = self.row(r, "FAIL_TO_PASS", "src/calc.test.ts::calc > adds")
+        formats = self.row(r, "FAIL_TO_PASS", "src/calc.test.ts::calc > formats")
+        self.assertEqual("pass", adds["status"], adds["reason"])
+        self.assertTrue(adds["reason"].startswith("new on the branch (module src/format.ts), so not run on the base: "
+                                                  "this test killed 1 of the 1 mutants it covers"), adds["reason"])
+        self.assertEqual("fail", formats["status"])
+        self.assertIn("so not run on the base: killed none of the 2 mutants", formats["reason"])
+        self.assertEqual(["src/format.ts:1-1"], [a[a.index("--mutate") + 1] for a in self.logged("stryker")])
+
+
+class VitestNewExportTest(GateCase):
+    base_files = {"src/calc.ts": TS_BASE, "src/calc.test.ts": "// t\n", "FAKE_VITEST": "vitest-base-export.json\n",
+                  "FAKE_STRYKER": "mutation-new.json\n", "stryker.config.json": "{}\n"}
+    head_files = {"src/calc.ts": TS_HEAD + "export function format(x: number) {\n  return '#' + x;\n}\n",
+                  "src/calc.test.ts": "// t, more\n", "FAKE_VITEST": "vitest-head.json\n"}
+
+    def test_test_of_a_new_export_in_an_old_module_must_kill_a_mutant(self):
+        r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [FAIL_TO_PASS]"], code=0)
+        row = r["FAIL_TO_PASS"][0]
+        self.assertEqual("pass", row["status"], row["reason"])
+        self.assertTrue(row["reason"].startswith("new on the branch (export format), so not run on the base: this test killed 1"),
+                        row["reason"])
+
+
+class VitestTypoLoadTest(GateCase):
+    base_files = dict(VitestNewModuleTest.base_files, FAKE_VITEST="vitest-load-typo.json\n")
+    head_files = VitestNewModuleTest.head_files
+
+    def test_load_failure_from_a_typo_still_fails(self):
+        r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [FAIL_TO_PASS]"], code=1)
+        reason = r["FAIL_TO_PASS"][0]["reason"]
+        self.assertTrue(reason.startswith("load on base, not an assertion: Failed to load url ./fromat"), reason)
+        self.assertEqual([], self.logged("stryker") if os.path.exists(self.log) else [])
 
 
 class StrykerErrorTest(GateCase):

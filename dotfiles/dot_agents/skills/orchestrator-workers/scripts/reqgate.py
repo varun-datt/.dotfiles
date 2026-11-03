@@ -20,7 +20,9 @@ FAIL_TO_PASS test is
 run on the base commit with only the branch's test files applied and must fail there on an
 assertion (for Vitest: chai's AssertionError, a `.rejects`/`.resolves` failure, or an expect.assertions
 count); failing to load, import, compile or collect shows only that the code is absent, and
-fails the gate. Extension to SWE-bench: when the head tree has a Stryker config, a PASS_TO_PASS
+fails the gate, unless the failure names a module, export or file the branch adds: then the test is new
+on the branch, skips the base check and must instead kill at least one Stryker mutant of the changed
+lines it covers (with no mutant runner it fails). Extension to SWE-bench: when the head tree has a Stryker config, a PASS_TO_PASS
 test must kill at least one Stryker mutant on the changed source lines it covers; without a mutant
 runner it is reported "not checked: no mutant runner". When the Stryker report cannot tell which
 mutants the test covers (no testFiles, no test of that name, or mutants with no coveredBy) the test
@@ -370,7 +372,9 @@ def vitest_outcome(report, tree, path, parts, code=0, err=""):
     hits, suite_errors = [], []
     for r in files:
         if not r.get("assertionResults") and r.get("status") == "failed":
-            return "load", last_lines(r.get("message")) or "the file failed to load"
+            msg = r.get("message")
+            lines = [x for x in dict.fromkeys([first_line(msg)] + last_lines(msg).split(" | ")) if x]
+            return "load", " | ".join(lines) or "the file failed to load"
         hits += [a for a in r["assertionResults"]
                  if [t for t in a.get("ancestorTitles", []) if t and t != path] + [a.get("title")] == parts]
         if r.get("message"):
@@ -549,6 +553,49 @@ def mutant_check(report, ranges, path, name):
     return "fail", f"killed none of the {counts['attempted']} mutants it covers on changed lines ({seen})", counts
 
 
+LOAD_PATHS = [re.compile(p) for p in (r"Cannot find module '([^']+)'", r"Failed to load url (\S+)", r'Failed to resolve import "([^"]+)"',
+                                      r"No module named '([\w.]+)'", r"The requested module '([^']+)'")]
+LOAD_SYMBOLS = [re.compile(p) for p in (r"([A-Za-z_$][\w$]*)\)? is not a (?:function|constructor)",
+                                        r"does not provide an export named '([\w$]+)'", r"cannot import name '(\w+)'",
+                                        r"has no attribute '(\w+)'", r"([A-Za-z_$][\w$]*) is not defined")]
+SOURCE_EXT = re.compile(r"\.(?:[cm]?[jt]sx?|py|json)$")
+
+
+def module_key(path, dotted=False):
+    path = path.replace("\\", "/")
+    if dotted and "/" not in path:
+        path = path.replace(".", "/")
+    path = re.sub(r"^(?:\.{1,2}/|/|@/|~/|#/)+", "", path)
+    path = SOURCE_EXT.sub("", path)
+    return path[:-len("/index")] if path.endswith("/index") else path
+
+
+def defines(source, sym):
+    s = re.escape(sym)
+    return any(re.search(p, source, re.M) for p in (
+        rf"\b(?:function\*?|class|const|let|var|interface|type|enum|def)\s+{s}\b",
+        rf"\bexport\s*\{{[^}}]*\b{s}\b[^}}]*\}}",
+        rf"^\s*(?:(?:public|private|protected|static|async|readonly|override|get|set)\s+)*\*?{s}\s*(?:<[^>\n]*>)?\([^)\n]*\)[^;{{\n]*\{{",
+        rf"^\s*{s}\s*[:=]"))
+
+
+def new_on_branch(repo, base, head, changed, detail):
+    """"module <path>" or "export <name>" when a load or error on the base names a file or symbol the branch adds, else None."""
+    sources = [(s, p) for s, p in changed if s != "D" and not is_test_path(p)]
+    for pattern in LOAD_PATHS:
+        for m in pattern.finditer(detail or ""):
+            want = module_key(m.group(1), dotted=pattern is LOAD_PATHS[3])
+            for s, p in sources:
+                if s == "A" and want and same_path(module_key(p), want):
+                    return f"module {p}"
+    syms = {m.group(1) for pattern in LOAD_SYMBOLS for m in pattern.finditer(detail or "")}
+    for sym in sorted(syms):
+        for s, p in sources:
+            if defines(git(repo, "show", f"{head}:{p}"), sym) and not (s != "A" and defines(git(repo, "show", f"{base}:{p}"), sym)):
+                return f"export {sym}"
+    return None
+
+
 def no_runner(repo, head, path):
     """"Playwright" or "live" for a test the gate has no runner for, else None."""
     if not path.endswith(JS_SUFFIXES):
@@ -621,40 +668,6 @@ def check(args):
     runnable = [e for e in runnable if "check" not in e]
 
     mutants_run, stryker_error, no_cover, statuses = 0, None, None, {}
-    with worktree(repo, head, node_modules) as tree:
-        for e in runnable:
-            e["head"], e["head_detail"] = run(tree, e)
-        keeps = [e for e in runnable if e["kind"] == "PASS_TO_PASS"]
-        mode = args.mutants if args.mutants != "auto" else ("stryker" if has_stryker(tree) else "none")
-        ranges = changed_ranges(repo, base, head, sources) if keeps and mode == "stryker" else {}
-        report = None
-        if keeps and mode == "stryker" and ranges:
-            try:
-                report = stryker_run(tree, ranges, args.stryker_timeout, args.stryker_cmd)
-                for r in report.get("files", {}).values():
-                    for m in r.get("mutants", []):
-                        statuses[m.get("status")] = statuses.get(m.get("status"), 0) + 1
-                mutants_run = sum(v for k, v in statuses.items() if k not in NOT_RUN)
-            except NoCoveringTest as err:
-                no_cover = str(err)
-            except SetupError as err:
-                stryker_error = str(err)
-        for e in keeps:
-            if mode != "stryker":
-                e["check"], e["reason"] = "not checked", "not checked: no mutant runner"
-            elif not ranges:
-                e["check"], e["reason"] = "not checked", "no changed source lines: no mutants run"
-            elif no_cover:
-                e["check"], e["reason"] = "not checked", no_cover
-            elif stryker_error:
-                e["check"], e["reason"] = "fail", stryker_error
-            else:
-                e["check"], e["reason"], e["mutants"] = mutant_check(report, ranges, e["file"], e["name"])
-                if report.get("partial"):
-                    e["partial"] = True
-                    if e["check"] == "fail" and e["reason"].startswith("killed none"):
-                        e["reason"] = "no mutant killed by this test yet" + e["reason"][len("killed none"):]
-                    e["reason"] = f"partial, {report['partial']}: {e['reason']}"
     news = [e for e in runnable if e["kind"] == "FAIL_TO_PASS"]
     if news:
         with worktree(repo, base, node_modules) as tree:
@@ -672,8 +685,51 @@ def check(args):
                     e["check"], e["reason"] = "pass", "fails on base on an assertion"
                 elif status == "passed":
                     e["check"], e["reason"] = "fail", "passes on base: it cannot catch the change"
+                elif status in ("load", "error") and (new := new_on_branch(repo, base, head, changed, detail)):
+                    e["new_code"] = new
                 else:
                     e["check"], e["reason"] = "fail", f"{status} on base, not an assertion: {detail}".rstrip(": ")
+    with worktree(repo, head, node_modules) as tree:
+        for e in runnable:
+            e["head"], e["head_detail"] = run(tree, e)
+        keeps = [e for e in runnable if e["kind"] == "PASS_TO_PASS"]
+        fresh = [e for e in news if "new_code" in e]
+        mode = args.mutants if args.mutants != "auto" else ("stryker" if has_stryker(tree) else "none")
+        ranges = changed_ranges(repo, base, head, sources) if (keeps or fresh) and mode == "stryker" else {}
+        report = None
+        if (keeps or fresh) and mode == "stryker" and ranges:
+            try:
+                report = stryker_run(tree, ranges, args.stryker_timeout, args.stryker_cmd)
+                for r in report.get("files", {}).values():
+                    for m in r.get("mutants", []):
+                        statuses[m.get("status")] = statuses.get(m.get("status"), 0) + 1
+                mutants_run = sum(v for k, v in statuses.items() if k not in NOT_RUN)
+            except NoCoveringTest as err:
+                no_cover = str(err)
+            except SetupError as err:
+                stryker_error = str(err)
+        for e in keeps + fresh:
+            if mode != "stryker":
+                e["check"], e["reason"] = "not checked", "not checked: no mutant runner"
+            elif not ranges:
+                e["check"], e["reason"] = "not checked", "no changed source lines: no mutants run"
+            elif no_cover:
+                e["check"], e["reason"] = "not checked", no_cover
+            elif stryker_error:
+                e["check"], e["reason"] = "fail", stryker_error
+            else:
+                e["check"], e["reason"], e["mutants"] = mutant_check(report, ranges, e["file"], e["name"])
+                if report.get("partial"):
+                    e["partial"] = True
+                    if e["check"] == "fail" and e["reason"].startswith("killed none"):
+                        e["reason"] = "no mutant killed by this test yet" + e["reason"][len("killed none"):]
+                    e["reason"] = f"partial, {report['partial']}: {e['reason']}"
+        for e in fresh:
+            if e["check"] != "pass":
+                e["check"] = "fail"
+                if e["reason"] == "not checked: no mutant runner":
+                    e["reason"] = "needs a killed mutant, and there is no mutant runner"
+            e["reason"] = f"new on the branch ({e['new_code']}), so not run on the base: {e['reason']}"
     for e in runnable:
         if e["head"] != "passed":
             e["check"], e["reason"] = "fail", f"{e['head']} at head: {e['head_detail']}".rstrip(": ")
