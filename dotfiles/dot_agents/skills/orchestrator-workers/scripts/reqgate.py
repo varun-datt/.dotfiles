@@ -24,11 +24,13 @@ fails the gate. Extension to SWE-bench: when the head tree has a Stryker config,
 test must kill at least one Stryker mutant on the changed source lines it covers; without a mutant
 runner it is reported "not checked: no mutant runner". When the Stryker report cannot tell which
 mutants the test covers (no testFiles, no test of that name, or mutants with no coveredBy) the test
-fails as "attribution unavailable"; a measured "covers no changed line" is reported and not failed, as is
-"no covering test", when Stryker's dry run ran no test at all. A Stryker run stopped at --stryker-timeout
+fails as "attribution unavailable". A measured "covers no changed line", or "no covering test" when
+Stryker's dry run ran no test at all, is reported first in the table and fails only when no other test
+of the same MUST covers a changed line. A Stryker run stopped at --stryker-timeout
 keeps the mutants its event-recorder reporter wrote so far, marked partial; a kill seen there passes.
-Mutant counts use only Stryker's MutantStatus names; killedByThisTest is a separate count. A `none` line is reported and counted, and
-is not a failure on its own. Every test runs in a temporary detached worktree, removed afterwards.
+Mutant counts use only Stryker's MutantStatus names; killedByThisTest is a separate count. A `none` line is reported first and counted, and
+is not a failure on its own. Playwright tests (importing @playwright/test) and live tests (*.live.test.*)
+are reported "not checked: no runner" and do not fail. Every test runs in a temporary detached worktree, removed afterwards.
 
 Exit 0 when every check passes, 1 when any fails, 2 on a usage or setup error, an internal error or a
 worktree it could not remove; 128+N when stopped by signal N (SIGINT, SIGTERM), after killing its child
@@ -547,6 +549,31 @@ def mutant_check(report, ranges, path, name):
     return "fail", f"killed none of the {counts['attempted']} mutants it covers on changed lines ({seen})", counts
 
 
+def no_runner(repo, head, path):
+    """"Playwright" or "live" for a test the gate has no runner for, else None."""
+    if not path.endswith(JS_SUFFIXES):
+        return None
+    if re.search(r"\.live\.(test|spec)\.[cm]?[jt]sx?$", path):
+        return "live"
+    source = subprocess.run(["git", "-C", repo, "show", f"{head}:{path}"], capture_output=True, text=True,
+                            stdin=subprocess.DEVNULL).stdout
+    if re.search(r"""(?:from\s+|require\(\s*)['"]@playwright/test['"]""", source):
+        return "Playwright"
+    return None
+
+
+def covers_change(e):
+    """True when the test is measured to cover a changed line, False when measured not to, None when unknown."""
+    if e.get("check") == "not checked" and (e["reason"] == "covers no changed line" or e["reason"].startswith("no covering test")):
+        return False
+    if e.get("mutants", {}).get("attempted"):
+        return True
+    # Only the source differs between the two trees, so failing on base on an assertion means it reached changed code.
+    if e["kind"] == "FAIL_TO_PASS" and e.get("base") == "failed" and e.get("check") == "pass":
+        return True
+    return None
+
+
 def check(args):
     started = time.monotonic()
     repo = os.path.abspath(args.repo)
@@ -586,6 +613,12 @@ def check(args):
         if not runner:
             return "error", f"no runner for {e['file']}: pass --runner"
         return RUNNERS[runner](tree, e["file"], e["name"], args.timeout, **opts)
+
+    for e in runnable:
+        kind = no_runner(repo, head, e["file"])
+        if kind:
+            e["check"], e["reason"] = "not checked", f"not checked: no runner ({kind})"
+    runnable = [e for e in runnable if "check" not in e]
 
     mutants_run, stryker_error, no_cover, statuses = 0, None, None, {}
     with worktree(repo, head, node_modules) as tree:
@@ -644,6 +677,11 @@ def check(args):
     for e in runnable:
         if e["head"] != "passed":
             e["check"], e["reason"] = "fail", f"{e['head']} at head: {e['head_detail']}".rstrip(": ")
+    for e in tests:
+        e["covers"] = covers_change(e)
+    for e in tests:
+        if e["covers"] is False and e["check"] == "not checked" and not any(x["covers"] for x in tests if x["must"] == e["must"]):
+            e["check"], e["reason"] = "fail", f"{e['reason']}; no other test of MUST {e['must']} covers a changed line"
     failed = bool(problems) or any(e["check"] == "fail" for e in tests)
     return {
         "passed": not failed,
@@ -662,6 +700,8 @@ def check(args):
 
 def entry(e):
     out = {"must": e["must"], "test": f"{e['file']}::{e['name']}", "status": e["check"], "reason": e["reason"]}
+    if e.get("covers") is False:
+        out["covers"] = False
     if "mutants" in e:
         out["mutants"] = e["mutants"]
     if e.get("partial"):
@@ -675,16 +715,19 @@ def mutant_text(counts):
 
 
 def table(result):
-    rows = [(f"MUST {r['must']}", kind, r["test"], r["status"], r["reason"] + (mutant_text(r["mutants"]) if "mutants" in r else ""))
-            for kind in KINDS for r in result[kind]]
-    rows += [(f"MUST {n['must']}", "none", "-", "none", n["why"]) for n in result["none"]]
-    rows += [(f"MUST {n['must']}", "unmapped", "-", n["status"], n["reason"]) for n in result["unmapped"]]
-    rows.sort(key=lambda r: int(r[0].split()[1]))
-    lines = [" | ".join(r) for r in rows]
+    """One row per map line: none lines first, then PASS_TO_PASS tests that cover no changed line, then the rest by MUST."""
+    rows = [(0, f"MUST {n['must']}", "none", "-", "none", n["why"]) for n in result["none"]]
+    rows += [(1 if r.get("covers") is False else 2, f"MUST {r['must']}", kind, r["test"], r["status"],
+              r["reason"] + (mutant_text(r["mutants"]) if "mutants" in r else ""))
+             for kind in KINDS for r in result[kind]]
+    rows += [(2, f"MUST {n['must']}", "unmapped", "-", n["status"], n["reason"]) for n in result["unmapped"]]
+    rows.sort(key=lambda r: (r[0], int(r[1].split()[1])))
+    lines = [" | ".join(r[1:]) for r in rows]
     lines += [f"problem: {p}" for p in result["problems"]]
     lines.append(f"{'PASS' if result['passed'] else 'FAIL'}: {len(result['musts'])} MUSTs, "
                  f"{sum(r['status'] == 'fail' for k in KINDS for r in result[k])} failing tests, "
-                 f"{len(result['problems'])} problems, {len(result['none'])} none (the owner decides whether none should fail), "
+                 f"{sum(r['status'] == 'not checked' for k in KINDS for r in result[k])} not checked, "
+                 f"{len(result['problems'])} problems, {len(result['none'])} none (reported, not failed), "
                  f"{result['mutants_run']} mutants{' (partial)' if result.get('mutants_partial') else ''}, {result['minutes']} min")
     return "\n".join(lines)
 

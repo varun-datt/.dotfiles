@@ -275,7 +275,8 @@ class PythonGateTest(GateCase):
         r = self.gate([1, 2], ["- MUST 1: pkg/test_calc.py::CalcTest.test_clamp_negative [FAIL_TO_PASS]",
                                "- MUST 2: none (a prompt change, read by the reviewer)"], code=0)
         self.assertEqual([{"must": "2", "why": "a prompt change, read by the reviewer"}], r["none"])
-        self.assertIn("1 none (the owner decides whether none should fail)", r["printed"])
+        self.assertIn("1 none (reported, not failed)", r["printed"])
+        self.assertTrue(r["printed"].startswith("MUST 2 | none | - | none | a prompt change"), r["printed"])
 
     def test_must_mapped_twice_checks_both_lines(self):
         r = self.gate([1], ["- MUST 1: pkg/test_calc.py::CalcTest.test_clamp_negative [FAIL_TO_PASS]",
@@ -352,8 +353,18 @@ class VitestGateTest(GateCase):
         self.assertLessEqual(set(r["mutant_statuses"]), set(SCHEMA_STATUSES))
 
     def test_keeps_test_covering_no_changed_line_is_reported(self):
-        r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > formats [PASS_TO_PASS]"], code=0)
-        self.assertEqual(("not checked", "covers no changed line"), (r["PASS_TO_PASS"][0]["status"], r["PASS_TO_PASS"][0]["reason"]))
+        r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > formats [PASS_TO_PASS]"], code=1)
+        row = r["PASS_TO_PASS"][0]
+        self.assertEqual(("fail", "covers no changed line; no other test of MUST 1 covers a changed line", False),
+                         (row["status"], row["reason"], row["covers"]))
+
+    def test_keeps_test_covering_no_changed_line_beside_one_that_does_is_reported_first(self):
+        r = self.gate([1, 2], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]",
+                               "- MUST 2: src/calc.test.ts::calc > keeps zero [PASS_TO_PASS]",
+                               "- MUST 1: src/calc.test.ts::calc > formats [PASS_TO_PASS]"], code=1)
+        row = self.row(r, "PASS_TO_PASS", "src/calc.test.ts::calc > formats")
+        self.assertEqual(("not checked", "covers no changed line"), (row["status"], row["reason"]))
+        self.assertTrue(r["printed"].startswith("MUST 1 | PASS_TO_PASS | src/calc.test.ts::calc > formats | not checked"), r["printed"])
 
     def test_vitest_non_assertion_and_pass_on_base_fail(self):
         r = self.gate([1, 2], ["- MUST 1: src/calc.test.ts::calc > throws [FAIL_TO_PASS]",
@@ -501,8 +512,8 @@ class StrykerErrorTest(GateCase):
 
 
 class NoCoveringTestTest(GateCase):
-    base_files = dict(StrykerErrorTest.base_files, FAKE_STRYKER="notests\n")
-    head_files = {"src/calc.ts": TS_HEAD}
+    base_files = dict(StrykerErrorTest.base_files, FAKE_STRYKER="notests\n", FAKE_VITEST="vitest-base.json\n")
+    head_files = {"src/calc.ts": TS_HEAD, "FAKE_VITEST": "vitest-head.json\n"}
 
     def test_stryker_running_no_tests_is_no_covering_test_not_a_stryker_failure(self):
         r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]"])
@@ -510,6 +521,29 @@ class NoCoveringTestTest(GateCase):
         self.assertTrue(row["reason"].startswith("no covering test: "), row["reason"])
         self.assertNotIn("Stryker failed", row["reason"])
         self.assertNotEqual("pass", row["status"])
+
+    def test_no_covering_test_fails_only_when_no_test_of_its_must_covers_a_change(self):
+        alone = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]"], code=1)["PASS_TO_PASS"][0]
+        self.assertEqual("fail", alone["status"])
+        self.assertTrue(alone["reason"].endswith("; no other test of MUST 1 covers a changed line"), alone["reason"])
+        paired = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]",
+                                 "- MUST 1: src/calc.test.ts::calc > adds [FAIL_TO_PASS]"], code=0)
+        self.assertEqual("not checked", paired["PASS_TO_PASS"][0]["status"])
+
+
+class NoRunnerTest(GateCase):
+    base_files = {"src/calc.ts": TS_BASE, "FAKE_VITEST": "vitest-head.json\n"}
+    head_files = {"src/calc.ts": TS_HEAD, "e2e/app.spec.ts": "import { test, expect } from '@playwright/test';\n",
+                  "src/api.live.test.ts": "import { it } from 'vitest';\n"}
+
+    def test_playwright_and_live_tests_are_not_checked_and_do_not_fail(self):
+        r = self.gate([1, 2], ["- MUST 1: e2e/app.spec.ts::app > loads [FAIL_TO_PASS]",
+                               "- MUST 2: src/api.live.test.ts::api > answers [PASS_TO_PASS]"], code=0)
+        self.assertEqual(("not checked", "not checked: no runner (Playwright)"),
+                         (r["FAIL_TO_PASS"][0]["status"], r["FAIL_TO_PASS"][0]["reason"]))
+        self.assertEqual(("not checked", "not checked: no runner (live)"),
+                         (r["PASS_TO_PASS"][0]["status"], r["PASS_TO_PASS"][0]["reason"]))
+        self.assertFalse(os.path.exists(self.log) and self.logged("vitest"))
 
 
 class StrykerTimeoutTest(GateCase):
