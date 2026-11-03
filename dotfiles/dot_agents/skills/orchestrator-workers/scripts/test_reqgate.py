@@ -433,6 +433,53 @@ class VitestOutcomeTest(unittest.TestCase):
         self.assertIn("Unhandled Rejection", detail)
 
 
+# Failure messages as Vitest 5.0.5's JSON reporter wrote them for each form (probe, 2026-11-02), paths made up.
+VITEST_ASSERTIONS = {
+    ".rejects": 'Error: promise resolved "1" instead of rejecting\n    at Assertion.__VITEST_REJECTS__ (file:///w/node_modules/vitest/dist/chunks/index.js:2480:17)\n    at Assertion.propertyGetter (file:///w/x.js:1:1)',
+    ".resolves": 'Error: promise rejected "Error: boom" instead of resolving\n    at Assertion.__VITEST_RESOLVES__ (file:///w/node_modules/vitest/dist/chunks/index.js:2451:17)',
+    ".resolves then a matcher": "Error: expected 1 to be 2 // Object.is equality\n    at Assertion.__VITEST_RESOLVES__ (file:///w/node_modules/vitest/dist/chunks/index.js:2451:17)",
+    ".rejects then toThrow": "Error: expected [Function] to throw error including 'b' but got 'a'\n    at Assertion.__VITEST_REJECTS__ (file:///w/node_modules/vitest/dist/chunks/index.js:2480:17)",
+    ".rejects with no stack": 'promise resolved "undefined" instead of rejecting',
+    "toThrow": "AssertionError: expected [Function] to throw an error\n    at Proxy.<anonymous> (file:///w/node_modules/@vitest/expect/x.js:1:1)",
+    "expect.assertions": "Error: expected number of assertions to be 2, but got 1\n    at errorGen (file:///w/node_modules/vitest/dist/chunks/index.js:8077:43)",
+    "expect.hasAssertions": "Error: expected any number of assertion, but got none\n    at expect.methodWrapper (file:///w/node_modules/vitest/dist/x.js:1:1)",
+}
+VITEST_ERRORS = {
+    "plain Error": "Error: expected token\n    at /w/src/calc.test.ts:9:9",
+    "TypeError": "TypeError: Cannot read properties of undefined (reading 'x')\n    at /w/src/calc.test.ts:10:20",
+    "matcher TypeError": "TypeError: .toMatch() expects to receive a string, but got undefined\n    at /w/src/calc.test.ts:4:4",
+}
+
+
+class VitestAssertionFormTest(unittest.TestCase):
+    path = VitestOutcomeTest.path
+    outcome = VitestOutcomeTest.outcome
+
+    def assert_assertions(self, *forms):
+        for form in forms:
+            with self.subTest(form):
+                message = VITEST_ASSERTIONS[form]
+                status, detail = self.outcome(vitest_file(self.path, ("adds", "failed", [message]), status="failed"), code=1)
+                self.assertEqual("failed", status, detail)
+
+    def test_rejects_failure_is_an_assertion(self):
+        self.assert_assertions(".rejects", ".rejects then toThrow", ".rejects with no stack")
+
+    def test_resolves_failure_is_an_assertion(self):
+        self.assert_assertions(".resolves", ".resolves then a matcher")
+
+    def test_to_throw_failure_is_an_assertion(self):
+        self.assert_assertions("toThrow")
+
+    def test_expect_assertions_failure_is_an_assertion(self):
+        self.assert_assertions("expect.assertions", "expect.hasAssertions")
+
+    def test_other_errors_are_not_assertions(self):
+        for form, message in VITEST_ERRORS.items():
+            with self.subTest(form):
+                self.assertEqual("error", self.outcome(vitest_file(self.path, ("adds", "failed", [message]), status="failed"), code=1)[0])
+
+
 class VitestLoadOnBaseTest(GateCase):
     base_files = {"src/calc.test.ts": "// none\n", "FAKE_VITEST": "vitest-load.json\n"}
     head_files = {"src/calc.test.ts": "// calc tests\n", "src/format.ts": "export {}\n", "FAKE_VITEST": "vitest-head.json\n"}

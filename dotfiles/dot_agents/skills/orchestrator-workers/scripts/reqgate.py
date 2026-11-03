@@ -18,7 +18,8 @@ has no map, a mapped test path is absolute, escapes the repository, is a symlink
 head (checked before anything runs), or a named test is missing, ambiguous or does not pass at head. A
 FAIL_TO_PASS test is
 run on the base commit with only the branch's test files applied and must fail there on an
-assertion; failing to load, import, compile or collect shows only that the code is absent, and
+assertion (for Vitest: chai's AssertionError, a `.rejects`/`.resolves` failure, or an expect.assertions
+count); failing to load, import, compile or collect shows only that the code is absent, and
 fails the gate. Extension to SWE-bench: when the head tree has a Stryker config, a PASS_TO_PASS
 test must kill at least one Stryker mutant on the changed source lines it covers; without a mutant
 runner it is reported "not checked: no mutant runner". When the Stryker report cannot tell which
@@ -328,6 +329,27 @@ def first_line(text):
     return next((x.strip() for x in (text or "").splitlines() if x.strip()), "")
 
 
+ASYNC_EXPECT_FRAME = re.compile(r"^at \S*__VITEST_(?:REJECTS|RESOLVES)__ ")
+VITEST_ASSERTION = re.compile(r"^(?:Error: )?(?:promise (?:resolved|rejected) .* instead of (?:rejecting|resolving)"
+                              r"|expected number of assertions to be \d+, but got \d+|expected any number of assertion, but got none)$")
+
+
+def vitest_assertion(message):
+    """Whether one Vitest failure message (an error's stack, or its message) is an assertion.
+
+    Chai's AssertionError names itself. A `.rejects` or `.resolves` failure, including any matcher chained
+    after it, is rethrown with the stack of a plain Error made in Vitest's __VITEST_REJECTS__ or
+    __VITEST_RESOLVES__ getter, so it is known by that first frame, or by its message when there is no
+    stack; expect.assertions() and expect.hasAssertions() throw a plain Error with a fixed message."""
+    lines = [x.strip() for x in (message or "").splitlines() if x.strip()]
+    if not lines:
+        return False
+    if lines[0].startswith("AssertionError"):
+        return True
+    frame = next((x for x in lines[1:] if x.startswith("at ")), "")
+    return bool(ASYNC_EXPECT_FRAME.match(frame) or VITEST_ASSERTION.match(lines[0]))
+
+
 def vitest_outcome(report, tree, path, parts, code=0, err=""):
     """Read Vitest's JSON reporter output for one test file and title; code and err are Vitest's exit and stderr."""
     want = os.path.realpath(os.path.join(tree, path))
@@ -357,7 +379,7 @@ def vitest_outcome(report, tree, path, parts, code=0, err=""):
         return "error", f"the suite failed: {detail}"
     if hit.get("status") == "failed":
         # Vitest's expect throws chai's AssertionError; any other error class is not an assertion.
-        return ("failed" if msgs and all(m.lstrip().startswith("AssertionError") for m in msgs) else "error"), detail
+        return ("failed" if msgs and all(vitest_assertion(m) for m in msgs) else "error"), detail
     if hit.get("status") == "passed":
         explained = any(a.get("status") == "failed" for r in results for a in r.get("assertionResults", [])) or \
             any(r.get("status") == "failed" for r in results)
