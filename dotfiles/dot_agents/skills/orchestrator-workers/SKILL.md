@@ -236,7 +236,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 - **Reviews:** [review.md](assets/review.md), which grades on [references/rubric.md](references/rubric.md)
   (`review.sh` fills `{{RUBRIC}}`) and tags each finding's cause and class, and the short
   [rereview.md](assets/rereview.md), which only checks each named finding was fixed, its test, and
-  harm the fix itself adds, at medium effort.
+  harm the fix itself adds, at high effort.
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
   fresh session, so it names the branch, worktree, base commit and ports.
 - **Resume round, sent with `-r`:** [resume.md](assets/resume.md); short, because the session

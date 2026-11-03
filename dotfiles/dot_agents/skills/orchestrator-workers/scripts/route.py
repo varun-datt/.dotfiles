@@ -23,8 +23,9 @@ A review without --author-model takes the model of the item's latest author roun
 (picked, overridden or reused) is in the author's family is refused (exit 2, logged as a refuse event) unless the
 override says same_family=yes: the fallback after a 422 refusal, which the audit then shows as overridden. A reused
 decision falls back on the author saved with it; a review whose author is unknown from all three is refused the same way.
-A review, re-review or critique runs at high effort unless the override names another; run logs the size of the
-worktree's REVIEW-DIFF.patch as inputs.diff_chars (null, with diff_source null, when there is none, as for a critique).
+A review, re-review or critique runs at high effort unless the override names another; every run of one logs what it
+reads on its launch line, and on a decision it draws, as diff_chars and diff_source: the worktree's REVIEW-DIFF.patch,
+else a critique's snapshot folders named by --add-dir (text files only), else null.
 A second fix round for an item (named <item>-fixN with N >= 2, or after a fix launch for it in routes.jsonl) is
 refused (exit 2, a refuse event) unless the override carries owner_approved=<where the owner said so>, logged with
 the launch. resume.py continues a round and is not checked.
@@ -688,6 +689,30 @@ def fix_round_refused(run, rnd, kind, ov):
     return True
 
 
+def review_input(run, wt, add_dirs):
+    """(chars, source) of what a review reads: the worktree's REVIEW-DIFF.patch, else the text files of the snapshot
+    folders --add-dir names (not the run folder, not a git repository), else (None, None)."""
+    patch = os.path.join(wt, 'REVIEW-DIFF.patch')
+    if os.path.isfile(patch):
+        with open(patch, encoding='utf-8', errors='replace') as f:
+            return len(f.read()), patch
+    skip = {os.path.realpath(run), os.path.realpath(wt)}
+    snaps = [p for p in (os.path.abspath(os.path.expanduser(d)) for d in add_dirs)
+             if os.path.isdir(p) and os.path.realpath(p) not in skip and not os.path.exists(os.path.join(p, '.git'))]
+    if not snaps:
+        return None, None
+    total = 0
+    for s in snaps:
+        for root, dirs, files in os.walk(s):
+            for fn in files:
+                with contextlib.suppress(OSError):
+                    with open(os.path.join(root, fn), 'rb') as f:
+                        data = f.read()
+                    if b'\0' not in data:
+                        total += len(data.decode('utf-8', 'replace'))
+    return total, ', '.join(snaps)
+
+
 def author_from_log(run, rnd):
     """(model, file) of the item's latest author round log in the run folder, else (None, None)."""
     import mine
@@ -878,13 +903,9 @@ def run_round(a, cfg):
     with open(brief, encoding='utf-8') as f:
         text = f.read()
     review_diff = os.path.join(wt, 'REVIEW-DIFF.patch')
-    a.diff_size = None
     if kind in ('review', 'fix') and os.path.isfile(review_diff):
         with open(review_diff, encoding='utf-8', errors='replace') as f:
-            patch = f.read()
-        a.changed = changed_files(patch)
-        if kind == 'review':
-            a.diff_size = (len(patch), review_diff)
+            a.changed = changed_files(f.read())
     author_src = 'argument' if a.author_model else None
     if kind == 'review' and not a.author_model:
         a.author_model, fn = author_from_log(run, rnd)
@@ -904,7 +925,7 @@ def run_round(a, cfg):
         if new is not None:
             rec = new
             if kind == 'review' and not a.diff:
-                size, src = a.diff_size or (None, None)
+                size, src = review_input(run, wt, a.add_dir or [])
                 rec['inputs'] = {**rec.get('inputs', {}), 'diff_chars': size, 'diff_source': src}
             rec.update(cli_version=version, model_id=rec['choice']['model'], worktree=wt)
             log(run, rec)
@@ -917,6 +938,9 @@ def run_round(a, cfg):
         return 12
     argv = launch_argv(rnd, kind, wt, c, a.add_dir or [], text + (REVIEW_TAIL if kind == 'review' else ''))
     jsonl = os.path.join(run, rnd + '.jsonl')
+    measured = {}
+    if kind == 'review':
+        measured = dict(zip(('diff_chars', 'diff_source'), review_input(run, wt, a.add_dir or [])))
     try:
         with open(os.path.join(run, rnd + '.start'), 'w') as f:
             f.write(f'{int(datetime.datetime.now().timestamp())}\n')
@@ -928,7 +952,7 @@ def run_round(a, cfg):
             print(f'route.py run: no git HEAD in {wt}; {rnd}.base not written', file=sys.stderr)
         log(run, {'event': 'launch', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
                   'round': rnd, 'kind': kind, 'decision_at': rec['at'], 'cli_version': version, 'model_id': c['model'],
-                  'timeout_s': secs, 'brief': brief, 'argv': argv[:-1],
+                  'timeout_s': secs, 'brief': brief, 'argv': argv[:-1], **measured,
                   **({'owner_approved': ov['owner_approved']} if (ov or {}).get('owner_approved') else {})})
         env = {**os.environ, 'COPILOT_TASK_WAIT_TIMEOUT_SECONDS': str(min(5400, secs)), 'GIT_CONFIG_COUNT': '1',
                'GIT_CONFIG_KEY_0': 'url.blocked-by-orchestrator://.pushInsteadOf', 'GIT_CONFIG_VALUE_0': ''}

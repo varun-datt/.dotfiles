@@ -683,6 +683,65 @@ class Launcher(unittest.TestCase):
         import mine
         return [d for _, d in mine.read_routes(self.run_dir) if d.get('event') == 'launch']
 
+    def measured(self, rnd):
+        return [(d.get('diff_chars', 'absent'), d.get('diff_source', 'absent')) for d in self.launches() if d['round'] == rnd]
+
+    def test_every_review_launch_measures_what_it_reads_whether_the_decision_is_new_or_reused(self):
+        from unittest import mock
+        patch = 'diff --git a/a.py b/a.py\n+x\n'
+        path = self.write_patch(patch)
+        pick = [sys.executable, '-B', os.path.join(HERE, 'route.py'), 'pick', '--run', self.run_dir, '--item', 'x-review',
+                '--kind', 'review', '--prompt', self.brief, '--no-classifier', '--seed', '1', '--author-model', OPUS]
+        self.assertEqual(self.sp.run(pick, capture_output=True, env=self.env, stdin=self.sp.DEVNULL).returncode, 0)
+        patch += '+grown after pick\n'
+        self.write_patch(patch)
+        p = self.launch('x-review', 'review')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertEqual(len(self.decisions()), 1)
+        self.assertEqual(self.measured('x-review'), [(len(patch), path)])
+        args = ['run', 'x-rereview', '--kind', 'review', '--run', self.run_dir, '--brief', self.brief, '--worktree', self.wt,
+                '--no-classifier', '--seed', '1', '--author-model', OPUS, '--history-root', self.env['OW_STATE_ROOT']]
+        def load_wait(rc):
+            def sweep(*a):
+                nonlocal patch
+                if a[0] != 'load':
+                    return 0
+                patch += '+grown during the load wait\n'
+                self.write_patch(patch)
+                return rc
+            return sweep
+        for wait_rc, code in ((1, 12), (0, 0)):
+            with mock.patch.dict(os.environ, self.env, clear=True), \
+                    mock.patch.object(route, 'sweep', side_effect=load_wait(wait_rc)), \
+                    mock.patch('sys.stdout'), mock.patch('sys.stderr'):
+                self.assertEqual(route.main(args), code)
+        self.assertEqual(len([d for d in self.decisions() if d['item'] == 'x-rereview']), 1)
+        self.assertEqual(self.measured('x-rereview'), [(len(patch), path)])
+        os.remove(path)
+        snap = os.path.join(self.tmp, 'snap')
+        os.makedirs(os.path.join(snap, 'sub'))
+        for rel, data in (('note.md', 'caf\u00e9 note\n'.encode()), ('sub/report.md', b'report\n'), ('shot.png', b'\x89PNG\0\0')):
+            with open(os.path.join(snap, rel), 'wb') as f:
+                f.write(data)
+        project = os.path.join(self.tmp, 'project')
+        os.makedirs(os.path.join(project, '.git'))
+        with open(os.path.join(project, 'big.txt'), 'w') as f:
+            f.write('p' * 1000)
+        with open(os.path.join(self.run_dir, 'big.txt'), 'w') as f:
+            f.write('r' * 1000)
+        p = self.launch('x-critique', 'review', '--author-model', OPUS, '--add-dir', snap, '--add-dir', self.run_dir,
+                        '--add-dir', project)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        want = (len('caf\u00e9 note\n') + len('report\n'), snap)
+        self.assertEqual(self.measured('x-critique'), [want])
+        d = self.decision('x-critique')
+        self.assertEqual((d['inputs']['diff_chars'], d['inputs']['diff_source']), want)
+        p = self.launch('x-critique2', 'review', '--author-model', OPUS, '--add-dir', self.run_dir)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertEqual(self.measured('x-critique2'), [(None, None)])
+        self.assertEqual(self.launch('x-fix1', 'fix').returncode, 0)
+        self.assertNotIn('diff_chars', self.launches()[-1])
+
     def test_a_second_fix_round_is_refused_without_the_owner_and_launched_with_approval(self):
         p = self.launch('x-fix1', 'fix')
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
