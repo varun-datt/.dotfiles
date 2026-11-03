@@ -15,6 +15,9 @@ SARIF 2.1.0: https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html. F
     suppressions    one, kind external and status accepted, when the finding was ruled wrong or out of
                     scope (the suppression is what is accepted); none when accepted, demoted or unruled
     properties      everything SARIF has no field for (run, item, round, ruling, ruling_source, ...)
+A review whose report ends in a fenced `json` block (a SARIF `runs[0].results` array the reviewer wrote, as
+assets/review.md, rereview.md and critique-research.md ask) is read from that block alone, checked with sarif_errors();
+a malformed block is named and the prose is read instead, as it is for older reports with no block.
 Rulings, most trusted first: rulings.jsonl (a Blocker ruled Major is accepted), the next fix brief's
 ACCEPTED list, its REJECTED list (an item sent to debt is out of scope), its RECORDED / "Record only"
 lines (demoted), "could not reproduce" in the fix report (rejected, wrong), then a later re-review that
@@ -29,6 +32,13 @@ SARIF_SCHEMA = 'https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schem
 FP_KEY = 'reviewDefect/v1'
 LEVELS = {'Blocker': 'error', 'Major': 'error', 'Minor': 'warning'}
 BASELINE = ('new', 'unchanged', 'updated', 'absent')
+GRADES = ('Blocker', 'Major', 'Minor', 'Nit')
+# What review.md, rereview.md and critique-research.md ask a reviewer to write in its findings block.
+BLOCK_FIELDS = ('ruleId', 'level', 'message.text', 'locations', 'locations[0].physicalLocation.artifactLocation.uri',
+                'locations[0].physicalLocation.region.startLine', 'properties', 'n', 'grade', 'area', 'likelihood',
+                'impact', 'class')
+REREVIEW_FIELDS = ('earlierN', 'rereviewVerdict', 'introducedByFix')
+BLOCK_FENCE = re.compile(r'^[ \t]*```json[ \t]*\n(.*?)^[ \t]*```[ \t]*$', re.M | re.S)
 SOURCES = ('rulings.jsonl', 'fix-brief-accepted', 'fix-brief-rejected', 'fix-brief-recorded', 'fix-report',
            'rereview')
 CRITIQUE = re.compile(r'-critique(?:-[a-z0-9]+)?$')
@@ -358,6 +368,86 @@ def parse(report, rereview=False, dropped=None, fix=False):
     return found
 
 
+def block_of(report, rereview=False):
+    """(findings, error, line) from the report's last fenced `json` block: findings is None when there is no block or
+    it is malformed, and error then names what is wrong (None when there is no block)."""
+    fences = list(BLOCK_FENCE.finditer(report or ''))
+    if not fences:
+        return None, None, None
+    m = fences[-1]
+    line = (report or '')[:m.start()].count('\n') + 1
+    try:
+        data = json.loads(m.group(1))
+    except ValueError as e:
+        return None, f'not JSON: {e}', line
+    if isinstance(data, dict) and isinstance(data.get('runs'), list) and data['runs'] and isinstance(data['runs'][0], dict):
+        data = data['runs'][0].get('results')
+    if not isinstance(data, list) or not all(isinstance(x, dict) for x in data):
+        return None, 'not a runs[0].results array of objects', line
+    errs = sarif_errors(sarif_log([{k: v for k, v in x.items() if not (k == 'ruleId' and v is None)} for x in data]))
+    found, seen = [], set()
+    for i, x in enumerate(data):
+        p = x.get('properties') if isinstance(x.get('properties'), dict) else {}
+        name = f"result {i + 1}" + (f" ({p['n']})" if p.get('n') is not None else '')
+        bad = []
+        for key in ('n', 'grade'):
+            if p.get(key) in (None, ''):
+                bad.append(f'properties.{key} missing')
+        if 'level' not in x:
+            bad.append('level missing')
+        if p.get('grade') not in (None, '') and p['grade'] not in GRADES:
+            bad.append(f"grade {p['grade']!r}")
+        if x.get('ruleId') is not None and x['ruleId'] not in mine.CAUSES:
+            bad.append(f"ruleId {x['ruleId']!r} is no cause code")
+        for key, pat in (('area', r'[A-Z]{2,8}'), ('likelihood', r'L[1-3]'), ('impact', r'I[1-4]')):
+            if p.get(key) is not None and not re.fullmatch(pat, str(p[key])):
+                bad.append(f'{key} {p[key]!r}')
+        earlier, verdict = p.get('earlierN'), p.get('rereviewVerdict')
+        if rereview and earlier is not None and verdict not in ('fixed', 'partly', 'not fixed'):
+            bad.append(f'rereviewVerdict {verdict!r}')
+        locs = x.get('locations') or []
+        phys = locs[0].get('physicalLocation', {}) if locs and isinstance(locs[0], dict) else {}
+        uri = (phys.get('artifactLocation') or {}).get('uri')
+        start = (phys.get('region') or {}).get('startLine')
+        if locs and not isinstance(uri, str):
+            bad.append('locations without artifactLocation.uri')
+        errs += [f'{name}: {b}' for b in bad]
+        if bad:
+            continue
+        raw = str(p['n']).strip()
+        lm = re.fullmatch(r'([BMPF]?)(\d+)', raw, re.I)
+        label = ({'': '', 'B': '', 'M': 'm', 'P': 'p', 'F': 'F'}[lm.group(1).upper()] + lm.group(2)) if lm else raw
+        ref = status = None
+        if rereview and earlier is not None:
+            em = re.fullmatch(r'([BF]?)(\d+)', str(earlier).strip(), re.I)
+            ref = (('F' if em.group(1).upper() == 'F' else '') + em.group(2)) if em else str(earlier).strip()
+            label, section, status = 'c' + ref.lstrip('F'), 'blocking', VERDICT_STATE[verdict]
+        elif rereview and p.get('introducedByFix') is True:
+            section = 'new'
+        elif label.startswith('m') or p['grade'] in ('Minor', 'Nit'):
+            section = 'minor'
+        elif label.startswith('p') or x.get('ruleId') == 'PRE':
+            section = 'pre'
+        else:
+            section = 'blocking'
+        if label in seen:
+            errs.append(f'{name}: label {label} given twice')
+            continue
+        seen.add(label)
+        text = x['message']['text']
+        blocking = status in ('unchanged', 'updated') if status else (p['grade'] in ('Blocker', 'Major') and
+                                                                      section in ('blocking', 'new'))
+        found.append({'n': label, 'section': section, 'title': text[:200], 'text': text, 'cause': x.get('ruleId'),
+                      'class': p.get('class') and class_label(str(p['class'])), 'area': p.get('area'),
+                      'likelihood': p.get('likelihood'), 'impact': p.get('impact'), 'grade': p['grade'],
+                      'file': uri, 'line': start if isinstance(start, int) else None, 'status': status,
+                      'verdict': verdict if status else None, 'ref': ref, 'blocking': bool(blocking),
+                      'introduced': p.get('introducedByFix') is True if rereview else None, 'from_block': True})
+    if errs:
+        return None, '; '.join(errs), line
+    return found, None, line
+
+
 def words(text):
     out = set()
     text = PATH_LINE.sub(' ', re.sub(r'\]\([^)]*\)', ']', text or ''))
@@ -563,7 +653,7 @@ def record(run, rounds=None):
     for r in rounds:
         kind = 'critique' if CRITIQUE.search(r['name']) else ('fix' if is_fix(r) else r['kind'])
         by_item.setdefault(CRITIQUE.sub('', r['name']) if kind == 'critique' else r['item'], []).append(dict(r, kind=kind))
-    obs, unparsed, reviews, ambiguous = [], [], 0, []
+    obs, unparsed, reviews, ambiguous, blocks = [], [], 0, [], 0
     defects = collections.OrderedDict()
 
     def observe(f, r, item, fp_seen, next_fix, prev_fix, link=None):
@@ -584,7 +674,8 @@ def record(run, rounds=None):
             o['defect'] = did
             o['state'] = 'new'
             introduced = r['kind'] == 'rereview' and prev_fix and f['cause'] != 'PRE' and \
-                (f['section'] == 'new' or INTRODUCED.search(f['text']))
+                (f['introduced'] if f.get('introduced') is not None else
+                 (f['section'] == 'new' or INTRODUCED.search(f['text'])))
             o['introduced_by'] = prev_fix['name'] if introduced else None
             defects[did] = {'defect_id': did, 'fingerprint': {'item': item, 'file': f['file'],
                             'code_area': folder, 'cause': f['cause'], 'class': f['class']},
@@ -615,7 +706,19 @@ def record(run, rounds=None):
             reviews += 1
             report, source = report_of(run, r)
             dropped = []
-            found = parse(report, r['kind'] == 'rereview', dropped)
+            found, err, bline = block_of(report, r['kind'] == 'rereview')
+            if found is not None:
+                missing = [f['ref'] for f in found if f['ref'] and not any(o['f']['n'] == f['ref'] for o in open_obs)]
+                if missing:
+                    found, err = None, 'earlierN ' + ', '.join(missing) + ' names no earlier finding of the item'
+            if err:
+                unparsed.append({'kind': 'block', 'round': r['name'], 'file': source, 'line': bline,
+                                 'why': f'findings block not read ({err}); the prose was read instead'})
+            from_block = found is not None
+            if from_block:
+                blocks += 1
+            else:
+                found = parse(report, r['kind'] == 'rereview', dropped)
             numbered = {f['n'] for f in found}
             for (rnd, n), row in rulings.items():
                 if rnd == r['name'] and n not in numbered:
@@ -624,7 +727,9 @@ def record(run, rounds=None):
                                   'area': row.get('area'), 'likelihood': None, 'impact': None, 'grade': row.get('grade'),
                                   'file': None, 'line': None, 'status': None, 'verdict': None, 'ref': None,
                                   'blocking': row.get('grade') in ('Blocker', 'Major'), 'ruling_only': True})
-            if not found and (r.get('blocking') or 0) > 0:
+            if from_block:
+                pass
+            elif not found and (r.get('blocking') or 0) > 0:
                 unparsed.append({'round': r['name'], 'file': source,
                                  'line': 1, 'why': f"verdict says {r['blocking']} blocking but no finding was split out"})
             elif (r.get('blocking') or 0) > 0 and not any(f['blocking'] for f in found):
@@ -650,14 +755,14 @@ def record(run, rounds=None):
                     if named:
                         links[id(f)] = named[-1]
                 accepted = (prev_brief or {}).get('accepted') or []
-                if accepted and len(accepted) >= len(carried):
+                if accepted and len(accepted) >= len(carried) and not from_block:
                     pairs = match(accepted, [o['f'] for o in targets], floor=0.2)
                     by_brief = {i: j for i, j in pairs}
                     for f in carried:
                         k = int(f['n'][1:]) - 1 if f['n'][1:].isdigit() else -1
                         if id(f) not in links and k in by_brief and all(targets[by_brief[k]] is not v for v in links.values()):
                             links[id(f)] = targets[by_brief[k]]
-                rest = [f for f in carried if id(f) not in links]
+                rest = [f for f in carried if id(f) not in links and not from_block]
                 free = [o for o in targets if all(o is not v for v in links.values())]
                 for i, j in match([f['text'] for f in rest], [o['f'] for o in free], floor=0.2,
                                   hint=lambda i, j: rest[i]['n'][1:] == free[j]['f']['n']):
@@ -682,8 +787,9 @@ def record(run, rounds=None):
     for a in ambiguous:
         unparsed.append(a)
     return results, list(defects.values()), {'reviews': reviews, 'findings': len(results), 'defects': len(defects),
-                                             'unparsed': len({u['round'] for u in unparsed if u.get('kind') != 'ambiguous'}),
-                                             'ambiguous': len(ambiguous)}, unparsed
+                                             'unparsed': len({u['round'] for u in unparsed
+                                                              if u.get('kind') not in ('ambiguous', 'block')}),
+                                             'ambiguous': len(ambiguous), 'blocks': blocks}, unparsed
 
 
 def rule(run, r, this, rulings, next_fix, ambiguous=None):
@@ -789,6 +895,52 @@ def sarif_log(results):
                       'results': results}]}
 
 
+SARIF_LEVEL = {'none', 'note', 'warning', 'error'}
+SARIF_KIND = {'pass', 'open', 'informational', 'notApplicable', 'review', 'fail'}
+SUPPRESSION_KIND = {'inSource', 'external'}
+SUPPRESSION_STATUS = {'accepted', 'underReview', 'rejected'}
+
+
+def sarif_errors(log):
+    """Hand-coded from SARIF 2.1.0 sections 3.13-3.34: required properties and enum values used here."""
+    errs = []
+    if log.get('version') != '2.1.0' or not str(log.get('$schema', '')).startswith('https://docs.oasis-open.org/sarif/'):
+        errs.append('log version or $schema')
+    if not isinstance(log.get('runs'), list) or len(log['runs']) != 1:
+        return errs + ['runs']
+    run = log['runs'][0]
+    driver = run.get('tool', {}).get('driver', {})
+    if not driver.get('name'):
+        errs.append('tool.driver.name')
+    rule_ids = {r.get('id') for r in driver.get('rules', [])}
+    for i, r in enumerate(run.get('results', [])):
+        if not isinstance(r.get('message'), dict) or not r['message'].get('text'):
+            errs.append(f'{i}: message.text')
+        if 'level' in r and r['level'] not in SARIF_LEVEL:
+            errs.append(f'{i}: level')
+        if 'kind' in r and r['kind'] not in SARIF_KIND:
+            errs.append(f'{i}: kind')
+        if 'ruleId' in r and r['ruleId'] not in rule_ids:
+            errs.append(f'{i}: ruleId not in rules')
+        if r.get('baselineState', 'new') not in BASELINE:
+            errs.append(f'{i}: baselineState')
+        for s in r.get('suppressions', []):
+            if s.get('kind') not in SUPPRESSION_KIND or s.get('status', 'accepted') not in SUPPRESSION_STATUS:
+                errs.append(f'{i}: suppression')
+        for loc in r.get('locations', []):
+            reg = loc.get('physicalLocation', {}).get('region') if isinstance(loc, dict) else None
+            if reg is not None and (not isinstance(reg.get('startLine'), int) or reg['startLine'] < 1):
+                errs.append(f'{i}: region.startLine')
+        pf = r.get('partialFingerprints', {})
+        if 'suppressions' in r and not all('suppressions' in x for x in run.get('results', [])):
+            errs.append(f'{i}: suppressions on some results of the run only (3.27.23)')
+        if not isinstance(pf, dict) or not all(isinstance(v, str) for v in pf.values()):
+            errs.append(f'{i}: partialFingerprints values')
+        if not isinstance(r.get('properties', {}), dict):
+            errs.append(f'{i}: properties')
+    return errs
+
+
 def dump(rows):
     return ''.join(json.dumps(x, ensure_ascii=False, sort_keys=True) + '\n' for x in rows)
 
@@ -796,7 +948,7 @@ def dump(rows):
 def write(run, out=None, sarif=False):
     out = out or run
     if not os.path.isdir(run):
-        results, defects, counts, unparsed = [], [], {'reviews': 0, 'findings': 0, 'defects': 0, 'unparsed': 0}, []
+        results, defects, counts, unparsed = [], [], {'reviews': 0, 'findings': 0, 'defects': 0, 'unparsed': 0, 'blocks': 0}, []
     else:
         results, defects, counts, unparsed = record(run)
     os.makedirs(out, exist_ok=True)
@@ -809,10 +961,13 @@ def write(run, out=None, sarif=False):
             f.write(text)
         os.replace(tmp, os.path.join(out, name))
     lines = [f"findings: {counts['reviews']} reviews, {counts['findings']} findings, {counts['defects']} defects, "
-             f"{counts['unparsed']} reports not parsed; written to {out}"]
+             f"{counts['unparsed']} reports not parsed, {counts['blocks']} reviews read from a findings block; "
+             f"written to {out}"]
     for u in unparsed:
         if u.get('kind') == 'ambiguous':
             lines.append(f"  ambiguous ruling: {u['round']}: {u['why']}")
+        elif u.get('kind') == 'block':
+            lines.append(f"  findings block: {u['file']} line {u['line']}: {u['why']}")
         else:
             lines.append(f"  not parsed: {u['file']} line {u['line']}: {u['why']}")
     return '\n'.join(lines), counts

@@ -515,50 +515,8 @@ class FixRoundTwoTest(unittest.TestCase):
         self.assertEqual((f['area'], f['cause'], f['class']), ('REL', 'FAIL', 'unbounded retry'))
 
 
-LEVEL = {'none', 'note', 'warning', 'error'}
-KIND = {'pass', 'open', 'informational', 'notApplicable', 'review', 'fail'}
-SUPPRESSION_KIND = {'inSource', 'external'}
-SUPPRESSION_STATUS = {'accepted', 'underReview', 'rejected'}
-
-
-def sarif_errors(log):
-    """Hand-coded from SARIF 2.1.0 sections 3.13-3.34: required properties and enum values used here."""
-    errs = []
-    if log.get('version') != '2.1.0' or not str(log.get('$schema', '')).startswith('https://docs.oasis-open.org/sarif/'):
-        errs.append('log version or $schema')
-    if not isinstance(log.get('runs'), list) or len(log['runs']) != 1:
-        return errs + ['runs']
-    run = log['runs'][0]
-    driver = run.get('tool', {}).get('driver', {})
-    if not driver.get('name'):
-        errs.append('tool.driver.name')
-    rule_ids = {r.get('id') for r in driver.get('rules', [])}
-    for i, r in enumerate(run.get('results', [])):
-        if not isinstance(r.get('message'), dict) or not r['message'].get('text'):
-            errs.append(f'{i}: message.text')
-        if 'level' in r and r['level'] not in LEVEL:
-            errs.append(f'{i}: level')
-        if 'kind' in r and r['kind'] not in KIND:
-            errs.append(f'{i}: kind')
-        if 'ruleId' in r and r['ruleId'] not in rule_ids:
-            errs.append(f'{i}: ruleId not in rules')
-        if r.get('baselineState', 'new') not in findings.BASELINE:
-            errs.append(f'{i}: baselineState')
-        for s in r.get('suppressions', []):
-            if s.get('kind') not in SUPPRESSION_KIND or s.get('status', 'accepted') not in SUPPRESSION_STATUS:
-                errs.append(f'{i}: suppression')
-        for loc in r.get('locations', []):
-            reg = loc.get('physicalLocation', {}).get('region')
-            if reg is not None and (not isinstance(reg.get('startLine'), int) or reg['startLine'] < 1):
-                errs.append(f'{i}: region.startLine')
-        pf = r.get('partialFingerprints', {})
-        if 'suppressions' in r and not all('suppressions' in x for x in run.get('results', [])):
-            errs.append(f'{i}: suppressions on some results of the run only (3.27.23)')
-        if not all(isinstance(v, str) for v in pf.values()):
-            errs.append(f'{i}: partialFingerprints values')
-        if not isinstance(r.get('properties', {}), dict):
-            errs.append(f'{i}: properties')
-    return errs
+LEVEL, KIND = findings.SARIF_LEVEL, findings.SARIF_KIND
+sarif_errors = findings.sarif_errors
 
 
 class CliTest(unittest.TestCase):
@@ -639,6 +597,104 @@ class CliTest(unittest.TestCase):
         p = self.cli('--help')
         self.assertIn('--findings', p.stdout)
         self.assertIn('--sarif', p.stdout)
+
+
+class BlockTest(unittest.TestCase):
+    """Reviewers' structured findings blocks (owner, 2026-11-02, 4a)."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.run = Run(os.path.join(tmp.name, 'run-k'))
+
+    def record(self):
+        res = findings.record(self.run.dir)
+        self.unparsed, self.counts = res[3], res[2]
+        return {(r['properties']['round'], r['properties']['n']): r for r in res[0]}
+
+    @staticmethod
+    def block(results):
+        return '\n```json\n' + json.dumps(results, indent=1) + '\n```\n'
+
+    FIRST = [{'ruleId': 'ADJ', 'level': 'error', 'message': {'text': 'Saved notes vanish on close'},
+              'locations': [{'physicalLocation': {'artifactLocation': {'uri': 'src/a.py'}, 'region': {'startLine': 3}}}],
+              'properties': {'n': 'B1', 'grade': 'Major', 'area': 'DATA', 'likelihood': 'L1', 'impact': 'I2',
+                             'class': 'lost write'}},
+             {'ruleId': 'EDGE', 'level': 'error', 'message': {'text': 'Empty list crashes the page'},
+              'properties': {'n': 'B2', 'grade': 'Major', 'area': 'COR', 'likelihood': 'L2', 'impact': 'I2', 'class': None}},
+             {'ruleId': 'TEST', 'level': 'warning', 'message': {'text': 'The guard test cannot fail'},
+              'properties': {'n': 'M1', 'grade': 'Minor', 'area': 'VERIF', 'likelihood': 'L2', 'impact': 'I3',
+                             'class': 'vacuous test'}}]
+
+    def test_a_valid_block_builds_every_row_and_the_prose_is_not_read(self):
+        prose = '2 blocking\n\n**Blocking.**\n\nB1. [Major] DATA L1/I2 FIX: prose title that must not be used in z.py:9\n'
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report=prose + self.block(self.FIRST))
+        by = self.record()
+        self.assertEqual(sorted(k[1] for k in by), ['1', '2', 'm1'])
+        b1 = by[('job-review', '1')]
+        self.assertEqual((b1['ruleId'], b1['message']['text'], b1['properties']['class'], b1['properties']['blocking']),
+                         ('ADJ', 'Saved notes vanish on close', 'lost write', True))
+        self.assertEqual(b1['locations'][0]['physicalLocation']['region']['startLine'], 3)
+        self.assertEqual((by[('job-review', 'm1')]['properties']['blocking'], by[('job-review', 'm1')]['level']),
+                         (False, 'warning'))
+        self.assertEqual((self.counts['blocks'], self.unparsed), (1, []))
+        self.assertEqual(findings.sarif_errors(findings.sarif_log([r for r in by.values()])), [])
+
+    def test_a_block_missing_a_required_field_is_named_and_the_prose_is_read(self):
+        bad = [dict(self.FIRST[0], properties={k: v for k, v in self.FIRST[0]['properties'].items() if k != 'grade'})]
+        prose = '1 blocking\n\n**Blocking.**\n\nB1. [Major] DATA L1/I2 ADJ: Prose finding in z.py:9\nClass: prose class.\n'
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report=prose + self.block(bad))
+        by = self.record()
+        self.assertEqual(by[('job-review', '1')]['message']['text'], 'Prose finding in z.py:9')
+        whys = [u['why'] for u in self.unparsed if u.get('kind') == 'block']
+        self.assertEqual(len(whys), 1, self.unparsed)
+        self.assertIn('result 1 (B1): properties.grade missing', whys[0])
+        self.assertIn('the prose was read instead', whys[0])
+        self.assertEqual(self.counts['blocks'], 0)
+        out = findings.write(self.run.dir)[0]
+        self.assertIn('findings block: job-review.txt line', out)
+
+    def test_a_block_that_is_not_json_is_named(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='Blocking: none\n\n```json\n[{"level": \n```\n')
+        self.record()
+        self.assertTrue(any(u.get('kind') == 'block' and 'not JSON' in u['why'] for u in self.unparsed), self.unparsed)
+
+    def test_a_rereview_block_links_by_the_named_numbers_not_by_text(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='2 blocking\n' + self.block(self.FIRST))
+        self.run.round('job-fix1', at=T0 + 20)
+        # Text that would match the other finding: the named number must win.
+        re_block = [{'level': 'error', 'message': {'text': 'Empty list crashes the page'},
+                     'properties': {'n': '1', 'grade': 'Major', 'area': 'DATA', 'likelihood': 'L1', 'impact': 'I2',
+                                    'class': 'lost write', 'earlierN': 1, 'rereviewVerdict': 'partly'}},
+                    {'level': 'note', 'message': {'text': 'Saved notes vanish on close'},
+                     'properties': {'n': '2', 'grade': 'Major', 'area': None, 'likelihood': None, 'impact': None,
+                                    'class': None, 'earlierN': 'B2', 'rereviewVerdict': 'fixed'}},
+                    {'ruleId': 'FAIL', 'level': 'error', 'message': {'text': 'Retry never ends'},
+                     'properties': {'n': 'B1', 'grade': 'Major', 'area': 'REL', 'likelihood': 'L2', 'impact': 'I2',
+                                    'class': 'unbounded retry', 'introducedByFix': True}}]
+        self.run.round('job-rereview', at=T0 + 30, report='2 blocking\n\nprose\n' + self.block(re_block))
+        by = self.record()
+        fp = lambda k: by[k]['partialFingerprints'][findings.FP_KEY]  # noqa: E731
+        self.assertEqual(fp(('job-rereview', 'c1')), fp(('job-review', '1')))
+        self.assertEqual(fp(('job-rereview', 'c2')), fp(('job-review', '2')))
+        self.assertEqual([by[('job-rereview', c)]['baselineState'] for c in ('c1', 'c2')], ['updated', 'absent'])
+        new = by[('job-rereview', '1')]
+        self.assertEqual((new['baselineState'], new['properties']['introducedBy']), ('new', 'job-fix1'))
+        self.assertEqual(self.counts['blocks'], 2)
+
+    def test_a_rereview_block_naming_an_unknown_finding_falls_back_to_prose(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='1 blocking\n' + self.block(self.FIRST[:1]))
+        self.run.round('job-fix1', at=T0 + 20)
+        re_block = [{'level': 'error', 'message': {'text': 'x'},
+                     'properties': {'n': '1', 'grade': 'Major', 'earlierN': 7, 'rereviewVerdict': 'not fixed'}}]
+        self.run.round('job-rereview', at=T0 + 30, report='Blocking: none\n' + self.block(re_block))
+        self.record()
+        self.assertTrue(any(u.get('kind') == 'block' and 'earlierN 7' in u['why'] for u in self.unparsed), self.unparsed)
 
 
 if __name__ == '__main__':
