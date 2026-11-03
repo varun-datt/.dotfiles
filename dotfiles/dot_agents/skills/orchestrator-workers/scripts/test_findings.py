@@ -515,6 +515,58 @@ class FixRoundTwoTest(unittest.TestCase):
         self.assertEqual((f['area'], f['cause'], f['class']), ('REL', 'FAIL', 'unbounded retry'))
 
 
+class FixRoundThreeTest(unittest.TestCase):
+    """The prose fallback's leftovers from the first fix round's re-check, one test each."""
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.run = Run(os.path.join(tmp.name, 'run-y'))
+
+    def by(self):
+        return {(r['properties']['round'], r['properties']['n']): r for r in findings.record(self.run.dir)[0]}
+
+    def test_fix_report_known_limits_are_recorded_beside_same_kind(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report=REVIEW)
+        self.run.round('job-fix1', at=T0 + 20)
+        append(self.run, 'job-fix1', message('1. Fixed 1 in src/guard.py:10.\n\n**Same kind, not fixed:**\n- `a.py:3` keeps one.\n\n'
+                                             '6. Known limits:\n- `b.py:9`: a moved file loses its ruling.\n- Retries are not bounded.\n'
+                                             '7. Drafts: none.\n'))
+        fix = {k[1]: r['properties'] for k, r in self.by().items() if k[0] == 'job-fix1'}
+        self.assertEqual(sorted(fix), ['l1', 'l2', 's1'])
+        self.assertEqual((fix['l1']['origin'], fix['l1']['blocking'], fix['s1']['origin']), ('known-limit', False, 'same-kind'))
+
+    def test_bare_number_in_a_rejected_list_rules_that_finding(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report=REVIEW)
+        self.run.round('job-fix1', at=T0 + 20)
+        write(self.run, 'job-fix1.prompt.md', 'ACCEPTED, fix these:\n1. B1: the guard.\n\nREJECTED: 2 (by design); 5, out of scope.\n')
+        by = self.by()
+        self.assertEqual((by[('job-review', '2')]['properties']['ruling'], by[('job-review', '2')]['properties']['rulingReason']),
+                         ('rejected', 'wrong'))
+        self.assertEqual(by[('job-review', '5')]['properties']['ruling'], 'rejected')
+        self.assertEqual(findings.refs('2 (by design)'), ['2'])
+        self.assertEqual(findings.refs('3 retries are fine'), [])
+
+    def test_status_less_entry_under_findings_is_carried_not_introduced(self):
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='1 blocking\n\nB1. [Major] SEC L2/I1 ADJ: edit approvals skip the recheck in acp.ts:553\n')
+        self.run.round('job-fix1', at=T0 + 20)
+        self.run.round('job-rereview', at=T0 + 30, report='1 blocking\n\n**Findings.**\n\n'
+                                                       'B1. acp.ts:560 a diff-only edit still bypasses the recheck.\n')
+        by = self.by()
+        self.assertNotIn(('job-rereview', '1'), by)
+        c = by[('job-rereview', 'c1')]
+        self.assertEqual(c['partialFingerprints'], by[('job-review', '1')]['partialFingerprints'])
+        self.assertIsNone(c['properties']['introducedBy'])
+
+    def test_minor_table_row_and_a_following_tagged_minor_get_different_ids(self):
+        fs = findings.parse('Blocking: none\n\n**Minor.**\n\n| # | Finding |\n|---|---|\n| 1 | the label is vague in a.py:3 |\n\n'
+                            'VERIFIED COR L3/I3 EDGE: an empty list renders a blank row in b.py:4; class: empty input\n')
+        self.assertEqual([f['n'] for f in fs], ['m1', 'm2'])
+
+
 LEVEL, KIND = findings.SARIF_LEVEL, findings.SARIF_KIND
 sarif_errors = findings.sarif_errors
 

@@ -58,6 +58,7 @@ VERDICT_STATE = {'not fixed': 'unchanged', 'partly': 'updated', 'fixed': 'absent
 INTRODUCED = re.compile(r'\bintroduced by (?:the|this) fix\b|\bfix[- ]introduced\b', re.I)
 REF = re.compile(r'\b(?:([BFc])(\d+)|(?:findings?|#)\s*(\d+(?:\s*(?:,|and|&)\s*\d+)*))\b', re.I)
 SAME_KIND = re.compile(r'^[#*_\s]*same\s+kind\b[^:]*(?::[*_]*\s*(.*))?$', re.I)
+KNOWN_LIMITS = re.compile(r'^[#*_\s]*(?:\d+[.)]\s*)?[*_]*known\s+limits?\b[^:]*(?::[*_]*\s*(.*))?$', re.I)
 BRIEF_LABELS = (('accepted', ('ACCEPTED', 'FIX THESE')), ('rejected', ('REJECTED', 'NOT TO CHANGE')),
                 ('recorded', ('RECORDED', 'RECORD ONLY')))
 BRIEF_END = re.compile(r"^[*_#\s]*(?:[A-Z]{2,}(?:[ '-]+[A-Z]{2,})+\b|[A-Z]{3,}\s*(?:\([^)]*\))?\s*[:,]|(?i:for each finding)\b)")
@@ -170,7 +171,7 @@ def status_of(text):
 
 def is_blocking(text, section, grade, status):
     low = (text or '')[:400].lower()
-    if section in PREFIX or section == 'same-kind':
+    if section in PREFIX or section in ('same-kind', 'limit'):
         return False
     if re.search(r'non-?\s?blocking', low):
         return False
@@ -194,8 +195,9 @@ def title_cell(cells, header):
     return max(prose, key=len) if prose else None
 
 
-def label_item(m, section, rereview, counters):
-    """(label, section, ref) for a labelled item: ref is the earlier review's finding a re-review item names."""
+def label_item(m, section, rereview, counters, carried=False):
+    """(label, section, ref) for a labelled item: ref is the earlier review's finding a re-review item names; under a
+    re-review's Findings heading (carried) every item is an earlier finding, with or without a status word."""
     pre, n, body = m.group('pre'), m.group('pn') or m.group('num'), m.group('body')
     if pre == 'M':
         counters['minor'] = max(counters['minor'], int(n))
@@ -206,7 +208,7 @@ def label_item(m, section, rereview, counters):
             return 'c' + n, sec, None
         if m.group('rn'):
             return 'c' + n, sec, ('F' if m.group('rp') == 'F' else '') + m.group('rn')
-        if STATUS.search(body[:120]):
+        if carried or STATUS.search(body[:120]):
             return 'c' + n, sec, ('F' if pre == 'F' else '') + n
         return ('F' + n if pre == 'F' else n), 'new', None
     if pre == 'F':
@@ -221,7 +223,7 @@ def split(report, rereview=False, dropped=None):
 
     Finding-like lines no finding takes in (outside skipped sections) are appended to `dropped` as (line, text)."""
     out, cur, section, counters = [], None, None, collections.Counter()
-    fenced, table, header, gap = False, None, None, False
+    fenced, table, header, gap, findings_head = False, None, None, False, False
 
     def close():
         if not cur:
@@ -249,6 +251,7 @@ def split(report, rereview=False, dropped=None):
         if sec:
             close()
             cur, section, gap = None, sec, False
+            findings_head = s.strip('#*_ ').lower().startswith('findings')
             continue
         if cur is not None and gap and not m and not (cur.get('heading') or raw[:1].isspace() or DETAIL.match(s)):
             close()
@@ -292,8 +295,10 @@ def split(report, rereview=False, dropped=None):
                 num, body = (num_from_table or t.group(1)), s
                 sec = section or 'blocking'
                 label = PREFIX[sec] + num if sec in PREFIX else (('c' + num) if rereview and sec == 'blocking' else num)
+                if sec in PREFIX:
+                    counters[sec] = max(counters[sec], int(num))
             elif m:
-                label, sec, ref = label_item(m, section, rereview, counters)
+                label, sec, ref = label_item(m, section, rereview, counters, findings_head)
                 body = m.group('body')
                 if sec in PREFIX and not label.startswith(PREFIX[sec]):
                     counters[sec] += 1
@@ -320,27 +325,41 @@ def split(report, rereview=False, dropped=None):
 
 def same_kind(report):
     """The items of a fix report's "Same kind, not fixed" list, each as a finding of section same-kind."""
-    out, on, gap = [], False, False
+    return listed(report, SAME_KIND, 'same-kind', 's')
+
+
+def known_limits(report):
+    """The items of a fix report's "Known limits" list, each as a finding of section limit; a numbered line ends it."""
+    return listed(report, KNOWN_LIMITS, 'limit', 'l', numbered=False)
+
+
+def listed(report, head, section, prefix, numbered=True):
+    """A headed list's items; a numbered line out of the list's own 1, 2, 3 order (the report's next section) ends it."""
+    out, on, gap, want = [], False, False, 1
     for i, raw in enumerate((report or '').splitlines(), 1):
         s = raw.strip()
-        m = SAME_KIND.match(s) if not on else None
+        m = head.match(s) if not on else None
         if m:
             on, gap = True, False
             rest = (m.group(1) or '').strip(' *_')
             if rest and not re.match(r'none\b', rest, re.I):
-                out.append({'label': 's' + str(len(out) + 1), 'text': rest, 'section': 'same-kind', 'line': i})
+                out.append({'label': prefix + str(len(out) + 1), 'text': rest, 'section': section, 'line': i})
             continue
         if not on:
             continue
         if not s:
             gap = True
             continue
-        if s.startswith('#') or (section_of(s) and not mine.LIST_ITEM.match(s)):
+        num = re.match(r'(\d+)[.)]\s', s) if not raw[:1].isspace() else None
+        if s.startswith('#') or (section_of(s) and not mine.LIST_ITEM.match(s)) or \
+                (num and (not numbered or int(num.group(1)) != want)):
             break
+        if num:
+            want += 1
         if mine.LIST_ITEM.match(s) and not raw[:1].isspace():
             item = re.sub(r'^(?:[-*+]|\d+[.)])\s+', '', s)
             if not re.match(r'none\b', item, re.I):
-                out.append({'label': 's' + str(len(out) + 1), 'text': item, 'section': 'same-kind', 'line': i})
+                out.append({'label': prefix + str(len(out) + 1), 'text': item, 'section': section, 'line': i})
         elif out and (raw[:1].isspace() or not gap):
             out[-1]['text'] += '\n' + s
         else:
@@ -351,7 +370,7 @@ def same_kind(report):
 
 def parse(report, rereview=False, dropped=None, fix=False):
     found = []
-    for f in (same_kind(report) if fix else split(report, rereview, dropped)):
+    for f in ((same_kind(report) + known_limits(report)) if fix else split(report, rereview, dropped)):
         cause, cls, area, lik, imp, grade = tags(f['text'])
         if cause is None:
             cells = [c.strip().strip('*_`') for c in f['text'].split('|')]
@@ -605,6 +624,9 @@ def refs(text):
     """Finding labels a ruling names explicitly (B1 -> 1, c3, F2, "finding 2"), its own list number left out."""
     body = re.sub(r'^\s*(?:[-*+]|\d+[.)])\s+', '', text or '')
     out = []
+    bare = re.match(r'^[*_\s]*(\d+(?:\s*(?:,|and|&)\s*\d+)*)(?=\s*(?:[(:;,—–-]|\.(?:\s|$)|$))', body)
+    if bare:
+        out += re.findall(r'\d+', bare.group(1))
     for m in REF.finditer(body):
         if m.group(1):
             out.append({'b': '', 'f': 'F', 'c': 'c'}[m.group(1).lower()] + m.group(2))
@@ -862,7 +884,8 @@ def result(run_name, o):
              'trigger': None, 'class': f['class'], 'focus': None, 'codeArea': f['code_area'],
              'origin': 'fix-introduced' if o.get('introduced_by') else ('fix-left' if o['state'] != 'new' else
                                                                        ('pre' if f['section'] == 'pre' else
-                                                                        'same-kind' if f['section'] == 'same-kind' else 'new')),
+                                                                        'same-kind' if f['section'] == 'same-kind' else
+                                                                        'known-limit' if f['section'] == 'limit' else 'new')),
              'rereviewVerdict': f.get('verdict'),
              'blocking': f['blocking'], 'section': f['section'],
              'ruling': win and win['ruling'], 'rulingReason': win and win['reason'], 'rulingSource': win and win['source'],
