@@ -1,0 +1,41 @@
+{
+  "run": "amc-2026-10-27",
+  "item": "diagram",
+  "head": "5fdc5216aed3298e23e249878f12915061a9db16",
+  "base": "5b65c68f4cc0fb94151a3a743e03cc5e6239f38c",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "new e2e test: wide sequence diagram's scrollWidth exceeds clientWidth and smallest label height is at least 12 px"},
+      {"file": "tests/e2e/app.spec.ts", "name": "draws a Mermaid diagram from a finished reply, and keeps the source and an error for a broken one", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "existing e2e test (selectors adjusted) still opens the source details block, which MUST 1 says to keep"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/diagram.test.ts", "name": "fences the source as mermaid", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new helper behind the More menu's Copy as Markdown and Quote items: wraps the source in a mermaid fence"},
+      {"file": "tests/e2e/app.spec.ts", "name": "draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "toolbar hidden until focus, Expand reached by Shift+Tab and shown at opacity 1"},
+      {"file": "tests/e2e/app.spec.ts", "name": "copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "drives the toolbar's Copy source and the More menu items by accessible name"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/diagram.test.ts", "name": "zoom math > fits and centres a wide diagram, never above 2x", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new fit computation used when the overlay opens and on F"},
+      {"file": "tests/unit/diagram.test.ts", "name": "zoom math > keeps the point under the cursor fixed", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new zoom-at-point math behind pinch and Cmd+scroll zoom"},
+      {"file": "tests/unit/diagram.test.ts", "name": "zoom math > shows actual size centred", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "0 resets to 100%; also checks the percent readout text"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "only checks the Copied status message after Copy source; no test checks the PNG clipboard write, 2x scale or background"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/diagram.test.ts", "name": "fileName > uses the title line when there is one", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new file-name helper derives the save name from the diagram's title or first line"},
+      {"file": "tests/unit/diagram.test.ts", "name": "fileName > uses the first line otherwise, skipping comments and front matter", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "file name from first meaningful line"},
+      {"file": "tests/e2e/app.spec.ts", "name": "copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "Save as SVG produces a download with the expected file name and SVG body"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/diagram.test.ts", "name": "zoom math > clamps the scale", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "branch wrote its own pan/zoom (no library added); only the correctness of that hand-written math is testable, not the library choice or no-CDN rule"},
+      {"file": "tests/unit/diagram.test.ts", "name": "zoom math > keeps the point under the cursor fixed", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "correctness of the hand-written zoom"}
+    ]},
+    {"must": "7", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "draws a Mermaid diagram from a finished reply, and keeps the source and an error for a broken one", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "existing hostile-diagram check (no javascript hrefs in the drawn art) guards the sanitised render; nothing checks the PNG canvas path"}
+    ]}
+  ],
+  "findings": [
+    {"round": "rv-diagram", "n": "2", "musts": ["1", "2"], "tests": ["tests/e2e/app.spec.ts::draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard"], "note": "reviewer found the shown toolbar is absolutely placed over the drawing with no reserved gutter, so it can hide the top of a wide diagram; the e2e test checks toolbar visibility and focus but not overlap, and a geometry assertion (toolbar box not intersecting the drawn art) would fail on this head and on base"}
+  ],
+  "notes": "No describe wraps app.spec.ts tests, so e2e names are bare titles. The only Vitest file is new (tests/unit/diagram.test.ts, importing new src/ui/diagram.ts), so on base it fails at import rather than on an assertion. The non-overlap rule in finding 2 is not literally in the MUST text; it came from an owner ruling, mapped to MUSTs 1 and 2 by judgement. MUSTs 1, 4 and 7 have only Playwright tests. Review report found in rv-diagram.jsonl (agent log)."
+}

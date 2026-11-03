@@ -1,0 +1,118 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/command-result.test.ts::an agent-prompt shows its notice, then sends its prompt as today",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/command-result.test.ts::a mode in a result goes through AMC's mode switch; an unknown mode refuses a prompt and sends nothing",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/command-result.test.ts::maps each result kind the SDK declares",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/command-result.test.ts::text and completed results show a row; completed without a message reads Done",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/command-result.test.ts::a completed result applies its mode, and says so when it cannot",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/command-result.test.ts::a subcommand menu returns its options and writes nothing; picking one runs the parent with it",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::a command's subcommand menu runs the pick, its other results land in AMC, and a kind AMC does not handle reads Not supported",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/command-result.test.ts::a timeline entry adds a row with its link and returns the prefill without sending it",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/drafts.test.ts::prefillDraft > keeps a draft below the suggestion instead of replacing it",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_5__.prefillDraft) is not a function"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/drafts.test.ts::prefillDraft > fills an empty message box with a command's suggestion",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_5__.prefillDraft) is not a function"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/command-result.test.ts::a model picker dialog asks the view to open AMC's picker; set-model goes through AMC's model switch with its warning",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/command-result.test.ts::runtimeSettingsChanged re-reads the session's settings",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/command-result.test.ts::set-model during a turn applies at turn end, as AMC's own picker does",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/command-result.test.ts::an unhandled kind shows a quiet Not supported row naming the command and kind, and never done",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/command-result.test.ts::never maps an unknown kind, a missing kind or a kind missing its required field to done",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/engine/command-result.ts' imported from $TMPDIR/reqgate-3n2v9kmi/tree/tests/unit/command-result.test.ts"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "7",
+      "test": "tests/unit/acp.test.ts::hands a slash command back as a prompt, so the host sends it and nothing goes out from the adapter",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.35
+}

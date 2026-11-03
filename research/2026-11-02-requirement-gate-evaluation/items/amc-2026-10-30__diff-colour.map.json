@@ -1,0 +1,27 @@
+{
+  "run": "amc-2026-10-30",
+  "item": "diff-colour",
+  "head": "8c84fece1a2ccd34f980e07f3d882b5b858c7265",
+  "base": "a36c03d8e025678c6fa2aa49295e2f8e8c75b70f",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/diff-colour.test.ts", "name": "gives every code line of a diff tokens with all four palettes", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "diff code lines get the reply highlighter's tokens for each palette"},
+      {"file": "tests/unit/diff-colour.test.ts", "name": "sorts a diff's lines into header, hunk, added, removed and context rows", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "added and removed rows stay marked as such alongside colouring"},
+      {"file": "tests/e2e/app.spec.ts", "name": "colours the code in a diff with the theme AMC is in, in the permission card, Changes and the pull request's Files pane", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "each diff view coloured in all four themes with add marks present; title names the MUST's list of views"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/diff-colour.test.ts", "name": "colours nothing for an unknown language or a diff over the cap", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "diffs over the line cap are left uncoloured"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "colours the code in a diff with the theme AMC is in, in the permission card, Changes and the pull request's Files pane", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "only indirect: accessibility scans per theme on the coloured diffs; no test measures code-colour contrast on the add/remove tints"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/diff-colour.test.ts", "name": "gives every code line of a diff tokens with all four palettes", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the unit test the MUST asks for; title echoes 'a diff's lines get tokens'"},
+      {"file": "tests/e2e/app.spec.ts", "name": "colours the code in a diff with the theme AMC is in, in the permission card, Changes and the pull request's Files pane", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "the browser test across each kind of diff view with expectCleanLayout"}
+    ]}
+  ],
+  "findings": [
+    {"round": "diff-colour-review", "n": "1", "musts": ["3"], "tests": ["tests/e2e/app.spec.ts::colours the code in a diff with the theme AMC is in, in the permission card, Changes and the pull request's Files pane"], "note": "the only related test is a browser accessibility scan that did not flag the sub-AA token colours on the tints; a Vitest contrast-threshold test for each theme would fail at head and so expose the unmet MUST, since the author could not have made it pass"}
+  ],
+  "notes": "diff-colour.test.ts and src/ui/diff-colour.ts are new, so on the base the unit tests fail at import rather than on an assertion. Tests are top-level (no describe). MUST 3 has no direct test; the Playwright mapping is weak. Report found as the final message in diff-colour-review.jsonl."
+}

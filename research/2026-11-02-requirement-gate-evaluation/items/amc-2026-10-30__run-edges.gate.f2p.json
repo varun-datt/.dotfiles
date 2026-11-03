@@ -1,0 +1,90 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/runs.test.ts::restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/runs.test.ts::a restored card whose orchestrator cannot be opened again says so and offers to end the run, which keeps every worktree and branch",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/runs.test.ts::restart while the finish card is open, with an answer that arrives as the host stops: the answer is refused, the card comes back, and the run merges",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/runs.test.ts::a failed run merge can be tried again: a second failure gives the new reason, two quick presses merge once, and success settles the offer",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/runs.test.ts::a worker merge that stops on a conflict names the files; its retry waits behind the run's running step, then merges as normal",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::a run's failed merge says why and can be tried again, which merges the run",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/runs.test.ts::restart while the finish card is open, with an answer that arrives as the host stops: the answer is refused, the card comes back, and the run merges",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/runs.test.ts::the orchestrator's turn ends on its own while a review card is open: the card stays answerable and merging carries the run on",
+      "status": "fail",
+      "reason": "passes on base: it cannot catch the change"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/runs.test.ts::a worker merge that stops on a conflict names the files; its retry waits behind the run's running step, then merges as normal",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/runs.test.ts::restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/runs.test.ts::a failed run merge can be tried again: a second failure gives the new reason, two quick presses merge once, and success settles the offer",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::a run's failed merge says why and can be tried again, which merges the run",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 1.19
+}

@@ -1,0 +1,17 @@
+## REQUIREMENTS MAP
+
+- MUST 1: tests/e2e/app.spec.ts::draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard [FAIL_TO_PASS]
+- MUST 1: tests/e2e/app.spec.ts::draws a Mermaid diagram from a finished reply, and keeps the source and an error for a broken one [PASS_TO_PASS]
+- MUST 2: tests/unit/diagram.test.ts::fences the source as mermaid [FAIL_TO_PASS]
+- MUST 2: tests/e2e/app.spec.ts::draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard [FAIL_TO_PASS]
+- MUST 2: tests/e2e/app.spec.ts::copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG [FAIL_TO_PASS]
+- MUST 3: tests/unit/diagram.test.ts::zoom math > fits and centres a wide diagram, never above 2x [FAIL_TO_PASS]
+- MUST 3: tests/unit/diagram.test.ts::zoom math > keeps the point under the cursor fixed [FAIL_TO_PASS]
+- MUST 3: tests/unit/diagram.test.ts::zoom math > shows actual size centred [FAIL_TO_PASS]
+- MUST 4: tests/e2e/app.spec.ts::copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG [FAIL_TO_PASS]
+- MUST 5: tests/unit/diagram.test.ts::fileName > uses the title line when there is one [FAIL_TO_PASS]
+- MUST 5: tests/unit/diagram.test.ts::fileName > uses the first line otherwise, skipping comments and front matter [FAIL_TO_PASS]
+- MUST 5: tests/e2e/app.spec.ts::copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG [FAIL_TO_PASS]
+- MUST 6: tests/unit/diagram.test.ts::zoom math > clamps the scale [FAIL_TO_PASS]
+- MUST 6: tests/unit/diagram.test.ts::zoom math > keeps the point under the cursor fixed [FAIL_TO_PASS]
+- MUST 7: tests/e2e/app.spec.ts::draws a Mermaid diagram from a finished reply, and keeps the source and an error for a broken one [PASS_TO_PASS]

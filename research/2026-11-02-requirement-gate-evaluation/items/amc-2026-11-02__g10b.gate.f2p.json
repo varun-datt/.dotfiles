@@ -1,0 +1,103 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/type-rules.test.ts::a Copilot-style engine gets the type's rules folder as instructionDirectories on create and resume, for chat, task try, run worker, orchestrator and fork",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/type-rules.ts' imported from $TMPDIR/reqgate-x8_avwox/tree/tests/unit/type-rules.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/type-rules.test.ts::with no folder for the type, or an unknown type, nothing is passed and the view says no rules; a resume after the folder appears passes it",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/type-rules.ts' imported from $TMPDIR/reqgate-x8_avwox/tree/tests/unit/type-rules.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/type-rules.test.ts::a rules folder that is a link leading outside the agents folder is refused with a reason; one leading inside it is used",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/type-rules.ts' imported from $TMPDIR/reqgate-x8_avwox/tree/tests/unit/type-rules.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/type-rules.test.ts::Cursor (ACP) gets the rules as one context block before the first prompt, and not again on the next turn",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/type-rules.ts' imported from $TMPDIR/reqgate-x8_avwox/tree/tests/unit/type-rules.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/type-rules.test.ts::the context block: a file over the cap is cut with a note, files after it are left out with a note, a non-UTF-8 file is skipped with a note",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/type-rules.ts' imported from $TMPDIR/reqgate-x8_avwox/tree/tests/unit/type-rules.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/type-rules.test.ts::the context block: one file, several files in name order, the source named, fenced",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/type-rules.ts' imported from $TMPDIR/reqgate-x8_avwox/tree/tests/unit/type-rules.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::the catalog names the repository type and its rules folder, and shows the same special-repo switches as the panel, a change in either showing in the other",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/type-rules.test.ts::with no folder for the type, or an unknown type, nothing is passed and the view says no rules; a resume after the folder appears passes it",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/type-rules.ts' imported from $TMPDIR/reqgate-x8_avwox/tree/tests/unit/type-rules.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/special-repos.test.ts::in a run, order send, change, engine-made end: the change is stored at once, shown as pending, and applied once at the turn's end",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: this session is part of a running run; change its special repos when the run ends"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/special-repos.test.ts::in a run, order send, change, Stop, late events after Stop: applied exactly once and the late end changes nothing",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: this session is part of a running run; change its special repos when the run ends"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/special-repos.test.ts::in a run, order change, engine-made end, refused reopen: the switch stays stored, the failure is shown on it, and the next send retries",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: this session is part of a running run; change its special repos when the run ends"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/run-switches.test.ts::a run started from a session with one switch on: its orchestrator and every worker start with that switch",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/run-switches.test.ts::a run started from a session with no switch on, or with no source session: orchestrator and workers start with none",
+      "status": "fail",
+      "reason": "passes on base: it cannot catch the change"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/run-switches.test.ts::switches changed in the source session, or in the orchestrator, after the run started do not reach the run's later workers",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: this session is part of a running run; change its special repos when the run ends"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.38
+}

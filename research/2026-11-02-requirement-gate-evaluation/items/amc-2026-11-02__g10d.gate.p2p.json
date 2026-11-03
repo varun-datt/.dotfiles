@@ -1,0 +1,61 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [
+    "MUST 1 has no line in the REQUIREMENTS MAP",
+    "MUST 3 has no line in the REQUIREMENTS MAP",
+    "MUST 4 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "2",
+      "test": "tests/unit/workspaces.test.ts::workspaces in the nav > groups by repository, falls back to the folder, nests forks under their root, and places cloud sessions",
+      "status": "pass",
+      "reason": "killed 20 of 43 mutants it covers (Killed 20, Survived 9, Timeout 1, KilledByOtherTests 13)",
+      "mutants": {
+        "attempted": 43,
+        "Killed": 20,
+        "Survived": 9,
+        "Timeout": 1,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 13
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "1",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "3",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "4",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 114,
+  "mutant_statuses": {
+    "NoCoverage": 114,
+    "Survived": 19,
+    "Killed": 81,
+    "Timeout": 14
+  },
+  "minutes": 5.89
+}

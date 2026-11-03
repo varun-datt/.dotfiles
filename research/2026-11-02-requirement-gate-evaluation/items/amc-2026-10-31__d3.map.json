@@ -1,0 +1,17 @@
+{
+  "run": "amc-2026-10-31", "item": "d3", "head": "504326a51fe37fdfd87867faedf72a20e780e01b", "base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "a late Report a problem reply, saved or failed, leaves the New session dialog opened after it and what was typed in it", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "late save or failure reply held by page.route, then a New session dialog opened"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "saving the work pack folder keeps an unsaved Parent folder draft, and saving the Parent folder keeps a pack folder draft", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "sibling save keeps the draft text; the caret is not asserted"}
+    ]},
+    {"must": "3", "none": "an impact-map listing requirement; no skipped test or extra test was added for other class members"},
+    {"must": "4", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "Report a problem saves the note with the view and session to the inbox, and keeps it when the save fails", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "existing test of a normal report save, unchanged"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. The branch changed only tests/e2e/app.spec.ts and src/ui files that no Vitest test covers, so every mapped test is Playwright-only."
+}

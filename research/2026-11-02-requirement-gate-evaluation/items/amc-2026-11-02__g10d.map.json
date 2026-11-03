@@ -1,0 +1,28 @@
+{
+  "run": "amc-2026-11-02", "item": "g10d", "head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4", "base": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/worktree-grouping.test.ts", "name": "a chat session, a task try and a run worker of a child repository list under its workspace inside the product repos folder", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "grouped() places chat, try, orchestrator and worker rows under the child repo inside the product-repos workspace; title quotes the MUST's cases"},
+      {"file": "tests/unit/worktree-grouping.test.ts", "name": "a session whose origin repository was deleted is still listed under the folder, and its workspace is marked missing only when every session's origin is gone", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "deleted-origin case: still listed and marked missing; title quotes the case"},
+      {"file": "tests/unit/worktree-grouping.test.ts", "name": "100 child repositories, each with a try, give 100 workspaces under the folder in name order and no stray", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the 100-child-repos case with worktree tries grouped by origin"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/worktree-grouping.test.ts", "name": "a standalone repository's task try groups under that repository's workspace, as its chat sessions do, by key or by origin", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "standalone repo's try joins its chat sessions' workspace; title quotes the MUST"},
+      {"file": "tests/unit/workspaces.test.ts", "name": "workspaces in the nav > groups by repository, falls back to the folder, nests forks under their root, and places cloud sessions", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "unchanged base test of how chat sessions group, the behaviour worktree sessions must match"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "the session panel's Reaches line names the switched-on special repos, with each path on hover, and says Only this repository when none is on", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "only test of the Reaches line (src/ui/special.tsx); browser only"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/worktree-grouping.test.ts", "name": "a regroup keeps each row's id and star, and a plain folder session keeps its own folder's key whatever its origin", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a starred worktree row keeps its object, id and star under its new group; does not check folds, hand order or keys"},
+      {"file": "tests/e2e/app.spec.ts", "name": "task tries and run workers list under their repository inside the product repos workspace, with a deleted origin marked, stars kept and every row reachable by Tab", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "browser check of stars kept and keyboard reach of nested rows (Tab, not arrows); also covers MUST 1 visually"}
+    ]}
+  ],
+  "findings": [
+    {"round": "g10d-review", "n": "2", "musts": ["1"], "tests": ["tests/unit/worktree-grouping.test.ts::a session whose origin repository was deleted is still listed under the folder, and its workspace is marked missing only when every session's origin is gone"], "note": "The mapped test asserts the marker is dropped when a healthy clone shares the key, enshrining the gap; a test expecting a per-session marker would fail on head (partial: the right expectation, not a base run, is what exposes it)."},
+    {"round": "g10d-review", "n": "3", "musts": ["3"], "tests": ["tests/e2e/app.spec.ts::the session panel's Reaches line names the switched-on special repos, with each path on hover, and says Only this repository when none is on"], "note": "Folding the special-repos section hides the line; the browser test never folds it, and no fail-on-base check would expose this."},
+    {"round": "g10d-rereview", "n": "c1", "musts": ["4", "1"], "tests": ["tests/unit/worktree-grouping.test.ts::a regroup keeps each row's id and star, and a plain folder session keeps its own folder's key whatever its origin", "tests/e2e/app.spec.ts::task tries and run workers list under their repository inside the product repos workspace, with a deleted origin marked, stars kept and every row reachable by Tab"], "note": "Tests cover the grouping helper but not consumers such as the tab title and scoped file search; a coverage gap that a fail-on-base check does not measure."},
+    {"round": "g10d-review", "n": "4", "musts": ["1", "4"], "tests": ["tests/e2e/app.spec.ts::task tries and run workers list under their repository inside the product repos workspace, with a deleted origin marked, stars kept and every row reachable by Tab", "tests/unit/worktree-grouping.test.ts::a regroup keeps each row's id and star, and a plain folder session keeps its own folder's key whatever its origin"], "note": "The acceptance tests check proxies (fixture without hidden tries, Tab instead of arrows, identity without an actual regroup); they fail on base yet still pass on head, so a fail-on-base gate would accept them."}
+  ],
+  "notes": "Head includes s2's commits, so actions, server, task-loop and the New run e2e tests belong to s2. MUST 3 has no Vitest test (Playwright only). Other MUST 1 unit cases in worktree-grouping.test.ts (80-character name, failed repository key, fork of a try) and the host test 'the host marks a session whose origin folder is gone, and only that one' also fit. MUST 4's folds and hand order have no direct test at this head."
+}

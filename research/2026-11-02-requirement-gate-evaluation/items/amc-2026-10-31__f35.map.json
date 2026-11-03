@@ -1,0 +1,32 @@
+{
+  "run": "amc-2026-10-31", "item": "f35",
+  "head": "627d2873c9d18a28738192e115c981770878c654", "base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/palette.test.ts", "name": "the text-in-files scope > is chosen by % and keeps every other key as it was", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the % scope parse is new in src/ui/palette.ts"},
+      {"file": "tests/unit/palette.test.ts", "name": "the text-in-files scope > shows only the latest search's answer when an earlier one answers later", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the typing-fast case: a slower earlier answer never replaces a newer one (latestOnly is new)"},
+      {"file": "tests/unit/palette.test.ts", "name": "the text-in-files scope > marks the match inside a line, and leaves the line whole when the match is out of range", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the row's marked match (marked is new)"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "% finds text inside the workspace's files and opens a hit at its line", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "only test that chooses a hit and checks the file view opens at the line, including past the first screen and a deleted file; Playwright, not run by the gate"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a git workspace > is case-sensitive when the query has a capital letter", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 3's capital-letter rule; new source src/host/text-search.ts"},
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a git workspace > skips ignored and binary files and finds untracked ones", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "ignored, binary and untracked cases of the git grep search"},
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a git workspace > matches -dash literally", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the query-starting-with-dash case; name is the it.each title with %s filled by the string, as Vitest prints it"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a folder that is not a git repository > walks the folder, skipping node_modules, big and binary files and symlinks", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 4's skip list; non-git match, nested node_modules, over 1 MB file and outside symlinks"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a git workspace > stops at the hit limit, says so and leaves no git running", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "200-hit cap with the truncated flag and no child left running"},
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a git workspace > stops a slow search when asked and at its deadline, and kills the child", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "cancel and deadline both return truncated and kill the git child"},
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a folder that is not a git repository > stops the walk at its deadline and when asked", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "deadline and abort for the folder walk"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/server.test.ts", "name": "host server > searches text only in a known session's folder, returns relative paths and refuses anything else", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new endpoint: relative paths for a known session, 4xx for unknown, .. and absolute paths"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. MUST 2 is checked only by a Playwright test. The palette's cut-short message (MUST 5) and the 3-second default are not unit-tested (tests pass a short timeout). The -dash it.each name assumes Vitest prints %s strings unquoted."
+}

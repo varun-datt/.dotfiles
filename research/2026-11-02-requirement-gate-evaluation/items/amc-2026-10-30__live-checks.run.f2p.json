@@ -1,0 +1,14 @@
+{
+ "id": "amc-2026-10-30__live-checks",
+ "phase": "f2p",
+ "exit": 0,
+ "wall_min": 0.11,
+ "load_exit": 0,
+ "stderr": "",
+ "stdout_tail": "MUST 1 | FAIL_TO_PASS | tests/live/workflows.live.test.ts::workflows on real Copilot > tool-search | fail | error at head: Vitest exited 1: no output; it did not report the file\nMUST 1 | FAIL_TO_PASS | tests/live/workflows.live.test.ts::workflows on real Copilot > run-findings | fail | error at head: Vitest exited 1: no output; it did not report the file\nMUST 2 | FAIL_TO_PASS | tests/unit/one-shot.test.ts::Copilot tool search option > reaches the session config only when set | pass | fails on base on an assertion\nMUST 2 | FAIL_TO_PASS | tests/live/workflows.live.test.ts::workflows on real Copilot > tool-search | fail | error at head: Vitest exited 1: no output; it did not report the file\nMUST 3 | none | - | none | running the live suite on the default model within the budget is an operational step; the live cap check has a computed title and was skipped\nMUST 4 | none | - | none | recording passed workflows after a leak scan is an operational step; the live test's leak scan predates the branch and no test checks recording\nMUST 5 | FAIL_TO_PASS | tests/unit/transcript.test.ts::buildView > shows a hand-over summary without the model's analysis block | pass | fails on base on an assertion\nMUST 5 | FAIL_TO_PASS | tests/e2e/app.spec.ts::opens the full summary from the glance card, writes it once, switches back to the card, and counts the messages since the card | fail | error at head: Vitest exited 1: no output; it did not report the file\nFAIL: 5 MUSTs, 4 failing tests, 0 problems, 2 none (the owner decides whether none should fail), 0 mutants, 0.11 min\n",
+ "leftover_worktrees": [],
+ "leftover_removed": false,
+ "head": "8f27343d56d2662e884aba28a0a67ccf4683b689",
+ "base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+ "cmd": "~/worktrees/chezmoi/r3/dotfiles/dot_agents/skills/orchestrator-workers/scripts/reqgate.py check --repo ~/sandbox/personal/agent-mission-control --base 231b968facf8dd04e3d05f5876e60aa4555aaa54 --head 8f27343d56d2662e884aba28a0a67ccf4683b689 --brief ~/.local/state/orchestrator-workers/amc-2026-10-30/live-checks.prompt.md --report ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-30__live-checks.report.f2p.md --warn --json ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-30__live-checks.gate.f2p.json --timeout 180 --mutants none"
+}

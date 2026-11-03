@@ -1,0 +1,27 @@
+{
+  "run": "amc-2026-10-31", "item": "d1", "head": "91e790c88e2b7cd687c6c59c68f57ee2b12d9615", "base": "e4c5605e00053c256acfbd8915a0893db25fca2b",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/inside.test.ts", "name": "MUST 1: whatever is linked or swapped, the bytes read come from inside the root", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "fast-check property over link layouts and swap points; cites MUST 1"},
+      {"file": "tests/unit/inside.test.ts", "name": "TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "notes and pin read with a swap between check and read"},
+      {"file": "tests/unit/inside.test.ts", "name": "TD-10: a folder under a history root swapped for an outward link between the check and the read is not read", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "history reader with a folder swapped between check and read"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/inside.test.ts", "name": "MUST 2: a root given with a trailing / or /. is refused even when it is otherwise a plain folder", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "trailing slash forms refused; cites MUST 2"},
+      {"file": "tests/unit/inside.test.ts", "name": "TD-9: a history root given with a trailing /, /. or // through a link is refused as unsafe", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "trailing forms through a link"},
+      {"file": "tests/unit/inside.test.ts", "name": "TD-11: a history root whose parent folder is a link is refused as unsafe", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a root whose parent folder is a link"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/inside.test.ts", "name": "TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "refusal uses the existing outside-folder message"},
+      {"file": "tests/unit/history.test.ts", "name": "a history root that is itself a link is not read, and the source is reported as unsafe", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "the existing unsafe outcome for a refused root is kept"},
+      {"file": "tests/unit/inside.test.ts", "name": "TD-10: a folder under a history root swapped for an outward link between the check and the read is not read", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the reader returns null instead of throwing"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/history.test.ts", "name": "Copilot CLI: counts a normal session's facets by rule", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "a normal history read is unchanged"},
+      {"file": "tests/unit/history.test.ts", "name": "reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "normal repeated history reads"},
+      {"file": "tests/unit/file-write.test.ts", "name": "writeTextFile > reads a file that is not valid UTF-8 as read-only, hashed on its own bytes, and refuses to save it", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "normal pin-file read through the changed pins.ts"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. inside.test.ts imports a new module (src/host/inside.ts), so on base every test in it fails at import, not on an assertion. No route-level test checks that a refusal never throws out of a request handler (MUST 3). The history.test.ts diff only resolves its temp folder's real path."
+}

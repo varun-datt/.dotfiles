@@ -1,0 +1,41 @@
+{
+  "run": "amc-2026-10-28",
+  "item": "pr-overview",
+  "head": "e7d412a7e6cd7a540845526b0df2cb636d19efa7",
+  "base": "aa2b6f4133533626d7465a8e35f608164551855b",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > lists a failed and a running build, and leaves the passed one to the quiet line", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "only failing and running builds become blocker rows, the passed build goes to the summary line; title echoes the MUST's quiet-line wording"},
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "no blocker rows and a single passed summary when nothing blocks; title quotes the MUST's when-nothing-blocks wording"},
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > lists merge conflicts, open threads with their one file, and a draft", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "conflict, thread and draft blocker kinds with the Go to them next step"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/ado-overview.test.ts", "name": "reviewer photos > fetches only from the organisation's own Azure DevOps address, and refuses an id that is not a plain id", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "photo fetch goes only to the configured organisation's host and rejects caller-shaped ids; title echoes the MUST's only-from-the-organisation wording"},
+      {"file": "tests/unit/ado-overview.test.ts", "name": "reviewer photos > caps its cache by count, keeps a missing photo as missing, and writes nothing to disk", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "in-memory cache capped by count and no file writes; title echoes the MUST's never-writes-to-disk wording"},
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > marks nobody as you when the signed-in identity cannot be read", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the You match depends on the signed-in identity; required-once and initials fallback are only checked in the browser test"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/ado.test.ts", "name": "Azure DevOps work items > reads a pull request in any project: blockers in fix order, reviewers, builds, open threads by file, size and linked work items", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "linked work items were already read at base; test edited only for new reviewer fields; does not check the HTTP verb"},
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "also asserts the linked work item ids on the overview data"},
+      {"file": "tests/e2e/app.spec.ts", "name": "opens an Azure DevOps pull request in a tab from Home and from ! in the palette, with what blocks it, its checks and its linked work items", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "a linked work item opens AMC's work item tab"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "when nothing blocks a pull request, the overview says so in one quiet line, shows each reviewer once with required on the reviewer, You for the signed-in person, initials when a photo fails, and work items last", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "Raw switch shows every check including passed ones, every reviewer with raw vote and the branches"},
+      {"file": "tests/e2e/app.spec.ts", "name": "opens an Azure DevOps pull request in a tab from Home and from ! in the palette, with what blocks it, its checks and its linked work items", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "switches Raw and back to Insights; checks and activity under Raw"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "when nothing blocks a pull request, the overview says so in one quiet line, shows each reviewer once with required on the reviewer, You for the signed-in person, initials when a photo fails, and work items last", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "section order puts the description after status and reviewers"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a pull request opens on its sanitised description, lists its changed files with a read-only side-by-side diff, and shows its threads nested", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "sanitised description still renders (tab name updated to Overview)"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > names who rejected it and who waits for the author, each pointing at the comments", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "made-up fixture per blocker kind in the fake Azure DevOps"},
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > lists a rejected and a running policy, and skips the reviewer-count policy", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "policy blocker fixture"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the pull request overview lists a draft blocker: It is a draft", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "one of the per-blocker browser tests with expectCleanLayout (title built by a template literal in a loop)"}
+    ]}
+  ],
+  "findings": [
+    {"round": "rv-pr-overview", "n": "F4", "musts": ["3"], "tests": ["tests/unit/ado.test.ts::Azure DevOps work items > reads a pull request in any project: blockers in fix order, reviewers, builds, open threads by file, size and linked work items"], "note": "work item details for the linked list come from a pre-existing read-only batch POST rather than the GET the MUST names; no mapped test asserts the request verb, and a test that did would fail on base and at head, so it would expose this (ruling rejected it as a literal reading)"},
+    {"round": "rv-pr-overview", "n": "F5", "musts": ["6", "1", "2"], "tests": ["tests/e2e/app.spec.ts::the pull request overview lists a draft blocker: It is a draft", "tests/unit/ado-overview.test.ts::reviewer photos > fetches only from the organisation's own Azure DevOps address, and refuses an id that is not a plain id"], "note": "test-focus finding: browser cases skip some implemented blocker kinds, and the photo tests call the client method instead of the HTTP route, so route-level auth and verb regressions go unchecked"}
+  ],
+  "notes": "MUSTs 4 and 5 have only Playwright tests. Per-blocker browser tests are generated by a loop with a template-literal title; names are given as Vitest/Playwright would print them. ado.test.ts change for MUST 3 is an edit to an existing test, so on base it fails for the reviewer shape, not the work items. Review findings found in rv-pr-overview.jsonl."
+}

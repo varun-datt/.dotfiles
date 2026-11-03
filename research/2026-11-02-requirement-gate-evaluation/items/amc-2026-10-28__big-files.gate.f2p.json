@@ -1,0 +1,97 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "5",
+      "why": "no test checks either engine adapter's outgoing payload for a by-path attachment; both use the shared documents block, verified only by reading source"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/attachments.test.ts::attachments > keeps refusing a binary or non-UTF-8 file sent by path, judged from its head",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/server.test.ts::host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/attachments.test.ts::attachments > asks above 5 MB: refuses an unconfirmed file with 428, and not at or under 5 MB",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::asks before sending a file over 5 MB: Cancel and Escape keep the draft, Send delivers it by path",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/attachments.test.ts::attachments > still delivers the message when a file is over 100 MB or gone, tells the owner why, and records a by-path file with its size",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: promise resolved \"undefined\" instead of rejecting"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/server.test.ts::host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "6",
+      "test": "tests/e2e/app.spec.ts::asks before sending a file over 5 MB: Cancel and Escape keep the draft, Send delivers it by path",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.26
+}

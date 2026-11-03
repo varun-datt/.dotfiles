@@ -1,0 +1,27 @@
+{
+  "run": "amc-2026-10-31", "item": "d4",
+  "head": "8edf0e0233511f0a63c179279c22b002b8923162", "base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/knowledge.test.ts", "name": "a notes query that looks like one of kb's options reaches kb as the query, from every search path", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "runs an argparse stand-in for kb with option-like queries through notes, forMessage and search; on base the query lands before --json without a marker so argparse reads it as an option"},
+      {"file": "tests/unit/knowledge.test.ts", "name": "every query is the last argument, after kb's end-of-options marker", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "checks kbSearchArgs puts the query last after --; title quotes MUST 1's end-of-options marker wording; kbSearchArgs is new"},
+      {"file": "tests/unit/text-search.test.ts", "name": "a query is only ever searched as text (TD-26) > searches a query that looks like a git grep option as text, never as an option", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "git grep already received the query after -e on base (src/host/text-search.ts unchanged there), so this new test guards existing behaviour; covers the git grep member of MUST 1"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/text-search.test.ts", "name": "a query is only ever searched as text (TD-26) > trims surrounding whitespace and newlines, then finds what the bare query finds, in git and in the walk", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the trim rule for git grep and the folder walk is new in src/host/text-search.ts"},
+      {"file": "tests/unit/text-search.test.ts", "name": "a query is only ever searched as text (TD-26) > refuses an empty query, one of only newlines, and one with a line break inside", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "textQuery refusal of empty, newline-only and inner-newline queries is new"},
+      {"file": "tests/unit/knowledge.test.ts", "name": "a notes query that looks like one of kb's options reaches kb as the query, from every search path", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "its last assertion checks a notes query wrapped in newlines reaches kb trimmed (kb route of the same rule)"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/knowledge.test.ts", "name": "passes kb's arguments as a list, with sources for the agent's own search", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "asserts the exact argument array handed to the kb runner with a shell-like query; expectation changed to the new layout so it fails on base"},
+      {"file": "tests/unit/text-search.test.ts", "name": "a query is only ever searched as text (TD-26) > searches a query that looks like a git grep option as text, never as an option", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "a pager-command query must not create the marker file, which a shell string would allow; git grep was already spawned with an array at base"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a git workspace > finds every hit in a file with its line, case-insensitive for a lower-case query", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "unchanged test of an ordinary git grep query covering the changed searchText entry"},
+      {"file": "tests/unit/text-search.test.ts", "name": "searching text in a folder that is not a git repository > walks the folder, skipping node_modules, big and binary files and symlinks", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "unchanged test of an ordinary walk query through the changed walkSearch entry"},
+      {"file": "tests/unit/knowledge.test.ts", "name": "reads kb's outcomes: hits, none, outside every source, a timeout and bad output", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "unchanged kb test of ordinary queries going through the changed argument builder and fake runner"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. Tests cite debt rows TD-3/TD-26 rather than MUST numbers, so only the end-of-options title counts as strict. The git grep member already used -e at base, so the new git-grep option test is classed PASS_TO_PASS. The it.each literal-matching test was skipped because its printed name holds shell metacharacters."
+}

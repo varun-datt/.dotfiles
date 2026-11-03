@@ -1,0 +1,16 @@
+{
+ "id": "amc-2026-10-28__gaps-3",
+ "phase": "p2p",
+ "exit": 0,
+ "wall_min": 2.74,
+ "load_exit": 0,
+ "stderr": "",
+ "stdout_tail": "MUST 1 | PASS_TO_PASS | tests/unit/acp.test.ts::asks again when an approved command comes back with other environment variables or another folder, and says so on the card | pass | killed 5 of 11 mutants it covers (Killed 5, Survived 4, KilledByOtherTests 2); mutants attempted 11: Killed 5, Survived 4, Timeout 0, KilledByOtherTests 2\nMUST 2 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 3 | PASS_TO_PASS | tests/unit/code-tool.test.ts::hover on a symbol declared outside the folder says so instead of showing its signature and docs | pass | killed 4 of 7 mutants it covers (Killed 4, Survived 1, KilledByOtherTests 2); mutants attempted 7: Killed 4, Survived 1, Timeout 0, KilledByOtherTests 2\nMUST 4 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nproblem: MUST 2 has no line in the REQUIREMENTS MAP\nproblem: MUST 4 has no line in the REQUIREMENTS MAP\nFAIL: 4 MUSTs, 0 failing tests, 2 problems, 0 none (the owner decides whether none should fail), 71 mutants, 2.74 min\n",
+ "leftover_worktrees": [
+  "$TMPDIR/reqgate-b8qmq_gq/tree"
+ ],
+ "leftover_removed": false,
+ "head": "cc97c39a01a3f2069f4e44c0cd51e00cd8dd6aa4",
+ "base": "ab27bb5ba09f8835476457b609f1bde018051627",
+ "cmd": "~/worktrees/chezmoi/r3/dotfiles/dot_agents/skills/orchestrator-workers/scripts/reqgate.py check --repo ~/sandbox/personal/agent-mission-control --base ab27bb5ba09f8835476457b609f1bde018051627 --head cc97c39a01a3f2069f4e44c0cd51e00cd8dd6aa4 --brief ~/.local/state/orchestrator-workers/amc-2026-10-28/gaps-3.prompt.md --report ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-28__gaps-3.report.p2p.md --warn --json ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-28__gaps-3.gate.p2p.json --timeout 180 --mutants stryker --stryker-timeout 1200 --stryker-cmd npx --no-install stryker run ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/scripts/stryker.eval.json"
+}

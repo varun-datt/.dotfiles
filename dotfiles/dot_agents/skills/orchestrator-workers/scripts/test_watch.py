@@ -147,6 +147,51 @@ class WatchTest(unittest.TestCase):
                     self.assertTrue(first == reason or first.startswith(reason + ':') or first.startswith(reason + ';'), first)
                     self.assertEqual(clock.sleeps, sleeps)
 
+    def queue(self, review, runner=True):
+        os.makedirs(self.run_dir, exist_ok=True)
+        step = lambda n, **kw: {'name': n, 'start': None, 'end': None, 'exit': None, 'pid': None, **kw}
+        item = {'id': 'a', 'after': [], 'slot': True, 'priority': 0, 'added': 1.0, 'done': False,
+                'pipeline': [step('build', start=1.0, end=2.0, exit=0), review, step('suspend:rulings'), step('fix')]}
+        with open(os.path.join(self.run_dir, 'queue.json'), 'w') as f:
+            json.dump({'items': [item]}, f)
+        if runner:
+            pid = os.getpid()
+        else:
+            p = subprocess.Popen(['true'])
+            p.wait()
+            pid = p.pid
+        with open(os.path.join(self.run_dir, 'queue.pid'), 'w') as f:
+            f.write(str(pid))
+
+    def test_no_idle_while_the_queue_runner_has_a_pipeline_step_ready_or_launching(self):
+        self.register()
+        done = [row('a', 'done')]
+        ready = {'name': 'review', 'start': None, 'end': None, 'exit': None, 'pid': None}
+        launching = {**ready, 'start': 3.0}
+        passed = {**ready, 'start': 3.0, 'end': 4.0, 'exit': 0}
+        for label, review in (('ready', ready), ('launching', launching)):
+            with self.subTest(label):
+                self.queue(review)
+                code, out, clock = self.watch(done, '2')
+                self.assertEqual(out.getvalue().splitlines(), ['HEARTBEAT: 2 awake minutes; running=0 stalled=0 died=0'])
+                self.assertEqual(clock.sleeps, 2)
+        with self.subTest('suspended for the chat'):
+            self.queue(passed)
+            self.assertEqual(self.lines(done, '2'), ['IDLE: no worker running; running=0 stalled=0 died=0'])
+        with self.subTest('runner not running'):
+            self.queue(ready, runner=False)
+            self.assertEqual(self.lines(done, '2'), ['IDLE: no worker running; running=0 stalled=0 died=0'])
+        with self.subTest('the step suspends while watching'):
+            self.queue(ready)
+
+            def rows(n):
+                if n == 2:
+                    self.queue(passed)
+                return done
+            code, out, clock = self.watch(rows, '60')
+            self.assertEqual(out.getvalue().splitlines(), ['IDLE: no worker running; running=0 stalled=0 died=0'])
+            self.assertEqual(clock.sleeps, 1)
+
     def test_a_stall_waits_for_the_stall_minutes_after_wake(self):
         self.register()
         _, out, clock = self.watch([row('stuck', 'STALLED', idle=30)], '60')

@@ -1,0 +1,14 @@
+{
+ "id": "amc-2026-11-02__s2",
+ "phase": "p2p",
+ "exit": 0,
+ "wall_min": 3.82,
+ "load_exit": 0,
+ "stderr": "",
+ "stdout_tail": "MUST 1 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 2 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 3 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 4 | PASS_TO_PASS | tests/unit/task-loop.test.ts::a brief takes 1 to 5 tries and refuses 0 or 6 | not checked | covers no changed line; mutants attempted 0: Killed 0, Survived 0, Timeout 0\nMUST 5 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nproblem: MUST 1 has no line in the REQUIREMENTS MAP\nproblem: MUST 2 has no line in the REQUIREMENTS MAP\nproblem: MUST 3 has no line in the REQUIREMENTS MAP\nproblem: MUST 5 has no line in the REQUIREMENTS MAP\nFAIL: 5 MUSTs, 0 failing tests, 4 problems, 0 none (the owner decides whether none should fail), 54 mutants, 3.81 min\n",
+ "leftover_worktrees": [],
+ "leftover_removed": false,
+ "head": "7ebb8444b2f9eb7776efd7a644cc5ba27d14e2e3",
+ "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+ "cmd": "~/worktrees/chezmoi/r3/dotfiles/dot_agents/skills/orchestrator-workers/scripts/reqgate.py check --repo ~/sandbox/personal/agent-mission-control --base 8c9fdd9dcdec47151475f9f9f37b65629a41a5c8 --head 7ebb8444b2f9eb7776efd7a644cc5ba27d14e2e3 --brief ~/.local/state/orchestrator-workers/amc-2026-11-02/s2.prompt.md --report ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-11-02__s2.report.p2p.md --warn --json ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-11-02__s2.gate.p2p.json --timeout 180 --mutants stryker --stryker-timeout 1200 --stryker-cmd npx --no-install stryker run ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/scripts/stryker.eval.json"
+}

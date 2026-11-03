@@ -1,0 +1,129 @@
+{
+  "passed": true,
+  "musts": [
+    "1",
+    "2",
+    "3"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty",
+      "status": "pass",
+      "reason": "killed 11 of 11 mutants it covers (Killed 11)",
+      "mutants": {
+        "attempted": 11,
+        "Killed": 11,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group",
+      "status": "pass",
+      "reason": "killed 12 of 12 mutants it covers (Killed 12)",
+      "mutants": {
+        "attempted": 12,
+        "Killed": 12,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/order.test.ts::tab order > uses the default bar until the owner moves something, and never loses an action",
+      "status": "pass",
+      "reason": "killed 10 of 12 mutants it covers (Killed 10, KilledByOtherTests 2)",
+      "mutants": {
+        "attempted": 12,
+        "Killed": 10,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 2
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/order.test.ts::tab order > says why an action is not offered, and nothing when it is",
+      "status": "pass",
+      "reason": "killed 24 of 28 mutants it covers (Killed 24, Survived 4)",
+      "mutants": {
+        "attempted": 28,
+        "Killed": 24,
+        "Survived": 4,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty",
+      "status": "pass",
+      "reason": "killed 11 of 11 mutants it covers (Killed 11)",
+      "mutants": {
+        "attempted": 11,
+        "Killed": 11,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group",
+      "status": "pass",
+      "reason": "killed 12 of 12 mutants it covers (Killed 12)",
+      "mutants": {
+        "attempted": 12,
+        "Killed": 12,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 40,
+  "mutant_statuses": {
+    "NoCoverage": 25,
+    "Killed": 36,
+    "Survived": 4
+  },
+  "minutes": 0.2
+}

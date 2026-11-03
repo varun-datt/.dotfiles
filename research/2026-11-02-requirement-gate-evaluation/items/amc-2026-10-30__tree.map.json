@@ -1,0 +1,22 @@
+{
+  "run": "amc-2026-10-30", "item": "tree", "head": "04bee9d540e1e24baf6cdd25fbf978e63cae25df", "base": "c8bc8195092e80dc449ed7cd841cb3e241140c46",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "a pull request opens on its sanitised description, lists its changed files with a read-only side-by-side diff, and shows its threads nested", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "existing PR files test, selectors adjusted; guards the rows and behaviours kept"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the Files pane shows a file side by side, inline, as a Markdown preview or raw, shows an image as before and after, and remembers the view over a reload", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "existing tree-driven file selection, kept working"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "exercises the rebuilt tree; no direct check of the package choice"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "title quotes the MUST's tree-pattern key list"},
+      {"file": "tests/e2e/app.spec.ts", "name": "next change reveals a file whose folder is closed and moves the tree's focus to it", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "next change driving the open folders from outside"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Alt+F5 and Shift+Alt+F5 move between changes, past a file's last change to the next file, and the help lists them", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "existing next-change test, kept working"}
+    ]},
+    {"must": "3", "none": "start-up size is a build measure; tests/unit/entry-budget.test.ts checks only the byte counter and touches no changed line"},
+    {"must": "4", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "browser test of every key with expectCleanLayout"},
+      {"file": "tests/e2e/app.spec.ts", "name": "next change reveals a file whose folder is closed and moves the tree's focus to it", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "next change with expectCleanLayout"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. The branch changed only tests/e2e/app.spec.ts, and no Vitest test covers src/ui/pr-files.tsx, so every mapped test is Playwright-only and the gate's Vitest runner can check none of them."
+}

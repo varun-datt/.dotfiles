@@ -1,0 +1,36 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2"
+  ],
+  "problems": [
+    "MUST 1 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "2",
+      "test": "tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list",
+      "status": "fail",
+      "reason": "Stryker failed (exit 1):   innerError: undefined | } | Node.js v26.12.1"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list",
+      "status": "fail",
+      "reason": "Stryker failed (exit 1):   innerError: undefined | } | Node.js v26.12.1"
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "1",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.07
+}

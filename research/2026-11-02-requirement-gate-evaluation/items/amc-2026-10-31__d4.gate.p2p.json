@@ -1,0 +1,120 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [
+    "MUST 2 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/text-search.test.ts::a query is only ever searched as text (TD-26) > searches a query that looks like a git grep option as text, never as an option",
+      "status": "pass",
+      "reason": "killed 4 of 7 mutants it covers (Killed 4, KilledByOtherTests 3)",
+      "mutants": {
+        "attempted": 7,
+        "Killed": 4,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 3
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/text-search.test.ts::a query is only ever searched as text (TD-26) > searches a query that looks like a git grep option as text, never as an option",
+      "status": "pass",
+      "reason": "killed 4 of 7 mutants it covers (Killed 4, KilledByOtherTests 3)",
+      "mutants": {
+        "attempted": 7,
+        "Killed": 4,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 3
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/text-search.test.ts::searching text in a git workspace > finds every hit in a file with its line, case-insensitive for a lower-case query",
+      "status": "pass",
+      "reason": "killed 4 of 7 mutants it covers (Killed 4, KilledByOtherTests 3)",
+      "mutants": {
+        "attempted": 7,
+        "Killed": 4,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 3
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/text-search.test.ts::searching text in a folder that is not a git repository > walks the folder, skipping node_modules, big and binary files and symlinks",
+      "status": "pass",
+      "reason": "killed 4 of 7 mutants it covers (Killed 4, KilledByOtherTests 3)",
+      "mutants": {
+        "attempted": 7,
+        "Killed": 4,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 3
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/knowledge.test.ts::reads kb's outcomes: hits, none, outside every source, a timeout and bad output",
+      "status": "pass",
+      "reason": "killed 6 of 12 mutants it covers (Killed 6, KilledByOtherTests 6)",
+      "mutants": {
+        "attempted": 12,
+        "Killed": 6,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 6
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "2",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 29,
+  "mutant_statuses": {
+    "NoCoverage": 1,
+    "Killed": 26,
+    "Survived": 3
+  },
+  "minutes": 2.1
+}

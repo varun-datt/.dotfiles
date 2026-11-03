@@ -1,0 +1,28 @@
+{
+  "run": "amc-2026-10-30",
+  "item": "markers",
+  "head": "96438cfe79769b90d91d625d6827f5fa841ccd48",
+  "base": "c79ef7986c2c42a82afcc8feeed35b02d7aad7d3",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/markers.test.ts", "name": "keeps markers in the store across a restart, edits and deletes them", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "add, edit, delete through the host; markers survive reopening the store; title echoes 'survive a restart'"},
+      {"file": "tests/unit/markers.test.ts", "name": "accepts only a real date, a name, a known measure and a stated direction", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a marker is a date, a name and one known facet measure"},
+      {"file": "tests/e2e/app.spec.ts", "name": "adds a marker in Insights, reads its before and after figures with session counts, edits it and deletes it", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "owner adds, edits and deletes a marker on the Insights page, and it survives a reload"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/markers.test.ts", "name": "compares equal windows on each side of the marker's day, counting sessions on each side", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "before-and-after over equal windows with session counts; title quotes 'equal windows on each side'"},
+      {"file": "tests/unit/markers.test.ts", "name": "says too few sessions below the threshold on either side and states no verdict", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "named threshold and the too-few flag; title quotes 'too few sessions'"},
+      {"file": "tests/unit/markers.test.ts", "name": "gives a verdict only when the owner stated the direction", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "verdict words only with a stated direction; title echoes the MUST's direction rule"}
+    ]},
+    {"must": "3", "none": "no test checks that no credits are spent or that nothing leaves the machine"},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/markers.test.ts", "name": "puts a session that starts at the marker's midnight after it and one a minute earlier before it, and leaves out the day past the window", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the 'marker near the window's edge' host case"},
+      {"file": "tests/unit/markers.test.ts", "name": "has no value for a measure with no data, and for a marker dated after today", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the 'measure with no data' host case, quoted in the title"},
+      {"file": "tests/e2e/app.spec.ts", "name": "adds a marker in Insights, reads its before and after figures with session counts, edits it and deletes it", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "the browser test of adding a marker and reading its figures, with expectCleanLayout; title echoes that wording"}
+    ]}
+  ],
+  "findings": [
+    {"round": "markers-rereview", "n": "4b", "musts": ["2", "4"], "tests": ["tests/e2e/app.spec.ts::draws a marker's before and after with a labelled strip, neutral colours and a verdict word"], "note": "the verdict word's colour in one light theme falls below AA; the browser test at that round's head (not present at the mapped head) checks colours differ, not contrast, and a contrast check would be a CSS/browser test outside the Vitest gate, so a fail-on-base unit test would not expose it"}
+  ],
+  "notes": "markers.test.ts and src/host/markers.ts are new, so on the base the unit file fails at import rather than on an assertion. Tests are top-level. Finding 4b's test exists only at its round head 4885254. Report found as the final message in markers-rereview.jsonl."
+}

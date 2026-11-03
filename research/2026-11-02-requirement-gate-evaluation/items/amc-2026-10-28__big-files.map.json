@@ -1,0 +1,36 @@
+{
+  "run": "amc-2026-10-28",
+  "item": "big-files",
+  "head": "66c5fabc54db4e23f6bd9d8d59b8fe8a37b178c0",
+  "base": "aa2b6f4133533626d7465a8e35f608164551855b",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "files just over 2 MB and up to 100 MB come back by path with size, human size text and type; base skipped them"},
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the by-path note the engine gets carries path, size, type and the data-not-instructions line"},
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > keeps refusing a binary or non-UTF-8 file sent by path, judged from its head", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "binary handling kept for by-path files, judged from a small head; base skipped these sizes as too large instead"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/server.test.ts", "name": "host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "HTTP layer refuses an unconfirmed >5 MB file and accepts it once confirmed; title restates the MUST's refuse-unless-confirmed wording"},
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > asks above 5 MB: refuses an unconfirmed file with 428, and not at or under 5 MB", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "host validation throws 428 with the ask text above 5 MB, only a literal true confirms"},
+      {"file": "tests/e2e/app.spec.ts", "name": "asks before sending a file over 5 MB: Cancel and Escape keep the draft, Send delivers it by path", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "the view's ask dialog with Send, Cancel and Escape"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > still delivers the message when a file is over 100 MB or gone, tells the owner why, and records a by-path file with its size", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "over-100 MB file is refused with a session note naming the 100 MB limit (base note said 2 MB)"},
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "100 MB + 1 byte is skipped with no by-path entry"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "a hostile file name and the path note are wrapped in nonce fences; title quotes the MUST's hostile-name wording"}
+    ]},
+    {"must": "5", "none": "no test checks either engine adapter's outgoing payload for a by-path attachment; both use the shared documents block, verified only by reading source"},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/attachments.test.ts", "name": "attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the size-band edge tests with sparse files; title names the bands the MUST lists"},
+      {"file": "tests/unit/server.test.ts", "name": "host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the confirm flag at the HTTP layer"},
+      {"file": "tests/e2e/app.spec.ts", "name": "asks before sending a file over 5 MB: Cancel and Escape keep the draft, Send delivers it by path", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "browser test of the ask with expectCleanLayout and renders"}
+    ]}
+  ],
+  "findings": [
+    {"round": "rv-big-files", "n": "4", "musts": ["1"], "tests": ["tests/unit/attachments.test.ts::attachments > keeps refusing a binary or non-UTF-8 file sent by path, judged from its head"], "note": "reviewer found binary/encoding rejection now inspects only the leading 64 KB, so bad bytes later in a by-path file pass as text; the mapped test only puts the bad bytes at the start, and a test with a bad tail would fail on base (base skipped files over 2 MB) and still fail at head, so it would expose this"},
+    {"round": "rv-big-files", "n": "5", "musts": ["4"], "tests": ["tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name"], "note": "the @ completion in the composer copies the raw file name into the prompt text, a pre-existing path outside the changed host code; the fence test covers only the host's document block, and a base-failing test of the new code would not reach the composer path"}
+  ],
+  "notes": "Strict marks rely on titles restating MUST wording (no MUST numbers or comments in the test files). MUST 5 has no test. MUST 2 and 6 also have a Playwright test. Review findings read from the final message in rv-big-files.jsonl; numbering follows the findings table rows."
+}

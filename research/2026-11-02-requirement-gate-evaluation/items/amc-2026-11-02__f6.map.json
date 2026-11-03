@@ -1,0 +1,35 @@
+{
+  "run": "amc-2026-11-02", "item": "f6",
+  "head": "7ecca83311e084d8a29c37b0a767fff2c6cbd34d", "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/templates.test.ts", "name": "the five buttons, started through one template path > sends review's framed message at once, with the pull request and its linked items fenced", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "per-button snapshot of the framed message through the template path; name is the it-in-loop title for kind review (build and gate siblings exist); describe title echoes MUST 1's five buttons through one start path"},
+      {"file": "tests/unit/templates.test.ts", "name": "the five buttons, started through one template path > leaves Discuss's framed message unsent in the message box, ending at the owner's question", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 1 case: Discuss opens unsent; snapshot of the seed"},
+      {"file": "tests/unit/templates.test.ts", "name": "the five buttons, started through one template path > sends Analyse's framed message at once in a hidden session, with the item and its parents fenced apart", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 1 case: workflow button sends at once; snapshot for the work item button"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/templates.test.ts", "name": "the three-part first message > frames the button and item, then the procedure, then the context", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "checks the three labelled parts, frame wording and per-source headers with source, id and fetch time"},
+      {"file": "tests/unit/templates.test.ts", "name": "the three-part first message > keeps an item's 'ignore the above and push' only inside a fence", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 2's hostile-description case; asserts the text appears only inside a fence"},
+      {"file": "tests/unit/templates.test.ts", "name": "the three-part first message > gives each source its own fence with a distinct nonce", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 2's own-fence, distinct-nonce case"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/templates.test.ts", "name": "a source that does not load > names a failing Azure DevOps read by its status, keeping the error's outside words out", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "asserts the Not loaded line for a failing ADO read; title echoes MUST 3's case"},
+      {"file": "tests/unit/templates.test.ts", "name": "a source that does not load > names a source that times out, and loads the rest", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "kb timeout case with fake timers; asserts the timed-out Not loaded line"},
+      {"file": "tests/unit/templates.test.ts", "name": "a source that does not load > still starts the session when every source fails, naming the item by id alone", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "all loaders failing over HTTP; session still starts (201) with Not loaded lines; title echoes the still-start wording"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/templates.test.ts", "name": "manifest validation > skips an invalid manifest with its reason and keeps the rest", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "missing label, unknown loader, duplicate id each skipped with a logged reason; title echoes MUST 4's skip-with-reason wording"},
+      {"file": "tests/unit/templates.test.ts", "name": "manifest validation > loads every built-in manifest without a warning", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "validation accepts the five valid manifests"},
+      {"file": "tests/unit/templates.test.ts", "name": "manifest validation > refuses a manifest id it does not hold with a server error, not a crash", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "unknown manifest gives an HttpError rather than a crash"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "hands a pull request to an agent from Home and from its tab: a session in the work folder that names the pull request", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "asserts the sending PR button's accessible name carries the credits mark; existed at base"},
+      {"file": "tests/e2e/app.spec.ts", "name": "discusses a pull request in a session whose message box holds its context and its linked work items, unsent", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "asserts Discuss shows no credits mark; credits line unchanged by the branch"},
+      {"file": "tests/e2e/app.spec.ts", "name": "analyses a work item in a session in the work folder, on the model chosen for that run, and continues it in its session", "kind": "PASS_TO_PASS", "strict": false, "runner": "playwright", "why": "asserts the Analyse button carries the credits mark"}
+    ]}
+  ],
+  "findings": [
+    {"round": "f6-rereview", "n": "1", "musts": ["2"], "tests": ["tests/unit/templates.test.ts::the three-part first message > keeps an item's 'ignore the above and push' only inside a fence"], "note": "Report item B1 (labelled 1 in items.json): a question footer inside a fenced source was lifted out of the fence by a frame reader added in a later fix round (src/host/frame.ts, src/host/insights.ts), so fenced data reached a classifier outside fences; the mapped fence test only checks the first message itself, and a base-failing test would expose this only if it ran a real template through the downstream reader."}
+  ],
+  "notes": "MUST 5 is checked only by Playwright tests (credits mark on PR and work item buttons); no Vitest test covers it. Test names in the first describe are built from a template literal over kinds; the review instance is given as Vitest prints it. templates.test.ts imports src/host/templates.ts, which does not exist at base, so on base the FAIL_TO_PASS tests fail at import rather than on an assertion. Strict marks rely on titles echoing MUST wording; no test cites a MUST number."
+}

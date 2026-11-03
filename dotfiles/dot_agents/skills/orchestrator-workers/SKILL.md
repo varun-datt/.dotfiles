@@ -82,13 +82,16 @@ which answers you inferred from the repository.
 9. **Power:** will the machine stay on AC power and awake? On battery, every worker stalls.
    For unattended work, check it rather than ask: `pmset -g custom` must show `sleep 0` under
    AC Power. A Mac with AC `sleep 1` went to idle sleep while plugged in, and every worker froze.
+   Never wrap a launch in `caffeinate`: this Mac kills it within seconds. A queued item that runs it fails
+   at launch, where `route.py run`, `review.sh` and `resume.py` refuse (exit 2) because they find caffeinate
+   among their ancestor processes. Command text is not checked: a program inside shell text has no end of forms.
 10. **Anything** the plan leaves unclear.
 
 **After the answers:**
 - record the rulings, dated;
 - create the run folder and copy [scripts/budgets.example.json](scripts/budgets.example.json) into it
   as `budgets.json`;
-- start `watch.py` in an async terminal, and `runqueue.py run` in another ([queue runner](#queue-runner));
+- start `runqueue.py run` in an async terminal and `watch.py` in another as a stall watchdog; wait with `runqueue.py wait` ([queue runner](#queue-runner));
 - run `python3 ~/.agents/skills/orchestrator-workers/scripts/state.py init --title "<goal>" --client vscode|cli --session-id <id>`; it writes `<run>/orchestrator.json` and registers the run for the dashboard. Record each item, the queue and every question for the owner only through `state.py item|queue|ask|answered` ([details](references/details.md#state-file));
 - work autonomously.
 
@@ -114,6 +117,10 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   -> trial merge -> merge -> gates on main -> restart owner's instance -> records
 ```
 
+- **Only judgement wakes the chat.** Queue each item as a [pipeline](#queue-runner): the runner prepares and
+  launches the review, the fix round and the re-check itself, and stops at two suspend points, ruling the
+  review's findings and merging, because only those need judgement. The chat waits for the next one with
+  `runqueue.py wait`; a failed step also stops the pipeline and waits on the chat.
 - **The blocking rule** ([references/rubric.md](references/rubric.md), owner, 2026-10-30): the
   reviewer grades every finding by likelihood and impact; Blocker and Major block (I1 at L1–L2; I2
   at L1–L2; I3 at L1). Minor goes to debt: one line on the repository's `docs/tech-debt.md`.
@@ -128,8 +135,9 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   minutes: its `TECH DEBT:` line lists the ids it fixes with their lines, or says why not, and
   `route.py run` warns (exit unchanged) for each open row on a named path whose id the brief leaves out; the worktree's root folder itself is not matched, since every brief names it in YOUR RESOURCES. A class seen 3 times becomes a planned item; past about 30 open rows, each run plans one
   debt item; `debt.py stale` lists rows untouched for 3 runs, to close "won't fix" or keep.
-- Fixes made after the re-review go to a **post-merge review (commit-then-review)** on main, so
-  nothing lands unreviewed. Anything still open is recorded for the owner.
+- A finding the re-review leaves open pauses the item for the owner (owner, 2026-10-31, confirmed
+  2026-11-02): one fix round, then the owner decides. A fix made after the re-review, once the owner
+  approves it, goes to a **post-merge review (commit-then-review)** on main, so nothing lands unreviewed.
 - **Parallelism** is decided per item, from its dependencies and the files it touches.
 - **Finish before starting** (owner, 2026-10-13). A freed slot goes first to the oldest started
   item's next step: a fix round, a catch-up with main, then the merge. A new build starts only
@@ -240,9 +248,9 @@ Standing owner rules are appended to the preambles as soon as they are made.
 longer stops the run. (It is not `queue.py`, which would hide Python's own `queue` module from
 every script in the folder.)
 
-- **Start it** in an async terminal alongside `watch.py`:
-  `timeout 172800 python3 scripts/runqueue.py run --slots 3`. When the client is VS Code, add
-  `--chat-log <session transcript>`; the transcript grows on every tool call.
+- **Start it** in an async terminal: `timeout 172800 python3 scripts/runqueue.py run --slots 3`. When the
+  client is VS Code, add `--chat-log <session transcript>`; the transcript grows on every tool call. The chat
+  waits on it with `runqueue.py wait` (below); start `watch.py` beside it only as a stall watchdog.
 - **Queue every approved item** with `runqueue.py add <id> --cmd "<launch command>" [--after <ids>]`
   instead of launching it by hand. `--after` names only queued ids, so queue an item that waits on
   one started by hand after that one merges. Queue reviews with `--no-slot` and a `review.sh` command.
@@ -252,7 +260,40 @@ every script in the folder.)
   `|` or `$(...)` loses the exemption), or it carries `--unrouted-reason "<text>"`, which is stored with the item.
   A false refusal is acceptable; pass the reason or drop the extra commands.
 - **After each merge,** call `runqueue.py done <id>`. Items that wait on it become ready.
-- **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done.
+- **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done; a pipeline item also
+  names its step and what it waits on (a running round, the chat's done file, or a failure with its exit code).
+- **Pipelines: queue the whole item once** (owner, 2026-11-02, after the chat cost 7,105 of a run's 22,454 credits
+  re-reading its context at every round's end):
+  `runqueue.py add <id> --pipeline build,review,suspend:rulings,fix,recheck,suspend:merge --worktree <wt>
+  [--brief <prompt>] [--route-args "<route.py run options>"] [--review-args "<review.sh options>"]`. The runner
+  launches each step when the one before exits 0: build and fix through `route.py run` (rounds `<id>` and
+  `<id>-fix1`), review and re-check through `review.sh` (`<id>-review`, `<id>-rereview`), after
+  `scripts/reviewprep.py` writes `REVIEW-DIFF.patch`, `REVIEW-REPORT.md` and the filled prompt (risk blocks from
+  the brief's RISK line; the re-check's findings from the fix brief's numbered list). Reviews take no slot. The
+  diff starts at the HEAD the build (or fix) step had at its first launch, so a retry does not narrow it;
+  `<id>.reviewbase` overrides it after a catch-up with main.
+  - **Suspend points** are the two steps that need judgement: `suspend:rulings` (accept or reject each finding)
+    and `suspend:merge`. The item waits on the chat, the idle alert names it, and it resumes when
+    `<run>/<id>.<name>.done` exists. For rulings, write `<id>-fix1.body.md` (or the whole
+    `<id>-fix1.prompt.md`; otherwise the build's prompt with its body swapped is used) and then
+    `<id>.rulings.done`; write `none` in it to skip the fix and re-check when nothing blocks. Writing
+    `<id>.merge.done` after the merge marks the item done. `add` refuses a done file left from before.
+  - **A failed step stops the pipeline**: a non-zero exit (3 capped, 4 errored, 5 brief refused, 12 load,
+    124 timed out) or a prep failure (exit 2: no base, an empty diff, no report or findings) waits on the chat
+    with its reason. `runqueue.py retry <id>` relaunches it; `retry <id> --passed` marks it passed after the
+    chat finished it by hand, and `--report <round>` names the resume round whose report the next review or
+    re-check reads (by default the newest of `<round>.jsonl` and `<round>-resumeN.jsonl`). `retry` refuses
+    while the step's round may still run. A further fix round is never automatic.
+  - **Briefs:** review and re-check read the task and risks from the brief the build or fix was launched with
+    (`--brief`, or the fix brief above).
+  - **Restarts are safe:** a step that started is never relaunched; its exit code is kept in
+    `<run>/<round>.queue-exit`. A restarted runner finds a round still running by its pid, its
+    `<run>/<round>.queue-pid` or its command line; one that vanished without an exit code shows `failed ?`.
+  - **Finish before starting:** a ready fix, re-check or other later step of a started item takes a freed slot
+    before any new build, oldest started first, whatever the build's priority.
+  - **Wait in one blocking call:** `runqueue.py wait [--max-min 30]` returns when an item newly needs the chat
+    (a suspend, a failed step, a plain item that exited), printing one line each, and exits 1 on timeout.
+    Run it in a foreground terminal; it prints a tick each minute.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
   line to `ALERT.log`, once for each new item waiting: it does not repeat while the same items
@@ -267,12 +308,13 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **Status table:** `status.py`. Its states are running, STALLED, DIED, ERRORED, CAPPED, done and
   superseded. A capped round shows its credits against the cap. A died or errored round
   reads superseded once a later round of the same item starts.
-- **Watchdog:** `watch.py`, in an async terminal. It exits on:
+- **Watchdog:** `watch.py`, in an async terminal; with the queue runner it is only a stall watchdog, and the
+  chat waits with `runqueue.py wait`. It exits on:
   - a stall: 20 awake minutes without output;
   - a death;
   - a round that hit its credit cap (CAPPED);
   - a budget overrun, once per worker;
-  - no worker running;
+  - no worker running, unless the queue runner has a pipeline step ready or launching;
   - the heartbeat.
 
   Restart it after every report. Sleep resets the stall clock.
