@@ -1,0 +1,97 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/clusters.test.ts::rule-made clusters > group many by kind, largest first, ties by name, with medians",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/clusters.ts' imported from $TMPDIR/reqgate-qmha2sv9/tree/tests/unit/clusters.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/clusters.test.ts::rule-made clusters > group topics by shared words after stop words, falling back to the title",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/clusters.ts' imported from $TMPDIR/reqgate-qmha2sv9/tree/tests/unit/clusters.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.clusters is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/clusters.test.ts::rule-made suggestions > name the evidence and the change, for long sessions with more corrections",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/clusters.ts' imported from $TMPDIR/reqgate-qmha2sv9/tree/tests/unit/clusters.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/clusters.test.ts::rule-made suggestions > show at most five, and none with one session",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/clusters.ts' imported from $TMPDIR/reqgate-qmha2sv9/tree/tests/unit/clusters.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/clusters.test.ts::rule-made suggestions > keep a dismissed one dismissed until its evidence changes",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/clusters.ts' imported from $TMPDIR/reqgate-qmha2sv9/tree/tests/unit/clusters.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > cost nothing to read, and send outside history only when the press names it",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.clusters is not a function"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > refuse a second press while a pass runs",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.nameTopics is not a function"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::Insights clusters sessions from every source by rule, suggests at no cost, names topic groups with AI only on a press, and wraps long titles at 900 px",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/clusters.test.ts::rule-made clusters > are empty with no sessions, and suggest nothing",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/clusters.ts' imported from $TMPDIR/reqgate-qmha2sv9/tree/tests/unit/clusters.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/clusters.test.ts::rule-made clusters > group many by kind, largest first, ties by name, with medians",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/clusters.ts' imported from $TMPDIR/reqgate-qmha2sv9/tree/tests/unit/clusters.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.clusters is not a function"
+    },
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::Insights clusters sessions from every source by rule, suggests at no cost, names topic groups with AI only on a press, and wraps long titles at 900 px",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.39
+}

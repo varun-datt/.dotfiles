@@ -1,0 +1,85 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/assignments.test.ts::the move keeps a copy of the store from before it, holding every old task",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/assignments.test.ts::a move that fails half-way, after a row was written, is undone, the store still opens and says why, the readable tasks stay usable, and the next start moves them",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/assignments.test.ts::a project belongs to one workspace and links a folder inside a knowledge repository; no folder yet is allowed and flagged; outside is refused with the reason",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/assignments.test.ts::an assignment moves from the Inbox to a project of its workspace and back, never to another workspace's or a missing project",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/assignments.test.ts::two updates from the same version: the first lands, the older one is refused",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/assignments.test.ts::the task action route updates the record, refuses an older version with 409, and refuses bad fields",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/assignments.test.ts::the task loop's own save keeps a move made since it read the task",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/projects.ts' imported from $TMPDIR/reqgate-ltflnh5k/tree/tests/unit/assignments.test.ts"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "3",
+      "test": "tests/unit/task-loop.test.ts::a task whose check passes waits for the owner, and Merge brings it into the checkout's current branch",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/task-loop.test.ts::Open a pull request: the task's agent drafts it, not a draft by default, and Create hands it to the opener",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.27
+}

@@ -1,0 +1,85 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "5",
+      "why": "help and docs wording changes (src/ui/help.tsx, docs/*.md, AGENTS.md) have no test asserting the stated default tries or how to start a run; the browser test only checks New run is absent from help"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/server.test.ts::host server > refuses to start a run without AMC_RUNS=1 and creates nothing, but still lists and ends runs",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/actions.test.ts::action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_1__.hiddenActions) is not a function"
+    },
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::hides New run everywhere and refuses to start a run when the host runs without AMC_RUNS=1",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/server.test.ts::host server > passes a new run to the manager with AMC_RUNS=1, and says so on health",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/actions.test.ts::action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_1__.hiddenActions) is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::lists New run in the palette, help and New session when the host runs with AMC_RUNS=1",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::hides New run everywhere and refuses to start a run when the host runs without AMC_RUNS=1",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/task-loop.test.ts::a task whose check passes waits for the owner, and Merge brings it into the checkout's current branch",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/task-loop.test.ts::a failed check starts a fresh try told why, and the last failed try leaves the task in Do now",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "4",
+      "test": "tests/unit/task-loop.test.ts::a brief takes 1 to 5 tries and refuses 0 or 6",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.23
+}

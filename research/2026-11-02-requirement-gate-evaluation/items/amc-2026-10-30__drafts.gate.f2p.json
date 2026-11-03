@@ -1,0 +1,91 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "5",
+      "why": "no test adds or sends pieces while a turn is running"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/drafts.test.ts::changeDrafts > adds, edits, removes, clears sent pieces and discards all",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/drafts.ts' imported from $TMPDIR/reqgate-4w55zhct/tree/tests/unit/drafts.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/drafts.test.ts::changeDrafts > adds, edits, removes, clears sent pieces and discards all",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/drafts.ts' imported from $TMPDIR/reqgate-4w55zhct/tree/tests/unit/drafts.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/drafts.test.ts::composeDraft > sends each piece's quoted anchor, its file and line, and its note, then the owner's text",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/drafts.ts' imported from $TMPDIR/reqgate-4w55zhct/tree/tests/unit/drafts.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/drafts.test.ts::composeDraft > names a single piece without a count, and leaves the owner's text alone when there are no pieces",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/drafts.ts' imported from $TMPDIR/reqgate-4w55zhct/tree/tests/unit/drafts.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/drafts.test.ts::changeDrafts > keeps anchors inside the session's folder and refuses empty quotes and unknown pieces",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/drafts.ts' imported from $TMPDIR/reqgate-4w55zhct/tree/tests/unit/drafts.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/drafts.test.ts::composeDraft > sends each piece's quoted anchor, its file and line, and its note, then the owner's text",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/drafts.ts' imported from $TMPDIR/reqgate-4w55zhct/tree/tests/unit/drafts.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/e2e/app.spec.ts::gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.19
+}

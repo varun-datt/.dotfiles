@@ -1,0 +1,30 @@
+{
+  "run": "amc-2026-11-02", "item": "o1", "head": "e704d3626ff6ac031f728f8ea3013dda1e612d75", "base": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/acp-folders.test.ts", "name": "an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "fake ACP agent logs session/new roots for zero, one, two and own-folder cases; title quotes the MUST's cases"},
+      {"file": "tests/unit/acp-folders.test.ts", "name": "an agent that offers additionalDirectories > sends the whole current list on each session/load, not the change", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "session/load carries the full list each time, not a delta, as the MUST says"},
+      {"file": "tests/unit/acp-special.test.ts", "name": "offered: each switch change while idle reloads the session with the whole current list", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "through SessionManager: load after a switch change sends the full list and drops the session's own folder listed as special"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/acp-special.test.ts", "name": "not offered: the switches still work, no roots are sent, the panel says so, and kb searches the switched-on repos", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "capability absent: no roots, panel reason text, kb searched with the switched-on source and hits reach the agent"},
+      {"file": "tests/unit/acp-folders.test.ts", "name": "an agent whose additionalDirectories capability is absent > sends no roots on new or load, and refuses a write into the folder it was not given", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "describe.each variant for the absent case (the false, malformed and list variants print with their own label in place of 'absent')"},
+      {"file": "tests/unit/acp-folders.test.ts", "name": "offersFolders > is true only for an object under sessionCapabilities.additionalDirectories", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "capability false or malformed treated as absent"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/acp-folders.test.ts", "name": "an agent that offers additionalDirectories > writes inside the session's folder and inside an added root, after asking", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "inside the folder and inside an added root pass with approval; title quotes the MUST's two allowed places"},
+      {"file": "tests/unit/acp-folders.test.ts", "name": "an agent that offers additionalDirectories > refuses, without asking, a write outside every root, with a .. step, through a link, or at a root itself", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "outside every root, '..' escape, symlink out, a root itself: the MUST's refusal cases with reasons"},
+      {"file": "tests/unit/acp-folders.test.ts", "name": "an agent that offers additionalDirectories > refuses a write into a root switched off since the session opened", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the root-switched-off-since case"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/acp-special.test.ts", "name": "offered: a change while a turn runs waits for the engine-made end, then reloads once", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "engine-made end order: pending, then one session/load at the end"},
+      {"file": "tests/unit/acp-special.test.ts", "name": "offered: Stop with a pending change reloads once, and the stopped turn's late write is refused", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "Stop then late events order"},
+      {"file": "tests/unit/acp-special.test.ts", "name": "offered: a refusal ends the turn and the pending change is applied once", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "refusal order"}
+    ]}
+  ],
+  "findings": [
+    {"round": "o1-review", "n": "2", "musts": ["2"], "tests": ["tests/unit/acp-special.test.ts::not offered: the switches still work, no roots are sent, the panel says so, and kb searches the switched-on repos"], "note": "The fallback test lists kb sources before the first search; a source added later is missed because the list is cached. The test passes on head, so a fail-on-base check would not expose it."},
+    {"round": "o1-review", "n": "3", "musts": ["1"], "tests": ["tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once"], "note": "Dedup is checked only with identical path strings; a case using a symlink alias of the session folder would fail on head (partial: needs the alias case, not just a base run)."}
+  ],
+  "notes": "Head includes s2's commits, so actions, server, task-loop and the New run e2e tests belong to s2. The browser test 'on an ACP session the special repos stay switchable and the panel says when the agent offers no folder access' (tests/e2e/app.spec.ts, Playwright) also covers MUST 2's panel text. MUST 4's host-restart order is 'offered: after a host restart the session is loaded with its stored switches' (acp-special.test.ts), left out to keep three. The describe.each title uses %s; the name given is the 'absent' variant as Vitest prints it. special-repos.test.ts only renames a base test."
+}

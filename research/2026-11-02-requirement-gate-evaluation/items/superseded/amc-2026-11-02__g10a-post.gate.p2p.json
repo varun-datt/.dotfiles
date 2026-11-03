@@ -1,0 +1,64 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2"
+  ],
+  "problems": [
+    "MUST 1 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "2",
+      "test": "tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list",
+      "status": "fail",
+      "reason": "attribution unavailable: no test in the Stryker report's testFiles is named two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list",
+      "status": "fail",
+      "reason": "attribution unavailable: no test in the Stryker report's testFiles is named two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "1",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 68,
+  "mutant_statuses": {
+    "NoCoverage": 78,
+    "Killed": 66,
+    "Survived": 2
+  },
+  "minutes": 0.11
+}

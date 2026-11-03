@@ -1,0 +1,154 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [
+    "MUST 1 has no line in the REQUIREMENTS MAP",
+    "MUST 2 has no line in the REQUIREMENTS MAP",
+    "MUST 4 has no line in the REQUIREMENTS MAP",
+    "MUST 6 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "3",
+      "test": "tests/unit/watch.test.ts::the workspace watcher > delivers a burst of writes as one batch, skips .git and node_modules, and keeps one watcher per folder",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/watch.test.ts::the workspace watcher > drops an event the system delivers again for a file unchanged since its last batch, and still reports its next write",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/watch.test.ts::the workspace watcher > hears a real write from the operating system",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion",
+      "status": "fail",
+      "reason": "attribution unavailable: no test in the Stryker report's testFiles is named test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/test-hygiene.test.ts::test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0",
+      "status": "fail",
+      "reason": "attribution unavailable: no test in the Stryker report's testFiles is named test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/test-hygiene.test.ts::test hygiene > catches a new fixed sleep",
+      "status": "fail",
+      "reason": "attribution unavailable: no test in the Stryker report's testFiles is named test hygiene > catches a new fixed sleep",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "1",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "2",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "4",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "6",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 1.18
+}

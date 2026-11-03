@@ -1,0 +1,102 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [
+    "MUST 3 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/diff-colour.test.ts::gives every code line of a diff tokens with all four palettes",
+      "status": "pass",
+      "reason": "killed 69 of 127 mutants it covers (Killed 69, Survived 40, KilledByOtherTests 18)",
+      "mutants": {
+        "attempted": 127,
+        "Killed": 69,
+        "Survived": 40,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 18
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/diff-colour.test.ts::sorts a diff's lines into header, hunk, added, removed and context rows",
+      "status": "pass",
+      "reason": "killed 37 of 49 mutants it covers (Killed 37, Survived 12)",
+      "mutants": {
+        "attempted": 49,
+        "Killed": 37,
+        "Survived": 12,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/diff-colour.test.ts::colours nothing for an unknown language or a diff over the cap",
+      "status": "pass",
+      "reason": "killed 13 of 21 mutants it covers (Killed 13, Survived 4, KilledByOtherTests 4)",
+      "mutants": {
+        "attempted": 21,
+        "Killed": 13,
+        "Survived": 4,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 4
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/diff-colour.test.ts::gives every code line of a diff tokens with all four palettes",
+      "status": "pass",
+      "reason": "killed 69 of 127 mutants it covers (Killed 69, Survived 40, KilledByOtherTests 18)",
+      "mutants": {
+        "attempted": 127,
+        "Killed": 69,
+        "Survived": 40,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 18
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "3",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 138,
+  "mutant_statuses": {
+    "NoCoverage": 99,
+    "Killed": 91,
+    "Survived": 47
+  },
+  "minutes": 1.42
+}

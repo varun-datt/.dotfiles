@@ -1,0 +1,109 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "4",
+      "why": "no test checks that history data is not sent to a model, logged or written outside the store"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/history.test.ts::VS Code: replays the chat mutation log and counts its facets",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/history.test.ts::Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/history.test.ts::a history root that is itself a link is not read, and the source is reported as unsafe",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/history.test.ts::a linked folder anywhere below a root is not followed",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/history.test.ts::a large snapshot is parsed off the host thread, so the host's timers keep firing",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/history.test.ts::a read that never answers times out as that source's failure, ends its worker, and the next read starts a fresh one",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/history.test.ts::Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/history.test.ts::VS Code: a huge session is replayed",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/history.ts' imported from $TMPDIR/reqgate-bulnnf28/tree/tests/unit/history.test.ts"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.28
+}

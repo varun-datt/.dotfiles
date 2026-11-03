@@ -1,0 +1,43 @@
+{
+  "run": "amc-2026-11-02", "item": "g93a", "head": "741b460c12c17f731d7587036caf05fc7245d870", "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/command-result.test.ts", "name": "an agent-prompt shows its notice, then sends its prompt as today", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "agent-prompt with notice shown before the prompt is sent"},
+      {"file": "tests/unit/command-result.test.ts", "name": "a mode in a result goes through AMC's mode switch; an unknown mode refuses a prompt and sends nothing", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "mode plan applied via the mode switch; unknown mode refused"},
+      {"file": "tests/unit/command-result.test.ts", "name": "maps each result kind the SDK declares", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "adapter mapping of text and agent-prompt (notice, mode)"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/command-result.test.ts", "name": "text and completed results show a row; completed without a message reads Done", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "completed with and without a message"},
+      {"file": "tests/unit/command-result.test.ts", "name": "a completed result applies its mode, and says so when it cannot", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "completed with mode; the cannot-apply half is not actually exercised"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/command-result.test.ts", "name": "a subcommand menu returns its options and writes nothing; picking one runs the parent with it", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "menu options returned; pick invokes the command with the option"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a command's subcommand menu runs the pick, its other results land in AMC, and a kind AMC does not handle reads Not supported", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "only test of the visible menu, one-option menu and Escape"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/command-result.test.ts", "name": "a timeline entry adds a row with its link and returns the prefill without sending it", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "row with and without URL; prefill not sent"},
+      {"file": "tests/unit/drafts.test.ts", "name": "prefillDraft > keeps a draft below the suggestion instead of replacing it", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "prefill while a draft is in the composer keeps the draft"},
+      {"file": "tests/unit/drafts.test.ts", "name": "prefillDraft > fills an empty message box with a command's suggestion", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "prefill into an empty composer"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/command-result.test.ts", "name": "a model picker dialog asks the view to open AMC's picker; set-model goes through AMC's model switch with its warning", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "model-picker dialog, set-model with warning, set-plan-model message"},
+      {"file": "tests/unit/command-result.test.ts", "name": "runtimeSettingsChanged re-reads the session's settings", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes the MUST's flag and re-read wording; only a completed result is flagged"},
+      {"file": "tests/unit/command-result.test.ts", "name": "set-model during a turn applies at turn end, as AMC's own picker does", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "model switch goes through the same deferred path as the picker"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/command-result.test.ts", "name": "an unhandled kind shows a quiet Not supported row naming the command and kind, and never done", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes the MUST's row and naming wording; unknown, missing kind, broken field, other dialog"},
+      {"file": "tests/unit/command-result.test.ts", "name": "never maps an unknown kind, a missing kind or a kind missing its required field to done", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "adapter side; title quotes the MUST's missing-required-field case"}
+    ]},
+    {"must": "7", "tests": [
+      {"file": "tests/unit/acp.test.ts", "name": "hands a slash command back as a prompt, so the host sends it and nothing goes out from the adapter", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "existing unchanged Cursor (ACP) command test guards today's behaviour"}
+    ]}
+  ],
+  "findings": [
+    {"round": "g93a-review", "n": "2", "musts": ["5"], "tests": ["tests/unit/command-result.test.ts::runtimeSettingsChanged re-reads the session's settings"], "note": "The re-read test flags only a completed result, so a flagged set-model that skips the re-read passes. A FAIL_TO_PASS test for a flagged set-model would fail on base and on this head, so it would expose the gap."},
+    {"round": "g93a-review", "n": "3", "musts": ["1", "2"], "tests": ["tests/unit/command-result.test.ts::a completed result applies its mode, and says so when it cannot", "tests/unit/command-result.test.ts::a mode in a result goes through AMC's mode switch; an unknown mode refuses a prompt and sends nothing"], "note": "The unknown mode is refused only for prompts, and the completed-with-mode test never tries a bad or refused mode. A completed-plus-unknown-mode FAIL_TO_PASS case would expose it; a mid-turn refusal needs an event-order test."},
+    {"round": "g93a-review", "n": "4", "musts": ["6"], "tests": ["tests/unit/command-result.test.ts::never maps an unknown kind, a missing kind or a kind missing its required field to done"], "note": "The malformed-field test covers some required fields but not the ones the adapter fills with defaults. More malformed fixtures as FAIL_TO_PASS tests would catch it, but only for the fields someone thinks to list."},
+    {"round": "g93a-rereview", "n": "c1", "musts": ["4", "5"], "tests": ["tests/unit/command-result.test.ts::maps each result kind the SDK declares", "tests/unit/command-result.test.ts::a model picker dialog asks the view to open AMC's picker; set-model goes through AMC's model switch with its warning"], "note": "Found at a later head. Some picker, model and entry fields have no test, and a targeted picker is treated as a plain one. Per-field FAIL_TO_PASS tests would expose parts of this; the incomplete audit itself is not testable."},
+    {"round": "g93a-review", "n": "7", "musts": ["3"], "tests": ["tests/e2e/app.spec.ts::a command's subcommand menu runs the pick, its other results land in AMC, and a kind AMC does not handle reads Not supported", "tests/unit/command-result.test.ts::set-model during a turn applies at turn end, as AMC's own picker does"], "note": "The Escape check asserts only that the menu is hidden, not that nothing was invoked, and the Playwright test runs outside the gate. The invoke-then-Stop case comes from the brief's known cases, not from a numbered MUST. A base-failing test would not expose a weak assertion."}
+  ],
+  "notes": "No test cites a MUST by number; strict marks rest on title wording. MUST 3's Escape case and MUST 7's fake-ACP case have no new Vitest test: MUST 7 relies on an unchanged existing ACP test. Every command-result test imports a new module (src/host/engine/command-result.ts), so on base it fails at import, not on an assertion."
+}

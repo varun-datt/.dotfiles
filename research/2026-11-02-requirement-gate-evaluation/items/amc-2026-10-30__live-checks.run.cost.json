@@ -1,0 +1,16 @@
+{
+ "id": "amc-2026-10-30__live-checks",
+ "phase": "cost",
+ "exit": 0,
+ "wall_min": 1.32,
+ "load_exit": 0,
+ "stderr": "",
+ "stdout_tail": "MUST 1 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 2 | PASS_TO_PASS | tests/unit/one-shot.test.ts::Copilot tool search option > reaches the session config only when set | pass | killed 1 of 1 mutants it covers (Killed 1); mutants attempted 1: Killed 1, Survived 0, Timeout 0\nMUST 3 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 4 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 5 | PASS_TO_PASS | tests/unit/transcript.test.ts::buildView > shows a hand-over summary without the model's analysis block | pass | killed 10 of 11 mutants it covers (Killed 10, Survived 1); mutants attempted 11: Killed 10, Survived 1, Timeout 0\nproblem: MUST 1 has no line in the REQUIREMENTS MAP\nproblem: MUST 3 has no line in the REQUIREMENTS MAP\nproblem: MUST 4 has no line in the REQUIREMENTS MAP\nFAIL: 5 MUSTs, 0 failing tests, 3 problems, 0 none (the owner decides whether none should fail), 36 mutants, 1.31 min\n",
+ "leftover_worktrees": [
+  "$TMPDIR/reqgate-_du1l97l/tree"
+ ],
+ "leftover_removed": false,
+ "head": "8f27343d56d2662e884aba28a0a67ccf4683b689",
+ "base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+ "cmd": "~/worktrees/chezmoi/r3/dotfiles/dot_agents/skills/orchestrator-workers/scripts/reqgate.py check --repo ~/sandbox/personal/agent-mission-control --base 231b968facf8dd04e3d05f5876e60aa4555aaa54 --head 8f27343d56d2662e884aba28a0a67ccf4683b689 --brief ~/.local/state/orchestrator-workers/amc-2026-10-30/live-checks.prompt.md --report ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-30__live-checks.report.cost.md --warn --json ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-30__live-checks.gate.cost.json --timeout 180 --mutants stryker --stryker-timeout 1200 --stryker-cmd npx --no-install stryker run ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/scripts/stryker.eval.json"
+}

@@ -1,0 +1,23 @@
+{
+ "amc-2026-10-31__d1": {
+  "strict_tests": 2,
+  "differ": [],
+  "none": [
+   "3",
+   "4"
+  ]
+ },
+ "amc-2026-10-30__diff-colour": {
+  "strict_tests": 2,
+  "differ": [],
+  "none": [
+   "2",
+   "3"
+  ]
+ },
+ "amc-2026-11-02__g10d": {
+  "strict_tests": 6,
+  "differ": [],
+  "none": []
+ }
+}

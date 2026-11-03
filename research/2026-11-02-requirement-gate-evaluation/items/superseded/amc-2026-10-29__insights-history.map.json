@@ -1,0 +1,36 @@
+{
+  "run": "amc-2026-10-29",
+  "item": "insights-history",
+  "head": "b01f2820d5d8736b095c1a2a9b2c4b583783e702",
+  "base": "b89cfaefb73103664e33c4adb955543c6c5dfe51",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/history.test.ts", "name": "Copilot CLI: counts a normal session's facets by rule", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new parser for CLI history; checks each rule-made facet on a made-up normal session"},
+      {"file": "tests/unit/history.test.ts", "name": "VS Code: replays the chat mutation log and counts its facets", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new parser for VS Code chat files; checks the same facets"},
+      {"file": "tests/unit/history.test.ts", "name": "reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "asserts a facet a source lacks is left out of its available list (not-available, not zero)"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/history.test.ts", "name": "Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "defensive parsing: unparsable lines skipped, rest counted"},
+      {"file": "tests/unit/history.test.ts", "name": "a missing source shows nothing, and links out of a history folder are not followed", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "symlinked session folder and file inside a root are not parsed"},
+      {"file": "tests/unit/history.test.ts", "name": "a linked folder anywhere below a root is not followed", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "links deeper in the VS Code tree are not followed"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/history.test.ts", "name": "a missing source shows nothing, and links out of a history folder are not followed", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "a missing root yields no source entry; title echoes the MUST's 'missing ... shows nothing' wording"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "groups per source, filter buttons, window switch; title echoes 'own group with a filter'"}
+    ]},
+    {"must": "4", "none": "no test checks that history data is not sent to a model, logged or written outside the store"},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/history.test.ts", "name": "reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "only the changed file is re-parsed; title quotes 'changed since the last read'"},
+      {"file": "tests/unit/history.test.ts", "name": "a large snapshot is parsed off the host thread, so the host's timers keep firing", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "host event loop stays responsive while a big file parses (non-blocking)"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/history.test.ts", "name": "Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the truncated and unknown-event fixture case the MUST lists, by those words"},
+      {"file": "tests/unit/history.test.ts", "name": "VS Code: a huge session is replayed", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the huge-session fixture case the MUST lists"},
+      {"file": "tests/unit/history.test.ts", "name": "reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the host test of incremental reading the MUST asks for"}
+    ]}
+  ],
+  "findings": [
+    {"round": "insights-history-rereview1", "n": "1", "musts": ["2"], "tests": ["tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed", "tests/unit/history.test.ts::a linked folder anywhere below a root is not followed"], "note": "the link tests only place links below a root, so they pass while a root that is itself a link is still followed; a linked-root test would fail at this head, but against the base it fails anyway (no reader), so a fail-on-base check would not single out this gap"}
+  ],
+  "notes": "No describe blocks: test names are the bare titles. history.test.ts and src/host/history.ts are new, so on the base every unit test fails at import rather than on an assertion; the gate may count these as errors, not FAIL_TO_PASS. Report found only in rereview1.jsonl (final message). Strict marks are judgement calls based on titles echoing MUST wording; no test cites a MUST number."
+}

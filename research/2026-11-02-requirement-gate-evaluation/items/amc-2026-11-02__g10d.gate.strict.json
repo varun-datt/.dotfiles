@@ -1,0 +1,54 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/worktree-grouping.test.ts::a chat session, a task try and a run worker of a child repository list under its workspace inside the product repos folder",
+      "status": "fail",
+      "reason": "passes on base: it cannot catch the change"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/worktree-grouping.test.ts::a session whose origin repository was deleted is still listed under the folder, and its workspace is marked missing only when every session's origin is gone",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/worktree-grouping.test.ts::100 child repositories, each with a try, give 100 workspaces under the folder in name order and no stray",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/worktree-grouping.test.ts::a standalone repository's task try groups under that repository's workspace, as its chat sessions do, by key or by origin",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::the session panel's Reaches line names the switched-on special repos, with each path on hover, and says Only this repository when none is on",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::task tries and run workers list under their repository inside the product repos workspace, with a deleted origin marked, stars kept and every row reachable by Tab",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.15
+}

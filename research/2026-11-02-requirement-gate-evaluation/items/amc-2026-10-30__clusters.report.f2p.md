@@ -1,0 +1,15 @@
+## REQUIREMENTS MAP
+
+- MUST 1: tests/unit/clusters.test.ts::rule-made clusters > group many by kind, largest first, ties by name, with medians [FAIL_TO_PASS]
+- MUST 1: tests/unit/clusters.test.ts::rule-made clusters > group topics by shared words after stop words, falling back to the title [FAIL_TO_PASS]
+- MUST 1: tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press [FAIL_TO_PASS]
+- MUST 2: tests/unit/clusters.test.ts::rule-made suggestions > name the evidence and the change, for long sessions with more corrections [FAIL_TO_PASS]
+- MUST 2: tests/unit/clusters.test.ts::rule-made suggestions > show at most five, and none with one session [FAIL_TO_PASS]
+- MUST 2: tests/unit/clusters.test.ts::rule-made suggestions > keep a dismissed one dismissed until its evidence changes [FAIL_TO_PASS]
+- MUST 3: tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > cost nothing to read, and send outside history only when the press names it [FAIL_TO_PASS]
+- MUST 3: tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > refuse a second press while a pass runs [FAIL_TO_PASS]
+- MUST 3: tests/e2e/app.spec.ts::Insights clusters sessions from every source by rule, suggests at no cost, names topic groups with AI only on a press, and wraps long titles at 900 px [FAIL_TO_PASS]
+- MUST 4: tests/unit/clusters.test.ts::rule-made clusters > are empty with no sessions, and suggest nothing [FAIL_TO_PASS]
+- MUST 4: tests/unit/clusters.test.ts::rule-made clusters > group many by kind, largest first, ties by name, with medians [FAIL_TO_PASS]
+- MUST 4: tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press [FAIL_TO_PASS]
+- MUST 5: tests/e2e/app.spec.ts::Insights clusters sessions from every source by rule, suggests at no cost, names topic groups with AI only on a press, and wraps long titles at 900 px [FAIL_TO_PASS]

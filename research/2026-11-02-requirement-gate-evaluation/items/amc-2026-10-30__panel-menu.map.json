@@ -1,0 +1,22 @@
+{
+  "run": "amc-2026-10-30", "item": "panel-menu",
+  "head": "26c2edf63fd5b369caebbdbed6cdcacab3e64575", "base": "c79ef7986c2c42a82afcc8feeed35b02d7aad7d3",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/order.test.ts", "name": "tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "grouping rule for moved actions, group order by first action and dropped empty groups; title echoes MUST 1's clauses"},
+      {"file": "tests/unit/order.test.ts", "name": "tab order > never gives a stray separator when the header takes a whole group", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "no empty group so no doubled or edge separator; title echoes the never-a-stray-separator rule"},
+      {"file": "tests/unit/order.test.ts", "name": "tab order > uses the default bar until the owner moves something, and never loses an action", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "existing test changed on the branch to expect the menu as groups rather than one flat group"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/order.test.ts", "name": "tab order > says why an action is not offered, and nothing when it is", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the short reason an action is muted, including the archived-only example; title does not cite the MUST"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a customised menu keeps its groups with separators, and the dialog mutes what this session cannot offer", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "only test of the dialog listing every action, the muted row with its reason and the all-sessions heading; title echoes MUST 2"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/order.test.ts", "name": "tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the unit test of the grouping rule MUST 3 asks for (moved actions, emptied group)"},
+      {"file": "tests/unit/order.test.ts", "name": "tab order > never gives a stray separator when the header takes a whole group", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 3's no-stray-separators case"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a customised menu keeps its groups with separators, and the dialog mutes what this session cannot offer", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "the browser test of the menu and dialog with expectCleanLayout that MUST 3 asks for"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings. MUST 3 is a requirement for tests; mapped to the tests it names. The dialog half of MUST 2 (every action listed, muted rows, heading) is checked only by Playwright; Vitest covers the reason helper. order.test.ts imports groupMenu and whyNot, new on the branch, so base runs fail at import."
+}

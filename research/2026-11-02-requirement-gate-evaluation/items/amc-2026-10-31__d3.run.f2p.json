@@ -1,0 +1,14 @@
+{
+ "id": "amc-2026-10-31__d3",
+ "phase": "f2p",
+ "exit": 0,
+ "wall_min": 0.05,
+ "load_exit": 0,
+ "stderr": "",
+ "stdout_tail": "MUST 1 | FAIL_TO_PASS | tests/e2e/app.spec.ts::a late Report a problem reply, saved or failed, leaves the New session dialog opened after it and what was typed in it | fail | error at head: Vitest exited 1: no output; it did not report the file\nMUST 2 | FAIL_TO_PASS | tests/e2e/app.spec.ts::saving the work pack folder keeps an unsaved Parent folder draft, and saving the Parent folder keeps a pack folder draft | fail | error at head: Vitest exited 1: no output; it did not report the file\nMUST 3 | none | - | none | an impact-map listing requirement; no skipped test or extra test was added for other class members\nMUST 4 | PASS_TO_PASS | tests/e2e/app.spec.ts::Report a problem saves the note with the view and session to the inbox, and keeps it when the save fails | fail | error at head: Vitest exited 1: no output; it did not report the file\nFAIL: 4 MUSTs, 3 failing tests, 0 problems, 1 none (the owner decides whether none should fail), 0 mutants, 0.05 min\n",
+ "leftover_worktrees": [],
+ "leftover_removed": false,
+ "head": "504326a51fe37fdfd87867faedf72a20e780e01b",
+ "base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+ "cmd": "~/worktrees/chezmoi/r3/dotfiles/dot_agents/skills/orchestrator-workers/scripts/reqgate.py check --repo ~/sandbox/personal/agent-mission-control --base 73619b3b991ff69319eb21fd04aef723351ea86f --head 504326a51fe37fdfd87867faedf72a20e780e01b --brief ~/.local/state/orchestrator-workers/amc-2026-10-31/d3.prompt.md --report ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-31__d3.report.f2p.md --warn --json ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-31__d3.gate.f2p.json --timeout 180 --mutants none"
+}

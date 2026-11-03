@@ -1,0 +1,239 @@
+{
+  "passed": true,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once",
+      "status": "pass",
+      "reason": "killed 13 of 13 mutants it covers (Killed 13)",
+      "mutants": {
+        "attempted": 13,
+        "Killed": 13,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends the whole current list on each session/load, not the change",
+      "status": "pass",
+      "reason": "killed 9 of 13 mutants it covers (Killed 9, KilledByOtherTests 4)",
+      "mutants": {
+        "attempted": 13,
+        "Killed": 9,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 4
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/acp-special.test.ts::offered: each switch change while idle reloads the session with the whole current list",
+      "status": "pass",
+      "reason": "killed 37 of 78 mutants it covers (Killed 37, Survived 9, KilledByOtherTests 32)",
+      "mutants": {
+        "attempted": 78,
+        "Killed": 37,
+        "Survived": 9,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 32
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/acp-special.test.ts::not offered: the switches still work, no roots are sent, the panel says so, and kb searches the switched-on repos",
+      "status": "pass",
+      "reason": "killed 54 of 105 mutants it covers (Killed 54, Survived 10, Timeout 2, KilledByOtherTests 39)",
+      "mutants": {
+        "attempted": 105,
+        "Killed": 54,
+        "Survived": 10,
+        "Timeout": 2,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 39
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/acp-folders.test.ts::an agent whose additionalDirectories capability is absent > sends no roots on new or load, and refuses a write into the folder it was not given",
+      "status": "pass",
+      "reason": "killed 26 of 54 mutants it covers (Killed 26, Survived 5, KilledByOtherTests 23)",
+      "mutants": {
+        "attempted": 54,
+        "Killed": 26,
+        "Survived": 5,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 23
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/acp-folders.test.ts::offersFolders > is true only for an object under sessionCapabilities.additionalDirectories",
+      "status": "pass",
+      "reason": "killed 28 of 28 mutants it covers (Killed 28)",
+      "mutants": {
+        "attempted": 28,
+        "Killed": 28,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > writes inside the session's folder and inside an added root, after asking",
+      "status": "pass",
+      "reason": "killed 17 of 24 mutants it covers (Killed 17, KilledByOtherTests 7)",
+      "mutants": {
+        "attempted": 24,
+        "Killed": 17,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 7
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > refuses, without asking, a write outside every root, with a .. step, through a link, or at a root itself",
+      "status": "pass",
+      "reason": "killed 13 of 24 mutants it covers (Killed 13, KilledByOtherTests 11)",
+      "mutants": {
+        "attempted": 24,
+        "Killed": 13,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 11
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > refuses a write into a root switched off since the session opened",
+      "status": "pass",
+      "reason": "killed 23 of 30 mutants it covers (Killed 23, KilledByOtherTests 7)",
+      "mutants": {
+        "attempted": 30,
+        "Killed": 23,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 7
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/acp-special.test.ts::offered: a change while a turn runs waits for the engine-made end, then reloads once",
+      "status": "pass",
+      "reason": "killed 30 of 78 mutants it covers (Killed 30, Survived 9, KilledByOtherTests 39)",
+      "mutants": {
+        "attempted": 78,
+        "Killed": 30,
+        "Survived": 9,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 39
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/acp-special.test.ts::offered: Stop with a pending change reloads once, and the stopped turn's late write is refused",
+      "status": "pass",
+      "reason": "killed 29 of 78 mutants it covers (Killed 29, Survived 9, KilledByOtherTests 40)",
+      "mutants": {
+        "attempted": 78,
+        "Killed": 29,
+        "Survived": 9,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 40
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/acp-special.test.ts::offered: a refusal ends the turn and the pending change is applied once",
+      "status": "pass",
+      "reason": "killed 29 of 78 mutants it covers (Killed 29, Survived 9, KilledByOtherTests 40)",
+      "mutants": {
+        "attempted": 78,
+        "Killed": 29,
+        "Survived": 9,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 40
+      }
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 203,
+  "mutant_statuses": {
+    "NoCoverage": 80,
+    "Killed": 167,
+    "Survived": 21,
+    "Timeout": 15
+  },
+  "minutes": 9.94
+}

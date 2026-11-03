@@ -1,0 +1,47 @@
+{
+  "run": "amc-2026-10-29",
+  "item": "canvas-b",
+  "head": "16793cd0aa62d2652fc6d9b389be728449ceb001",
+  "base": "933663c1a7a98cf5d2eda7e673f50a1173bd9744",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/canvas-message.test.ts", "name": "readCanvasMessage > takes a size that is a finite non-negative number, rounded up and capped", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the narrow height message: only a number, capped at a ceiling"},
+      {"file": "tests/unit/canvas.test.ts", "name": "the prelude > goes inside <head>, else after <html>, else first, and never changes a non-HTML file", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the injected prelude that carries the theme and the size reporting into the frame"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a canvas card reads as part of the chat: the app's title, no file name, no border, AMC's theme in both schemes", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "title, no file name, no border, theme follows a scheme switch; title quotes the MUST's reads-as-part-of-the-chat wording"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/pins.test.ts", "name": "pins > pins a canvas by its path and refuses the same canvas twice", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "canvas becomes a pin kind like AMC's other pins"},
+      {"file": "tests/unit/canvas-message.test.ts", "name": "readCanvasMessage > reads ready and escape", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "Escape pressed inside the frame reaches the host view as a message so the overlay can close"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a canvas is pinned, opens larger over the view, and Escape closes it and returns focus", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "Pin, Open larger, Escape, focus return; title restates the MUST"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/canvas.test.ts", "name": "canvas files and the session > keeps canvas files out of git and Changes, removes them when the session is archived, and keeps a saved copy", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "part 1's save path, unchanged at base; guards that the save still works"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Save a copy keeps the canvas file in the session's folder", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "Save from the card's menu writes the file"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/canvas.test.ts", "name": "bringing a file into the canvas folder > opens a copy for the agent and for Preview, whatever the turn is doing", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "Preview serves an HTML file through the canvas origin and records the card"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Preview in Changes opens an HTML file as the same card, and a file the agent shows from the folder is copied in", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "Preview button in Changes opens the card"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Preview on an HTML file tab opens the same card, and a file outside the session's folder is refused with a reason", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "Preview button on the file tab"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/canvas-message.test.ts", "name": "readCanvasMessage > ignores anything malformed", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "malformed height messages are dropped; title echoes the MUST's malformed-one-ignored wording"},
+      {"file": "tests/unit/canvas-message.test.ts", "name": "readCanvasMessage > takes a size that is a finite non-negative number, rounded up and capped", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "valid and oversized height cases"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a canvas frame takes only a valid height from its app, up to a ceiling, and ignores a malformed one", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "the browser height-message test the MUST lists; title quotes its valid/oversized/malformed cases"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/canvas.test.ts", "name": "bringing a file into the canvas folder > copies an HTML file from inside the session's folder, reuses an identical copy, and refuses everything else with a reason", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "copy from inside the session folder, refusal outside, symlink out refused; title quotes the MUST's inside-the-session's-folder and reason wording"},
+      {"file": "tests/unit/canvas.test.ts", "name": "bringing a file into the canvas folder > opens a copy for the agent and for Preview, whatever the turn is doing", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "an outside path is refused through the session manager"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Preview on an HTML file tab opens the same card, and a file outside the session's folder is refused with a reason", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "HTTP refusal with a reason for an outside file; title quotes the MUST"}
+    ]},
+    {"must": "7", "tests": [
+      {"file": "tests/unit/canvas.test.ts", "name": "canvas origin > serves only canvas files, read-only, with a policy that allows scripts and no fetch, XHR or WebSocket", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "existing test changed to require the WebRTC guard in served HTML and a stricter policy"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a peer connection cannot be made inside a canvas frame", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "constructor and nested-frame attempts blocked in the frame while the app window keeps WebRTC; title restates the MUST's peer-connection wording"}
+    ]}
+  ],
+  "findings": [
+    {"round": "canvas-b-rereview1", "n": "1", "musts": ["7"], "tests": ["tests/e2e/app.spec.ts::a peer connection cannot be made inside a canvas frame", "tests/unit/canvas.test.ts::canvas origin > serves only canvas files, read-only, with a policy that allows scripts and no fetch, XHR or WebSocket"], "note": "at a later head, a canvas page loaded directly (not in the card) recovers a native peer connection through an empty child frame; the unit test only checks the guard text and the browser test only the in-card case, and this depends on browser platform behaviour that a base-failing unit test would not reproduce"},
+    {"round": "canvas-b-review1", "n": "1", "musts": ["7"], "tests": ["tests/unit/canvas.test.ts::the prelude > goes inside <head>, else after <html>, else first, and never changes a non-HTML file"], "note": "the guard is placed at the first head tag even when it sits inside an HTML comment, so a page can comment the guard out; the prelude test has no commented-head case, though such a case added to it would fail on base (no prelude) and at head, so it would expose this"},
+    {"round": "canvas-b-review1", "n": "2", "musts": ["7"], "tests": ["tests/unit/canvas.test.ts::canvas origin > serves only canvas files, read-only, with a policy that allows scripts and no fetch, XHR or WebSocket"], "note": "SVG files served on the canvas origin can run scripts but get no guard (only HTML does); the origin test covers HTML only, and an adjacent SVG case would be needed to expose it"}
+  ],
+  "notes": "No Vitest test checks the theme passing or the title reading in the browser; MUSTs 1, 2, 4, 5, 6 have Vitest tests plus Playwright; MUST 3's new behaviour (Save from the card menu) is Playwright-only, with a Vitest PASS_TO_PASS guard on part 1's save. The rereview finding concerns head 482af12, later than the mapped head. Reports read from canvas-b-review1.jsonl and canvas-b-rereview1.jsonl."
+}

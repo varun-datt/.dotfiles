@@ -1,0 +1,74 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "1",
+      "why": "inventory of flaky tests from repeated runs and gate logs is report work; no test checks it"
+    },
+    {
+      "must": "2",
+      "why": "classification of flake kinds with evidence is report work; no test checks it"
+    },
+    {
+      "must": "4",
+      "why": "30 loaded unit runs and 10 browser runs are evidence in the report; no test checks it"
+    },
+    {
+      "must": "6",
+      "why": "docs/testing.md and report drafts are documentation; no test checks them"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "5",
+      "test": "tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion",
+      "status": "fail",
+      "reason": "passes on base: it cannot catch the change"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/test-hygiene.test.ts::test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0",
+      "status": "fail",
+      "reason": "passes on base: it cannot catch the change"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/test-hygiene.test.ts::test hygiene > catches a new fixed sleep",
+      "status": "fail",
+      "reason": "passes on base: it cannot catch the change"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "3",
+      "test": "tests/unit/watch.test.ts::the workspace watcher > delivers a burst of writes as one batch, skips .git and node_modules, and keeps one watcher per folder",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/watch.test.ts::the workspace watcher > drops an event the system delivers again for a file unchanged since its last batch, and still reports its next write",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/watch.test.ts::the workspace watcher > hears a real write from the operating system",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.1
+}

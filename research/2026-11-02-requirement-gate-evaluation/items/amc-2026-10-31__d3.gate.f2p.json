@@ -1,0 +1,42 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "3",
+      "why": "an impact-map listing requirement; no skipped test or extra test was added for other class members"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::a late Report a problem reply, saved or failed, leaves the New session dialog opened after it and what was typed in it",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::saving the work pack folder keeps an unsaved Parent folder draft, and saving the Parent folder keeps a pack folder draft",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::Report a problem saves the note with the view and session to the inbox, and keeps it when the save fails",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.05
+}

@@ -1,0 +1,28 @@
+{
+  "run": "amc-2026-10-30", "item": "notes-search",
+  "head": "28d4a830de68f35c0fe56dda86dfe3043712095b", "base": "f37cb54a844a48b5a40c5cd958db0e2736fd0af2",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/knowledge.test.ts", "name": "the host reads a note only from inside its source's folder, records kb health, and refuses a short query", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "host side of the Notes group: refuses a query under three characters, a failed search reports failed and is recorded in health; title echoes the health clause"},
+      {"file": "tests/unit/knowledge.test.ts", "name": "the palette's note search reports a timeout, a failure, bad output and a folder outside every source", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a slow or failed kb search yields a failed state with its reason"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "only test of the group in the palette, the Searching notes state and not holding the other groups back; title quotes the Notes group"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/knowledge.test.ts", "name": "the host reads a note only from inside its source's folder, records kb health, and refuses a short query", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the host returns a note as markdown only from inside its source's folder"},
+      {"file": "tests/unit/knowledge.test.ts", "name": "the palette's note search reads kb's contract: rows, de-duplicated and capped, openable only for a known source", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "rows carry source and path and whether AMC can open them"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "opens a note read-only in a tab; title quotes the read-only wording"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/analytics.test.ts", "name": "records a palette search as counts and the kind of row picked, never its text, and refuses anything else", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "changed on the branch to expect noteRows in the palette.search record and to refuse a bad noteRows"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "asserts the record counts note rows and a note pick"},
+      {"file": "tests/e2e/app.spec.ts", "name": "measures palette searches that find nothing or get no pick, without sending what was typed", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "changed to expect noteRows zero in the record"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/knowledge.test.ts", "name": "the palette's note search reads kb's contract: rows, de-duplicated and capped, openable only for a known source", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "host test of the kb call's contract with a fake runner; title echoes the contract case"},
+      {"file": "tests/unit/knowledge.test.ts", "name": "the palette's note search reports a timeout, a failure, bad output and a folder outside every source", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "host test of timeout and failure; title echoes MUST 4's cases"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "the browser test of results, slow and failed with expectCleanLayout that MUST 4 asks for"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings. MUST 4 is a requirement for tests rather than behaviour; mapped to the tests it names. The palette-side parts of MUST 1 (debounce, Searching notes state, not holding other groups back) and MUST 2 (read-only tab, copy-path fallback) are checked only by Playwright; Vitest covers the host side. No test checks the copy-path fallback or that a note is never written. analytics.test.ts uses top-level it() with no describe."
+}
