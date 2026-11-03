@@ -1,0 +1,32 @@
+{
+  "run": "amc-2026-10-30",
+  "item": "drafts",
+  "head": "7a5656ac8bce9d0395fbe6bd4e865c19e2460880",
+  "base": "a36c03d8e025678c6fa2aa49295e2f8e8c75b70f",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/drafts.test.ts", "name": "changeDrafts > adds, edits, removes, clears sent pieces and discards all", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "adds a piece anchored to a file line and one anchored to a reply"},
+      {"file": "tests/e2e/app.spec.ts", "name": "gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "adds pieces from a reply selection and from the file view's actions menu"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/drafts.test.ts", "name": "changeDrafts > adds, edits, removes, clears sent pieces and discards all", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "edit, remove and discard-all of pending pieces at the host"},
+      {"file": "tests/e2e/app.spec.ts", "name": "gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "message box shows pieces with their count, edits and removes one, Discard all asks for confirmation"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/drafts.test.ts", "name": "composeDraft > sends each piece's quoted anchor, its file and line, and its note, then the owner's text", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "composed message order and content; title quotes the MUST's wording"},
+      {"file": "tests/unit/drafts.test.ts", "name": "composeDraft > names a single piece without a count, and leaves the owner's text alone when there are no pieces", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "single-piece and no-piece composition"},
+      {"file": "tests/e2e/app.spec.ts", "name": "gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "the fake engine receives the composed text and the pieces clear after send"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/drafts.test.ts", "name": "changeDrafts > keeps anchors inside the session's folder and refuses empty quotes and unknown pieces", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "file anchors outside the session folder are refused; title echoes 'anchors stay inside the session'"},
+      {"file": "tests/e2e/app.spec.ts", "name": "gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "pieces and notes survive a page reload (host-kept); no test restarts the host"}
+    ]},
+    {"must": "5", "none": "no test adds or sends pieces while a turn is running"},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/drafts.test.ts", "name": "composeDraft > sends each piece's quoted anchor, its file and line, and its note, then the owner's text", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the unit test of composing the message"},
+      {"file": "tests/e2e/app.spec.ts", "name": "gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "the browser test the MUST lists (reply and file line, edit, remove, reload, send, Discard all, expectCleanLayout); title echoes that list"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings. drafts.test.ts imports new modules (src/host/drafts.ts, src/ui/draft-message.ts), so on the base it fails at import rather than on an assertion. tests/unit/working.test.ts only gained a drafts field in its fixture and checks no MUST. Restart survival is checked only by a browser reload, not a host restart."
+}

@@ -1,0 +1,112 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/diagram.test.ts::fences the source as mermaid",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/diagram.test.ts::zoom math > fits and centres a wide diagram, never above 2x",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/diagram.test.ts::zoom math > keeps the point under the cursor fixed",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/diagram.test.ts::zoom math > shows actual size centred",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/diagram.test.ts::fileName > uses the title line when there is one",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/diagram.test.ts::fileName > uses the first line otherwise, skipping comments and front matter",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::copies a diagram's source and Markdown, quotes it into the message box, and saves it as SVG",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/diagram.test.ts::zoom math > clamps the scale",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/diagram.test.ts::zoom math > keeps the point under the cursor fixed",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/diagram.ts' imported from $TMPDIR/reqgate-dbdpt87v/tree/tests/unit/diagram.test.ts"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::draws a Mermaid diagram from a finished reply, and keeps the source and an error for a broken one",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "7",
+      "test": "tests/e2e/app.spec.ts::draws a Mermaid diagram from a finished reply, and keeps the source and an error for a broken one",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.27
+}

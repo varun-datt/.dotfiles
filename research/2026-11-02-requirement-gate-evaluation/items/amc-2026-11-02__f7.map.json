@@ -1,0 +1,32 @@
+{
+  "run": "amc-2026-11-02", "item": "f7",
+  "head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7", "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/assignments.test.ts", "name": "every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "legacy fixture store with each old state; checks mapped state and the workspace Inbox; title echoes MUST 1's each-old-state and Inbox wording"},
+      {"file": "tests/unit/assignments.test.ts", "name": "the move keeps a copy of the store from before it, holding every old task", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "backup taken before the migration; title paraphrases the backup clause closely"},
+      {"file": "tests/unit/assignments.test.ts", "name": "a move that fails half-way, after a row was written, is undone, the store still opens and says why, the readable tasks stay usable, and the next start moves them", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "one-transaction rollback and host still starts saying why; title quotes MUST 1's half-way failure case"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/assignments.test.ts", "name": "a project belongs to one workspace and links a folder inside a knowledge repository; no folder yet is allowed and flagged; outside is refused with the reason", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 2 and its no-folder and outside-folder cases"},
+      {"file": "tests/unit/assignments.test.ts", "name": "an assignment moves from the Inbox to a project of its workspace and back, never to another workspace's or a missing project", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 2 case: moving an assignment from the Inbox to a project; at most one project"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/assignments.test.ts", "name": "every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "asserts every new field with defaults on migrated rows and that the task view fields are unchanged"},
+      {"file": "tests/unit/task-loop.test.ts", "name": "a task whose check passes waits for the owner, and Merge brings it into the checkout's current branch", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "existing, unchanged task test guarding the task's Merge path over the changed store"},
+      {"file": "tests/unit/task-loop.test.ts", "name": "Open a pull request: the task's agent drafts it, not a draft by default, and Create hands it to the opener", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "existing, unchanged task test guarding Open pull request"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/assignments.test.ts", "name": "two updates from the same version: the first lands, the older one is refused", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 4's case"},
+      {"file": "tests/unit/assignments.test.ts", "name": "the task action route updates the record, refuses an older version with 409, and refuses bad fields", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "version check through the HTTP route"},
+      {"file": "tests/unit/assignments.test.ts", "name": "the task loop's own save keeps a move made since it read the task", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a stale internal save does not overwrite a newer write"}
+    ]}
+  ],
+  "findings": [
+    {"round": "f7-rereview", "n": "c3", "musts": ["1", "2"], "tests": ["tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task"], "note": "After the fix, Inboxes are created from sessions only, so a workspace stored only through a project before the change stays without an Inbox on reopen; the mapped migration test uses task-bearing fixtures only, and a base-failing test with a project-only fixture store would expose it."},
+    {"round": "f7-review", "n": "3", "musts": ["1", "2"], "tests": ["tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task"], "note": "Inbox creation happened only inside the task migration loop, so workspaces with sessions but no tasks got none; the mapped test only uses stores with tasks, so a test opening a session-only fixture and listing projects would have failed at head."},
+    {"round": "f7-review", "n": "4", "musts": ["2"], "tests": ["tests/unit/assignments.test.ts::a project belongs to one workspace and links a folder inside a knowledge repository; no folder yet is allowed and flagged; outside is refused with the reason"], "note": "Validation checked only lexical containment, so an existing file or a folder outside the projects area of a knowledge repository passed; the mapped test covers outside, parent-escape and root paths but not these, so adding those cases would expose it."},
+    {"round": "f7-review", "n": "5", "musts": ["3"], "tests": ["tests/e2e/app.spec.ts::keeps every dialog inside a 720 px window, with its last button in reach when its content grows"], "note": "Gate-run finding: an unchanged Playwright test that starts and discards an assignment was left out of the browser regression selector; not a missing assertion, so no base-failing test applies, and it is outside the Vitest map."}
+  ],
+  "notes": "assignments.test.ts uses top-level test() calls with no describe, so names are bare titles. MUST 3's browser cases (task tab, Home rows) are checked only by Playwright tests in tests/e2e/app.spec.ts that existed at base; the map uses existing Vitest task-loop tests as PASS_TO_PASS guards instead. assignments.test.ts imports src/host/projects.ts, new on the branch, so base runs fail at import."
+}

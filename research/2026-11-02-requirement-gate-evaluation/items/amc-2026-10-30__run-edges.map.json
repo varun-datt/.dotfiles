@@ -1,0 +1,27 @@
+{
+  "run": "amc-2026-10-30", "item": "run-edges", "head": "c2faf82c07018371ae6473f5d8e5468334c76402", "base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/runs.test.ts", "name": "restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "card restored after restart with the same actions; title quotes that wording"},
+      {"file": "tests/unit/runs.test.ts", "name": "a restored card whose orchestrator cannot be opened again says so and offers to end the run, which keeps every worktree and branch", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "orchestrator cannot continue; title quotes keeping every worktree and branch"},
+      {"file": "tests/unit/runs.test.ts", "name": "restart while the finish card is open, with an answer that arrives as the host stops: the answer is refused, the card comes back, and the run merges", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "finish card persisted across a restart"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/runs.test.ts", "name": "a failed run merge can be tried again: a second failure gives the new reason, two quick presses merge once, and success settles the offer", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "retry, second failure's new reason, success; title quotes those words"},
+      {"file": "tests/unit/runs.test.ts", "name": "a worker merge that stops on a conflict names the files; its retry waits behind the run's running step, then merges as normal", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a conflict is reported with its files"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a run's failed merge says why and can be tried again, which merges the run", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "visible retry button on the error card"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/runs.test.ts", "name": "restart while the finish card is open, with an answer that arrives as the host stops: the answer is refused, the card comes back, and the run merges", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "two listed orders; title quotes both verbatim"},
+      {"file": "tests/unit/runs.test.ts", "name": "the orchestrator's turn ends on its own while a review card is open: the card stays answerable and merging carries the run on", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "orchestrator ending on its own with a card open; title quotes that order"},
+      {"file": "tests/unit/runs.test.ts", "name": "a worker merge that stops on a conflict names the files; its retry waits behind the run's running step, then merges as normal", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a retry while another step of the run is running"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/runs.test.ts", "name": "restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "host test for the review-card restart order"},
+      {"file": "tests/unit/runs.test.ts", "name": "a failed run merge can be tried again: a second failure gives the new reason, two quick presses merge once, and success settles the offer", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "host test for the double-press order"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a run's failed merge says why and can be tried again, which merges the run", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "the browser test of the retry; no browser test of the card after a restart exists"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. All new runs.test.ts tests are top-level, with no describe. MUST 4 is a test-list requirement: its browser test of the card after a simulated restart is absent. Strict marks rest on titles quoting the MUSTs' wording; none cites a number."
+}

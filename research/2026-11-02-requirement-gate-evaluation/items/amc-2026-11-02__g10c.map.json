@@ -1,0 +1,28 @@
+{
+  "run": "amc-2026-11-02", "item": "g10c", "head": "9078f61570223fdbeea821dc689b495afea5468f", "base": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/kb-scope.test.ts", "name": "a chat session in a repo kb knows searches only its origin's source, from the tool, the palette, each message and warm-up", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "fake kb records --source=app for tool, palette, message and warm-up; title quotes the MUST's chat case and callers"},
+      {"file": "tests/unit/kb-scope.test.ts", "name": "a task try and a run worker in AMC's worktrees folder search the origin's source, not the worktree", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "worktree sessions search the origin's source; title quotes the MUST's worktree case"},
+      {"file": "tests/unit/kb-scope.test.ts", "name": "a repo kb does not know runs no search and records outside once; each switched-on special repo adds its source, and one switched off leaves the next search", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "unknown repo, one and two switches on, switch off mid-session; title quotes those cases"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/kb-scope.test.ts", "name": "a wiki hit never reaches a session with the wiki off: a result that lands after the switch, a hit linked into it, and a note opened from an older list", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "late result after switch-off, symlinked hit and note-file read all refused; the MUST's two cases"},
+      {"file": "tests/unit/kb-scope.test.ts", "name": "a message sent with the wiki off attaches no wiki hit, though kb answers with one", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a wiki hit kb returns is not attached to the message when the wiki is off"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/kb-scope.test.ts", "name": "the Azure DevOps tool follows the origin: offered in a task worktree of an in-scope repo, refused for an out-of-scope one, on create and after resume", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "fake ADO with a scoped pack, worktree tries in and out of scope, before and after a restart; title quotes the MUST's cases"},
+      {"file": "tests/unit/ado-tool.test.ts", "name": "a session gets the tool only when Azure DevOps is set up and the work pack covers its folder", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "unchanged base test guarding a chat session in scope and a pack with no scope.json (everywhere, as today)"},
+      {"file": "tests/unit/pack.test.ts", "name": "a scope folder spelled through a link covers the real folder a session's origin is stored as, and the other way round", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "inScope now compares real paths, needed because origins are stored as real paths"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/kb-scope.test.ts", "name": "when kb cannot list its sources, a session still sends, searches nothing, and kb's health says why", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "malformed output and timeout of the sources listing: session keeps working, no search, health names the reason; title paraphrases the MUST closely"},
+      {"file": "tests/unit/kb-scope.test.ts", "name": "Check again, with kb failing, has the next search read kb's source list afresh", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "recovery path of the sources list after failure (Check again)"}
+    ]}
+  ],
+  "findings": [
+    {"round": "g10c-rereview", "n": "c1", "musts": ["2"], "tests": ["tests/unit/kb-scope.test.ts::a wiki hit never reaches a session with the wiki off: a result that lands after the switch, a hit linked into it, and a note opened from an older list"], "note": "After the fix, revocation of cached notes was tested for prompts, steers and subagents but not for fork, hand-off or the Cursor engine; a missing case, which a fail-on-base check of the existing tests cannot reveal."},
+    {"round": "g10c-review", "n": "4", "musts": ["1", "2"], "tests": ["tests/unit/kb-scope.test.ts::a task try and a run worker in AMC's worktrees folder search the origin's source, not the worktree"], "note": "The worktree test switches nothing on, so origin-plus-switched-source in task and worker sessions is unasserted; the test passes either way, so fail-on-base checking would not flag the gap."}
+  ],
+  "notes": "Head includes s2's commits, so e2e, actions, server and task-loop changes belong to s2; no browser test was added for these MUSTs. knowledge.test.ts and analytics.test.ts changes only adapt fakes to the new sources listing. MUST 4's 'kb missing' case has no test (review noted a pre-existing gap there). The TD-2 test 'kb's source list is read again when its sources file changes, or on Check again (TD-2)' is tech debt, not a MUST."
+}

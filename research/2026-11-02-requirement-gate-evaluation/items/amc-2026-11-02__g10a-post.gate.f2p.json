@@ -1,0 +1,47 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/special-view.test.ts::readSpecial > refuses a null entry",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/special-view.ts' imported from $TMPDIR/reqgate-em5ehyjq/tree/tests/unit/special-view.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/special-view.test.ts::readSpecial > accepts every shape the host sends",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/special-view.ts' imported from $TMPDIR/reqgate-em5ehyjq/tree/tests/unit/special-view.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "2",
+      "test": "tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.09
+}

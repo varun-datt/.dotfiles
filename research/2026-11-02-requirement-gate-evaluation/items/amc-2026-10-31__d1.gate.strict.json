@@ -1,0 +1,39 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "3",
+      "why": "no test cites it"
+    },
+    {
+      "must": "4",
+      "why": "no test cites it"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/inside.test.ts::MUST 1: whatever is linked or swapped, the bytes read come from inside the root",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-b8qmq_gq/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/inside.test.ts::MUST 2: a root given with a trailing / or /. is refused even when it is otherwise a plain folder",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-b8qmq_gq/tree/tests/unit/inside.test.ts"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.06
+}

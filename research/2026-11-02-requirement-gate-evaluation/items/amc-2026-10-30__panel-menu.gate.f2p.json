@@ -1,0 +1,65 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_2__.groupMenu) is not a function"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/order.test.ts::tab order > uses the default bar until the owner moves something, and never loses an action",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/order.test.ts::tab order > says why an action is not offered, and nothing when it is",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_1__.whyNot) is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::a customised menu keeps its groups with separators, and the dialog mutes what this session cannot offer",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_2__.groupMenu) is not a function"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::a customised menu keeps its groups with separators, and the dialog mutes what this session cannot offer",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.19
+}

@@ -1,0 +1,4279 @@
+[
+ {
+  "run": "amc-2026-10-27",
+  "item": "diagram",
+  "review": "rv-diagram",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/diagram.prompt.md",
+  "branch": "ow/diagram",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7"
+  ],
+  "base": "5b65c68f4cc0fb94151a3a743e03cc5e6239f38c",
+  "base_how": "amc-2026-10-27/diagram.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/diagram",
+  "head": "5fdc5216aed3298e23e249878f12915061a9db16",
+  "head_how": "INFERRED: newest first-parent commit of 78edfd7^1 not in the build base whose committer time (1793147278) is before rv-diagram.start (1793148421); the branch and its reflog are gone",
+  "problems": [],
+  "build_base": "5b65c68f4cc0fb94151a3a743e03cc5e6239f38c",
+  "changed": [
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/ui/App.tsx",
+   "A\tsrc/ui/diagram-tools.tsx",
+   "A\tsrc/ui/diagram.ts",
+   "M\tsrc/ui/markdown-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/diagram.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/diagram.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/diagram.test.ts"
+  ],
+  "sources": [
+   "src/host/engine/fake.ts",
+   "src/ui/App.tsx",
+   "src/ui/diagram-tools.tsx",
+   "src/ui/diagram.ts",
+   "src/ui/markdown-view.tsx"
+  ],
+  "new_sources": [
+   "src/ui/diagram-tools.tsx",
+   "src/ui/diagram.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "rv-diagram",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Toolbar covers the top of the drawing, against the owner's ruling",
+    "round_head": null,
+    "round_head_how": null,
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "p7-cursor",
+  "review": "p7-cursor-review(in-chat)",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/p7-cursor.prompt.md",
+  "branch": "ow/p7-cursor",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "e1cbc67f4d61afdfc52c7ae730c39052be36664a",
+  "base_how": "amc-2026-10-27/p7-cursor.base",
+  "reflog_head": null,
+  "reflog_how": null,
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "rv-p7-post",
+    "n": "1",
+    "round_kind": "post",
+    "focus": "test",
+    "cause": "PLAT",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "SDK strips tool-call id, so the claimed approval match never runs",
+    "round_head": null,
+    "round_head_how": null,
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-28",
+  "item": "big-files",
+  "review": "rv-big-files",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/big-files.prompt.md",
+  "branch": "ow/big-files",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "aa2b6f4133533626d7465a8e35f608164551855b",
+  "base_how": "amc-2026-10-28/big-files.base",
+  "reflog_head": "66c5fabc54db4e23f6bd9d8d59b8fe8a37b178c0",
+  "reflog_how": "reflog of ow/big-files: last entry at 1793203865 <= review start 1793204567",
+  "head": "66c5fabc54db4e23f6bd9d8d59b8fe8a37b178c0",
+  "head_how": "reflog of ow/big-files: last entry at 1793203865 <= review start 1793204567",
+  "problems": [],
+  "build_base": "aa2b6f4133533626d7465a8e35f608164551855b",
+  "changed": [
+   "M\tsrc/host/engine/acp.ts",
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/fence.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/cards.tsx",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/attachments.test.ts",
+   "M\ttests/unit/server.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/attachments.test.ts",
+   "tests/unit/server.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/engine/acp.ts",
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/types.ts",
+   "src/host/fence.ts",
+   "src/host/sessions.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/cards.tsx"
+  ],
+  "new_sources": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "rv-big-files",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "READ",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Binary check now reads only the first 64 KB, against the brief",
+    "round_head": "66c5fabc54db4e23f6bd9d8d59b8fe8a37b178c0",
+    "round_head_how": "reflog of ow/big-files: last entry at 1793203865 <= review start 1793204567",
+    "round_reflog_head": "66c5fabc54db4e23f6bd9d8d59b8fe8a37b178c0"
+   },
+   {
+    "round": "rv-big-files",
+    "n": "5",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "PRE",
+    "test_would_catch": "no",
+    "ruling": "rejected",
+    "summary": "File name from @ completion reaches the model unfenced",
+    "round_head": "66c5fabc54db4e23f6bd9d8d59b8fe8a37b178c0",
+    "round_head_how": "reflog of ow/big-files: last entry at 1793203865 <= review start 1793204567",
+    "round_reflog_head": "66c5fabc54db4e23f6bd9d8d59b8fe8a37b178c0"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-28",
+  "item": "gaps-1",
+  "review": "rv-gaps-1",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/gaps-1.prompt.md",
+  "branch": "ow/gaps-1",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3"
+  ],
+  "base": "495d22b26dba6a401fa3d5f4f3f75b97ebba3c6b",
+  "base_how": "amc-2026-10-28/gaps-1.base",
+  "reflog_head": "e39ed661a99d478255e61ac48b616b51f85ae166",
+  "reflog_how": "reflog of ow/gaps-1: last entry at 1793240618 <= review start 1793242869",
+  "head": "e39ed661a99d478255e61ac48b616b51f85ae166",
+  "head_how": "reflog of ow/gaps-1: last entry at 1793240618 <= review start 1793242869",
+  "problems": [],
+  "build_base": "495d22b26dba6a401fa3d5f4f3f75b97ebba3c6b",
+  "changed": [
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/runs.ts",
+   "A\ttests/unit/tool-fences.test.ts"
+  ],
+  "tests": [
+   "tests/unit/tool-fences.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/tool-fences.test.ts"
+  ],
+  "sources": [
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/runs.ts"
+  ],
+  "new_sources": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "rv-gaps-1",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Worker reply enters the orchestrator's next message unfenced",
+    "round_head": "e39ed661a99d478255e61ac48b616b51f85ae166",
+    "round_head_how": "reflog of ow/gaps-1: last entry at 1793240618 <= review start 1793242869",
+    "round_reflog_head": "e39ed661a99d478255e61ac48b616b51f85ae166"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-28",
+  "item": "pr-overview",
+  "review": "rv-pr-overview",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/pr-overview.prompt.md",
+  "branch": "ow/pr-overview",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "aa2b6f4133533626d7465a8e35f608164551855b",
+  "base_how": "amc-2026-10-28/pr-overview.base",
+  "reflog_head": "e7d412a7e6cd7a540845526b0df2cb636d19efa7",
+  "reflog_how": "reflog of ow/pr-overview: last entry at 1793203561 <= review start 1793204477",
+  "head": "e7d412a7e6cd7a540845526b0df2cb636d19efa7",
+  "head_how": "reflog of ow/pr-overview: last entry at 1793203561 <= review start 1793204477",
+  "problems": [],
+  "build_base": "aa2b6f4133533626d7465a8e35f608164551855b",
+  "changed": [
+   "M\tsrc/host/ado-fake.ts",
+   "M\tsrc/host/ado-pr.ts",
+   "M\tsrc/host/ado.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/ui/api.ts",
+   "A\tsrc/ui/kit/Avatar.tsx",
+   "M\tsrc/ui/pull-request-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/ado-overview.test.ts",
+   "M\ttests/unit/ado.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/ado-overview.test.ts",
+   "tests/unit/ado.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/ado-overview.test.ts"
+  ],
+  "sources": [
+   "src/host/ado-fake.ts",
+   "src/host/ado-pr.ts",
+   "src/host/ado.ts",
+   "src/host/http/server.ts",
+   "src/ui/api.ts",
+   "src/ui/kit/Avatar.tsx",
+   "src/ui/pull-request-view.tsx"
+  ],
+  "new_sources": [
+   "src/ui/kit/Avatar.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "rv-pr-overview",
+    "n": "F4",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "yes",
+    "ruling": "rejected",
+    "summary": "Linked items read with a read-only POST, not the literal GET asked",
+    "round_head": "e7d412a7e6cd7a540845526b0df2cb636d19efa7",
+    "round_head_how": "reflog of ow/pr-overview: last entry at 1793203561 <= review start 1793204477",
+    "round_reflog_head": "e7d412a7e6cd7a540845526b0df2cb636d19efa7"
+   },
+   {
+    "round": "rv-pr-overview",
+    "n": "F5",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "CONV",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "Brief-named blocker cases and route-level tests missing",
+    "round_head": "e7d412a7e6cd7a540845526b0df2cb636d19efa7",
+    "round_head_how": "reflog of ow/pr-overview: last entry at 1793203561 <= review start 1793204477",
+    "round_reflog_head": "e7d412a7e6cd7a540845526b0df2cb636d19efa7"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-29",
+  "item": "canvas-b",
+  "review": "canvas-b-review1",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-29/canvas-b.prompt.md",
+  "branch": "ow/canvas-b",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7"
+  ],
+  "base": "933663c1a7a98cf5d2eda7e673f50a1173bd9744",
+  "base_how": "amc-2026-10-29/canvas-b.base",
+  "reflog_head": "16793cd0aa62d2652fc6d9b389be728449ceb001",
+  "reflog_how": "reflog of ow/canvas-b: last entry at 1793301234 <= review start 1793301731",
+  "head": "16793cd0aa62d2652fc6d9b389be728449ceb001",
+  "head_how": "reflog of ow/canvas-b: last entry at 1793301234 <= review start 1793301731",
+  "problems": [],
+  "build_base": "933663c1a7a98cf5d2eda7e673f50a1173bd9744",
+  "changed": [
+   "M\tsrc/host/canvas.ts",
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "A\tsrc/host/engine/fake-canvas.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/pins.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "A\tsrc/ui/canvas-card.tsx",
+   "A\tsrc/ui/canvas-message.ts",
+   "M\tsrc/ui/file-view.tsx",
+   "M\tsrc/ui/pins.tsx",
+   "M\tsrc/ui/rewind.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/canvas-message.test.ts",
+   "M\ttests/unit/canvas.test.ts",
+   "M\ttests/unit/pins.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/canvas-message.test.ts",
+   "tests/unit/canvas.test.ts",
+   "tests/unit/pins.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/canvas-message.test.ts"
+  ],
+  "sources": [
+   "src/host/canvas.ts",
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/fake-canvas.ts",
+   "src/host/engine/fake.ts",
+   "src/host/http/server.ts",
+   "src/host/pins.ts",
+   "src/host/sessions.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/canvas-card.tsx",
+   "src/ui/canvas-message.ts",
+   "src/ui/file-view.tsx",
+   "src/ui/pins.tsx",
+   "src/ui/rewind.tsx"
+  ],
+  "new_sources": [
+   "src/host/engine/fake-canvas.ts",
+   "src/ui/canvas-card.tsx",
+   "src/ui/canvas-message.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "canvas-b-rereview1",
+    "n": "1",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "PLAT",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Canvas opened directly gets WebRTC through an empty iframe",
+    "round_head": "482af121543381c3fb41ccc431b7521b3c5340fb",
+    "round_head_how": "reflog of ow/canvas-b: last entry at 1793302790 <= review start 1793303500",
+    "round_reflog_head": "482af121543381c3fb41ccc431b7521b3c5340fb"
+   },
+   {
+    "round": "canvas-b-review1",
+    "n": "1",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "BOUND",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Guard inserted at a <head> that can sit inside a comment",
+    "round_head": "16793cd0aa62d2652fc6d9b389be728449ceb001",
+    "round_head_how": "reflog of ow/canvas-b: last entry at 1793301234 <= review start 1793301731",
+    "round_reflog_head": "16793cd0aa62d2652fc6d9b389be728449ceb001"
+   },
+   {
+    "round": "canvas-b-review1",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "SVG canvas pages run scripts without the guard",
+    "round_head": "16793cd0aa62d2652fc6d9b389be728449ceb001",
+    "round_head_how": "reflog of ow/canvas-b: last entry at 1793301234 <= review start 1793301731",
+    "round_reflog_head": "16793cd0aa62d2652fc6d9b389be728449ceb001"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-29",
+  "item": "flake-3",
+  "review": "flake-3-review1",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-29/flake-3.prompt.md",
+  "branch": "ow/flake-3",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "cd8735c11164a8bcf73703b75ad1d8e34c44f070",
+  "base_how": "amc-2026-10-29/flake-3.base",
+  "reflog_head": "563999547f39cca7d883fe332470b81d43eb1142",
+  "reflog_how": "reflog of ow/flake-3: last entry at 1793288080 <= review start 1793288201",
+  "head": "563999547f39cca7d883fe332470b81d43eb1142",
+  "head_how": "reflog of ow/flake-3: last entry at 1793288080 <= review start 1793288201",
+  "problems": [],
+  "build_base": "cd8735c11164a8bcf73703b75ad1d8e34c44f070",
+  "changed": [
+   "M\tdocs/testing.md",
+   "M\tsrc/host/watch.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/attachments.test.ts",
+   "M\ttests/unit/runs.test.ts",
+   "M\ttests/unit/search.test.ts",
+   "M\ttests/unit/task-loop.test.ts",
+   "A\ttests/unit/test-hygiene.test.ts",
+   "A\ttests/unit/wait.ts",
+   "M\ttests/unit/watch.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/attachments.test.ts",
+   "tests/unit/runs.test.ts",
+   "tests/unit/search.test.ts",
+   "tests/unit/task-loop.test.ts",
+   "tests/unit/test-hygiene.test.ts",
+   "tests/unit/watch.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/test-hygiene.test.ts"
+  ],
+  "sources": [
+   "src/host/watch.ts"
+  ],
+  "new_sources": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "flake-3-review1",
+    "n": "1",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "No test still drives real OS events for a file in a subfolder",
+    "round_head": "563999547f39cca7d883fe332470b81d43eb1142",
+    "round_head_how": "reflog of ow/flake-3: last entry at 1793288080 <= review start 1793288201",
+    "round_reflog_head": "563999547f39cca7d883fe332470b81d43eb1142"
+   },
+   {
+    "round": "flake-3-review1",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "DESIGN",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "Sleep guard misses a common sleep form and matches comments",
+    "round_head": "563999547f39cca7d883fe332470b81d43eb1142",
+    "round_head_how": "reflog of ow/flake-3: last entry at 1793288080 <= review start 1793288201",
+    "round_reflog_head": "563999547f39cca7d883fe332470b81d43eb1142"
+   },
+   {
+    "round": "flake-3-review1",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "ADJ",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "Port guard ignores the browser config that still uses the shared port",
+    "round_head": "563999547f39cca7d883fe332470b81d43eb1142",
+    "round_head_how": "reflog of ow/flake-3: last entry at 1793288080 <= review start 1793288201",
+    "round_reflog_head": "563999547f39cca7d883fe332470b81d43eb1142"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-29",
+  "item": "insights-history",
+  "review": null,
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/insights-history.prompt.md",
+  "branch": "ow/insights-history",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "b89cfaefb73103664e33c4adb955543c6c5dfe51",
+  "base_how": "amc-2026-10-28/insights-history.base",
+  "head": "b01f2820d5d8736b095c1a2a9b2c4b583783e702",
+  "head_how": "reflog of ow/insights-history: last entry at 1793244494 <= review start 1793284932 (no first review round; the finding's own round)",
+  "problems": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "insights-history-rereview1",
+    "n": "1",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "A history root that is a link is still followed",
+    "round_head": "b01f2820d5d8736b095c1a2a9b2c4b583783e702",
+    "round_head_how": "reflog of ow/insights-history: last entry at 1793244494 <= review start 1793284932",
+    "round_reflog_head": "b01f2820d5d8736b095c1a2a9b2c4b583783e702"
+   }
+  ],
+  "build_base": "b89cfaefb73103664e33c4adb955543c6c5dfe51",
+  "changed": [
+   "M\tpackage.json",
+   "M\tplaywright.config.ts",
+   "M\tsrc/host/facets.ts",
+   "A\tsrc/host/history-worker.ts",
+   "A\tsrc/host/history.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/insights-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/fixtures/history.ts",
+   "A\ttests/unit/history.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/history.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/history.test.ts"
+  ],
+  "sources": [
+   "playwright.config.ts",
+   "src/host/facets.ts",
+   "src/host/history-worker.ts",
+   "src/host/history.ts",
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/ui/api.ts",
+   "src/ui/insights-view.tsx"
+  ],
+  "new_sources": [
+   "src/host/history-worker.ts",
+   "src/host/history.ts"
+  ]
+ },
+ {
+  "run": "amc-2026-10-29",
+  "item": "pr-threads",
+  "review": "pr-threads-review1",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-29/pr-threads.prompt.md",
+  "branch": "ow/pr-threads",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8"
+  ],
+  "base": "2198954c0844f60fcb87a9176adbd30430e245a7",
+  "base_how": "amc-2026-10-29/pr-threads.base",
+  "reflog_head": "1306db7669bf5a4d10a4f090ab3d13c821e370ec",
+  "reflog_how": "reflog of ow/pr-threads: last entry at 1793308225 <= review start 1793308349",
+  "head": "1306db7669bf5a4d10a4f090ab3d13c821e370ec",
+  "head_how": "reflog of ow/pr-threads: last entry at 1793308225 <= review start 1793308349",
+  "problems": [],
+  "build_base": "2198954c0844f60fcb87a9176adbd30430e245a7",
+  "changed": [
+   "M\tsrc/host/ado-fake.ts",
+   "M\tsrc/host/ado-pr.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/monaco.ts",
+   "M\tsrc/ui/pr-files.tsx",
+   "A\tsrc/ui/pr-thread.tsx",
+   "M\tsrc/ui/pull-request-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/ado-overview.test.ts",
+   "M\ttests/unit/ado.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/ado-overview.test.ts",
+   "tests/unit/ado.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/ado-fake.ts",
+   "src/host/ado-pr.ts",
+   "src/ui/api.ts",
+   "src/ui/monaco.ts",
+   "src/ui/pr-files.tsx",
+   "src/ui/pr-thread.tsx",
+   "src/ui/pull-request-view.tsx"
+  ],
+  "new_sources": [
+   "src/ui/pr-thread.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "pr-threads-review1",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "An existing browser test now fails",
+    "round_head": "1306db7669bf5a4d10a4f090ab3d13c821e370ec",
+    "round_head_how": "reflog of ow/pr-threads: last entry at 1793308225 <= review start 1793308349",
+    "round_reflog_head": "1306db7669bf5a4d10a4f090ab3d13c821e370ec"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "clusters",
+  "review": "clusters-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/clusters.prompt.md",
+  "branch": "ow/clusters",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "f914483c64fb7044137ebaa9b25cb0add8f07827",
+  "base_how": "amc-2026-10-30/clusters.base",
+  "reflog_head": "bca502bec451548ba101dbc68e8f8a8e658c219a",
+  "reflog_how": "reflog of ow/clusters: last entry at 1793334899 <= review start 1793335839",
+  "head": "bca502bec451548ba101dbc68e8f8a8e658c219a",
+  "head_how": "reflog of ow/clusters: last entry at 1793334899 <= review start 1793335839",
+  "problems": [],
+  "build_base": "f914483c64fb7044137ebaa9b25cb0add8f07827",
+  "changed": [
+   "A\tsrc/host/clusters.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/api.ts",
+   "A\tsrc/ui/insights-clusters.tsx",
+   "M\tsrc/ui/insights-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/usage-view.tsx",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/clusters-ai.test.ts",
+   "A\ttests/unit/clusters.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/clusters-ai.test.ts",
+   "tests/unit/clusters.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/clusters-ai.test.ts",
+   "tests/unit/clusters.test.ts"
+  ],
+  "sources": [
+   "src/host/clusters.ts",
+   "src/host/engine/fake.ts",
+   "src/host/http/server.ts",
+   "src/host/sessions.ts",
+   "src/ui/api.ts",
+   "src/ui/insights-clusters.tsx",
+   "src/ui/insights-view.tsx",
+   "src/ui/usage-view.tsx"
+  ],
+  "new_sources": [
+   "src/host/clusters.ts",
+   "src/ui/insights-clusters.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "clusters-review",
+    "n": "1",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Cached topic names from one source are sent in a request for another source",
+    "round_head": "bca502bec451548ba101dbc68e8f8a8e658c219a",
+    "round_head_how": "reflog of ow/clusters: last entry at 1793334899 <= review start 1793335839",
+    "round_reflog_head": "bca502bec451548ba101dbc68e8f8a8e658c219a"
+   },
+   {
+    "round": "clusters-review",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "DESIGN",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Dismissals keyed by position, so a reordered reply resurrects a dismissed item",
+    "round_head": "bca502bec451548ba101dbc68e8f8a8e658c219a",
+    "round_head_how": "reflog of ow/clusters: last entry at 1793334899 <= review start 1793335839",
+    "round_reflog_head": "bca502bec451548ba101dbc68e8f8a8e658c219a"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "diff-colour",
+  "review": "diff-colour-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/diff-colour.prompt.md",
+  "branch": "ow/diff-colour",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "a36c03d8e025678c6fa2aa49295e2f8e8c75b70f",
+  "base_how": "amc-2026-10-30/diff-colour.base",
+  "reflog_head": "8c84fece1a2ccd34f980e07f3d882b5b858c7265",
+  "reflog_how": "reflog of ow/diff-colour: last entry at 1793375183 <= review start 1793375307",
+  "head": "8c84fece1a2ccd34f980e07f3d882b5b858c7265",
+  "head_how": "reflog of ow/diff-colour: last entry at 1793375183 <= review start 1793375307",
+  "problems": [],
+  "build_base": "a36c03d8e025678c6fa2aa49295e2f8e8c75b70f",
+  "changed": [
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/ui/cards.tsx",
+   "A\tsrc/ui/diff-colour.ts",
+   "A\tsrc/ui/diff-view.tsx",
+   "M\tsrc/ui/highlight.ts",
+   "M\tsrc/ui/monaco.ts",
+   "M\tsrc/ui/rewind.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/diff-colour.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/diff-colour.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/diff-colour.test.ts"
+  ],
+  "sources": [
+   "src/host/engine/fake.ts",
+   "src/ui/cards.tsx",
+   "src/ui/diff-colour.ts",
+   "src/ui/diff-view.tsx",
+   "src/ui/highlight.ts",
+   "src/ui/monaco.ts",
+   "src/ui/rewind.tsx"
+  ],
+  "new_sources": [
+   "src/ui/diff-colour.ts",
+   "src/ui/diff-view.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "diff-colour-review",
+    "n": "1",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Added and removed tints push code colours below AA contrast",
+    "round_head": "8c84fece1a2ccd34f980e07f3d882b5b858c7265",
+    "round_head_how": "reflog of ow/diff-colour: last entry at 1793375183 <= review start 1793375307",
+    "round_reflog_head": "8c84fece1a2ccd34f980e07f3d882b5b858c7265"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "insights-history",
+  "review": "insights-history-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/insights-history.prompt.md",
+  "branch": "ow/insights-history",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+  "base_how": "amc-2026-10-28/insights-history.base; the branch merged main 1 time(s), so the base is the main commit of its newest merge (7c53fb35b5^2)",
+  "reflog_head": "6c7228e0349d987c10c17511b8526485c1180897",
+  "reflog_how": "reflog of ow/insights-history: last entry at 1793330574 <= review start 1793331066",
+  "head": "6c7228e0349d987c10c17511b8526485c1180897",
+  "head_how": "reflog of ow/insights-history: last entry at 1793330574 <= review start 1793331066",
+  "problems": [],
+  "build_base": "b89cfaefb73103664e33c4adb955543c6c5dfe51",
+  "changed": [
+   "M\tpackage.json",
+   "M\tplaywright.config.ts",
+   "M\tscripts/stable.ts",
+   "M\tsrc/host/facets.ts",
+   "M\tsrc/host/health.ts",
+   "A\tsrc/host/history-worker.ts",
+   "A\tsrc/host/history.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/insights-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/fixtures/history-stall-worker.ts",
+   "A\ttests/fixtures/history.ts",
+   "A\ttests/unit/history.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/history.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/history.test.ts"
+  ],
+  "sources": [
+   "playwright.config.ts",
+   "scripts/stable.ts",
+   "src/host/facets.ts",
+   "src/host/health.ts",
+   "src/host/history-worker.ts",
+   "src/host/history.ts",
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/ui/api.ts",
+   "src/ui/insights-view.tsx"
+  ],
+  "new_sources": [
+   "src/host/history-worker.ts",
+   "src/host/history.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "insights-history-review",
+    "n": "1",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "PLAT",
+    "test_would_catch": "no",
+    "ruling": "rejected",
+    "summary": "Linked root spelled with a trailing slash bypasses the refusal",
+    "round_head": "6c7228e0349d987c10c17511b8526485c1180897",
+    "round_head_how": "reflog of ow/insights-history: last entry at 1793330574 <= review start 1793331066",
+    "round_reflog_head": "6c7228e0349d987c10c17511b8526485c1180897"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "live-checks",
+  "review": "live-checks-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/live-checks.prompt.md",
+  "branch": "ow/live-checks",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+  "base_how": "amc-2026-10-30/live-checks.base",
+  "reflog_head": "8f27343d56d2662e884aba28a0a67ccf4683b689",
+  "reflog_how": "reflog of ow/live-checks: last entry at 1793331156 <= review start 1793331426",
+  "head": "8f27343d56d2662e884aba28a0a67ccf4683b689",
+  "head_how": "reflog of ow/live-checks: last entry at 1793331156 <= review start 1793331426",
+  "problems": [],
+  "build_base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+  "changed": [
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/ui/transcript.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/live/workflows.live.test.ts",
+   "M\ttests/unit/one-shot.test.ts",
+   "M\ttests/unit/transcript.test.ts",
+   "M\ttests/workflows/workflows.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/live/workflows.live.test.ts",
+   "tests/unit/one-shot.test.ts",
+   "tests/unit/transcript.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/fake.ts",
+   "src/ui/transcript.ts"
+  ],
+  "new_sources": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "live-checks-rereview2",
+    "n": "2b",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "ADJ",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "New per-workflow limit is spent by the title call, breaking basic",
+    "round_head": "f1c8ea5441f470efc9e35d71ef4f7c327d6e498a",
+    "round_head_how": "reflog of ow/live-checks: last entry at 1793361671 <= review start 1793362250",
+    "round_reflog_head": "f1c8ea5441f470efc9e35d71ef4f7c327d6e498a"
+   },
+   {
+    "round": "live-checks-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "Live-suite request counter bypassed, so paid sends can exceed the stated limit",
+    "round_head": "8f27343d56d2662e884aba28a0a67ccf4683b689",
+    "round_head_how": "reflog of ow/live-checks: last entry at 1793331156 <= review start 1793331426",
+    "round_reflog_head": "8f27343d56d2662e884aba28a0a67ccf4683b689"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "markers",
+  "review": "markers-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/markers.prompt.md",
+  "branch": "ow/markers",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "c79ef7986c2c42a82afcc8feeed35b02d7aad7d3",
+  "base_how": "amc-2026-10-30/markers.base",
+  "reflog_head": "96438cfe79769b90d91d625d6827f5fa841ccd48",
+  "reflog_how": "reflog of ow/markers: last entry at 1793331551 <= review start 1793331786",
+  "head": "96438cfe79769b90d91d625d6827f5fa841ccd48",
+  "head_how": "reflog of ow/markers: last entry at 1793331551 <= review start 1793331786",
+  "problems": [],
+  "build_base": "c79ef7986c2c42a82afcc8feeed35b02d7aad7d3",
+  "changed": [
+   "M\tsrc/host/http/server.ts",
+   "A\tsrc/host/markers.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/store/db.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/insights-view.tsx",
+   "A\tsrc/ui/markers-panel.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/markers.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/markers.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/markers.test.ts"
+  ],
+  "sources": [
+   "src/host/http/server.ts",
+   "src/host/markers.ts",
+   "src/host/sessions.ts",
+   "src/host/store/db.ts",
+   "src/ui/api.ts",
+   "src/ui/insights-view.tsx",
+   "src/ui/markers-panel.tsx"
+  ],
+  "new_sources": [
+   "src/host/markers.ts",
+   "src/ui/markers-panel.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "markers-rereview",
+    "n": "4b",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "UIQ",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Verdict text in one light theme is 3.86:1, below AA",
+    "round_head": "4885254a0338470675fde6db71c2281645ecfe9a",
+    "round_head_how": "reflog of ow/markers: last entry at 1793333564 <= review start 1793333798",
+    "round_reflog_head": "4885254a0338470675fde6db71c2281645ecfe9a"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "router-launcher",
+  "review": "router-launcher-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/router-launcher.prompt.md",
+  "branch": "ow/router-launcher",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "8",
+   "9"
+  ],
+  "base": "b44ca0f269998a66f391cb29cfd2efe90f6e5123",
+  "base_how": "amc-2026-10-30/router-launcher.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/router-launcher",
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "base b44ca0f269 not in the AMC repository",
+   "no head found"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "router-launcher-rereview",
+    "n": "c2",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Reused pick forgets the saved author, so family check is skipped",
+    "round_head": null,
+    "round_head_how": null,
+    "round_reflog_head": null
+   },
+   {
+    "round": "router-launcher-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Override lets a same-family model review its own family",
+    "round_head": null,
+    "round_head_how": null,
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "router-outcomes",
+  "review": "router-outcomes-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/router-outcomes.prompt.md",
+  "branch": "ow/router-outcomes",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "bb831b6b279780eb9fbffe0b7817e531cf2de114",
+  "base_how": "amc-2026-10-30/router-outcomes.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/router-outcomes",
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "base bb831b6b27 not in the AMC repository",
+   "no head found"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "router-outcomes-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "EDGE",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "A quoted verdict line before the real one is read as the verdict",
+    "round_head": null,
+    "round_head_how": null,
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "p1",
+  "review": "p1-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/p1.prompt.md",
+  "branch": "ow/p1",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "567da2ece88da64bf7e163d7232599ef0446d73c",
+  "base_how": "amc-2026-10-31/p1.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/p1",
+  "head": "f3b74cbd9ff1103060073dc6bf8abed8b932cf48",
+  "head_how": "amc-2026-10-31/p1-review.base (the head the round was launched on)",
+  "problems": [
+   "base 567da2ece8 not in the AMC repository",
+   "head f3b74cbd9f not in the AMC repository"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "p1-review",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "EDGE",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "A decorated bare none passes as a reason",
+    "round_head": "f3b74cbd9ff1103060073dc6bf8abed8b932cf48",
+    "round_head_how": "amc-2026-10-31/p1-review.base (the head the round was launched on)",
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "p3",
+  "review": "p3-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/p3.prompt.md",
+  "branch": "ow/p3",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "567da2ece88da64bf7e163d7232599ef0446d73c",
+  "base_how": "amc-2026-10-31/p3.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/p3",
+  "head": "f806264fe929f367f9dc7215248804fda8f480f8",
+  "head_how": "amc-2026-10-31/p3-review.base (the head the round was launched on)",
+  "problems": [
+   "base 567da2ece8 not in the AMC repository",
+   "head f806264fe9 not in the AMC repository"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "p3-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "Three mutations survive the text checks",
+    "round_head": "f806264fe929f367f9dc7215248804fda8f480f8",
+    "round_head_how": "amc-2026-10-31/p3-review.base (the head the round was launched on)",
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "p4",
+  "review": "p4-review2",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/p4.prompt.md",
+  "branch": "ow/p4",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "567da2ece88da64bf7e163d7232599ef0446d73c",
+  "base_how": "amc-2026-10-31/p4.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/p4",
+  "head": "08c1e691722c04b69b18518ebc02a60776934e4e",
+  "head_how": "amc-2026-10-31/p4-review2.base (the head the round was launched on)",
+  "problems": [
+   "base 567da2ece8 not in the AMC repository",
+   "head 08c1e69172 not in the AMC repository"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "p4-review2",
+    "n": "8",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "accepted",
+    "summary": "Several mutations survive the new tests",
+    "round_head": "08c1e691722c04b69b18518ebc02a60776934e4e",
+    "round_head_how": "amc-2026-10-31/p4-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "p5",
+  "review": "p5-review2",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/p5.prompt.md",
+  "branch": "ow/p5",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "567da2ece88da64bf7e163d7232599ef0446d73c",
+  "base_how": "amc-2026-10-31/p5.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/p5",
+  "head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+  "head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+  "problems": [
+   "base 567da2ece8 not in the AMC repository",
+   "head eae1d22c04 not in the AMC repository"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "p5-review2",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "EDGE",
+    "test_would_catch": "partial",
+    "ruling": "demoted",
+    "summary": "CRLF line endings and cell padding are not preserved",
+    "round_head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+    "round_head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "p5-review2",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "DESIGN",
+    "test_would_catch": "partial",
+    "ruling": "demoted",
+    "summary": "Row ids are reused and duplicate ids are accepted",
+    "round_head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+    "round_head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "p5-review2",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "EDGE",
+    "test_would_catch": "no",
+    "ruling": "demoted",
+    "summary": "A trailing newline lets a malformed value evade rejection",
+    "round_head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+    "round_head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "p5-review2",
+    "n": "5",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "EDGE",
+    "test_would_catch": "no",
+    "ruling": "demoted",
+    "summary": "Stored paths with a leading dot-slash are not matched",
+    "round_head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+    "round_head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "p5-review2",
+    "n": "6",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "yes",
+    "ruling": "demoted",
+    "summary": "Import never fills the file field",
+    "round_head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+    "round_head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "p5-review2",
+    "n": "7",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "EDGE",
+    "test_would_catch": "no",
+    "ruling": "demoted",
+    "summary": "Import changes pipes to slashes in imported text",
+    "round_head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+    "round_head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "p5-review2",
+    "n": "8",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "demoted",
+    "summary": "The writes-nothing test cannot detect an overwrite",
+    "round_head": "eae1d22c04033b0ed3f956e34031aba25ff7740b",
+    "round_head_how": "amc-2026-10-31/p5-review2.base (the head the round was launched on)",
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "p6",
+  "review": "p6-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/p6.prompt.md",
+  "branch": "ow/p6",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "efea86a582b02a064aff0c155a3021e4b0e1ebe8",
+  "base_how": "amc-2026-10-31/p6.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/p6",
+  "head": "b7f56fc9cc6b8e1ca25cb2e34705a8964f36a695",
+  "head_how": "amc-2026-10-31/p6-review.base (the head the round was launched on)",
+  "problems": [
+   "base efea86a582 not in the AMC repository",
+   "head b7f56fc9cc not in the AMC repository"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "p6-review",
+    "n": "1",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "A repo flag after the filename is read as a file and exits 1",
+    "round_head": "b7f56fc9cc6b8e1ca25cb2e34705a8964f36a695",
+    "round_head_how": "amc-2026-10-31/p6-review.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "p6-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "SPEC",
+    "test_would_catch": "no",
+    "ruling": "rejected",
+    "summary": "Naming the repository root yields no warnings",
+    "round_head": "b7f56fc9cc6b8e1ca25cb2e34705a8964f36a695",
+    "round_head_how": "amc-2026-10-31/p6-review.base (the head the round was launched on)",
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "f6",
+  "review": "f6-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/f6.prompt.md",
+  "branch": "ow/f6",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/f6.base",
+  "reflog_head": "7ecca83311e084d8a29c37b0a767fff2c6cbd34d",
+  "reflog_how": "reflog of ow/f6: last entry at 1793608874 <= review start 1793609206",
+  "head": "7ecca83311e084d8a29c37b0a767fff2c6cbd34d",
+  "head_how": "amc-2026-11-02/f6-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tsrc/host/ado-pr.ts",
+   "M\tsrc/host/ado.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/sessions.ts",
+   "A\tsrc/host/template-loaders.ts",
+   "A\tsrc/host/templates.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/__snapshots__/templates.test.ts.snap",
+   "M\ttests/unit/ado-attachments.test.ts",
+   "M\ttests/unit/analysis.test.ts",
+   "M\ttests/unit/fence-values.test.ts",
+   "M\ttests/unit/fence.test.ts",
+   "A\ttests/unit/prompts.ts",
+   "A\ttests/unit/templates.test.ts",
+   "M\ttests/workflows/workflows.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/ado-attachments.test.ts",
+   "tests/unit/analysis.test.ts",
+   "tests/unit/fence-values.test.ts",
+   "tests/unit/fence.test.ts",
+   "tests/unit/templates.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/templates.test.ts"
+  ],
+  "sources": [
+   "src/host/ado-pr.ts",
+   "src/host/ado.ts",
+   "src/host/engine/fake.ts",
+   "src/host/http/server.ts",
+   "src/host/sessions.ts",
+   "src/host/template-loaders.ts",
+   "src/host/templates.ts"
+  ],
+  "new_sources": [
+   "src/host/template-loaders.ts",
+   "src/host/templates.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "f6-rereview",
+    "n": "1",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "BOUND",
+    "test_would_catch": "no",
+    "ruling": "not-ruled",
+    "summary": "Fenced source text with a question footer republished outside fences as owner's question",
+    "round_head": "87c58e33fa80b0cc4c03bf01f37b37634148a224",
+    "round_head_how": "amc-2026-11-02/f6-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "87c58e33fa80b0cc4c03bf01f37b37634148a224"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "f7",
+  "review": "f7-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/f7.prompt.md",
+  "branch": "ow/f7",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/f7.base",
+  "reflog_head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7",
+  "reflog_how": "reflog of ow/f7: last entry at 1793609609 <= review start 1793609806",
+  "head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7",
+  "head_how": "amc-2026-11-02/f7-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "A\tsrc/host/projects.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/store/db.ts",
+   "M\tsrc/host/tasks.ts",
+   "A\ttests/unit/assignments.test.ts"
+  ],
+  "tests": [
+   "tests/unit/assignments.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/assignments.test.ts"
+  ],
+  "sources": [
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/projects.ts",
+   "src/host/sessions.ts",
+   "src/host/store/db.ts",
+   "src/host/tasks.ts"
+  ],
+  "new_sources": [
+   "src/host/projects.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "f7-rereview",
+    "n": "c3",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "not-ruled",
+    "summary": "Stored project-only workspaces from before the change still get no Inbox",
+    "round_head": "72218a774dce6a85b92e6800b79b915b77790e56",
+    "round_head_how": "amc-2026-11-02/f7-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "72218a774dce6a85b92e6800b79b915b77790e56"
+   },
+   {
+    "round": "f7-review",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Workspaces without assignments never get an Inbox",
+    "round_head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7",
+    "round_head_how": "amc-2026-11-02/f7-review.base (the head the round was launched on)",
+    "round_reflog_head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7"
+   },
+   {
+    "round": "f7-review",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Files and folders outside the projects area accepted as project folders",
+    "round_head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7",
+    "round_head_how": "amc-2026-11-02/f7-review.base (the head the round was launched on)",
+    "round_reflog_head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7"
+   },
+   {
+    "round": "f7-review",
+    "n": "5",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Existing assignment browser test excluded from the regression run",
+    "round_head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7",
+    "round_head_how": "amc-2026-11-02/f7-review.base (the head the round was launched on)",
+    "round_reflog_head": "d92d0a853897fdb5571f93e4077bc0eb79a7a7c7"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g10a",
+  "review": "g10a-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g10a.prompt.md",
+  "branch": "ow/g10a",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/g10a.base",
+  "reflog_head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5",
+  "reflog_how": "reflog of ow/g10a: last entry at 1793607496 <= review start 1793608978",
+  "head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5",
+  "head_how": "amc-2026-11-02/g10a-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tsrc/host/http/server.ts",
+   "A\tsrc/host/repo-type.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/store/db.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/dialogs.tsx",
+   "M\tsrc/ui/special.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/origin.test.ts",
+   "M\ttests/unit/product-repos.test.ts",
+   "A\ttests/unit/repo-type.test.ts",
+   "M\ttests/unit/server.test.ts",
+   "A\ttests/unit/special-settings.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/origin.test.ts",
+   "tests/unit/product-repos.test.ts",
+   "tests/unit/repo-type.test.ts",
+   "tests/unit/server.test.ts",
+   "tests/unit/special-settings.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/origin.test.ts",
+   "tests/unit/repo-type.test.ts",
+   "tests/unit/special-settings.test.ts"
+  ],
+  "sources": [
+   "src/host/http/server.ts",
+   "src/host/repo-type.ts",
+   "src/host/sessions.ts",
+   "src/host/store/db.ts",
+   "src/ui/api.ts",
+   "src/ui/dialogs.tsx",
+   "src/ui/special.tsx"
+  ],
+  "new_sources": [
+   "src/host/repo-type.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g10a-rereview",
+    "n": "c1",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "no",
+    "ruling": "demoted",
+    "summary": "Legacy hand-off records over 64 KiB still lose lineage; origin falls back",
+    "round_head": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+    "round_head_how": "amc-2026-11-02/g10a-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4"
+   },
+   {
+    "round": "g10a-review",
+    "n": "1",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Legacy forks and hand-offs fall back to worktree origin, ignoring recorded lineage",
+    "round_head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5",
+    "round_head_how": "amc-2026-11-02/g10a-review.base (the head the round was launched on)",
+    "round_reflog_head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5"
+   },
+   {
+    "round": "g10a-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Session-returning routes other than list and get omit origin and repository type",
+    "round_head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5",
+    "round_head_how": "amc-2026-11-02/g10a-review.base (the head the round was launched on)",
+    "round_reflog_head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5"
+   },
+   {
+    "round": "g10a-rereview",
+    "n": "c2",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "demoted",
+    "summary": "No test for a failed special-repos request in the type-line class",
+    "round_head": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+    "round_head_how": "amc-2026-11-02/g10a-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4"
+   },
+   {
+    "round": "g10a-rereview",
+    "n": "c3",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "demoted",
+    "summary": "No test removing file-valued entry while keeping missing-folder entry",
+    "round_head": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+    "round_head_how": "amc-2026-11-02/g10a-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4"
+   },
+   {
+    "round": "g10a-review",
+    "n": "6",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "900 px renders show no panel, so type line unchecked; few browser tests run",
+    "round_head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5",
+    "round_head_how": "amc-2026-11-02/g10a-review.base (the head the round was launched on)",
+    "round_reflog_head": "e3e93bb609a9b00552049ba5b6bc5613716d08e5"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g10a-post",
+  "review": null,
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g10a-post.prompt.md",
+  "branch": "ow/g10a-post",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2"
+  ],
+  "base": "3fd24325cf1d581c9ddb0170f37b0958f8b38578",
+  "base_how": "amc-2026-11-02/g10a-post.base",
+  "head": "3bb9731a648a758bb3ba95ed3efcf143c7a247d9",
+  "head_how": "amc-2026-11-02/g10a-post-rereview.base (the head the round was launched on) (no first review round; the finding's own round)",
+  "problems": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g10a-post-rereview",
+    "n": "c1",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "not-ruled",
+    "summary": "Malformed 200 recovery read after a failed toggle has no test",
+    "round_head": "3bb9731a648a758bb3ba95ed3efcf143c7a247d9",
+    "round_head_how": "amc-2026-11-02/g10a-post-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "3bb9731a648a758bb3ba95ed3efcf143c7a247d9"
+   }
+  ],
+  "build_base": "3fd24325cf1d581c9ddb0170f37b0958f8b38578",
+  "changed": [
+   "A\tsrc/ui/special-view.ts",
+   "M\tsrc/ui/special.tsx",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/special-settings.test.ts",
+   "A\ttests/unit/special-view.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/special-settings.test.ts",
+   "tests/unit/special-view.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/special-view.test.ts"
+  ],
+  "sources": [
+   "src/ui/special-view.ts",
+   "src/ui/special.tsx"
+  ],
+  "new_sources": [
+   "src/ui/special-view.ts"
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g10b",
+  "review": "g10b-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g10b.prompt.md",
+  "branch": "ow/g10b",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+  "base_how": "amc-2026-11-02/g10b.base; the branch merged main 2 time(s), so the base is the main commit of its newest merge (d11a3f6084^2)",
+  "reflog_head": "74855a7b99562f8c84917fcc776807107df7200b",
+  "reflog_how": "reflog of ow/g10b: last entry at 1793614424 <= review start 1793614704",
+  "head": "74855a7b99562f8c84917fcc776807107df7200b",
+  "head_how": "amc-2026-11-02/g10b-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tAGENTS.md",
+   "M\tdocs/design/day-with-amc.html",
+   "M\tdocs/tech-debt.md",
+   "M\tdocs/testing.md",
+   "M\tplaywright.config.ts",
+   "M\tscripts/stable.ts",
+   "M\tsrc/host/engine/acp.ts",
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/host/runs.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/store/db.ts",
+   "M\tsrc/host/tasks.ts",
+   "A\tsrc/host/type-rules.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/catalog.tsx",
+   "M\tsrc/ui/help.tsx",
+   "M\tsrc/ui/special.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/tasks.tsx",
+   "M\ttests/desktop/window.spec.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/actions.test.ts",
+   "A\ttests/unit/run-switches.test.ts",
+   "M\ttests/unit/server.test.ts",
+   "M\ttests/unit/special-repos.test.ts",
+   "M\ttests/unit/task-loop.test.ts",
+   "A\ttests/unit/type-rules.test.ts",
+   "M\tvitest.config.ts"
+  ],
+  "tests": [
+   "tests/desktop/window.spec.ts",
+   "tests/e2e/app.spec.ts",
+   "tests/unit/actions.test.ts",
+   "tests/unit/run-switches.test.ts",
+   "tests/unit/server.test.ts",
+   "tests/unit/special-repos.test.ts",
+   "tests/unit/task-loop.test.ts",
+   "tests/unit/type-rules.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/run-switches.test.ts",
+   "tests/unit/type-rules.test.ts"
+  ],
+  "sources": [
+   "playwright.config.ts",
+   "scripts/stable.ts",
+   "src/host/engine/acp.ts",
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/types.ts",
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/runs.ts",
+   "src/host/sessions.ts",
+   "src/host/store/db.ts",
+   "src/host/tasks.ts",
+   "src/host/type-rules.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/catalog.tsx",
+   "src/ui/help.tsx",
+   "src/ui/special.tsx",
+   "src/ui/tasks.tsx",
+   "vitest.config.ts"
+  ],
+  "new_sources": [
+   "src/host/type-rules.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g10b-review",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "DESIGN",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Catalog shows on-disk folders rather than those the session actually loaded",
+    "round_head": "74855a7b99562f8c84917fcc776807107df7200b",
+    "round_head_how": "amc-2026-11-02/g10b-review.base (the head the round was launched on)",
+    "round_reflog_head": "74855a7b99562f8c84917fcc776807107df7200b"
+   },
+   {
+    "round": "g10b-review",
+    "n": "5",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "EDGE",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Size cap counts instruction text but excludes fence metadata, overrunning limit",
+    "round_head": "74855a7b99562f8c84917fcc776807107df7200b",
+    "round_head_how": "amc-2026-11-02/g10b-review.base (the head the round was launched on)",
+    "round_reflog_head": "74855a7b99562f8c84917fcc776807107df7200b"
+   },
+   {
+    "round": "g10b-rereview",
+    "n": "c3",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "not-ruled",
+    "summary": "Four required catalog renders show the panel closed",
+    "round_head": "2db4888919d32503c87825a9ae6a7ea209ad2c84",
+    "round_head_how": "amc-2026-11-02/g10b-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "2db4888919d32503c87825a9ae6a7ea209ad2c84"
+   },
+   {
+    "round": "g10b-review",
+    "n": "6",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Several required unit and browser tests missing",
+    "round_head": "74855a7b99562f8c84917fcc776807107df7200b",
+    "round_head_how": "amc-2026-11-02/g10b-review.base (the head the round was launched on)",
+    "round_reflog_head": "74855a7b99562f8c84917fcc776807107df7200b"
+   },
+   {
+    "round": "g10b-review",
+    "n": "7",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Required catalog renders skipped or never inspected",
+    "round_head": "74855a7b99562f8c84917fcc776807107df7200b",
+    "round_head_how": "amc-2026-11-02/g10b-review.base (the head the round was launched on)",
+    "round_reflog_head": "74855a7b99562f8c84917fcc776807107df7200b"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g10c",
+  "review": "g10c-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g10c.prompt.md",
+  "branch": "ow/g10c",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+  "base_how": "amc-2026-11-02/g10c.base; the branch merged main 2 time(s), so the base is the main commit of its newest merge (d11a3f6084^2)",
+  "reflog_head": "9078f61570223fdbeea821dc689b495afea5468f",
+  "reflog_how": "reflog of ow/g10c: last entry at 1793615264 <= review start 1793615632",
+  "head": "9078f61570223fdbeea821dc689b495afea5468f",
+  "head_how": "amc-2026-11-02/g10c-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tAGENTS.md",
+   "M\tdocs/design/day-with-amc.html",
+   "M\tdocs/tech-debt.md",
+   "M\tdocs/testing.md",
+   "M\tplaywright.config.ts",
+   "M\tscripts/stable.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/knowledge.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/host/pack.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/tasks.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/help.tsx",
+   "M\tsrc/ui/tasks.tsx",
+   "M\ttests/desktop/window.spec.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/actions.test.ts",
+   "M\ttests/unit/analytics.test.ts",
+   "A\ttests/unit/kb-scope.test.ts",
+   "M\ttests/unit/knowledge.test.ts",
+   "M\ttests/unit/pack.test.ts",
+   "M\ttests/unit/server.test.ts",
+   "M\ttests/unit/task-loop.test.ts"
+  ],
+  "tests": [
+   "tests/desktop/window.spec.ts",
+   "tests/e2e/app.spec.ts",
+   "tests/unit/actions.test.ts",
+   "tests/unit/analytics.test.ts",
+   "tests/unit/kb-scope.test.ts",
+   "tests/unit/knowledge.test.ts",
+   "tests/unit/pack.test.ts",
+   "tests/unit/server.test.ts",
+   "tests/unit/task-loop.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/kb-scope.test.ts"
+  ],
+  "sources": [
+   "playwright.config.ts",
+   "scripts/stable.ts",
+   "src/host/http/server.ts",
+   "src/host/knowledge.ts",
+   "src/host/main.ts",
+   "src/host/pack.ts",
+   "src/host/sessions.ts",
+   "src/host/tasks.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/help.tsx",
+   "src/ui/tasks.tsx"
+  ],
+  "new_sources": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g10c-rereview",
+    "n": "c1",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "no",
+    "ruling": "not-ruled",
+    "summary": "Fork, hand-off and ACP revocation paths have no tests",
+    "round_head": "c6fe4394cf89029ab63e8a8526fa0faa3da5eb61",
+    "round_head_how": "amc-2026-11-02/g10c-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "c6fe4394cf89029ab63e8a8526fa0faa3da5eb61"
+   },
+   {
+    "round": "g10c-review",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "No test for a worktree session with a switched-off source",
+    "round_head": "9078f61570223fdbeea821dc689b495afea5468f",
+    "round_head_how": "amc-2026-11-02/g10c-review.base (the head the round was launched on)",
+    "round_reflog_head": "9078f61570223fdbeea821dc689b495afea5468f"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g10d",
+  "review": "g10d-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g10d.prompt.md",
+  "branch": "ow/g10d",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+  "base_how": "amc-2026-11-02/g10d.base; the branch merged main 2 time(s), so the base is the main commit of its newest merge (d11a3f6084^2)",
+  "reflog_head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4",
+  "reflog_how": "reflog of ow/g10d: last entry at 1793614677 <= review start 1793614969",
+  "head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4",
+  "head_how": "amc-2026-11-02/g10d-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tAGENTS.md",
+   "M\tdocs/design/day-with-amc.html",
+   "M\tdocs/tech-debt.md",
+   "M\tdocs/testing.md",
+   "M\tplaywright.config.ts",
+   "M\tscripts/stable.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/tasks.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/help.tsx",
+   "M\tsrc/ui/special.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/tasks.tsx",
+   "M\tsrc/ui/workspaces.ts",
+   "M\ttests/desktop/window.spec.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/actions.test.ts",
+   "M\ttests/unit/server.test.ts",
+   "M\ttests/unit/task-loop.test.ts",
+   "A\ttests/unit/worktree-grouping.test.ts"
+  ],
+  "tests": [
+   "tests/desktop/window.spec.ts",
+   "tests/e2e/app.spec.ts",
+   "tests/unit/actions.test.ts",
+   "tests/unit/server.test.ts",
+   "tests/unit/task-loop.test.ts",
+   "tests/unit/worktree-grouping.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/worktree-grouping.test.ts"
+  ],
+  "sources": [
+   "playwright.config.ts",
+   "scripts/stable.ts",
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/sessions.ts",
+   "src/host/tasks.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/help.tsx",
+   "src/ui/special.tsx",
+   "src/ui/tasks.tsx",
+   "src/ui/workspaces.ts"
+  ],
+  "new_sources": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g10d-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Clone grouping hides the missing-folder marker",
+    "round_head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4",
+    "round_head_how": "amc-2026-11-02/g10d-review.base (the head the round was launched on)",
+    "round_reflog_head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4"
+   },
+   {
+    "round": "g10d-review",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Fold hides the Reaches line",
+    "round_head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4",
+    "round_head_how": "amc-2026-11-02/g10d-review.base (the head the round was launched on)",
+    "round_reflog_head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4"
+   },
+   {
+    "round": "g10d-rereview",
+    "n": "c1",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "not-ruled",
+    "summary": "Tests cover the grouping helper but not its navigation consumers",
+    "round_head": "ce0755d57b01fd9d900b7c3484da449dab64a6cc",
+    "round_head_how": "amc-2026-11-02/g10d-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "ce0755d57b01fd9d900b7c3484da449dab64a6cc"
+   },
+   {
+    "round": "g10d-review",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Acceptance tests check a proxy, not the navigation itself",
+    "round_head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4",
+    "round_head_how": "amc-2026-11-02/g10d-review.base (the head the round was launched on)",
+    "round_reflog_head": "2ba9907b9a53efdb52f9ad79aafd3ef2bf3bb7f4"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g91a",
+  "review": "g91a-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g91a.prompt.md",
+  "branch": "ow/g91a",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/g91a.base",
+  "reflog_head": "cd27ee62c897e38d44c6cf941ab5cb6835a69447",
+  "reflog_how": "reflog of ow/g91a: last entry at 1793608392 <= review start 1793608983",
+  "head": "cd27ee62c897e38d44c6cf941ab5cb6835a69447",
+  "head_how": "amc-2026-11-02/g91a-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/cards.tsx",
+   "A\tsrc/ui/citations.ts",
+   "M\tsrc/ui/markdown-view.tsx",
+   "M\tsrc/ui/markdown.ts",
+   "A\tsrc/ui/sources.tsx",
+   "M\tsrc/ui/steps.ts",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/transcript.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/web-search.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/web-search.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/web-search.test.ts"
+  ],
+  "sources": [
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/fake.ts",
+   "src/host/engine/types.ts",
+   "src/ui/App.tsx",
+   "src/ui/cards.tsx",
+   "src/ui/citations.ts",
+   "src/ui/markdown-view.tsx",
+   "src/ui/markdown.ts",
+   "src/ui/sources.tsx",
+   "src/ui/steps.ts",
+   "src/ui/transcript.ts"
+  ],
+  "new_sources": [
+   "src/ui/citations.ts",
+   "src/ui/sources.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g91a-review",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "rejected",
+    "summary": "One-shot title and insight sessions created without citations enabled",
+    "round_head": "cd27ee62c897e38d44c6cf941ab5cb6835a69447",
+    "round_head_how": "amc-2026-11-02/g91a-review.base (the head the round was launched on)",
+    "round_reflog_head": "cd27ee62c897e38d44c6cf941ab5cb6835a69447"
+   },
+   {
+    "round": "g91a-review",
+    "n": "5",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Named URL permission card unit test missing; only helpers and ASCII host tested",
+    "round_head": "cd27ee62c897e38d44c6cf941ab5cb6835a69447",
+    "round_head_how": "amc-2026-11-02/g91a-review.base (the head the round was launched on)",
+    "round_reflog_head": "cd27ee62c897e38d44c6cf941ab5cb6835a69447"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g92a",
+  "review": "g92a-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g92a.prompt.md",
+  "branch": "ow/g92a",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/g92a.base",
+  "reflog_head": "7df7344cbd34632aa9a652a862a81717fc87c4ae",
+  "reflog_how": "reflog of ow/g92a: last entry at 1793608005 <= review start 1793608983",
+  "head": "7df7344cbd34632aa9a652a862a81717fc87c4ae",
+  "head_how": "amc-2026-11-02/g92a-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "A\tsrc/host/commit-preview.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/shell-guard.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/cards.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/transcript.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/commit-card.test.ts",
+   "A\ttests/unit/commit-preview.test.ts",
+   "M\ttests/unit/task-loop.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/commit-card.test.ts",
+   "tests/unit/commit-preview.test.ts",
+   "tests/unit/task-loop.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/commit-card.test.ts",
+   "tests/unit/commit-preview.test.ts"
+  ],
+  "sources": [
+   "src/host/commit-preview.ts",
+   "src/host/engine/fake.ts",
+   "src/host/engine/types.ts",
+   "src/host/sessions.ts",
+   "src/host/shell-guard.ts",
+   "src/ui/App.tsx",
+   "src/ui/cards.tsx",
+   "src/ui/transcript.ts"
+  ],
+  "new_sources": [
+   "src/host/commit-preview.ts"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g92a-review",
+    "n": "7",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "No test sends a commit permission through a real auto-approving task session",
+    "round_head": "7df7344cbd34632aa9a652a862a81717fc87c4ae",
+    "round_head_how": "amc-2026-11-02/g92a-review.base (the head the round was launched on)",
+    "round_reflog_head": "7df7344cbd34632aa9a652a862a81717fc87c4ae"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "g93a",
+  "review": "g93a-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/g93a.prompt.md",
+  "branch": "ow/g93a",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/g93a.base",
+  "reflog_head": "741b460c12c17f731d7587036caf05fc7245d870",
+  "reflog_how": "reflog of ow/g93a: last entry at 1793606977 <= review start 1793608984",
+  "head": "741b460c12c17f731d7587036caf05fc7245d870",
+  "head_how": "amc-2026-11-02/g93a-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "A\tsrc/host/engine/command-result.ts",
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/draft-message.ts",
+   "A\tsrc/ui/kit/SubcommandMenu.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/transcript.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/command-result.test.ts",
+   "M\ttests/unit/drafts.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/command-result.test.ts",
+   "tests/unit/drafts.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/command-result.test.ts"
+  ],
+  "sources": [
+   "src/host/engine/command-result.ts",
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/fake.ts",
+   "src/host/engine/types.ts",
+   "src/host/sessions.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/draft-message.ts",
+   "src/ui/kit/SubcommandMenu.tsx",
+   "src/ui/transcript.ts"
+  ],
+  "new_sources": [
+   "src/host/engine/command-result.ts",
+   "src/ui/kit/SubcommandMenu.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "g93a-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "yes",
+    "ruling": "accepted",
+    "summary": "Model results flagged as settings-changed skip the required settings re-read",
+    "round_head": "741b460c12c17f731d7587036caf05fc7245d870",
+    "round_head_how": "amc-2026-11-02/g93a-review.base (the head the round was launched on)",
+    "round_reflog_head": "741b460c12c17f731d7587036caf05fc7245d870"
+   },
+   {
+    "round": "g93a-review",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Unknown or refused mode changes still report the command as done",
+    "round_head": "741b460c12c17f731d7587036caf05fc7245d870",
+    "round_head_how": "amc-2026-11-02/g93a-review.base (the head the round was launched on)",
+    "round_reflog_head": "741b460c12c17f731d7587036caf05fc7245d870"
+   },
+   {
+    "round": "g93a-review",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Malformed command results get defaults and run instead of showing unsupported",
+    "round_head": "741b460c12c17f731d7587036caf05fc7245d870",
+    "round_head_how": "amc-2026-11-02/g93a-review.base (the head the round was launched on)",
+    "round_reflog_head": "741b460c12c17f731d7587036caf05fc7245d870"
+   },
+   {
+    "round": "g93a-rereview",
+    "n": "c1",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "not-ruled",
+    "summary": "Result-field audit incomplete; targeted pickers become ordinary pickers; several fields untested",
+    "round_head": "9305c48c4346d1ff063b693c54eb8f58e50c0fb2",
+    "round_head_how": "amc-2026-11-02/g93a-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "9305c48c4346d1ff063b693c54eb8f58e50c0fb2"
+   },
+   {
+    "round": "g93a-review",
+    "n": "7",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "No invoke-then-Stop test; Escape test never asserts zero invocations",
+    "round_head": "741b460c12c17f731d7587036caf05fc7245d870",
+    "round_head_how": "amc-2026-11-02/g93a-review.base (the head the round was launched on)",
+    "round_reflog_head": "741b460c12c17f731d7587036caf05fc7245d870"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "o1",
+  "review": "o1-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/o1.prompt.md",
+  "branch": "ow/o1",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "8c8e146f20922d4f2f8fe69709f90797b6bdeac4",
+  "base_how": "amc-2026-11-02/o1.base; the branch merged main 2 time(s), so the base is the main commit of its newest merge (d11a3f6084^2)",
+  "reflog_head": "e704d3626ff6ac031f728f8ea3013dda1e612d75",
+  "reflog_how": "reflog of ow/o1: last entry at 1793617870 <= review start 1793618149",
+  "head": "e704d3626ff6ac031f728f8ea3013dda1e612d75",
+  "head_how": "amc-2026-11-02/o1-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tAGENTS.md",
+   "M\tdocs/design/day-with-amc.html",
+   "M\tdocs/tech-debt.md",
+   "M\tdocs/testing.md",
+   "M\tplaywright.config.ts",
+   "M\tscripts/stable.ts",
+   "M\tsrc/host/engine/acp.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/knowledge.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/tasks.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/help.tsx",
+   "M\tsrc/ui/special.tsx",
+   "M\tsrc/ui/tasks.tsx",
+   "M\ttests/desktop/window.spec.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/fixtures/fake-acp-agent.ts",
+   "A\ttests/unit/acp-folders.test.ts",
+   "A\ttests/unit/acp-special.test.ts",
+   "M\ttests/unit/actions.test.ts",
+   "M\ttests/unit/server.test.ts",
+   "M\ttests/unit/special-repos.test.ts",
+   "M\ttests/unit/task-loop.test.ts"
+  ],
+  "tests": [
+   "tests/desktop/window.spec.ts",
+   "tests/e2e/app.spec.ts",
+   "tests/unit/acp-folders.test.ts",
+   "tests/unit/acp-special.test.ts",
+   "tests/unit/actions.test.ts",
+   "tests/unit/server.test.ts",
+   "tests/unit/special-repos.test.ts",
+   "tests/unit/task-loop.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/acp-folders.test.ts",
+   "tests/unit/acp-special.test.ts"
+  ],
+  "sources": [
+   "playwright.config.ts",
+   "scripts/stable.ts",
+   "src/host/engine/acp.ts",
+   "src/host/engine/types.ts",
+   "src/host/http/server.ts",
+   "src/host/knowledge.ts",
+   "src/host/main.ts",
+   "src/host/sessions.ts",
+   "src/host/tasks.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/help.tsx",
+   "src/ui/special.tsx",
+   "src/ui/tasks.tsx"
+  ],
+  "new_sources": [],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "o1-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "ADJ",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Knowledge sources registered after the first search omitted from switched-on scope",
+    "round_head": "e704d3626ff6ac031f728f8ea3013dda1e612d75",
+    "round_head_how": "amc-2026-11-02/o1-review.base (the head the round was launched on)",
+    "round_reflog_head": "e704d3626ff6ac031f728f8ea3013dda1e612d75"
+   },
+   {
+    "round": "o1-review",
+    "n": "3",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Root dedup compares path strings, so aliased folders are sent twice",
+    "round_head": "e704d3626ff6ac031f728f8ea3013dda1e612d75",
+    "round_head_how": "amc-2026-11-02/o1-review.base (the head the round was launched on)",
+    "round_reflog_head": "e704d3626ff6ac031f728f8ea3013dda1e612d75"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "o2",
+  "review": "o2-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/o2.prompt.md",
+  "branch": "ow/o2",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "efa173d7d367629057420065388ca9c65b0ac70f",
+  "base_how": "amc-2026-11-02/o2.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/o2",
+  "head": "3064932e022098e627517e0e20d0e7772ce86544",
+  "head_how": "amc-2026-11-02/o2-review.base (the head the round was launched on)",
+  "problems": [
+   "base efa173d7d3 not in the AMC repository",
+   "head 3064932e02 not in the AMC repository"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "o2-review",
+    "n": "2",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Evaluation oracle is self-referential; expected results come from the engine under test",
+    "round_head": "3064932e022098e627517e0e20d0e7772ce86544",
+    "round_head_how": "amc-2026-11-02/o2-review.base (the head the round was launched on)",
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "o3",
+  "review": "o3-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/o3.prompt.md",
+  "branch": "ow/o3",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "efa173d7d367629057420065388ca9c65b0ac70f",
+  "base_how": "amc-2026-11-02/o3.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/o3",
+  "head": "6325af7f01c1b683f579078dcc26aa2c41cf5203",
+  "head_how": "amc-2026-11-02/o3-review.base (the head the round was launched on)",
+  "problems": [
+   "base efa173d7d3 not in the AMC repository",
+   "head 6325af7f01 not in the AMC repository"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "o3-rereview",
+    "n": "c1",
+    "round_kind": "rereview",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "not-ruled",
+    "summary": "Null git field in a record raises a type error instead of a line-numbered message",
+    "round_head": "f748b746f1523590dfac06b94e75dcff3a1dd053",
+    "round_head_how": "amc-2026-11-02/o3-rereview.base (the head the round was launched on)",
+    "round_reflog_head": null
+   },
+   {
+    "round": "o3-review",
+    "n": "4",
+    "round_kind": "review",
+    "focus": "requirement",
+    "cause": "MUST",
+    "test_would_catch": "partial",
+    "ruling": "accepted",
+    "summary": "Malformed evaluation records rejected without naming the offending line",
+    "round_head": "6325af7f01c1b683f579078dcc26aa2c41cf5203",
+    "round_head_how": "amc-2026-11-02/o3-review.base (the head the round was launched on)",
+    "round_reflog_head": null
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "s1",
+  "review": "s1-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/s1.prompt.md",
+  "branch": "ow/s1",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/s1.base",
+  "reflog_head": "d21df60bb10a86c2b9f79f83e9361cbc61cb6e84",
+  "reflog_how": "reflog of ow/s1: last entry at 1793607248 <= review start 1793608981",
+  "head": "d21df60bb10a86c2b9f79f83e9361cbc61cb6e84",
+  "head_how": "amc-2026-11-02/s1-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tsrc/host/ado-fake.ts",
+   "M\tsrc/host/ado.ts",
+   "M\tsrc/host/home-items.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/bands.ts",
+   "A\tsrc/ui/row-time.tsx",
+   "M\tsrc/ui/tasks.tsx",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/bands.test.ts",
+   "M\ttests/unit/home-items.test.ts",
+   "A\ttests/unit/row-time.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/bands.test.ts",
+   "tests/unit/home-items.test.ts",
+   "tests/unit/row-time.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/row-time.test.ts"
+  ],
+  "sources": [
+   "src/host/ado-fake.ts",
+   "src/host/ado.ts",
+   "src/host/home-items.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/bands.ts",
+   "src/ui/row-time.tsx",
+   "src/ui/tasks.tsx"
+  ],
+  "new_sources": [
+   "src/ui/row-time.tsx"
+  ],
+  "set": "finding",
+  "findings": [
+   {
+    "round": "s1-rereview",
+    "n": "1",
+    "round_kind": "rereview",
+    "focus": "test",
+    "cause": "TEST",
+    "test_would_catch": "-",
+    "ruling": "not-ruled",
+    "summary": "New test asserts equality of two separately sampled clock readings and can flake",
+    "round_head": "235308e9b6b47ab80edade92cc45b1f7ecc874c9",
+    "round_head_how": "amc-2026-11-02/s1-rereview.base (the head the round was launched on)",
+    "round_reflog_head": "235308e9b6b47ab80edade92cc45b1f7ecc874c9"
+   },
+   {
+    "round": "s1-review",
+    "n": "5",
+    "round_kind": "review",
+    "focus": "test",
+    "cause": "MUST",
+    "test_would_catch": "no",
+    "ruling": "accepted",
+    "summary": "Named render matrix incomplete and task test never asserts the new time",
+    "round_head": "d21df60bb10a86c2b9f79f83e9361cbc61cb6e84",
+    "round_head_how": "amc-2026-11-02/s1-review.base (the head the round was launched on)",
+    "round_reflog_head": "d21df60bb10a86c2b9f79f83e9361cbc61cb6e84"
+   }
+  ]
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "e-fence",
+  "review": "e-fence-review(in-chat)",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/e-fence.prompt.md",
+  "branch": "ow/e-fence",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "02f792d524d3cfdfaef191e9f714cd8f991951ab",
+  "base_how": "amc-2026-10-27/e-fence.base",
+  "reflog_head": null,
+  "reflog_how": null,
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 5
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "files54",
+  "review": "rv-files54",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/files54.prompt.md",
+  "branch": "ow/files54",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3"
+  ],
+  "base": "5ab6ea64bcf89023b22d6a475bd201f39c3824d0",
+  "base_how": "amc-2026-10-27/files54.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/files54",
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 8
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "gaps55",
+  "review": "gaps55-review(in-chat)",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/gaps55.prompt.md",
+  "branch": "ow/gaps55",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "c33c658b4e3add697c2a5c4e863a8096f4edc3d0",
+  "base_how": "amc-2026-10-27/gaps55.base",
+  "reflog_head": null,
+  "reflog_how": null,
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 3
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "ops-stable",
+  "review": "ops-stable-review(in-chat)",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/ops-stable.prompt.md",
+  "branch": "ow/ops-stable",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "c33c658b4e3add697c2a5c4e863a8096f4edc3d0",
+  "base_how": "amc-2026-10-27/ops-stable.base",
+  "reflog_head": null,
+  "reflog_how": null,
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 5
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "p6-runs",
+  "review": "rv-p6-runs",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/p6-runs.prompt.md",
+  "branch": "ow/p6-runs",
+  "repo": "amc",
+  "musts": [],
+  "base": "01e209116b9794d26ab1f73c602d74bf1a3d9663",
+  "base_how": "amc-2026-10-27/p6-runs.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/p6-runs",
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 5
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "pr80",
+  "review": "pr80-review(in-chat)",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/pr80.prompt.md",
+  "branch": "ow/pr80",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "04dc11e4459b70206395e1dd0893c4ebbe2d558b",
+  "base_how": "amc-2026-10-27/pr80.base",
+  "reflog_head": null,
+  "reflog_how": null,
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 3
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "t7-codeintel",
+  "review": "rv-t7-codeintel",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/t7-codeintel.prompt.md",
+  "branch": "ow/t7-codeintel",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "01e209116b9794d26ab1f73c602d74bf1a3d9663",
+  "base_how": "amc-2026-10-27/t7-codeintel.base",
+  "reflog_head": null,
+  "reflog_how": null,
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 4
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "ux4",
+  "review": "rv-ux4",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/ux4.prompt.md",
+  "branch": "ow/ux4",
+  "repo": "amc",
+  "musts": [],
+  "base": "5b65c68f4cc0fb94151a3a743e03cc5e6239f38c",
+  "base_how": "amc-2026-10-27/ux4.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/ux4",
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 3
+ },
+ {
+  "run": "amc-2026-10-27",
+  "item": "v5-edit",
+  "review": "v5-edit-review(in-chat)",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-27/v5-edit.prompt.md",
+  "branch": "ow/v5-edit",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "c33c658b4e3add697c2a5c4e863a8096f4edc3d0",
+  "base_how": "amc-2026-10-27/v5-edit.base",
+  "reflog_head": null,
+  "reflog_how": null,
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 5
+ },
+ {
+  "run": "amc-2026-10-28",
+  "item": "canvas-a",
+  "review": "rv-canvas-a",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/canvas-a.prompt.md",
+  "branch": "ow/canvas-a",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "8995300b78132f4940c2a2852d73c3b4221ff5ac",
+  "base_how": "amc-2026-10-28/canvas-a.base; the branch merged main 1 time(s), so the base is the main commit of its newest merge (9d59eaa0f7^2)",
+  "reflog_head": "c1e50f88442b4a818edcb69100aa768700e646da",
+  "reflog_how": "reflog of ow/canvas-a: last entry at 1793243909 <= review start 1793244639",
+  "head": "c1e50f88442b4a818edcb69100aa768700e646da",
+  "head_how": "reflog of ow/canvas-a: last entry at 1793243909 <= review start 1793244639",
+  "problems": [],
+  "build_base": "495d22b26dba6a401fa3d5f4f3f75b97ebba3c6b",
+  "changed": [
+   "A\tsrc/host/canvas.ts",
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/transcript.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/canvas.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/canvas.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/canvas.test.ts"
+  ],
+  "sources": [
+   "src/host/canvas.ts",
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/fake.ts",
+   "src/host/engine/types.ts",
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/sessions.ts",
+   "src/ui/App.tsx",
+   "src/ui/transcript.ts"
+  ],
+  "new_sources": [
+   "src/host/canvas.ts"
+  ],
+  "set": "control-spare",
+  "first_review_findings": 3,
+  "sample_rank": 13
+ },
+ {
+  "run": "amc-2026-10-28",
+  "item": "credit-tracker",
+  "review": "pm-credit-tracker",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/credit-tracker.prompt.md",
+  "branch": "ow/credit-tracker",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "ec1b5c9e9ebd2f807b8e6575383fb88341de87bd",
+  "base_how": "amc-2026-10-28/credit-tracker.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/credit-tracker",
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "base ec1b5c9e9e not in the AMC repository",
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 1
+ },
+ {
+  "run": "amc-2026-10-28",
+  "item": "gaps-3",
+  "review": "rv-gaps-3",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-28/gaps-3.prompt.md",
+  "branch": "ow/gaps-3",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "ab27bb5ba09f8835476457b609f1bde018051627",
+  "base_how": "amc-2026-10-28/gaps-3.base",
+  "reflog_head": "cc97c39a01a3f2069f4e44c0cd51e00cd8dd6aa4",
+  "reflog_how": "reflog of ow/gaps-3: last entry at 1793242525 <= review start 1793243829",
+  "head": "cc97c39a01a3f2069f4e44c0cd51e00cd8dd6aa4",
+  "head_how": "reflog of ow/gaps-3: last entry at 1793242525 <= review start 1793243829",
+  "problems": [],
+  "build_base": "ab27bb5ba09f8835476457b609f1bde018051627",
+  "changed": [
+   "M\tsrc/host/code-tool.ts",
+   "M\tsrc/host/engine/acp.ts",
+   "M\tsrc/host/lsp.ts",
+   "M\tsrc/host/watch.ts",
+   "M\ttests/unit/acp.test.ts",
+   "M\ttests/unit/code-tool.test.ts",
+   "M\ttests/unit/watch.test.ts"
+  ],
+  "tests": [
+   "tests/unit/acp.test.ts",
+   "tests/unit/code-tool.test.ts",
+   "tests/unit/watch.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/code-tool.ts",
+   "src/host/engine/acp.ts",
+   "src/host/lsp.ts",
+   "src/host/watch.ts"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 5,
+  "sample_rank": 6
+ },
+ {
+  "run": "amc-2026-10-29",
+  "item": "refused-send",
+  "review": "refused-send-review1",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-29/refused-send.prompt.md",
+  "branch": "ow/refused-send",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "933663c1a7a98cf5d2eda7e673f50a1173bd9744",
+  "base_how": "amc-2026-10-29/refused-send.base",
+  "reflog_head": "eafb04e137a87b537ebab8113a9f258c70930fea",
+  "reflog_how": "reflog of ow/refused-send: last entry at 1793300859 <= review start 1793301091",
+  "head": "eafb04e137a87b537ebab8113a9f258c70930fea",
+  "head_how": "reflog of ow/refused-send: last entry at 1793300859 <= review start 1793301091",
+  "problems": [],
+  "build_base": "933663c1a7a98cf5d2eda7e673f50a1173bd9744",
+  "changed": [
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/sessions.ts",
+   "A\ttests/unit/refused-send.test.ts"
+  ],
+  "tests": [
+   "tests/unit/refused-send.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/refused-send.test.ts"
+  ],
+  "sources": [
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/types.ts",
+   "src/host/sessions.ts"
+  ],
+  "new_sources": [],
+  "set": "control-spare",
+  "first_review_findings": 3,
+  "sample_rank": 18
+ },
+ {
+  "run": "amc-2026-10-29",
+  "item": "stable-env",
+  "review": "stable-env-review1",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-29/stable-env.prompt.md",
+  "branch": "ow/stable-env",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3"
+  ],
+  "base": "cd8735c11164a8bcf73703b75ad1d8e34c44f070",
+  "base_how": "amc-2026-10-29/stable-env.base",
+  "reflog_head": "f28f0b3848cc8b9479c7abc0efc647000c3fa43f",
+  "reflog_how": "reflog of ow/stable-env: last entry at 1793283812 <= review start 1793284446",
+  "head": "f28f0b3848cc8b9479c7abc0efc647000c3fa43f",
+  "head_how": "reflog of ow/stable-env: last entry at 1793283812 <= review start 1793284446",
+  "problems": [],
+  "build_base": "cd8735c11164a8bcf73703b75ad1d8e34c44f070",
+  "changed": [
+   "M\tdocs/stable-copy.md",
+   "M\tscripts/stable.ts",
+   "M\ttests/unit/stable.test.ts"
+  ],
+  "tests": [
+   "tests/unit/stable.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "scripts/stable.ts"
+  ],
+  "new_sources": [],
+  "set": "control-spare",
+  "first_review_findings": 4,
+  "sample_rank": 15
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "drafts",
+  "review": "drafts-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/drafts.prompt.md",
+  "branch": "ow/drafts",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "a36c03d8e025678c6fa2aa49295e2f8e8c75b70f",
+  "base_how": "amc-2026-10-30/drafts.base",
+  "reflog_head": "7a5656ac8bce9d0395fbe6bd4e865c19e2460880",
+  "reflog_how": "reflog of ow/drafts: last entry at 1793376031 <= review start 1793376142",
+  "head": "7a5656ac8bce9d0395fbe6bd4e865c19e2460880",
+  "head_how": "reflog of ow/drafts: last entry at 1793376031 <= review start 1793376142",
+  "problems": [],
+  "build_base": "a36c03d8e025678c6fa2aa49295e2f8e8c75b70f",
+  "changed": [
+   "A\tsrc/host/drafts.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "A\tsrc/ui/draft-message.ts",
+   "A\tsrc/ui/draft-pieces.tsx",
+   "M\tsrc/ui/file-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/transcript.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/drafts.test.ts",
+   "M\ttests/unit/working.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/drafts.test.ts",
+   "tests/unit/working.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/drafts.test.ts"
+  ],
+  "sources": [
+   "src/host/drafts.ts",
+   "src/host/http/server.ts",
+   "src/host/sessions.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/draft-message.ts",
+   "src/ui/draft-pieces.tsx",
+   "src/ui/file-view.tsx",
+   "src/ui/transcript.ts"
+  ],
+  "new_sources": [
+   "src/host/drafts.ts",
+   "src/ui/draft-message.ts",
+   "src/ui/draft-pieces.tsx"
+  ],
+  "set": "control",
+  "first_review_findings": 6,
+  "sample_rank": 5
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "forecast-parallel",
+  "review": "forecast-parallel-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/forecast-parallel.prompt.md",
+  "branch": "ow/forecast-parallel",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "1488a8e655f8d596fcd2861378b73ab5f421020f",
+  "base_how": "amc-2026-10-30/forecast-parallel.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/forecast-parallel",
+  "head": null,
+  "head_how": null,
+  "problems": [
+   "base 1488a8e655 not in the AMC repository",
+   "no head found"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 2
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "home-reorder",
+  "review": "home-reorder-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/home-reorder.prompt.md",
+  "branch": "ow/home-reorder",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "f37cb54a844a48b5a40c5cd958db0e2736fd0af2",
+  "base_how": "amc-2026-10-30/home-reorder.base",
+  "reflog_head": "e4f12278e5d8e2e758d7fda382a03f9b56084743",
+  "reflog_how": "reflog of ow/home-reorder: last entry at 1793333421 <= review start 1793333798",
+  "head": "e4f12278e5d8e2e758d7fda382a03f9b56084743",
+  "head_how": "reflog of ow/home-reorder: last entry at 1793333421 <= review start 1793333798",
+  "problems": [],
+  "build_base": "f37cb54a844a48b5a40c5cd958db0e2736fd0af2",
+  "changed": [
+   "M\tsrc/ui/App.tsx",
+   "A\tsrc/ui/home-order.ts",
+   "M\tsrc/ui/order.tsx",
+   "M\tsrc/ui/outside-tree.ts",
+   "A\tsrc/ui/reorder.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/tasks.tsx",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/home-order.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/home-order.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/home-order.test.ts"
+  ],
+  "sources": [
+   "src/ui/App.tsx",
+   "src/ui/home-order.ts",
+   "src/ui/order.tsx",
+   "src/ui/outside-tree.ts",
+   "src/ui/reorder.tsx",
+   "src/ui/tasks.tsx"
+  ],
+  "new_sources": [
+   "src/ui/home-order.ts",
+   "src/ui/reorder.tsx"
+  ],
+  "set": "control-spare",
+  "first_review_findings": 5,
+  "sample_rank": 16
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "measures-view",
+  "review": "measures-view-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/measures-view.prompt.md",
+  "branch": "ow/measures-view",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "906cc61950d0a3a9843a4e4222ff9c9043fe50af",
+  "base_how": "amc-2026-10-30/measures-view.base",
+  "reflog_head": "4d1c03713d32f53900ed485c63894bd935bca765",
+  "reflog_how": "reflog of ow/measures-view: last entry at 1793331763 <= review start 1793332147",
+  "head": "4d1c03713d32f53900ed485c63894bd935bca765",
+  "head_how": "reflog of ow/measures-view: last entry at 1793331763 <= review start 1793332147",
+  "problems": [],
+  "build_base": "906cc61950d0a3a9843a4e4222ff9c9043fe50af",
+  "changed": [
+   "M\tscripts/analytics.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "A\tsrc/host/measures.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/insights-view.tsx",
+   "M\tsrc/ui/layout.tsx",
+   "A\tsrc/ui/measures-view.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/usage-view.tsx",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/measures.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/measures.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/measures.test.ts"
+  ],
+  "sources": [
+   "scripts/analytics.ts",
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/measures.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/insights-view.tsx",
+   "src/ui/layout.tsx",
+   "src/ui/measures-view.tsx",
+   "src/ui/usage-view.tsx"
+  ],
+  "new_sources": [
+   "src/host/measures.ts",
+   "src/ui/measures-view.tsx"
+  ],
+  "set": "control-spare",
+  "first_review_findings": 4,
+  "sample_rank": 14
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "notes-search",
+  "review": "notes-search-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/notes-search.prompt.md",
+  "branch": "ow/notes-search",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "f37cb54a844a48b5a40c5cd958db0e2736fd0af2",
+  "base_how": "amc-2026-10-30/notes-search.base",
+  "reflog_head": "28d4a830de68f35c0fe56dda86dfe3043712095b",
+  "reflog_how": "reflog of ow/notes-search: last entry at 1793332927 <= review start 1793333198",
+  "head": "28d4a830de68f35c0fe56dda86dfe3043712095b",
+  "head_how": "reflog of ow/notes-search: last entry at 1793332927 <= review start 1793333198",
+  "problems": [],
+  "build_base": "f37cb54a844a48b5a40c5cd958db0e2736fd0af2",
+  "changed": [
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/knowledge.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/dialogs.tsx",
+   "M\tsrc/ui/kit/CommandPalette.tsx",
+   "M\tsrc/ui/layout.tsx",
+   "A\tsrc/ui/note-tab.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/analytics.test.ts",
+   "M\ttests/unit/knowledge.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/analytics.test.ts",
+   "tests/unit/knowledge.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/http/server.ts",
+   "src/host/knowledge.ts",
+   "src/host/sessions.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/dialogs.tsx",
+   "src/ui/kit/CommandPalette.tsx",
+   "src/ui/layout.tsx",
+   "src/ui/note-tab.tsx"
+  ],
+  "new_sources": [
+   "src/ui/note-tab.tsx"
+  ],
+  "set": "control",
+  "first_review_findings": 5,
+  "sample_rank": 7
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "panel-menu",
+  "review": "panel-menu-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/panel-menu.prompt.md",
+  "branch": "ow/panel-menu",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3"
+  ],
+  "base": "c79ef7986c2c42a82afcc8feeed35b02d7aad7d3",
+  "base_how": "amc-2026-10-30/panel-menu.base",
+  "reflog_head": "26c2edf63fd5b369caebbdbed6cdcacab3e64575",
+  "reflog_how": "reflog of ow/panel-menu: last entry at 1793330802 <= review start 1793331066",
+  "head": "26c2edf63fd5b369caebbdbed6cdcacab3e64575",
+  "head_how": "reflog of ow/panel-menu: last entry at 1793330802 <= review start 1793331066",
+  "problems": [],
+  "build_base": "c79ef7986c2c42a82afcc8feeed35b02d7aad7d3",
+  "changed": [
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/order.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/order.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/order.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/order.tsx"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 3,
+  "sample_rank": 8
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "run-edges",
+  "review": "run-edges-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/run-edges.prompt.md",
+  "branch": "ow/run-edges",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+  "base_how": "amc-2026-10-30/run-edges.base",
+  "reflog_head": "c2faf82c07018371ae6473f5d8e5468334c76402",
+  "reflog_how": "reflog of ow/run-edges: last entry at 1793332818 <= review start 1793333167",
+  "head": "c2faf82c07018371ae6473f5d8e5468334c76402",
+  "head_how": "reflog of ow/run-edges: last entry at 1793332818 <= review start 1793333167",
+  "problems": [],
+  "build_base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+  "changed": [
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/run-git.ts",
+   "M\tsrc/host/runs.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/store/db.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/cards.tsx",
+   "M\tsrc/ui/panel.tsx",
+   "M\tsrc/ui/transcript.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/runs.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/runs.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/engine/fake.ts",
+   "src/host/http/server.ts",
+   "src/host/run-git.ts",
+   "src/host/runs.ts",
+   "src/host/sessions.ts",
+   "src/host/store/db.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/cards.tsx",
+   "src/ui/panel.tsx",
+   "src/ui/transcript.ts"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 4,
+  "sample_rank": 4
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "startup",
+  "review": "startup-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/startup.prompt.md",
+  "branch": "ow/startup",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "7c4dbc38b326fb1325fcfc6c8c8b4cff41aa8201",
+  "base_how": "amc-2026-10-30/startup.base",
+  "reflog_head": "2cc83fe4d078412d2ff7d206ed2089687d5bdf90",
+  "reflog_how": "reflog of ow/startup: last entry at 1793337412 <= review start 1793337640",
+  "head": "2cc83fe4d078412d2ff7d206ed2089687d5bdf90",
+  "head_how": "reflog of ow/startup: last entry at 1793337412 <= review start 1793337640",
+  "problems": [],
+  "build_base": "7c4dbc38b326fb1325fcfc6c8c8b4cff41aa8201",
+  "changed": [
+   "M\tsrc/ui/App.tsx",
+   "A\tsrc/ui/diagram-layer.tsx",
+   "A\tsrc/ui/handoff.ts",
+   "M\tsrc/ui/markdown-view.tsx",
+   "A\tsrc/ui/pr-change.ts",
+   "M\tsrc/ui/pr-files.tsx",
+   "M\tsrc/ui/pull-request-view.tsx"
+  ],
+  "tests": [],
+  "new_tests": [],
+  "sources": [
+   "src/ui/App.tsx",
+   "src/ui/diagram-layer.tsx",
+   "src/ui/handoff.ts",
+   "src/ui/markdown-view.tsx",
+   "src/ui/pr-change.ts",
+   "src/ui/pr-files.tsx",
+   "src/ui/pull-request-view.tsx"
+  ],
+  "new_sources": [
+   "src/ui/diagram-layer.tsx",
+   "src/ui/handoff.ts",
+   "src/ui/pr-change.ts"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 4
+ },
+ {
+  "run": "amc-2026-10-30",
+  "item": "tree",
+  "review": "tree-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-30/tree.prompt.md",
+  "branch": "ow/tree",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "c8bc8195092e80dc449ed7cd841cb3e241140c46",
+  "base_how": "amc-2026-10-30/tree.base",
+  "reflog_head": "04bee9d540e1e24baf6cdd25fbf978e63cae25df",
+  "reflog_how": "reflog of ow/tree: last entry at 1793340630 <= review start 1793340881",
+  "head": "04bee9d540e1e24baf6cdd25fbf978e63cae25df",
+  "head_how": "reflog of ow/tree: last entry at 1793340630 <= review start 1793340881",
+  "problems": [],
+  "build_base": "c8bc8195092e80dc449ed7cd841cb3e241140c46",
+  "changed": [
+   "M\tpackage-lock.json",
+   "M\tpackage.json",
+   "M\tsrc/ui/pr-files.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/ui/pr-files.tsx"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 5,
+  "sample_rank": 11
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "d1",
+  "review": "d1-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/d1.prompt.md",
+  "branch": "ow/d1",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "e4c5605e00053c256acfbd8915a0893db25fca2b",
+  "base_how": "amc-2026-10-31/d1.base",
+  "reflog_head": "91e790c88e2b7cd687c6c59c68f57ee2b12d9615",
+  "reflog_how": "reflog of ow/d1: last entry at 1793433970 <= review start 1793434592",
+  "head": "91e790c88e2b7cd687c6c59c68f57ee2b12d9615",
+  "head_how": "amc-2026-10-31/d1-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "e4c5605e00053c256acfbd8915a0893db25fca2b",
+  "changed": [
+   "M\tdocs/tech-debt.md",
+   "M\tpackage-lock.json",
+   "M\tpackage.json",
+   "M\tplaywright.config.ts",
+   "M\tsrc/host/history-worker.ts",
+   "M\tsrc/host/history.ts",
+   "A\tsrc/host/inside.ts",
+   "M\tsrc/host/pins.ts",
+   "M\ttests/fixtures/history-stall-worker.ts",
+   "M\ttests/unit/history.test.ts",
+   "A\ttests/unit/inside.test.ts"
+  ],
+  "tests": [
+   "tests/unit/history.test.ts",
+   "tests/unit/inside.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/inside.test.ts"
+  ],
+  "sources": [
+   "playwright.config.ts",
+   "src/host/history-worker.ts",
+   "src/host/history.ts",
+   "src/host/inside.ts",
+   "src/host/pins.ts"
+  ],
+  "new_sources": [
+   "src/host/inside.ts"
+  ],
+  "set": "control",
+  "first_review_findings": 3,
+  "sample_rank": 3
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "d2",
+  "review": "d2-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/d2.prompt.md",
+  "branch": "ow/d2",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2"
+  ],
+  "base": "9d47cc866cc3bd5f5b083241b2bffc75c912643f",
+  "base_how": "amc-2026-10-31/d2.base",
+  "reflog_head": "bf0d3527ec3039ea58382cc910c6b3540ebc12f8",
+  "reflog_how": "reflog of ow/d2: last entry at 1793430250 <= review start 1793430416",
+  "head": "bf0d3527ec3039ea58382cc910c6b3540ebc12f8",
+  "head_how": "amc-2026-10-31/d2-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "9d47cc866cc3bd5f5b083241b2bffc75c912643f",
+  "changed": [
+   "M\tsrc/host/fence.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\ttests/unit/fence-values.test.ts"
+  ],
+  "tests": [
+   "tests/unit/fence-values.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/fence.ts",
+   "src/host/sessions.ts"
+  ],
+  "new_sources": [],
+  "set": "control-spare",
+  "first_review_findings": 7,
+  "sample_rank": 17
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "d3",
+  "review": "d3-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/d3.prompt.md",
+  "branch": "ow/d3",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "base_how": "amc-2026-10-31/d3.base",
+  "reflog_head": "504326a51fe37fdfd87867faedf72a20e780e01b",
+  "reflog_how": "reflog of ow/d3: last entry at 1793435376 <= review start 1793435643",
+  "head": "504326a51fe37fdfd87867faedf72a20e780e01b",
+  "head_how": "amc-2026-10-31/d3-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "changed": [
+   "M\tdocs/tech-debt.md",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/dialogs.tsx",
+   "M\ttests/e2e/app.spec.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/ui/App.tsx",
+   "src/ui/dialogs.tsx"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 6,
+  "sample_rank": 0
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "d4",
+  "review": "d4-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/d4.prompt.md",
+  "branch": "ow/d4",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4"
+  ],
+  "base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "base_how": "amc-2026-10-31/d4.base",
+  "reflog_head": "8edf0e0233511f0a63c179279c22b002b8923162",
+  "reflog_how": "reflog of ow/d4: last entry at 1793435488 <= review start 1793435762",
+  "head": "8edf0e0233511f0a63c179279c22b002b8923162",
+  "head_how": "amc-2026-10-31/d4-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "changed": [
+   "M\tdocs/tech-debt.md",
+   "M\tsrc/host/knowledge.ts",
+   "M\tsrc/host/text-search.ts",
+   "M\ttests/unit/knowledge.test.ts",
+   "M\ttests/unit/text-search.test.ts"
+  ],
+  "tests": [
+   "tests/unit/knowledge.test.ts",
+   "tests/unit/text-search.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "src/host/knowledge.ts",
+   "src/host/text-search.ts"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 1,
+  "sample_rank": 9
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "f29",
+  "review": "f29-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/f29.prompt.md",
+  "branch": "ow/f29",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "base_how": "amc-2026-10-31/f29.base",
+  "reflog_head": "c97d6ff971af5b59d86da1fb8f0cd9ad55780808",
+  "reflog_how": "reflog of ow/f29: last entry at 1793426851 <= review start 1793427962",
+  "head": "c97d6ff971af5b59d86da1fb8f0cd9ad55780808",
+  "head_how": "amc-2026-10-31/f29-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "changed": [
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/host/pack.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/dialogs.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\tsrc/ui/workspaces.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/product-repos.test.ts",
+   "M\ttests/unit/server.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/product-repos.test.ts",
+   "tests/unit/server.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/product-repos.test.ts"
+  ],
+  "sources": [
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/pack.ts",
+   "src/host/sessions.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/dialogs.tsx",
+   "src/ui/workspaces.ts"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 8,
+  "sample_rank": 10
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "f35",
+  "review": "f35-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/f35.prompt.md",
+  "branch": "ow/f35",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "base_how": "amc-2026-10-31/f35.base",
+  "reflog_head": "627d2873c9d18a28738192e115c981770878c654",
+  "reflog_how": "reflog of ow/f35: last entry at 1793426695 <= review start 1793428018",
+  "head": "627d2873c9d18a28738192e115c981770878c654",
+  "head_how": "amc-2026-10-31/f35-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "changed": [
+   "M\tsrc/host/files.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/sessions.ts",
+   "A\tsrc/host/text-search.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/dialogs.tsx",
+   "M\tsrc/ui/palette.ts",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/palette.test.ts",
+   "M\ttests/unit/server.test.ts",
+   "A\ttests/unit/text-search.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/palette.test.ts",
+   "tests/unit/server.test.ts",
+   "tests/unit/text-search.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/text-search.test.ts"
+  ],
+  "sources": [
+   "src/host/files.ts",
+   "src/host/http/server.ts",
+   "src/host/sessions.ts",
+   "src/host/text-search.ts",
+   "src/ui/App.tsx",
+   "src/ui/api.ts",
+   "src/ui/dialogs.tsx",
+   "src/ui/palette.ts"
+  ],
+  "new_sources": [
+   "src/host/text-search.ts"
+  ],
+  "set": "control",
+  "first_review_findings": 10,
+  "sample_rank": 1
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "f85",
+  "review": "f85-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/f85.prompt.md",
+  "branch": "ow/f85",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "base_how": "amc-2026-10-31/f85.base",
+  "reflog_head": "3419b1cd5d2df5875f764ae882a78ee477c1b00c",
+  "reflog_how": "reflog of ow/f85: last entry at 1793434722 <= review start 1793434924",
+  "head": "3419b1cd5d2df5875f764ae882a78ee477c1b00c",
+  "head_how": "amc-2026-10-31/f85-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "73619b3b991ff69319eb21fd04aef723351ea86f",
+  "changed": [
+   "M\tsrc/host/engine/copilot-sdk.ts",
+   "M\tsrc/host/engine/fake.ts",
+   "M\tsrc/host/engine/types.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/pack.ts",
+   "M\tsrc/host/sessions.ts",
+   "M\tsrc/host/store/db.ts",
+   "M\tsrc/host/tasks.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/order.tsx",
+   "M\tsrc/ui/panel.tsx",
+   "A\tsrc/ui/special.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/special-repos.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/special-repos.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/special-repos.test.ts"
+  ],
+  "sources": [
+   "src/host/engine/copilot-sdk.ts",
+   "src/host/engine/fake.ts",
+   "src/host/engine/types.ts",
+   "src/host/http/server.ts",
+   "src/host/pack.ts",
+   "src/host/sessions.ts",
+   "src/host/store/db.ts",
+   "src/host/tasks.ts",
+   "src/ui/api.ts",
+   "src/ui/order.tsx",
+   "src/ui/panel.tsx",
+   "src/ui/special.tsx"
+  ],
+  "new_sources": [
+   "src/ui/special.tsx"
+  ],
+  "set": "control-spare",
+  "first_review_findings": 8,
+  "sample_rank": 12
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "f94",
+  "review": "f94-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/f94.prompt.md",
+  "branch": "ow/f94",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6"
+  ],
+  "base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "base_how": "amc-2026-10-31/f94.base",
+  "reflog_head": "1f90b7c1ac5363c72cd3d8445a142a23a12ab2fd",
+  "reflog_how": "reflog of ow/f94: last entry at 1793425802 <= review start 1793426038",
+  "head": "1f90b7c1ac5363c72cd3d8445a142a23a12ab2fd",
+  "head_how": "amc-2026-10-31/f94-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "changed": [
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "A\tsrc/host/reports.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/dialogs.tsx",
+   "M\tsrc/ui/styles.css",
+   "M\ttests/e2e/app.spec.ts",
+   "A\ttests/unit/reports.test.ts"
+  ],
+  "tests": [
+   "tests/e2e/app.spec.ts",
+   "tests/unit/reports.test.ts"
+  ],
+  "new_tests": [
+   "tests/unit/reports.test.ts"
+  ],
+  "sources": [
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/reports.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/dialogs.tsx"
+  ],
+  "new_sources": [
+   "src/host/reports.ts"
+  ],
+  "set": "control-spare",
+  "first_review_findings": 8,
+  "sample_rank": 19
+ },
+ {
+  "run": "amc-2026-10-31",
+  "item": "p2",
+  "review": "p2-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-10-31/p2.prompt.md",
+  "branch": "ow/p2",
+  "repo": "dotfiles",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "567da2ece88da64bf7e163d7232599ef0446d73c",
+  "base_how": "amc-2026-10-31/p2.base",
+  "reflog_head": null,
+  "reflog_how": "no reflog for ow/p2",
+  "head": "9f6b1f29a36bcd90eb68c77e80289bcec53ec9da",
+  "head_how": "amc-2026-10-31/p2-review.base (the head the round was launched on)",
+  "problems": [
+   "base 567da2ece8 not in the AMC repository",
+   "head 9f6b1f29a3 not in the AMC repository"
+  ],
+  "set": "control-ineligible",
+  "first_review_findings": 4
+ },
+ {
+  "run": "amc-2026-11-02",
+  "item": "s2",
+  "review": "s2-review",
+  "brief": "~/.local/state/orchestrator-workers/amc-2026-11-02/s2.prompt.md",
+  "branch": "ow/s2",
+  "repo": "amc",
+  "musts": [
+   "1",
+   "2",
+   "3",
+   "4",
+   "5"
+  ],
+  "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "base_how": "amc-2026-11-02/s2.base",
+  "reflog_head": "7ebb8444b2f9eb7776efd7a644cc5ba27d14e2e3",
+  "reflog_how": "reflog of ow/s2: last entry at 1793608472 <= review start 1793608978",
+  "head": "7ebb8444b2f9eb7776efd7a644cc5ba27d14e2e3",
+  "head_how": "amc-2026-11-02/s2-review.base (the head the round was launched on)",
+  "problems": [],
+  "build_base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "changed": [
+   "M\tAGENTS.md",
+   "M\tdocs/design/day-with-amc.html",
+   "M\tdocs/testing.md",
+   "M\tplaywright.config.ts",
+   "M\tscripts/stable.ts",
+   "M\tsrc/host/http/server.ts",
+   "M\tsrc/host/main.ts",
+   "M\tsrc/host/tasks.ts",
+   "M\tsrc/ui/App.tsx",
+   "M\tsrc/ui/actions.ts",
+   "M\tsrc/ui/api.ts",
+   "M\tsrc/ui/help.tsx",
+   "M\tsrc/ui/tasks.tsx",
+   "M\ttests/desktop/window.spec.ts",
+   "M\ttests/e2e/app.spec.ts",
+   "M\ttests/unit/actions.test.ts",
+   "M\ttests/unit/server.test.ts",
+   "M\ttests/unit/task-loop.test.ts"
+  ],
+  "tests": [
+   "tests/desktop/window.spec.ts",
+   "tests/e2e/app.spec.ts",
+   "tests/unit/actions.test.ts",
+   "tests/unit/server.test.ts",
+   "tests/unit/task-loop.test.ts"
+  ],
+  "new_tests": [],
+  "sources": [
+   "playwright.config.ts",
+   "scripts/stable.ts",
+   "src/host/http/server.ts",
+   "src/host/main.ts",
+   "src/host/tasks.ts",
+   "src/ui/App.tsx",
+   "src/ui/actions.ts",
+   "src/ui/api.ts",
+   "src/ui/help.tsx",
+   "src/ui/tasks.tsx"
+  ],
+  "new_sources": [],
+  "set": "control",
+  "first_review_findings": 3,
+  "sample_rank": 2
+ }
+]

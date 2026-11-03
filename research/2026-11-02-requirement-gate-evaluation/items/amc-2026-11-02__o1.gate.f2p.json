@@ -1,0 +1,90 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends the whole current list on each session/load, not the change",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/acp-special.test.ts::offered: each switch change while idle reloads the session with the whole current list",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/acp-special.test.ts::not offered: the switches still work, no roots are sent, the panel says so, and kb searches the switched-on repos",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/acp-folders.test.ts::an agent whose additionalDirectories capability is absent > sends no roots on new or load, and refuses a write into the folder it was not given",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: engine.folderAccess is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/acp-folders.test.ts::offersFolders > is true only for an object under sessionCapabilities.additionalDirectories",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_4__.offersFolders) is not a function"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > writes inside the session's folder and inside an added root, after asking",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > refuses, without asking, a write outside every root, with a .. step, through a link, or at a root itself",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > refuses a write into a root switched off since the session opened",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/acp-special.test.ts::offered: a change while a turn runs waits for the engine-made end, then reloads once",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: folder access on Cursor is not built yet"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/acp-special.test.ts::offered: Stop with a pending change reloads once, and the stopped turn's late write is refused",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: folder access on Cursor is not built yet"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/acp-special.test.ts::offered: a refusal ends the turn and the pending change is applied once",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: folder access on Cursor is not built yet"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.33
+}

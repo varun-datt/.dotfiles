@@ -1,0 +1,26 @@
+{
+  "run": "amc-2026-10-28",
+  "item": "gaps-3",
+  "head": "cc97c39a01a3f2069f4e44c0cd51e00cd8dd6aa4",
+  "base": "ab27bb5ba09f8835476457b609f1bde018051627",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/acp.test.ts", "name": "treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "trailing slash, . step and a link to the same folder are not asked again, a subfolder still is; title quotes the MUST's trailing-slash and . wording"},
+      {"file": "tests/unit/acp.test.ts", "name": "asks again when an approved command comes back with other environment variables or another folder, and says so on the card", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "existing test: a different folder still asks"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/watch.test.ts", "name": "language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "open-file match follows the volume's case rule (expectation depends on the volume check); fails on base only on a case-insensitive volume; title echoes the MUST's where-the-volume-is wording"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/code-tool.test.ts", "name": "hover on a local alias of a function from outside the folder does not show the outside signature, while an alias inside still answers", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "hover on an alias of an outside function no longer leaks the outside signature, an inside alias answers as the language server reports it; title quotes 'hover on a local alias'"},
+      {"file": "tests/unit/code-tool.test.ts", "name": "hover on a symbol declared outside the folder says so instead of showing its signature and docs", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "existing hover confinement the alias fix must keep"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/acp.test.ts", "name": "treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the per-gap test for the approvals folder gap"},
+      {"file": "tests/unit/watch.test.ts", "name": "language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the per-gap test for the case-matching gap"},
+      {"file": "tests/unit/code-tool.test.ts", "name": "hover on a local alias of a function from outside the folder does not show the outside signature, while an alias inside still answers", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the per-gap test for the alias hover gap"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. acp.test.ts and code-tool.test.ts tests are top-level (no describe). The watch.test.ts case test only fails on base where the volume ignores case, so it may pass on base on a case-sensitive volume. The code-tool test needs a real TypeScript language server (60 s timeout)."
+}

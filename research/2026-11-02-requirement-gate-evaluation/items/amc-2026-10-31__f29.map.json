@@ -1,0 +1,32 @@
+{
+  "run": "amc-2026-10-31", "item": "f29",
+  "head": "c97d6ff971af5b59d86da1fb8f0cd9ad55780808", "base": "0cc81bd887fb12f883b1301e24746402dfa89176",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/product-repos.test.ts", "name": "a pack without productRepos, or with an empty one, sets no folder and reports nothing", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "missing key, empty string and neither-set cases of the new pack field"},
+      {"file": "tests/unit/product-repos.test.ts", "name": "productRepos resolves an absolute or ~/ folder, and refuses a relative path, a missing folder and a file with the reason", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "~/ expansion, absolute resolution and the refused relative, missing and file cases with reasons"},
+      {"file": "tests/unit/product-repos.test.ts", "name": "the pack's folder wins over the one saved in Settings, which is used only when the pack has none", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "pack-over-Settings precedence and the Settings fallback"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/product-repos.test.ts", "name": "special keeps each good folder once and skips a bad entry with its reason", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "empty list, a bad entry among good ones, duplicates and a non-list value for the new special field"},
+      {"file": "tests/unit/product-repos.test.ts", "name": "a pack without productRepos, or with an empty one, sets no folder and reports nothing", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "asserts special is an empty list when the pack has none (missing case)"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/product-repos.test.ts", "name": "Settings saves, clears and refuses a bad folder keeping the old one, and the value outlasts a restart", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "set, clear, bad path refused with old value kept, and persistence across a new SessionManager on the same store"},
+      {"file": "tests/unit/product-repos.test.ts", "name": "the pack's folder wins over the one saved in Settings, which is used only when the pack has none", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "checks the from field (pack or settings) that Settings shows as the value's origin"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the product repos folder set in Settings groups its child repositories under one workspace, and clearing it regroups them", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "only test of the Settings field itself (origin text, save, clear); Playwright, not run by the gate"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/product-repos.test.ts", "name": "grouping puts each child repository under one workspace named for the folder, keeps their keys, and leaves the rest as today", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 4's grouping wording; checks the parent workspace, child rows and unchanged grouping outside the folder"},
+      {"file": "tests/unit/product-repos.test.ts", "name": "a session row is marked with the folder when its folder lies inside it, through a symlink too, and not in a sibling sharing a prefix", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "direct, nested, symlinked and prefix-sibling containment cases on the host side"},
+      {"file": "tests/unit/product-repos.test.ts", "name": "within compares path segments, so a sibling sharing a prefix is outside", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the prefix-sibling case at the containment helper"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/product-repos.test.ts", "name": "a session row is marked with the folder when its folder lies inside it, through a symlink too, and not in a sibling sharing a prefix", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the same manager re-marks rows after setPrefs, so regrouping needs no restart"},
+      {"file": "tests/unit/product-repos.test.ts", "name": "grouping puts each child repository under one workspace named for the folder, keeps their keys, and leaves the rest as today", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "child workspaces keep their own keys, which order and stars are saved under"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the product repos folder set in Settings groups its child repositories under one workspace, and clearing it regroups them", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "clears the setting live and checks the nav regroups with open tabs kept; Playwright only"}
+    ]}
+  ],
+  "findings": [],
+  "notes": "Control item: no findings listed. No test checks that a pack-provided value is read-only in Settings, or that saved order and stars survive a regroup directly (only key stability is checked). The only server.test.ts change is the prefs defaults gaining productRepos; not mapped. Playwright test is top-level, no describe."
+}

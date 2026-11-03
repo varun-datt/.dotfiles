@@ -1,0 +1,212 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [
+    "MUST 5 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB",
+      "status": "pass",
+      "reason": "killed 40 of 62 mutants it covers (Killed 40, Survived 10, KilledByOtherTests 12)",
+      "mutants": {
+        "attempted": 62,
+        "Killed": 40,
+        "Survived": 10,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 12
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name",
+      "status": "pass",
+      "reason": "killed 16 of 23 mutants it covers (Killed 16, Survived 2, KilledByOtherTests 5)",
+      "mutants": {
+        "attempted": 23,
+        "Killed": 16,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 5
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/attachments.test.ts::attachments > keeps refusing a binary or non-UTF-8 file sent by path, judged from its head",
+      "status": "pass",
+      "reason": "killed 21 of 40 mutants it covers (Killed 21, Survived 5, KilledByOtherTests 14)",
+      "mutants": {
+        "attempted": 40,
+        "Killed": 21,
+        "Survived": 5,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 14
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/server.test.ts::host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed",
+      "status": "pass",
+      "reason": "killed 50 of 79 mutants it covers (Killed 50, Survived 15, KilledByOtherTests 14)",
+      "mutants": {
+        "attempted": 79,
+        "Killed": 50,
+        "Survived": 15,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 14
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/attachments.test.ts::attachments > asks above 5 MB: refuses an unconfirmed file with 428, and not at or under 5 MB",
+      "status": "pass",
+      "reason": "killed 46 of 68 mutants it covers (Killed 46, Survived 12, KilledByOtherTests 10)",
+      "mutants": {
+        "attempted": 68,
+        "Killed": 46,
+        "Survived": 12,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 10
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/attachments.test.ts::attachments > still delivers the message when a file is over 100 MB or gone, tells the owner why, and records a by-path file with its size",
+      "status": "pass",
+      "reason": "killed 54 of 84 mutants it covers (Killed 54, Survived 15, KilledByOtherTests 15)",
+      "mutants": {
+        "attempted": 84,
+        "Killed": 54,
+        "Survived": 15,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 15
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB",
+      "status": "pass",
+      "reason": "killed 40 of 62 mutants it covers (Killed 40, Survived 10, KilledByOtherTests 12)",
+      "mutants": {
+        "attempted": 62,
+        "Killed": 40,
+        "Survived": 10,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 12
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name",
+      "status": "pass",
+      "reason": "killed 16 of 23 mutants it covers (Killed 16, Survived 2, KilledByOtherTests 5)",
+      "mutants": {
+        "attempted": 23,
+        "Killed": 16,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 5
+      }
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB",
+      "status": "pass",
+      "reason": "killed 40 of 62 mutants it covers (Killed 40, Survived 10, KilledByOtherTests 12)",
+      "mutants": {
+        "attempted": 62,
+        "Killed": 40,
+        "Survived": 10,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 12
+      }
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/server.test.ts::host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed",
+      "status": "pass",
+      "reason": "killed 50 of 79 mutants it covers (Killed 50, Survived 15, KilledByOtherTests 14)",
+      "mutants": {
+        "attempted": 79,
+        "Killed": 50,
+        "Survived": 15,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 14
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "5",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 143,
+  "mutant_statuses": {
+    "NoCoverage": 64,
+    "Survived": 30,
+    "Killed": 113
+  },
+  "minutes": 4.12
+}

@@ -1,0 +1,240 @@
+{
+  "passed": true,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/inside.test.ts::MUST 1: whatever is linked or swapped, the bytes read come from inside the root",
+      "status": "pass",
+      "reason": "killed 56 of 109 mutants it covers (Killed 56, Survived 34, Timeout 2, KilledByOtherTests 17)",
+      "mutants": {
+        "attempted": 109,
+        "Killed": 56,
+        "Survived": 34,
+        "Timeout": 2,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 17
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/inside.test.ts::TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read",
+      "status": "pass",
+      "reason": "killed 52 of 113 mutants it covers (Killed 52, Survived 35, Timeout 1, KilledByOtherTests 25)",
+      "mutants": {
+        "attempted": 113,
+        "Killed": 52,
+        "Survived": 35,
+        "Timeout": 1,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 25
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/inside.test.ts::TD-10: a folder under a history root swapped for an outward link between the check and the read is not read",
+      "status": "pass",
+      "reason": "killed 64 of 122 mutants it covers (Killed 64, Survived 38, Timeout 2, KilledByOtherTests 18)",
+      "mutants": {
+        "attempted": 122,
+        "Killed": 64,
+        "Survived": 38,
+        "Timeout": 2,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 18
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/inside.test.ts::MUST 2: a root given with a trailing / or /. is refused even when it is otherwise a plain folder",
+      "status": "pass",
+      "reason": "killed 52 of 105 mutants it covers (Killed 52, Survived 33, Timeout 1, KilledByOtherTests 19)",
+      "mutants": {
+        "attempted": 105,
+        "Killed": 52,
+        "Survived": 33,
+        "Timeout": 1,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 19
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/inside.test.ts::TD-9: a history root given with a trailing /, /. or // through a link is refused as unsafe",
+      "status": "pass",
+      "reason": "killed 9 of 16 mutants it covers (Killed 9, Survived 2, KilledByOtherTests 5)",
+      "mutants": {
+        "attempted": 16,
+        "Killed": 9,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 5
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/inside.test.ts::TD-11: a history root whose parent folder is a link is refused as unsafe",
+      "status": "pass",
+      "reason": "killed 12 of 16 mutants it covers (Killed 12, Survived 2, KilledByOtherTests 2)",
+      "mutants": {
+        "attempted": 16,
+        "Killed": 12,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 2
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/inside.test.ts::TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read",
+      "status": "pass",
+      "reason": "killed 52 of 113 mutants it covers (Killed 52, Survived 35, Timeout 1, KilledByOtherTests 25)",
+      "mutants": {
+        "attempted": 113,
+        "Killed": 52,
+        "Survived": 35,
+        "Timeout": 1,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 25
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/history.test.ts::a history root that is itself a link is not read, and the source is reported as unsafe",
+      "status": "pass",
+      "reason": "killed 11 of 21 mutants it covers (Killed 11, Survived 2, KilledByOtherTests 8)",
+      "mutants": {
+        "attempted": 21,
+        "Killed": 11,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 8
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/inside.test.ts::TD-10: a folder under a history root swapped for an outward link between the check and the read is not read",
+      "status": "pass",
+      "reason": "killed 64 of 122 mutants it covers (Killed 64, Survived 38, Timeout 2, KilledByOtherTests 18)",
+      "mutants": {
+        "attempted": 122,
+        "Killed": 64,
+        "Survived": 38,
+        "Timeout": 2,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 18
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped",
+      "status": "pass",
+      "reason": "killed 12 of 21 mutants it covers (Killed 12, Survived 2, KilledByOtherTests 7)",
+      "mutants": {
+        "attempted": 21,
+        "Killed": 12,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 7
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/file-write.test.ts::writeTextFile > reads a file that is not valid UTF-8 as read-only, hashed on its own bytes, and refuses to save it",
+      "status": "pass",
+      "reason": "killed 49 of 111 mutants it covers (Killed 49, Survived 35, Timeout 1, KilledByOtherTests 26)",
+      "mutants": {
+        "attempted": 111,
+        "Killed": 49,
+        "Survived": 35,
+        "Timeout": 1,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 26
+      }
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 142,
+  "mutant_statuses": {
+    "NoCoverage": 15,
+    "Killed": 98,
+    "Survived": 42,
+    "Ignored": 1,
+    "Timeout": 2
+  },
+  "minutes": 2.61
+}

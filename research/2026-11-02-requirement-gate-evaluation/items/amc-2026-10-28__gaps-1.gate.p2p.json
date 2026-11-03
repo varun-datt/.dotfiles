@@ -1,0 +1,66 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3"
+  ],
+  "problems": [
+    "MUST 2 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_kb: kb's hits",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_ado: an Azure DevOps title",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "2",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 36,
+  "mutant_statuses": {
+    "NoCoverage": 1,
+    "Killed": 20,
+    "Survived": 9,
+    "Timeout": 7
+  },
+  "minutes": 2.11
+}

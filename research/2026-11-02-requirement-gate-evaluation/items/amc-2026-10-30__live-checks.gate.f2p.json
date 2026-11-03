@@ -1,0 +1,64 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "3",
+      "why": "running the live suite on the default model within the budget is an operational step; the live cap check has a computed title and was skipped"
+    },
+    {
+      "must": "4",
+      "why": "recording passed workflows after a leak scan is an operational step; the live test's leak scan predates the branch and no test checks recording"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/live/workflows.live.test.ts::workflows on real Copilot > tool-search",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "1",
+      "test": "tests/live/workflows.live.test.ts::workflows on real Copilot > run-findings",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/one-shot.test.ts::Copilot tool search option > reaches the session config only when set",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/live/workflows.live.test.ts::workflows on real Copilot > tool-search",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/transcript.test.ts::buildView > shows a hand-over summary without the model's analysis block",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::opens the full summary from the glance card, writes it once, switches back to the card, and counts the messages since the card",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.11
+}

@@ -1,0 +1,14 @@
+{
+ "id": "amc-2026-10-29__flake-3",
+ "phase": "f2p",
+ "exit": 0,
+ "wall_min": 0.1,
+ "load_exit": 0,
+ "stderr": "",
+ "stdout_tail": "MUST 1 | none | - | none | inventory of flaky tests from repeated runs and gate logs is report work; no test checks it\nMUST 2 | none | - | none | classification of flake kinds with evidence is report work; no test checks it\nMUST 3 | PASS_TO_PASS | tests/unit/watch.test.ts::the workspace watcher > delivers a burst of writes as one batch, skips .git and node_modules, and keeps one watcher per folder | not checked | not checked: no mutant runner\nMUST 3 | PASS_TO_PASS | tests/unit/watch.test.ts::the workspace watcher > drops an event the system delivers again for a file unchanged since its last batch, and still reports its next write | not checked | not checked: no mutant runner\nMUST 3 | PASS_TO_PASS | tests/unit/watch.test.ts::the workspace watcher > hears a real write from the operating system | not checked | not checked: no mutant runner\nMUST 4 | none | - | none | 30 loaded unit runs and 10 browser runs are evidence in the report; no test checks it\nMUST 5 | FAIL_TO_PASS | tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion | fail | passes on base: it cannot catch the change\nMUST 5 | FAIL_TO_PASS | tests/unit/test-hygiene.test.ts::test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0 | fail | passes on base: it cannot catch the change\nMUST 5 | FAIL_TO_PASS | tests/unit/test-hygiene.test.ts::test hygiene > catches a new fixed sleep | fail | passes on base: it cannot catch the change\nMUST 6 | none | - | none | docs/testing.md and report drafts are documentation; no test checks them\nFAIL: 6 MUSTs, 3 failing tests, 0 problems, 4 none (the owner decides whether none should fail), 0 mutants, 0.1 min\n",
+ "leftover_worktrees": [],
+ "leftover_removed": false,
+ "head": "563999547f39cca7d883fe332470b81d43eb1142",
+ "base": "cd8735c11164a8bcf73703b75ad1d8e34c44f070",
+ "cmd": "~/worktrees/chezmoi/r3/dotfiles/dot_agents/skills/orchestrator-workers/scripts/reqgate.py check --repo ~/sandbox/personal/agent-mission-control --base cd8735c11164a8bcf73703b75ad1d8e34c44f070 --head 563999547f39cca7d883fe332470b81d43eb1142 --brief ~/.local/state/orchestrator-workers/amc-2026-10-29/flake-3.prompt.md --report ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-29__flake-3.report.f2p.md --warn --json ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-10-29__flake-3.gate.f2p.json --timeout 180 --mutants none"
+}

@@ -1,0 +1,136 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/canvas-message.test.ts::readCanvasMessage > takes a size that is a finite non-negative number, rounded up and capped",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/canvas-message.ts' imported from $TMPDIR/reqgate-pr6loldw/tree/tests/unit/canvas-message.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/canvas.test.ts::the prelude > goes inside <head>, else after <html>, else first, and never changes a non-HTML file",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_6__.withPrelude) is not a function"
+    },
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::a canvas card reads as part of the chat: the app's title, no file name, no border, AMC's theme in both schemes",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/pins.test.ts::pins > pins a canvas by its path and refuses the same canvas twice",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: Say what to pin: markdown, a file or a reply."
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/canvas-message.test.ts::readCanvasMessage > reads ready and escape",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/canvas-message.ts' imported from $TMPDIR/reqgate-pr6loldw/tree/tests/unit/canvas-message.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::a canvas is pinned, opens larger over the view, and Escape closes it and returns focus",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::Save a copy keeps the canvas file in the session's folder",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/canvas.test.ts::bringing a file into the canvas folder > opens a copy for the agent and for Preview, whatever the turn is doing",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.previewCanvas is not a function"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::Preview in Changes opens an HTML file as the same card, and a file the agent shows from the folder is copied in",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::Preview on an HTML file tab opens the same card, and a file outside the session's folder is refused with a reason",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/canvas-message.test.ts::readCanvasMessage > ignores anything malformed",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/canvas-message.ts' imported from $TMPDIR/reqgate-pr6loldw/tree/tests/unit/canvas-message.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/canvas-message.test.ts::readCanvasMessage > takes a size that is a finite non-negative number, rounded up and capped",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/canvas-message.ts' imported from $TMPDIR/reqgate-pr6loldw/tree/tests/unit/canvas-message.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::a canvas frame takes only a valid height from its app, up to a ceiling, and ignores a malformed one",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/canvas.test.ts::bringing a file into the canvas folder > copies an HTML file from inside the session's folder, reuses an identical copy, and refuses everything else with a reason",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_6__.placeInCanvas) is not a function"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/canvas.test.ts::bringing a file into the canvas folder > opens a copy for the agent and for Preview, whatever the turn is doing",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.previewCanvas is not a function"
+    },
+    {
+      "must": "6",
+      "test": "tests/e2e/app.spec.ts::Preview on an HTML file tab opens the same card, and a file outside the session's folder is refused with a reason",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "7",
+      "test": "tests/unit/canvas.test.ts::canvas origin > serves only canvas files, read-only, with a policy that allows scripts and no fetch, XHR or WebSocket",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "7",
+      "test": "tests/e2e/app.spec.ts::a peer connection cannot be made inside a canvas frame",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "3",
+      "test": "tests/unit/canvas.test.ts::canvas files and the session > keeps canvas files out of git and Changes, removes them when the session is archived, and keeps a saved copy",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.4
+}

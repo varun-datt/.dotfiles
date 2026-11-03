@@ -1,0 +1,85 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/knowledge.test.ts::a notes query that looks like one of kb's options reaches kb as the query, from every search path",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/knowledge.test.ts::every query is the last argument, after kb's end-of-options marker",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_6__.kbSearchArgs) is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/text-search.test.ts::a query is only ever searched as text (TD-26) > trims surrounding whitespace and newlines, then finds what the bare query finds, in git and in the walk",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/text-search.test.ts::a query is only ever searched as text (TD-26) > refuses an empty query, one of only newlines, and one with a line break inside",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/knowledge.test.ts::a notes query that looks like one of kb's options reaches kb as the query, from every search path",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/knowledge.test.ts::passes kb's arguments as a list, with sources for the agent's own search",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/text-search.test.ts::a query is only ever searched as text (TD-26) > searches a query that looks like a git grep option as text, never as an option",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/text-search.test.ts::a query is only ever searched as text (TD-26) > searches a query that looks like a git grep option as text, never as an option",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/text-search.test.ts::searching text in a git workspace > finds every hit in a file with its line, case-insensitive for a lower-case query",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/text-search.test.ts::searching text in a folder that is not a git repository > walks the folder, skipping node_modules, big and binary files and symlinks",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/knowledge.test.ts::reads kb's outcomes: hits, none, outside every source, a timeout and bad output",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.27
+}

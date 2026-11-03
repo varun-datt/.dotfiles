@@ -1,0 +1,34 @@
+{
+  "run": "amc-2026-11-02", "item": "g92a", "head": "7df7344cbd34632aa9a652a862a81717fc87c4ae", "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/commit-preview.test.ts", "name": "the message as git would write it > joins repeated -m as paragraphs, as git does", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "new parser module; checks repeated -m joined the git way"},
+      {"file": "tests/unit/commit-preview.test.ts", "name": "the message as git would write it > does not read -F outside the folder, through a link, or after a cd", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the -F outside-folder case and its card note"},
+      {"file": "tests/unit/commit-preview.test.ts", "name": "the message as git would write it > shows each commit in a chain, and ignores near-misses beside them", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "commits inside && and ; chains plus near-miss commands"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/commit-preview.test.ts", "name": "the owner's commit rules > say nothing about a clean message, or a subject alone", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "clean message and subject-only show no rule lines"},
+      {"file": "tests/unit/commit-preview.test.ts", "name": "the owner's commit rules > list every rule broken, one line each", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "all rules broken at once, one line each"},
+      {"file": "tests/unit/commit-preview.test.ts", "name": "the owner's commit rules > flag a process story", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "one rule broken alone (process story); sibling tests cover the others"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/commit-card.test.ts", "name": "the commit card's answers > shows the message and its rule breaks, offers only once, edits by rejection, and approves the re-issued commit", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "approve once, edit then re-issue, empty edit refused, through SessionManager and the fake engine"},
+      {"file": "tests/unit/commit-card.test.ts", "name": "the commit card's answers > sends the edited text fenced, after the exact instruction", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "rejection feedback carries the fixed instruction and fenced text"},
+      {"file": "tests/unit/commit-card.test.ts", "name": "the commit card's answers > denies like any other card", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "deny path; relies on a fake-engine phrase the branch adds"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/commit-card.test.ts", "name": "no approval but the owner's passes a commit > auto-approve passes other commands but waits on a commit, and on a commit beside a sandbox bypass", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "autoApprove session and sandbox-bypass commit both wait for the owner"},
+      {"file": "tests/unit/commit-card.test.ts", "name": "no approval but the owner's passes a commit > an analysis session's auto-approval waits on a commit", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "analysis auto-approval case"},
+      {"file": "tests/unit/task-loop.test.ts", "name": "the worktree's edge: symlinks and parent paths count as outside, ordinary commands as inside", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "existing test gained asserts that a commit stays outside a task's approval; base already refused it"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/commit-card.test.ts", "name": "a commit card and the turn's end > Stop answers an open commit card, and a later answer to it is refused", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "Stop rejecting an open card is existing card behaviour; note the test's setup uses a fake phrase added by the branch"},
+      {"file": "tests/unit/commit-card.test.ts", "name": "a commit card and the turn's end > a commit request that arrives after Stop waits for the owner and answers only itself, even with auto-approve", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "late commit after Stop with auto-approve would be approved on base"},
+      {"file": "tests/unit/commit-card.test.ts", "name": "a commit card and the turn's end > a host restart with a commit card open leaves it unanswerable, so it cannot approve into a later turn", "kind": "PASS_TO_PASS", "strict": true, "runner": "vitest", "why": "host-restart order; title quotes the MUST's approve-into-a-later-turn wording; base cards already behaved so"}
+    ]}
+  ],
+  "findings": [
+    {"round": "g92a-review", "n": "7", "musts": ["4"], "tests": ["tests/unit/task-loop.test.ts::the worktree's edge: symlinks and parent paths count as outside, ordinary commands as inside", "tests/unit/commit-card.test.ts::no approval but the owner's passes a commit > auto-approve passes other commands but waits on a commit, and on a commit beside a sandbox bypass"], "note": "The task case is only checked on the inside() predicate, not through a task-role session's permission path. A test that fails on base would not expose this: base already refused commits for tasks, so only a PASS_TO_PASS test through a real task session would cover it."}
+  ],
+  "notes": "The which-commands-are-commits it.each table was skipped because its titles are printf-formatted. tests/e2e/app.spec.ts also covers MUST 1-3 in Playwright (show, edit, re-issue, approve). No test cites a MUST by number; only one test title quotes MUST wording. FAIL_TO_PASS vs PASS_TO_PASS for MUST 5 is inferred: that MUST asks for today's card behaviour, but some of its tests depend on fake-engine phrases that exist only on the branch."
+}

@@ -1,0 +1,65 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7"
+  ],
+  "problems": [
+    "MUST 1 has no line in the REQUIREMENTS MAP",
+    "MUST 2 has no line in the REQUIREMENTS MAP",
+    "MUST 3 has no line in the REQUIREMENTS MAP",
+    "MUST 4 has no line in the REQUIREMENTS MAP",
+    "MUST 5 has no line in the REQUIREMENTS MAP",
+    "MUST 6 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "7",
+      "test": "tests/unit/acp.test.ts::hands a slash command back as a prompt, so the host sends it and nothing goes out from the adapter",
+      "status": "fail",
+      "reason": "Stryker timed out after 1200.0 s"
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "1",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "2",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "3",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "4",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "5",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "6",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 20.03
+}

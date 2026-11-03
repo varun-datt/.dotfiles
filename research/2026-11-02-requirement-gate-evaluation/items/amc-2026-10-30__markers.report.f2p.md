@@ -1,0 +1,12 @@
+## REQUIREMENTS MAP
+
+- MUST 1: tests/unit/markers.test.ts::keeps markers in the store across a restart, edits and deletes them [FAIL_TO_PASS]
+- MUST 1: tests/unit/markers.test.ts::accepts only a real date, a name, a known measure and a stated direction [FAIL_TO_PASS]
+- MUST 1: tests/e2e/app.spec.ts::adds a marker in Insights, reads its before and after figures with session counts, edits it and deletes it [FAIL_TO_PASS]
+- MUST 2: tests/unit/markers.test.ts::compares equal windows on each side of the marker's day, counting sessions on each side [FAIL_TO_PASS]
+- MUST 2: tests/unit/markers.test.ts::says too few sessions below the threshold on either side and states no verdict [FAIL_TO_PASS]
+- MUST 2: tests/unit/markers.test.ts::gives a verdict only when the owner stated the direction [FAIL_TO_PASS]
+- MUST 3: none (no test checks that no credits are spent or that nothing leaves the machine)
+- MUST 4: tests/unit/markers.test.ts::puts a session that starts at the marker's midnight after it and one a minute earlier before it, and leaves out the day past the window [FAIL_TO_PASS]
+- MUST 4: tests/unit/markers.test.ts::has no value for a measure with no data, and for a marker dated after today [FAIL_TO_PASS]
+- MUST 4: tests/e2e/app.spec.ts::adds a marker in Insights, reads its before and after figures with session counts, edits it and deletes it [FAIL_TO_PASS]

@@ -1,0 +1,110 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/commit-preview.test.ts::the message as git would write it > joins repeated -m as paragraphs, as git does",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/commit-preview.ts' imported from $TMPDIR/reqgate-xb4dwhog/tree/tests/unit/commit-preview.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/commit-preview.test.ts::the message as git would write it > does not read -F outside the folder, through a link, or after a cd",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/commit-preview.ts' imported from $TMPDIR/reqgate-xb4dwhog/tree/tests/unit/commit-preview.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/commit-preview.test.ts::the message as git would write it > shows each commit in a chain, and ignores near-misses beside them",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/commit-preview.ts' imported from $TMPDIR/reqgate-xb4dwhog/tree/tests/unit/commit-preview.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/commit-preview.test.ts::the owner's commit rules > say nothing about a clean message, or a subject alone",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/commit-preview.ts' imported from $TMPDIR/reqgate-xb4dwhog/tree/tests/unit/commit-preview.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/commit-preview.test.ts::the owner's commit rules > list every rule broken, one line each",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/commit-preview.ts' imported from $TMPDIR/reqgate-xb4dwhog/tree/tests/unit/commit-preview.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/commit-preview.test.ts::the owner's commit rules > flag a process story",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/commit-preview.ts' imported from $TMPDIR/reqgate-xb4dwhog/tree/tests/unit/commit-preview.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/commit-card.test.ts::the commit card's answers > shows the message and its rule breaks, offers only once, edits by rejection, and approves the re-issued commit",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/commit-card.test.ts::the commit card's answers > sends the edited text fenced, after the exact instruction",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: .toMatch() expects to receive a string, but got undefined"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/commit-card.test.ts::the commit card's answers > denies like any other card",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/commit-card.test.ts::no approval but the owner's passes a commit > auto-approve passes other commands but waits on a commit, and on a commit beside a sandbox bypass",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/commit-card.test.ts::no approval but the owner's passes a commit > an analysis session's auto-approval waits on a commit",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/commit-card.test.ts::a commit card and the turn's end > a commit request that arrives after Stop waits for the owner and answers only itself, even with auto-approve",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: timed out"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "4",
+      "test": "tests/unit/task-loop.test.ts::the worktree's edge: symlinks and parent paths count as outside, ordinary commands as inside",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/commit-card.test.ts::a commit card and the turn's end > Stop answers an open commit card, and a later answer to it is refused",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/commit-card.test.ts::a commit card and the turn's end > a host restart with a commit card open leaves it unanswerable, so it cannot approve into a later turn",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.73
+}

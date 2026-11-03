@@ -1,0 +1,28 @@
+{
+  "run": "amc-2026-10-29",
+  "item": "flake-3",
+  "head": "563999547f39cca7d883fe332470b81d43eb1142",
+  "base": "cd8735c11164a8bcf73703b75ad1d8e34c44f070",
+  "map": [
+    {"must": "1", "none": "inventory of flaky tests from repeated runs and gate logs is report work; no test checks it"},
+    {"must": "2", "none": "classification of flake kinds with evidence is report work; no test checks it"},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/watch.test.ts", "name": "the workspace watcher > delivers a burst of writes as one batch, skips .git and node_modules, and keeps one watcher per folder", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "rewritten to use injected watcher events and fake timers instead of OS events and fixed sleeps; guards batching behaviour the base already had"},
+      {"file": "tests/unit/watch.test.ts", "name": "the workspace watcher > drops an event the system delivers again for a file unchanged since its last batch, and still reports its next write", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "same deterministic-trigger fix applied; behaviour unchanged from base"},
+      {"file": "tests/unit/watch.test.ts", "name": "the workspace watcher > hears a real write from the operating system", "kind": "PASS_TO_PASS", "strict": false, "runner": "vitest", "why": "new test keeps one real OS-event contract with a condition wait, since the others now inject events; behaviour existed at base"}
+    ]},
+    {"must": "4", "none": "30 loaded unit runs and 10 browser runs are evidence in the report; no test checks it"},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/test-hygiene.test.ts", "name": "test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the guard: fails when a test file gains a fixed sleep beyond its recorded count; title quotes the MUST's fixed-sleep-in-a-test wording"},
+      {"file": "tests/unit/test-hygiene.test.ts", "name": "test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the port guard over test sources"},
+      {"file": "tests/unit/test-hygiene.test.ts", "name": "test hygiene > catches a new fixed sleep", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "self-check that the sleep pattern matches two sleep forms; title quotes the MUST's new-fixed-sleep wording"}
+    ]},
+    {"must": "6", "none": "docs/testing.md and report drafts are documentation; no test checks them"}
+  ],
+  "findings": [
+    {"round": "flake-3-review1", "n": "1", "musts": ["3"], "tests": ["tests/unit/watch.test.ts::the workspace watcher > hears a real write from the operating system"], "note": "test-focus finding: after nested-file checks switched to injected events, the only real OS-event test writes at the folder root, so a break in delivery for files in subfolders would go unseen; this is lost coverage of existing behaviour, not something a base-failing test would show"},
+    {"round": "flake-3-review1", "n": "2", "musts": ["5"], "tests": ["tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion", "tests/unit/test-hygiene.test.ts::test hygiene > catches a new fixed sleep"], "note": "test-focus finding: the sleep pattern misses a common setTimeout-in-a-promise form and counts matches in comments or strings; the self-check covers only two forms, so the guard cannot fail on that regression"},
+    {"round": "flake-3-review1", "n": "3", "musts": ["5"], "tests": ["tests/unit/test-hygiene.test.ts::test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0"], "note": "test-focus finding: the port guard scans only the tests folder, so the browser runner's config that still defaults to the shared port passes it"}
+  ],
+  "notes": "Four of six MUSTs are process, evidence or documentation work with no test. Changed watcher tests import a test hook renamed in this branch, so on base they fail at import, not on an assertion; they guard existing behaviour and are marked PASS_TO_PASS. Review read from flake-3-review1.jsonl."
+}

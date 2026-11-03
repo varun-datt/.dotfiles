@@ -1,0 +1,103 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/origin.test.ts::a chat session in a repo subfolder stores the git top level; outside git, the folder; through a link, the real path",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/origin.test.ts::a task try stores the task's root and a run worker the run's root, though each works in AMC's worktrees folder",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/origin.test.ts::a row stored before the field existed gets its origin worked out on read, and the stored row is not rewritten",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: no such column: \"origin\""
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/repo-type.test.ts::each type is resolved from the origin: standalone, knowledge, another value kept raw, no AGENTS.md, no Layout line",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/repo-type.ts' imported from $TMPDIR/reqgate-m5olg646/tree/tests/unit/repo-type.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/repo-type.test.ts::a repo inside the product repos folder is product even when its AGENTS.md says standalone; a sibling sharing the prefix is not",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/repo-type.ts' imported from $TMPDIR/reqgate-m5olg646/tree/tests/unit/repo-type.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/repo-type.test.ts::an AGENTS.md over 1 MB, or not UTF-8, is unknown with the reason, never a crash",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/repo-type.ts' imported from $TMPDIR/reqgate-m5olg646/tree/tests/unit/repo-type.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/special-settings.test.ts::pack only, Settings only, and both naming the same folder: listed once, from the pack, pack first",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.specialRepos is not a function"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/special-settings.test.ts::a folder that does not exist, a file, a relative path and a non-list are refused with the reason; nothing is saved",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::special repos added and removed in Settings show in the session panel, off; a pack-listed one is not removable; the panel names the repository's type",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/special-settings.test.ts::a repo added in Settings while a session is open shows at its next read, off, and can be switched on",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: set theme, panel, filePanel, nav, panelWidth, navWidth, spendCap, layout, folds, order, singleKeys, aiTitles, sandbox, workFolder, analysisModel, packFolder, insightCap or productRepos"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/special-settings.test.ts::removing a switched-on repo in Settings drops it before the next message, and adding it back starts off",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: set theme, panel, filePanel, nav, panelWidth, navWidth, spendCap, layout, folds, order, singleKeys, aiTitles, sandbox, workFolder, analysisModel, packFolder, insightCap or productRepos"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/special-settings.test.ts::after a host restart the Settings list and the switches on it are kept",
+      "status": "fail",
+      "reason": "error on base, not an assertion: Error: set theme, panel, filePanel, nav, panelWidth, navWidth, spendCap, layout, folds, order, singleKeys, aiTitles, sandbox, workFolder, analysisModel, packFolder, insightCap or productRepos"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/special-settings.test.ts::the session view carries the origin and type for the panel's line",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::special repos added and removed in Settings show in the session panel, off; a pack-listed one is not removable; the panel names the repository's type",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.32
+}

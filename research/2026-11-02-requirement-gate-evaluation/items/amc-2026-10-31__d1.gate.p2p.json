@@ -1,0 +1,109 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [
+    "MUST 1 has no line in the REQUIREMENTS MAP",
+    "MUST 2 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "3",
+      "test": "tests/unit/history.test.ts::a history root that is itself a link is not read, and the source is reported as unsafe",
+      "status": "pass",
+      "reason": "killed 11 of 21 mutants it covers (Killed 11, Survived 2, KilledByOtherTests 8)",
+      "mutants": {
+        "attempted": 21,
+        "Killed": 11,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 8
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped",
+      "status": "pass",
+      "reason": "killed 12 of 21 mutants it covers (Killed 12, Survived 2, KilledByOtherTests 7)",
+      "mutants": {
+        "attempted": 21,
+        "Killed": 12,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 7
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/file-write.test.ts::writeTextFile > reads a file that is not valid UTF-8 as read-only, hashed on its own bytes, and refuses to save it",
+      "status": "pass",
+      "reason": "killed 50 of 112 mutants it covers (Killed 50, Survived 34, Timeout 1, KilledByOtherTests 27)",
+      "mutants": {
+        "attempted": 112,
+        "Killed": 50,
+        "Survived": 34,
+        "Timeout": 1,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 27
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "1",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "2",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 143,
+  "mutant_statuses": {
+    "NoCoverage": 15,
+    "Killed": 100,
+    "Survived": 41,
+    "Timeout": 2
+  },
+  "minutes": 3.88
+}

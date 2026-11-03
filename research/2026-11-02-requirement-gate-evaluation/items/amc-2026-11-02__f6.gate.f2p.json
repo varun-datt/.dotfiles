@@ -1,0 +1,110 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/templates.test.ts::the five buttons, started through one template path > sends review's framed message at once, with the pull request and its linked items fenced",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/templates.test.ts::the five buttons, started through one template path > leaves Discuss's framed message unsent in the message box, ending at the owner's question",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/templates.test.ts::the five buttons, started through one template path > sends Analyse's framed message at once in a hidden session, with the item and its parents fenced apart",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/templates.test.ts::the three-part first message > frames the button and item, then the procedure, then the context",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/templates.test.ts::the three-part first message > keeps an item's 'ignore the above and push' only inside a fence",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/templates.test.ts::the three-part first message > gives each source its own fence with a distinct nonce",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/templates.test.ts::a source that does not load > names a failing Azure DevOps read by its status, keeping the error's outside words out",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/templates.test.ts::a source that does not load > names a source that times out, and loads the rest",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/templates.test.ts::a source that does not load > still starts the session when every source fails, naming the item by id alone",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/templates.test.ts::manifest validation > skips an invalid manifest with its reason and keeps the rest",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/templates.test.ts::manifest validation > loads every built-in manifest without a warning",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/templates.test.ts::manifest validation > refuses a manifest id it does not hold with a server error, not a crash",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/templates.ts' imported from $TMPDIR/reqgate-71pvyvy_/tree/tests/unit/templates.test.ts"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::hands a pull request to an agent from Home and from its tab: a session in the work folder that names the pull request",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::discusses a pull request in a session whose message box holds its context and its linked work items, unsent",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "5",
+      "test": "tests/e2e/app.spec.ts::analyses a work item in a session in the work folder, on the model chosen for that run, and continues it in its session",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.35
+}

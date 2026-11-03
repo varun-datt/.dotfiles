@@ -1,0 +1,14 @@
+{
+ "id": "amc-2026-11-02__g10a-post",
+ "phase": "p2p",
+ "exit": 0,
+ "wall_min": 0.11,
+ "load_exit": 0,
+ "stderr": "",
+ "stdout_tail": "MUST 1 | unmapped | - | fail | no line in the REQUIREMENTS MAP\nMUST 2 | PASS_TO_PASS | tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list | fail | attribution unavailable: no test in the Stryker report's testFiles is named two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list; mutants attempted 0: Killed 0, Survived 0, Timeout 0\nMUST 2 | PASS_TO_PASS | tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list | fail | attribution unavailable: no test in the Stryker report's testFiles is named two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list; mutants attempted 0: Killed 0, Survived 0, Timeout 0\nproblem: MUST 1 has no line in the REQUIREMENTS MAP\nFAIL: 2 MUSTs, 2 failing tests, 1 problems, 0 none (the owner decides whether none should fail), 68 mutants, 0.11 min\n",
+ "leftover_worktrees": [],
+ "leftover_removed": false,
+ "head": "3bb9731a648a758bb3ba95ed3efcf143c7a247d9",
+ "base": "3fd24325cf1d581c9ddb0170f37b0958f8b38578",
+ "cmd": "~/worktrees/chezmoi/r3/dotfiles/dot_agents/skills/orchestrator-workers/scripts/reqgate.py check --repo ~/sandbox/personal/agent-mission-control --base 3fd24325cf1d581c9ddb0170f37b0958f8b38578 --head 3bb9731a648a758bb3ba95ed3efcf143c7a247d9 --brief ~/.local/state/orchestrator-workers/amc-2026-11-02/g10a-post.prompt.md --report ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-11-02__g10a-post.report.p2p.md --warn --json ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/items/amc-2026-11-02__g10a-post.gate.p2p.json --timeout 180 --mutants stryker --stryker-timeout 1200 --stryker-cmd npx --no-install stryker run ~/worktrees/chezmoi/r4/research/2026-11-02-requirement-gate-evaluation/scripts/stryker.eval.json"
+}

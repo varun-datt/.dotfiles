@@ -1,0 +1,67 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/acp.test.ts::treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/watch.test.ts::language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_9__.ignoresCase) is not a function"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/code-tool.test.ts::hover on a local alias of a function from outside the folder does not show the outside signature, while an alias inside still answers",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/acp.test.ts::treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/watch.test.ts::language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_9__.ignoresCase) is not a function"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/code-tool.test.ts::hover on a local alias of a function from outside the folder does not show the outside signature, while an alias inside still answers",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/acp.test.ts::asks again when an approved command comes back with other environment variables or another folder, and says so on the card",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/code-tool.test.ts::hover on a symbol declared outside the folder says so instead of showing its signature and docs",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.23
+}

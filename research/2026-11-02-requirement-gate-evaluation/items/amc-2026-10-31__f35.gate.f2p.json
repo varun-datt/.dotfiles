@@ -1,0 +1,92 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/palette.test.ts::the text-in-files scope > is chosen by % and keeps every other key as it was",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/palette.test.ts::the text-in-files scope > shows only the latest search's answer when an earlier one answers later",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_1__.latestOnly) is not a function"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/palette.test.ts::the text-in-files scope > marks the match inside a line, and leaves the line whole when the match is out of range",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (0 , __vite_ssr_import_1__.marked) is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::% finds text inside the workspace's files and opens a hit at its line",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/text-search.test.ts::searching text in a git workspace > is case-sensitive when the query has a capital letter",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/text-search.ts' imported from $TMPDIR/reqgate-0619_ihu/tree/tests/unit/text-search.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/text-search.test.ts::searching text in a git workspace > skips ignored and binary files and finds untracked ones",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/text-search.ts' imported from $TMPDIR/reqgate-0619_ihu/tree/tests/unit/text-search.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/text-search.test.ts::searching text in a git workspace > matches -dash literally",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/text-search.ts' imported from $TMPDIR/reqgate-0619_ihu/tree/tests/unit/text-search.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/text-search.test.ts::searching text in a folder that is not a git repository > walks the folder, skipping node_modules, big and binary files and symlinks",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/text-search.ts' imported from $TMPDIR/reqgate-0619_ihu/tree/tests/unit/text-search.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/text-search.test.ts::searching text in a git workspace > stops at the hit limit, says so and leaves no git running",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/text-search.ts' imported from $TMPDIR/reqgate-0619_ihu/tree/tests/unit/text-search.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/text-search.test.ts::searching text in a git workspace > stops a slow search when asked and at its deadline, and kills the child",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/text-search.ts' imported from $TMPDIR/reqgate-0619_ihu/tree/tests/unit/text-search.test.ts"
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/text-search.test.ts::searching text in a folder that is not a git repository > stops the walk at its deadline and when asked",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/text-search.ts' imported from $TMPDIR/reqgate-0619_ihu/tree/tests/unit/text-search.test.ts"
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/server.test.ts::host server > searches text only in a known session's folder, returns relative paths and refuses anything else",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.26
+}

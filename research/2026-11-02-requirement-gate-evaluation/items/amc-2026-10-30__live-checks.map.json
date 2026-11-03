@@ -1,0 +1,27 @@
+{
+  "run": "amc-2026-10-30",
+  "item": "live-checks",
+  "head": "8f27343d56d2662e884aba28a0a67ccf4683b689",
+  "base": "231b968facf8dd04e3d05f5876e60aa4555aaa54",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/live/workflows.live.test.ts", "name": "workflows on real Copilot > tool-search", "kind": "FAIL_TO_PASS", "strict": false, "runner": "live", "why": "each new workflow in tests/workflows/workflows.ts runs as a live test named after it, with its declared request count; tool-search is one of them"},
+      {"file": "tests/live/workflows.live.test.ts", "name": "workflows on real Copilot > run-findings", "kind": "FAIL_TO_PASS", "strict": false, "runner": "live", "why": "another of the new workflows; the live suite is skipped unless the live flag is set"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/one-shot.test.ts", "name": "Copilot tool search option > reaches the session config only when set", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the tool-search option reaches the session config only when passed, so defaults stay unchanged"},
+      {"file": "tests/live/workflows.live.test.ts", "name": "workflows on real Copilot > tool-search", "kind": "FAIL_TO_PASS", "strict": false, "runner": "live", "why": "runs the turn with tool search on and off and records tool counts and tokens"}
+    ]},
+    {"must": "3", "none": "running the live suite on the default model within the budget is an operational step; the live cap check has a computed title and was skipped"},
+    {"must": "4", "none": "recording passed workflows after a leak scan is an operational step; the live test's leak scan predates the branch and no test checks recording"},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/transcript.test.ts", "name": "buildView > shows a hand-over summary without the model's analysis block", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "the small bug fixed with a test: added cases for a cut-off analysis block and a long real-format summary"},
+      {"file": "tests/e2e/app.spec.ts", "name": "opens the full summary from the glance card, writes it once, switches back to the card, and counts the messages since the card", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "changed to expect the full summary without the analysis text, with layout checks"}
+    ]}
+  ],
+  "findings": [
+    {"round": "live-checks-rereview2", "n": "2b", "musts": ["1", "3"], "tests": ["tests/unit/harness-meter.test.ts::the live harness's request meter > refuses a send past the workflow's declared requests, before the engine sees it"], "note": "at that round's head a new meter test set the per-workflow limit but switched AI titles off, so it missed that the title call uses up the one-request allowance of the basic workflow; a meter test with titles on would fail at head and expose it (test file exists at the round head, not the mapped head)"},
+    {"round": "live-checks-review", "n": "2", "musts": ["1", "3"], "tests": ["tests/live/workflows.live.test.ts::workflows on real Copilot > run-findings"], "note": "the run-findings workflow's paid sends go round the harness counter, so its declared request count and the suite cap are not enforced; no Vitest test checked the meter at this head, and a unit test of the counter would fail on the base where the bypass exists"}
+  ],
+  "notes": "Most MUSTs here are operational (run live, record, report) rather than code behaviour. Live tests run only with the live flag and are not Vitest-gate tests (tests/live is outside vitest.config include); names follow the template `${workflow.name}` under the describe title. The per-suite cap test has a computed title and was skipped. Finding 2b's test exists only at its round head f1c8ea5. Reports found as final messages in live-checks-review.jsonl and live-checks-rereview2.jsonl."
+}

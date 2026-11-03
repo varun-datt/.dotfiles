@@ -1,0 +1,37 @@
+{
+  "run": "amc-2026-11-02", "item": "s1", "head": "d21df60bb10a86c2b9f79f83e9361cbc61cb6e84", "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > shows how long a Do now session has waited, from the event that asked, failed or went quiet", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "session question, failure and stall wait time with hover text"},
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > counts a task in Do now from its last change of state, and a stopped one as a last change", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "failed task and pass-to-merge task time"},
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > uses when a review was asked when the source says, and says when it does not", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "review requested, with and without the request time"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > shows a Plan or background session's last change as a relative time, the later of its last event and its last update", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "session in Plan or background shows a relative last change"},
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > shows an outside row's last change in Plan and the background, and nothing when its source gave no time", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "work item and pull request rows"},
+      {"file": "tests/unit/home-items.test.ts", "name": "Home's outside work (4) > gives a work item its last change, and a parent shown for context its own last change rather than its newest child's", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "parent row uses its own time, not its child's"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > shows no time for a missing or unreadable date, or before the clock is read, and none in the future", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "no made-up time when the date is missing"},
+      {"file": "tests/unit/home-items.test.ts", "name": "Home's outside work (4) > gives each row the time its source says, and none where the source says nothing (105)", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "source gives no time, so no time; review falls back to last change"},
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > uses when a review was asked when the source says, and says when it does not", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "asserts the exact unknown-request hover text, in the body rather than the title"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/home-items.test.ts", "name": "Home's outside work (4) > puts the owner's draft in Plan from either source, keeps others' drafts out, and moves a draft on when it turns ready (106)", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "Azure DevOps and GitHub drafts, someone else's draft, a draft turning ready"},
+      {"file": "tests/unit/home-items.test.ts", "name": "Home's outside work (4) > orders the owner's own pull request as the dashboard does: draft, failed build, then reviewers' changes, never counting the author's own vote", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "existing test changed: draft band moved from background to plan"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/bands.test.ts", "name": "Home's bands > states each band's rule as the owner worded it (106)", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "exact rule text of all three bands; help-text copies not covered"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/unit/row-time.test.ts", "name": "a time on every Home row (105) > moves with the clock: the same row reads longer a minute later", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "checks the tick only; order, focus and colour are not checked here"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Home's row times tick with the clock without moving rows or focus, and say on hover what they measure", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "title quotes the MUST's tick-without-moving-rows-or-focus wording"},
+      {"file": "tests/e2e/app.spec.ts", "name": "shows the owner's pull requests, reviews and work items from Azure DevOps and GitHub on Home, in the band each belongs to", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "changed test asserts the row time draws no colour of its own"}
+    ]}
+  ],
+  "findings": [
+    {"round": "s1-rereview", "n": "1", "musts": ["1"], "tests": ["tests/unit/wait-clock.test.ts::a passed task keeps the time it passed when its pull request is drafted and the draft is left"], "note": "Raised at a later head, against a test the fix round added (not on this map's head). It compares two separately sampled timestamps. This is a flaky test, not an unmet requirement, so a base-failing test would not expose it."},
+    {"round": "s1-review", "n": "5", "musts": ["1"], "tests": ["tests/e2e/app.spec.ts::makes a chat into a task the owner reviews, which runs alone and waits on Home for a merge or a pull request preview", "tests/unit/row-time.test.ts::a time on every Home row (105) > counts a task in Do now from its last change of state, and a stopped one as a last change"], "note": "The render matrix in the acceptance list was incomplete, and the browser task test never asserts the task row's time. The unit taskTime test covers the helper but not the renderer. A base-failing test would not expose this coverage gap."}
+  ],
+  "notes": "Test titles cite PLAN item numbers (105, 106), not MUST numbers, so none counts as strict on that basis. MUST 6's order, focus and colour checks are only in Playwright. MUST 5's help-text copies have no unit test. row-time.test.ts imports a new module, so on base it fails at import, not on an assertion."
+}
