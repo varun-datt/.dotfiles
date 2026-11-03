@@ -1,19 +1,57 @@
 {
-  "run": "amc-2026-11-02", "item": "g10a-post",
-  "head": "3bb9731a648a758bb3ba95ed3efcf143c7a247d9", "base": "3fd24325cf1d581c9ddb0170f37b0958f8b38578",
-  "map": [
-    {"must": "1", "tests": [
-      {"file": "tests/unit/special-view.test.ts", "name": "readSpecial > refuses a null entry", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "malformed-body case: the new reader returns null so the panel shows the load failure; it.each title printed with its first argument"},
-      {"file": "tests/unit/special-view.test.ts", "name": "readSpecial > accepts every shape the host sends", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a valid list is read so it can show after a successful retry"},
-      {"file": "tests/e2e/app.spec.ts", "name": "a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "only test of the panel's failure message, Retry and no None yet; title quotes MUST 1"}
-    ]},
-    {"must": "2", "tests": [
-      {"file": "tests/unit/special-settings.test.ts", "name": "two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list", "kind": "PASS_TO_PASS", "strict": true, "runner": "vitest", "why": "remove the file-valued entry, keep the missing folder, then empty; title echoes MUST 2; host behaviour existed at base (branch changed only UI sources)"},
-      {"file": "tests/unit/special-settings.test.ts", "name": "two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list", "kind": "PASS_TO_PASS", "strict": true, "runner": "vitest", "why": "the reverse order case"}
-    ]}
-  ],
-  "findings": [
-    {"round": "g10a-post-rereview", "n": "c1", "musts": ["1"], "tests": ["tests/e2e/app.spec.ts::a toggle whose answer cannot be read, or whose recovery read fails, shows the load failure with a Retry, not the guessed switch", "tests/unit/special-view.test.ts::readSpecial > refuses a null entry"], "note": "The recovery read after a failed toggle is stubbed only as a 500 or a valid list, never a malformed 200; a coverage gap in the browser test for a path the code already handles, so no base-failing test is implied."}
-  ],
-  "notes": "MUST 1's visible behaviour (message, Retry, no None yet) is checked only by Playwright; the Vitest tests check the new body reader that decides the failure state. special-view.test.ts imports src/ui/special-view.ts, new on the branch, so base runs fail at import. MUST 2's two tests come from a for-loop template literal and are given as Vitest prints them; the branch changed no host source, so as PASS_TO_PASS they cover no changed lines and would kill no mutants on the changed lines."
+ "run": "amc-2026-11-02",
+ "item": "g10a-post",
+ "head": "3bf211b3d5357abbb953a323d2020727bc31d4d0",
+ "base": "3fd24325cf1d581c9ddb0170f37b0958f8b38578",
+ "map": [
+  {
+   "must": "1",
+   "tests": [
+    {
+     "file": "tests/e2e/app.spec.ts",
+     "name": "a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds",
+     "kind": "FAIL_TO_PASS",
+     "strict": true,
+     "runner": "playwright",
+     "why": "only test of the panel's failure message, Retry and no None yet; title quotes MUST 1"
+    }
+   ]
+  },
+  {
+   "must": "2",
+   "tests": [
+    {
+     "file": "tests/unit/special-settings.test.ts",
+     "name": "two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list",
+     "kind": "PASS_TO_PASS",
+     "strict": true,
+     "runner": "vitest",
+     "why": "remove the file-valued entry, keep the missing folder, then empty; title echoes MUST 2; host behaviour existed at base (branch changed only UI sources)"
+    },
+    {
+     "file": "tests/unit/special-settings.test.ts",
+     "name": "two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list",
+     "kind": "PASS_TO_PASS",
+     "strict": true,
+     "runner": "vitest",
+     "why": "the reverse order case"
+    }
+   ]
+  }
+ ],
+ "findings": [
+  {
+   "round": "g10a-post-rereview",
+   "n": "c1",
+   "musts": [
+    "1"
+   ],
+   "tests": [
+    "tests/e2e/app.spec.ts::a toggle whose answer cannot be read, or whose recovery read fails, shows the load failure with a Retry, not the guessed switch",
+    "tests/unit/special-view.test.ts::readSpecial > refuses a null entry"
+   ],
+   "note": "The recovery read after a failed toggle is stubbed only as a 500 or a valid list, never a malformed 200; a coverage gap in the browser test for a path the code already handles, so no base-failing test is implied."
+  }
+ ],
+ "notes": "MUST 1's visible behaviour (message, Retry, no None yet) is checked only by Playwright; the Vitest tests check the new body reader that decides the failure state. special-view.test.ts imports src/ui/special-view.ts, new on the branch, so base runs fail at import. MUST 2's two tests come from a for-loop template literal and are given as Vitest prints them; the branch changed no host source, so as PASS_TO_PASS they cover no changed lines and would kill no mutants on the changed lines. Remapped to the first review's head 3bf211b3d5: dropped tests absent there: ['MUST 1: tests/unit/special-view.test.ts::readSpecial > refuses a null entry', 'MUST 1: tests/unit/special-view.test.ts::readSpecial > accepts every shape the host sends']."
 }

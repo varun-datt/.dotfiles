@@ -5,8 +5,13 @@ Reads items.json, items/<key>.map.json, items/<key>.gate.f2p.json and, where pre
 (the PASS_TO_PASS verdicts with Stryker) and the .run.<phase>.json logs. Writes results.json and tables.md.
 
 Rule variants: map (the INFERRED map), strict (only tests whose title or comments cite the MUST; a MUST with none
-becomes a `none` line), and each again under SWE-bench's rule, where any non-pass on the base is a valid
-FAIL_TO_PASS (swebench/harness/grading.py test_failed), against the gate's assertion-only rule (D4).
+becomes a `none` line), and each again under a permissive rule, where any non-pass on the base is a valid
+FAIL_TO_PASS, against the gate's assertion-only rule (D4). The permissive rule is an AMC policy option, not SWE-bench's
+protocol: SWE-bench drops task instances whose base log shows ImportError or AttributeError (paper, Appendix A.3).
+
+Corrections after review: a Vitest `.rejects`/`.resolves` mismatch on the base is an assertion failure the gate reads as an
+error (it accepts only messages starting with AssertionError); classify() counts it as an assertion and `raw=True` keeps the
+gate's own reading. ARTEFACTS lists apparent catches a mutation check showed to be mapping artefacts (flake3/mutants.json).
 """
 import json, os, re, statistics
 
@@ -19,6 +24,10 @@ ABSENT = {"F2P load on base (new module)", "F2P error on base (missing export)",
 NOT_GATE = {"unsupported runner (playwright)", "unsupported runner (live)", "map error", "environment"}
 SIZES = json.load(open(os.path.join(OUT, "src_added_lines.json"))) if os.path.exists(os.path.join(OUT, "src_added_lines.json")) else {}
 VARIANTS = (("map", {}), ("strict", {"strict": True}), ("map_swe", {"swe": True}), ("strict_swe", {"strict": True, "swe": True}))
+REJECTS = re.compile(r"instead of (rejecting|resolving)")
+# flake-3's hygiene guards scan test files, which the gate copies onto the base, so they pass on any base: the flag would
+# stand for a correct guard too (flake3/mutants.json; scripts/flake3_mutants.py).
+ARTEFACTS = {("amc-2026-10-29__flake-3", "flake-3-review1", "2"), ("amc-2026-10-29__flake-3", "flake-3-review1", "3")}
 
 
 def load(path):
@@ -29,9 +38,11 @@ def key(i):
     return f"{i['run']}__{i['item']}"
 
 
-def classify(g, runner, base_status=None):
+def classify(g, runner, raw=False):
     """One test line's outcome in the gate's own words, sorted into kinds."""
     s, r = g["status"], g["reason"]
+    if not raw and r.startswith("error on base") and REJECTS.search(r):
+        return "pass"
     if runner != "vitest":
         return f"unsupported runner ({runner})"
     if r.startswith(("missing at head", "ambiguous at head")):
@@ -67,7 +78,7 @@ def classify(g, runner, base_status=None):
     return "other: " + r[:60]
 
 
-def test_kinds(m, gate, p2p, strict=False, swe=False):
+def test_kinds(m, gate, p2p, strict=False, swe=False, raw=False):
     """{(must, test): kind} under one rule variant, plus the MUSTs left with no test (`none`)."""
     meta = {}
     for e in m["map"]:
@@ -83,7 +94,7 @@ def test_kinds(m, gate, p2p, strict=False, swe=False):
                 continue
             if kind == "PASS_TO_PASS" and k in p2p_by and g["status"] in ("not checked", "pass"):
                 g = p2p_by[k] if g["status"] == "not checked" else g
-            c = classify(g, runner)
+            c = classify(g, runner, raw)
             if swe and c in ABSENT:
                 c = "pass"
             kinds[k] = c
@@ -114,9 +125,10 @@ def finding_verdict(f, mf, kinds, none):
     return "miss", sorted({c for c in own + near})
 
 
-def gate_fails(kinds, problems, as_run=False):
-    """Whether the gate fails the item; as_run keeps Playwright, live and environment failures, as the gate does."""
-    skip = {"pass", "P2P not checked", "P2P covers no changed line", "map error"} | (set() if as_run else NOT_GATE)
+def gate_fails(kinds, problems, as_run=False, nocover=False):
+    """Whether the gate fails the item; as_run keeps Playwright, live and environment failures, as the gate does;
+    nocover fails a PASS_TO_PASS test that covers no changed line (decision 5's option a)."""
+    skip = {"pass", "P2P not checked", "map error"} | (set() if nocover else {"P2P covers no changed line"}) | (set() if as_run else NOT_GATE)
     real = [c for c in kinds.values() if c not in skip]
     return bool(real) or bool(problems), sorted(set(real))
 
@@ -129,7 +141,7 @@ def cost_row(k):
             row = {"phase": phase, "wall_min": run["wall_min"], "exit": run["exit"]}
             if gate:
                 row.update(mutants_run=gate.get("mutants_run"), statuses=gate.get("mutant_statuses"),
-                           generated=sum((gate.get("mutant_statuses") or {}).values()),
+                           generated=None if any("Stryker" in g["reason"] for g in gate.get("PASS_TO_PASS", [])) else sum((gate.get("mutant_statuses") or {}).values()),
                            p2p=sorted({classify(g, "vitest") for g in gate.get("PASS_TO_PASS", [])}) if phase == "p2p" else [],
                            gate_min=gate.get("minutes"),
                            stryker_error=next((g["reason"] for g in gate.get("PASS_TO_PASS", []) if "Stryker" in g["reason"]), None))
@@ -139,7 +151,7 @@ def cost_row(k):
             sg = load(os.path.join(ITEMS, f"{k}.gate.cost-static.json"))
             if st and sg:
                 row["static_off"] = {"wall_min": st["wall_min"], "mutants_run": sg.get("mutants_run"),
-                                     "generated": sum((sg.get("mutant_statuses") or {}).values()),
+                                     "generated": sum(sg["mutant_statuses"].values()) if sg.get("mutant_statuses") else None,
                                      "statuses": sg.get("mutant_statuses")}
             return row
     return None
@@ -175,7 +187,10 @@ def main():
         for v, kw in VARIANTS:
             kinds, none = test_kinds(m, gate, p2p, **kw)
             fails, why = gate_fails(kinds, gate.get("problems"))
+            rk, _ = test_kinds(m, gate, p2p, raw=True, **kw)
             per[v] = {"fails": fails, "why": why, "none": none, "fails_as_run": gate_fails(kinds, gate.get("problems"), True)[0],
+                      "fails_raw": gate_fails(rk, gate.get("problems"))[0],
+                      "fails_nocover": gate_fails(kinds, gate.get("problems"), nocover=True)[0],
                       "kinds": {f"{n}|{t}": c for (n, t), c in kinds.items()}}
         res["variants"] = per
         for f in i.get("findings", []):
@@ -184,6 +199,9 @@ def main():
             for v, kw in VARIANTS:
                 kinds, none = test_kinds(m, gate, p2p, **kw)
                 vs[v] = finding_verdict(f, mf, kinds, none)
+                if (k, f["round"], str(f["n"])) in ARTEFACTS and vs[v][0] in ("caught", "MUST flagged"):
+                    vs[v] = ("flagged, not for this", ["mapping artefact: " + "; ".join(vs[v][1])])
+                vs[v + "_raw"] = finding_verdict(f, mf, *test_kinds(m, gate, p2p, raw=True, **kw))
             findings.append({"id": k, "f": f, "mf": mf, "verdicts": vs})
         if i["set"] == "control":
             controls.append((k, per, p2p is not None))
@@ -194,24 +212,53 @@ def main():
                        "error_export": sum(1 for g in f2p if classify(g, "vitest") == "F2P error on base (missing export)"),
                        "passes": sum(1 for g in f2p if g["reason"].startswith("passes on base")),
                        "fails_ok": sum(1 for g in f2p if g["status"] == "pass"),
+                       "rejects": sum(1 for g in f2p if g["reason"].startswith("error on base") and REJECTS.search(g["reason"])),
                        "new_sources": len(i.get("new_sources", [])),
-                       "fails_map": per["map"]["fails"], "fails_swe": per["map_swe"]["fails"]})
+                       "fails_map": per["map"]["fails"], "fails_swe": per["map_swe"]["fails"],
+                       "fails_map_raw": per["map"]["fails_raw"], "fails_swe_raw": per["map_swe"]["fails_raw"]})
     json.dump({"items": results, "findings": [{"id": x["id"], "round": x["f"]["round"], "n": x["f"]["n"],
                                                 "focus": x["f"]["focus"], "cause": x["f"]["cause"],
                                                 "graded": x["f"]["test_would_catch"],
                                                 "verdicts": x["verdicts"]} for x in findings],
                "dropped": dropped, "costs": [{"id": k, "set": s, **c} for k, s, c in costs], "new_modules": newmod},
               open(os.path.join(OUT, "results.json"), "w"), indent=1)
-    write_tables(findings, controls, costs, newmod, dropped)
+    write_tables(findings, controls, costs, newmod, dropped, every)
 
 
-def write_tables(findings, controls, costs, newmod, dropped):
-    L = ["## Dropped finding items\n", "<!-- table:dropped -->", "| item | findings | why |", "| --- | --- | --- |"]
+def stratify(findings, every):
+    """Dropped against kept findings, by focus and cause, and by the graded column (critique coverage gap 1)."""
+    kept = {(x["id"], x["f"]["round"], str(x["f"]["n"])) for x in findings if x["verdicts"]["map"][0] != "not run"}
+    rows = []
+    for i in every:
+        if i["set"] != "finding":
+            continue
+        for f in i.get("findings", []):
+            if f["focus"] not in ("requirement", "test"):
+                continue
+            rows.append((f["focus"], f["cause"], f.get("test_would_catch") or "-", (key(i), f["round"], str(f["n"])) in kept))
+    L = ["\n## Kept and dropped findings\n", "<!-- table:strata -->", "| focus | cause | kept | dropped |", "| --- | --- | --- | --- |"]
+    for focus in ("requirement", "test"):
+        for c in sorted({r[1] for r in rows if r[0] == focus}):
+            a = sum(1 for r in rows if r[0] == focus and r[1] == c and r[3])
+            b = sum(1 for r in rows if r[0] == focus and r[1] == c and not r[3])
+            L.append(f"| {focus} | {c} | {a} | {b} |")
+        L.append(f"| **{focus}, all** | | **{sum(1 for r in rows if r[0] == focus and r[3])}** | **{sum(1 for r in rows if r[0] == focus and not r[3])}** |")
+    L.append("\nRequirement-only findings by the graded column \"a named failing test would have caught it\":\n")
+    L.append("| graded | kept | dropped |")
+    L.append("| --- | --- | --- |")
+    for g in sorted({r[2] for r in rows if r[0] == "requirement"}):
+        L.append(f"| {g} | {sum(1 for r in rows if r[0] == 'requirement' and r[2] == g and r[3])} | {sum(1 for r in rows if r[0] == 'requirement' and r[2] == g and not r[3])} |")
+    L.append("<!-- /table -->")
+    return L
+
+
+def write_tables(findings, controls, costs, newmod, dropped, every):
+    L = stratify(findings, every) + ["## Dropped finding items\n", "<!-- table:dropped -->", "| item | findings | why |", "| --- | --- | --- |"]
     L += [f"| {d['id']} | {len(d['findings'])}: {', '.join(d['findings'])} | {d['why']} |" for d in dropped]
     L.append("<!-- /table -->\n")
     L.append("## Q1 per finding\n")
     L.append("<!-- table:q1rows -->")
-    L.append("| item | finding | focus/cause | graded | map | strict | map, SWE rule | kinds (map) |")
+    L.append("| item | finding | focus/cause | graded | map | strict | map, permissive | kinds (map) |")
     L.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
     for x in sorted(findings, key=lambda x: (x["f"]["focus"], x["id"], x["f"]["round"], str(x["f"]["n"]))):
         f, v = x["f"], x["verdicts"]
@@ -222,7 +269,7 @@ def write_tables(findings, controls, costs, newmod, dropped):
         sub = [x for x in findings if x["f"]["focus"] == focus]
         L.append(f"\n**{label}** ({len(sub)} in scope):\n")
         L.append(f"<!-- table:q1{focus} -->")
-        L.append("| verdict | map | strict | map, SWE | strict, SWE |")
+        L.append("| verdict | map | strict | map, permissive | strict, permissive |")
         L.append("| --- | --- | --- | --- | --- |")
         for verdict in ("caught", "MUST flagged", "none only", "flagged, not for this", "miss", "miss (no MUST)", "not run"):
             row = [sum(1 for x in sub if x["verdicts"][v][0] == verdict) for v, _ in VARIANTS]
@@ -241,19 +288,20 @@ def write_tables(findings, controls, costs, newmod, dropped):
         L.append("<!-- /table -->")
     L.append("\n## Q2 controls\n")
     L.append("<!-- table:q2 -->")
-    L.append("| control | Stryker checked | as run (Playwright counted) | map: fails? | kinds | strict: fails? | map, SWE: fails? | kinds (SWE) |")
+    L.append("| control | Stryker checked | as run (Playwright counted) | map: fails? | kinds | strict: fails? | map, permissive: fails? | kinds (permissive) |")
     L.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
     for k, per, checked in controls:
         L.append(f"| {k.split('__')[1]} | {'yes' if checked else 'no'} | {'FAIL' if per['map']['fails_as_run'] else 'pass'} | {'FAIL' if per['map']['fails'] else 'pass'} | {'; '.join(per['map']['why']) or '-'} | "
                  f"{'FAIL' if per['strict']['fails'] else 'pass'} | {'FAIL' if per['map_swe']['fails'] else 'pass'} | {'; '.join(per['map_swe']['why']) or '-'} |")
-    L.append("\nFalse alarms by kind (count of controls with at least one, map rule; SWE rule):\n")
-    L.append("| kind | map | strict | map, SWE | strict, SWE |")
+    L.append("\nFalse alarms by kind (count of controls with at least one, map rule; permissive rule):\n")
+    L.append("| kind | map | strict | map, permissive | strict, permissive |")
     L.append("| --- | --- | --- | --- | --- |")
     allk = sorted({c for _, per, _ in controls for v in per.values() for c in v["why"]})
     for c in allk:
         L.append(f"| {c} | " + " | ".join(str(sum(1 for _, per, _ in controls if c in per[v]["why"])) for v, _ in VARIANTS) + " |")
     L.append("| none line (reported, not a failure) | " + " | ".join(str(sum(1 for _, per, _ in controls if per[v]["none"])) for v, _ in VARIANTS) + " |")
-    L.append("| **controls failed** | " + " | ".join(str(sum(1 for _, per, _ in controls if per[v]["fails"])) for v, _ in VARIANTS) + f" |\n\nAs run, Playwright counted: {sum(1 for _, per, _ in controls if per['map']['fails_as_run'])} of {len(controls)} fail.")
+    L.append("| **controls failed** | " + " | ".join(str(sum(1 for _, per, _ in controls if per[v]["fails"])) for v, _ in VARIANTS) + " |")
+    L.append("| controls failed if a PASS_TO_PASS test covering no changed line fails (decision 5, option a) | " + " | ".join(str(sum(1 for _, per, _ in controls if per[v]["fails_nocover"])) for v, _ in VARIANTS) + f" |\n\nAs run, Playwright counted: {sum(1 for _, per, _ in controls if per['map']['fails_as_run'])} of {len(controls)} fail.")
     L.append("<!-- /table -->")
     L.append("\n## Q3 cost\n")
     L.append("<!-- table:q3 -->")
@@ -262,10 +310,13 @@ def write_tables(findings, controls, costs, newmod, dropped):
     for k, s, c in sorted(costs, key=lambda x: x[2]["wall_min"]):
         st = c.get("static_off") or {}
         err = f" ({c['stryker_error'][:40]})" if c.get("stryker_error", "") and "Stryker" in c["stryker_error"][:20] else ""
-        L.append(f"| {k.split('__')[1]} | {s} | {SIZES.get(k, '-')} | {c['phase']} | {c['wall_min']}{err} | {c.get('generated', '-')} | {c.get('mutants_run', '-')} | "
+        L.append(f"| {k.split('__')[1]} | {s} | {SIZES.get(k, '-')} | {c['phase']} | {c['wall_min']}{err} | {'unknown' if c.get('generated') is None else c['generated']} | {c.get('mutants_run', '-')} | "
                  f"{fmt_statuses(c.get('statuses'))} | {'; '.join(c.get('p2p') or []) or '-'} | {st.get('wall_min', '-')} | "
                  f"{str(st.get('generated', '-')) + ' / ' + str(st.get('mutants_run', '-')) if st else '-'} |")
     walls = [c["wall_min"] for _, _, c in costs]
+    gen = [c["generated"] for _, _, c in costs if c.get("generated") is not None]
+    if gen:
+        L.append(f"\nMutants generated: median {statistics.median(gen)}, largest {max(gen)} over {len(gen)} known counts; unknown for {len(costs) - len(gen)} ({', '.join(k.split('__')[1] for k, _, c in costs if c.get('generated') is None)}).")
     if walls:
         L.append(f"\nmedian {round(statistics.median(walls), 2)} min, largest {max(walls)} min over {len(walls)} items.")
     have = {k for k, _, _ in costs}
@@ -284,7 +335,7 @@ def write_tables(findings, controls, costs, newmod, dropped):
     L.append("<!-- /table -->")
     L.append("\n## Q4 new modules and absent code\n")
     L.append("<!-- table:q4 -->")
-    L.append("| item | set | FAIL_TO_PASS | fail on assertion | load on base (new module) | error on base: missing export | error on base: other | passes on base | new source files | gate fails (D4) | gate fails (SWE) |")
+    L.append("| item | set | FAIL_TO_PASS | fail on assertion | load on base (new module) | error on base: missing export | error on base: other | passes on base | new source files | gate fails (D4) | gate fails (permissive) |")
     L.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for r in newmod:
         L.append(f"| {r['id'].split('__')[1]} | {r['set']} | {r['f2p']} | {r['fails_ok']} | {r['load']} | {r['error_export']} | {r['error'] - r['error_export']} | {r['passes']} | {r['new_sources']} | "
@@ -297,7 +348,7 @@ def write_tables(findings, controls, costs, newmod, dropped):
 def summary(findings, controls, costs, newmod):
     names = [v for v, _ in VARIANTS]
     L = ["\n## Summary\n", "<!-- table:summary -->",
-         "| | assertion-only rule (D4), INFERRED map | D4, strict map | SWE-bench rule, INFERRED map | SWE-bench rule, strict map |",
+         "| | assertion-only rule (D4), INFERRED map | D4, strict map | permissive rule (any non-pass on base), INFERRED map | permissive rule, strict map |",
          "| --- | --- | --- | --- | --- |"]
     def count(sub, pred):
         return [sum(1 for x in sub if pred(x["verdicts"][v][0])) for v in names]
@@ -313,15 +364,16 @@ def summary(findings, controls, costs, newmod):
         d = count(sub, lambda r: r == "flagged, not for this")
         L.append(f"| ... item failed only for another reason | " + " | ".join(map(str, d)) + " |")
     L.append(f"| Clean controls failed (of {len(controls)}) | " + " | ".join(str(sum(1 for _, per, _ in controls if per[v]["fails"])) for v in names) + " |")
+    L.append(f"| ... with decision 5 option a (PASS_TO_PASS covering no changed line fails) | " + " | ".join(str(sum(1 for _, per, _ in controls if per[v]["fails_nocover"])) for v in names) + " |")
     L.append(f"| Clean controls failed with Playwright counted, as the gate runs today | {sum(1 for _, per, _ in controls if per['map']['fails_as_run'])} | | {sum(1 for _, per, _ in controls if per['map_swe']['fails_as_run'])} | |")
     f2p = [load(os.path.join(ITEMS, f"{r['id']}.gate.f2p.json"))["minutes"] for r in newmod]
     walls = [c["wall_min"] for _, _, c in costs]
-    gen = [c.get("generated") or 0 for _, _, c in costs]
+    gen = [c["generated"] for _, _, c in costs if c.get("generated") is not None]
     if f2p:
         L.append(f"| Minutes per change, base and head runs (median / largest, {len(f2p)} items) | {statistics.median(f2p)} / {max(f2p)} | same | same | same |")
     if walls:
         L.append(f"| Minutes per change with Stryker (median / largest, {len(walls)} items; partial, smallest first) | {round(statistics.median(walls), 2)} / {max(walls)} | same | same | same |")
-        L.append(f"| Mutants generated per change (median / largest) | {statistics.median(gen)} / {max(gen)} | same | same | same |")
+        L.append(f"| Mutants generated per change (median / largest; {len(gen)} known, {len(walls) - len(gen)} unknown) | {statistics.median(gen)} / {max(gen)} | same | same | same |")
     L.append("<!-- /table -->")
     return L
 

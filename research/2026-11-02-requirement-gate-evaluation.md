@@ -1,40 +1,42 @@
 # Requirement gate evaluation: the gate on past AMC items, with clean controls
 
-Research for task r4 (review record phase 4), 2026-11-02. It reruns the unmerged requirement gate (`reqgate.py`, branch `ow/r3`, [D4](2026-11-02-review-focus-learning.md#d4-the-script-that-replaces-is-each-requirement-met)) on the commits the first review saw, for past items with requirement-only or TEST findings and 12 clean controls. Data, per-item JSON and driver scripts: [2026-11-02-requirement-gate-evaluation/](2026-11-02-requirement-gate-evaluation/). Labels: VERIFIED (ran or read; source named), INFERRED (judgement), OPEN (unknown).
+Research for task r4 (review record phase 4), 2026-11-02, corrected the same day after a cross-family critique. It reruns the unmerged requirement gate (`reqgate.py`, branch `ow/r3`, [D4](2026-11-02-review-focus-learning.md#d4-the-script-that-replaces-is-each-requirement-met)) on the commits the first review saw, for past items with requirement-only or TEST findings and 12 clean controls. Data and scripts: [2026-11-02-requirement-gate-evaluation/](2026-11-02-requirement-gate-evaluation/). Labels: VERIFIED, INFERRED, OPEN.
 
 ## In short
 
-- **The gate catches almost none of the past requirement-only findings.** Of 31 in scope (of the note's 45), it flags the finding's own MUST for a test-quality reason once (g10d, a FAIL_TO_PASS test that passes on the base). Of the 8 graded "a named failing test would have caught it", it catches 0. The grading imagined a test written to the requirement; the gate checks only the *author's* tests, which passed without reaching it. (VERIFIED counts; why INFERRED)
-- **On TEST findings it does somewhat better, but not on the "tests that cannot fail" it was built for.** Of 25 in scope (of 30), it flags 4 for a test-quality reason (2 on the finding's own test); of the 13 with cause TEST, 2, and those only at MUST level. Most sit in new test files that fail to import on the base, which proves nothing. (VERIFIED counts)
-- **Under the note's assertion-only rule the gate fails nearly everything, controls included.** 10 of 12 clean controls fail, all for code absent on the base, none for a weak test. Under SWE-bench's rule (any non-pass on the base is a valid FAIL_TO_PASS), 1 of 12 fails, for a test that passes on the base. As the gate runs today, Playwright included, 12 of 12 fail. (VERIFIED)
-- **Stryker cost per change: median 2.7 minutes, 146 mutants; 9.9 minutes at most below the 20-minute cap, which one item of 231 added lines hit** (17 of 35 items measured, smallest first; VERIFIED). ignoreStatic halved one item's time and changed little elsewhere.
-- **Recommendation: do not narrow reviews on this gate yet.** Fix it first (SWE-bench's base rule, the mutant check on new code, Playwright marked or run), then rerun this evaluation, one command per phase.
+- **The gate catches almost none of the past requirement-only findings.** Of 31 in scope, it flags one finding's MUST for a test-quality reason (g10d); of the 8 graded "a named failing test would have caught it", 0. The grading imagined a test written to the requirement; the gate checks the author's tests, which passed. (VERIFIED counts; why INFERRED)
+- **It catches no TEST finding directly.** Of 25 in scope it flags 2 at MUST level (g10d, both cause TEST, of 13). flake-3's two "catches" in the first version were a mapping artefact (Q1). (VERIFIED)
+- **Under the assertion-only rule (D4) it fails nearly everything.** 10 of 12 clean controls fail, all for code absent on the base. Under a permissive rule (any non-pass on the base counts as failing; an AMC option, not SWE-bench's protocol, Q4), 1 of 12; 3 of 12 if PASS_TO_PASS tests covering no changed line also fail. As run today, Playwright included, 12 of 12. (VERIFIED)
+- **Stryker per change: median 2.7 minutes and 158 mutants (15 known counts, 2 unknown); one item of 231 added lines hit the 20-minute cap** (17 of 35 items, smallest first; VERIFIED). ignoreStatic halved one item's time.
+- **Recommendation: do not narrow reviews yet.** Fix the gate (a mutant check for tests of absent code, Playwright marked or run, three defects), then rerun on author-written maps against the acceptance bar.
+- **Scope:** the kept cohort only (31 of 45, 25 of 30); the dropped findings differ in kind.
 
 ## At a glance
 
 <!-- table:summary -->
-| | assertion-only rule (D4), INFERRED map | D4, strict map | SWE-bench rule, INFERRED map | SWE-bench rule, strict map |
+| | assertion-only rule (D4), INFERRED map | D4, strict map | permissive rule (any non-pass on base), INFERRED map | permissive rule, strict map |
 | --- | --- | --- | --- | --- |
 | Requirement-only findings caught or MUST flagged (of 31; graded yes: of 8) | 1 (0) | 1 (0) | 1 (0) | 1 (0) |
 | ... MUST had no test (`none`, reported, not failed) | 0 | 7 | 0 | 7 |
 | ... item failed only for another reason | 26 | 18 | 11 | 6 |
-| TEST-focus findings caught or MUST flagged (of 25; cause TEST: of 13) | 4 (2) | 4 (2) | 4 (2) | 4 (2) |
+| TEST-focus findings caught or MUST flagged (of 25; cause TEST: of 13) | 2 (2) | 2 (2) | 2 (2) | 2 (2) |
 | ... MUST had no test (`none`, reported, not failed) | 2 | 11 | 2 | 11 |
-| ... item failed only for another reason | 16 | 8 | 10 | 7 |
+| ... item failed only for another reason | 18 | 10 | 12 | 9 |
 | Clean controls failed (of 12) | 10 | 10 | 1 | 1 |
+| ... with decision 5 option a (PASS_TO_PASS covering no changed line fails) | 10 | 10 | 3 | 2 |
 | Clean controls failed with Playwright counted, as the gate runs today | 12 | | 9 | |
 | Minutes per change, base and head runs (median / largest, 37 items) | 0.26 / 1.19 | same | same | same |
 | Minutes per change with Stryker (median / largest, 17 items; partial, smallest first) | 2.74 / 20.03 | same | same | same |
-| Mutants generated per change (median / largest) | 146 / 553 | same | same | same |
+| Mutants generated per change (median / largest; 15 known, 2 unknown) | 158 / 553 | same | same | same |
 <!-- /table -->
 
 ## Items, commits and how they were chosen
 
-**Finding items** (VERIFIED, `scripts/discover.py` → `items.json`): every (run, item) pair holding one of the 45 requirement-only findings (recomputed from `findings.csv`: 12 yes, 14 partial, 19 no) or 30 blocking test-focus findings (17 with cause TEST): 35 pairs.
+**Finding items** (VERIFIED, `scripts/discover.py` → `items.json`): every (run, item) pair holding one of the 45 requirement-only findings (12 yes, 14 partial, 19 no) or 30 blocking TEST-focus findings (17 cause TEST): 35 pairs.
 
-**Two commits per item.** The head is the round's own `<round>.base` file in the run folder, cross-checked against `ow/<item>`'s reflog at the round's `.start` time; they agree for every AMC item. The build base is `<item>.base`, looked up through earlier runs; where the branch had merged main, the base is the main parent of the newest first-parent merge before the head (insights-history 10-30, g10b, g10c, g10d, o1). One head is INFERRED: `ow/diagram` and its reflog are gone, so the head is the newest first-parent commit of the merge's branch side committed before `rv-diagram.start`. `base_how` and `head_how` in `items.json` name the rule per item. Findings from re-review or post rounds are judged against the first review's head; their own round heads are recorded too.
+**Two commits per item.** Head: the first review round's `<round>.base`, cross-checked against `ow/<item>`'s reflog at the round's `.start`; they agree for every AMC item. Corrected after review (`scripts/fix_heads.py`, VERIFIED): insights-history (run 10-29) was first reviewed in run 10-28, head `056a7c5` not `b01f282`; g10a-post's first review is `g10a-post-review2`, head `3bf211b` not `3bb9731`; old outputs are in `items/superseded/`. Base: `<item>.base`; where the branch had merged main, the main parent of the newest first-parent merge before the head (5 items). One head is INFERRED (diagram: branch and reflog gone; the newest branch-side commit before `rv-diagram.start`). `base_how` and `head_how` in `items.json` name the rule per item.
 
-**Dropped** (VERIFIED): 10 pairs, 19 findings (14 requirement-only, 5 test-focus). Seven dotfiles items reviewed in AMC runs (p1, p3–p6, o2, o3) and two router items have no commits in AMC; p7-cursor (10-27) has no recoverable head. In scope: **31 of 45** requirement-only (8 of the 12 "yes") and **25 of 30** TEST (13 of the 17 with cause TEST).
+**Dropped** (VERIFIED): 10 pairs, 19 findings: seven dotfiles items and two router items have no commits in AMC; p7-cursor has no recoverable head. In scope: **31 of 45** requirement-only (8 of 12 "yes") and **25 of 30** TEST (13 of 17 cause TEST).
 
 <!-- table:dropped -->
 | item | findings | why |
@@ -51,18 +53,18 @@ Research for task r4 (review record phase 4), 2026-11-02. It reruns the unmerged
 | amc-2026-11-02__o3 | 2: o3-rereview #c1 (requirement), o3-review #4 (requirement) | base efa173d7d3 not in the AMC repository; head 6325af7f01 not in the AMC repository |
 <!-- /table -->
 
-**Controls** (VERIFIED): AMC first reviews with no blocking requirement- or test-focus finding, and items never named in any finding: 33. Eligible (commits found, tests changed): 20. Shuffled with `random.Random(20261102)`, first 12 taken: gaps-3, drafts, notes-search, panel-menu, run-edges, tree, d1, d3, d4, f29, f35, s2.
+**Controls** (VERIFIED): of 33 AMC items whose first review had no blocking requirement- or test-focus finding, 20 had commits and changed tests; shuffled with `random.Random(20261102)`, first 12: gaps-3, drafts, notes-search, panel-menu, run-edges, tree, d1, d3, d4, f29, f35, s2.
 
-**Requirements maps** (INFERRED, every one). Six worker sessions read each brief's MUSTs (`brief.py` `must_items()`) and the tests the branch added or changed, and wrote `items/<run>__<item>.map.json`: per MUST the tests, their kind (FAIL_TO_PASS or PASS_TO_PASS), runner (Vitest, Playwright, live) and whether the title or comments cite the MUST ("strict"). Only one AMC test (d1) cites a MUST number; "strict" mostly means a title restating the MUST. `scripts/validate_maps.py` confirmed every brief MUST appears in its map (VERIFIED for all 37) and found 7 maps with `it.each` or template-string titles, which the gate ran without a "missing" result. Strict results are derived from the full run's verdicts; real strict runs on d1, diff-colour and g10d matched on all 10 lines (`strict_check.json`, VERIFIED).
+**Requirements maps** (INFERRED, every one). Worker sessions read each brief's MUSTs (`brief.py` `must_items()`) and the branch's changed tests and wrote `items/<run>__<item>.map.json`: per MUST the tests, kind, runner and whether the title or comments cite the MUST ("strict"; only d1 cites a MUST number). `validate_maps.py` confirmed every MUST appears (37 maps, VERIFIED). Real strict runs on 3 items matched the derived strict results on all 10 lines (`strict_check.json`).
 
-**Running.** `scripts/run_gate.py <phase>` calls `reqgate.py check --warn --json` on each item with `--repo ~/sandbox/personal/agent-mission-control --timeout 180`; phase `f2p` with `--mutants none`, the Stryker phases with `--stryker-timeout 1200` and AMC main's Stryker config (Vitest runner, `perTest`, concurrency 4), one item at a time (`scripts/stryker_queue.py`). Each run waits for `sweep.py load` (every recorded exit 0) and checks for leftover gate worktrees (none left at the end). `scripts/analyse.py` and `scripts/splice.py` build the tables. No old commit failed on main's `node_modules`: all 145 base load failures name a `src/` module the branch adds, none a package (VERIFIED by reason text), so "environment" never applied.
+**Running.** `scripts/run_gate.py <phase>` calls `reqgate.py check --warn --json` on AMC: `f2p` with `--mutants none`, Stryker phases with `--stryker-timeout 1200` and AMC main's config (Vitest, `perTest`, concurrency 4), one at a time after `sweep.py load` exits 0; no gate worktree was left. No old commit failed on main's `node_modules`: all 141 base load failures name a `src/` module the branch adds (VERIFIED), so "environment" never applied.
 
 ## Q1. Past findings: what the gate catches
 
-**Caught**: the gate fails the finding's own test for a test-quality reason (FAIL_TO_PASS passing on the base, PASS_TO_PASS killing no mutant, failing at head). **MUST flagged**: such a reason on another test of the finding's MUST. **None only**: the MUST has no test, reported but not failed. **Flagged, not for this**: the item fails only for absent base code, an unrunnable Playwright or live test, or similar. **Miss**: otherwise. Finding-to-MUST links are INFERRED by the map workers from the review text.
+**Caught**: the finding's own test fails for a test-quality reason (FAIL_TO_PASS passing on the base, PASS_TO_PASS killing no mutant, failing at head). **MUST flagged**: such a reason on another test of its MUST. **None only**: the MUST has no test (reported, not failed). **Flagged, not for this**: the item fails only for absent base code, Playwright or similar. **Miss**: otherwise. Finding-to-MUST links are INFERRED.
 
 <!-- table:q1requirement -->
-| verdict | map | strict | map, SWE | strict, SWE |
+| verdict | map | strict | map, permissive | strict, permissive |
 | --- | --- | --- | --- | --- |
 | MUST flagged | 1 | 1 | 1 | 1 |
 | none only | 0 | 7 | 0 | 7 |
@@ -79,12 +81,11 @@ Crossed with the graded column (map rule):
 <!-- /table -->
 
 <!-- table:q1test -->
-| verdict | map | strict | map, SWE | strict, SWE |
+| verdict | map | strict | map, permissive | strict, permissive |
 | --- | --- | --- | --- | --- |
-| caught | 2 | 1 | 2 | 1 |
-| MUST flagged | 2 | 3 | 2 | 3 |
+| MUST flagged | 2 | 2 | 2 | 2 |
 | none only | 2 | 11 | 2 | 11 |
-| flagged, not for this | 16 | 8 | 10 | 7 |
+| flagged, not for this | 18 | 10 | 12 | 9 |
 | miss | 3 | 2 | 9 | 3 |
 
 Crossed with the graded column (map rule):
@@ -92,13 +93,13 @@ Crossed with the graded column (map rule):
 | graded cause | n | caught | MUST flagged | other |
 | --- | --- | --- | --- | --- |
 | cause TEST (a test that cannot fail) | 13 | 0 | 2 | 11 |
-| other cause | 12 | 2 | 0 | 10 |
+| other cause | 12 | 0 | 0 | 12 |
 <!-- /table -->
 
-Per finding (graded = the note's `test_would_catch` for requirement-only, the cause for TEST; kinds are the gate's reasons under the map rule):
+Per finding (graded: `test_would_catch`, or the cause for TEST):
 
 <!-- table:q1rows -->
-| item | finding | focus/cause | graded | map | strict | map, SWE rule | kinds (map) |
+| item | finding | focus/cause | graded | map | strict | map, permissive | kinds (map) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | diagram (2026-10-27) | rv-diagram #2 | requirement/MUST | yes | flagged, not for this | none only | flagged, not for this | F2P load on base (new module); unsupported runner (playwright) |
 | big-files (2026-10-28) | rv-big-files #4 | requirement/READ | yes | miss | none only | miss | pass |
@@ -133,8 +134,8 @@ Per finding (graded = the note's `test_would_catch` for requirement-only, the ca
 | o1 (2026-11-02) | o1-review #3 | requirement/MUST | partial | miss | miss | miss | pass |
 | pr-overview (2026-10-28) | rv-pr-overview #F5 | test/CONV | other | flagged, not for this | none only | flagged, not for this | F2P error on base (missing export); F2P error on base (other non-assertion); unsupported runner (playwright) |
 | flake-3 (2026-10-29) | flake-3-review1 #1 | test/TEST | TEST | miss | none only | miss | P2P covers no changed line |
-| flake-3 (2026-10-29) | flake-3-review1 #2 | test/DESIGN | other | caught | caught | caught | F2P passes on base |
-| flake-3 (2026-10-29) | flake-3-review1 #3 | test/ADJ | other | caught | MUST flagged | caught | F2P passes on base |
+| flake-3 (2026-10-29) | flake-3-review1 #2 | test/DESIGN | other | flagged, not for this | flagged, not for this | flagged, not for this | mapping artefact: F2P passes on base |
+| flake-3 (2026-10-29) | flake-3-review1 #3 | test/ADJ | other | flagged, not for this | flagged, not for this | flagged, not for this | mapping artefact: F2P passes on base |
 | pr-threads (2026-10-29) | pr-threads-review1 #4 | test/TEST | TEST | flagged, not for this | none only | flagged, not for this | unsupported runner (playwright) |
 | live-checks (2026-10-30) | live-checks-rereview2 #2b | test/ADJ | other | none only | none only | none only | none; unsupported runner (live) |
 | live-checks (2026-10-30) | live-checks-review #2 | test/TEST | TEST | none only | none only | none only | none; unsupported runner (live) |
@@ -142,7 +143,7 @@ Per finding (graded = the note's `test_would_catch` for requirement-only, the ca
 | g10a (2026-11-02) | g10a-rereview #c2 | test/TEST | TEST | flagged, not for this | flagged, not for this | flagged, not for this | unsupported runner (playwright) |
 | g10a (2026-11-02) | g10a-rereview #c3 | test/TEST | TEST | flagged, not for this | flagged, not for this | flagged, not for this | F2P error on base (missing export); unsupported runner (playwright) |
 | g10a (2026-11-02) | g10a-review #6 | test/MUST | other | flagged, not for this | flagged, not for this | flagged, not for this | F2P error on base (missing export); unsupported runner (playwright) |
-| g10a-post (2026-11-02) | g10a-post-rereview #c1 | test/TEST | TEST | flagged, not for this | flagged, not for this | flagged, not for this | F2P load on base (new module); unsupported runner (playwright) |
+| g10a-post (2026-11-02) | g10a-post-rereview #c1 | test/TEST | TEST | flagged, not for this | flagged, not for this | flagged, not for this | unsupported runner (playwright) |
 | g10b (2026-11-02) | g10b-rereview #c3 | test/MUST | other | flagged, not for this | flagged, not for this | flagged, not for this | F2P load on base (new module); unsupported runner (playwright) |
 | g10b (2026-11-02) | g10b-review #6 | test/MUST | other | flagged, not for this | flagged, not for this | miss | F2P error on base (other non-assertion); F2P load on base (new module) |
 | g10b (2026-11-02) | g10b-review #7 | test/MUST | other | flagged, not for this | flagged, not for this | flagged, not for this | F2P load on base (new module); unsupported runner (playwright) |
@@ -158,14 +159,16 @@ Per finding (graded = the note's `test_would_catch` for requirement-only, the ca
 | s1 (2026-11-02) | s1-review #5 | test/MUST | other | flagged, not for this | none only | miss | F2P load on base (new module) |
 <!-- /table -->
 
-Why so low (INFERRED): the grader's "yes" imagines a test written *to the missed requirement*; the gate sees only the author's tests, which passed at head, so it fails a requirement-only finding only when the MUST maps to a test that cannot fail, or to nothing. Readers mapped every MUST they could; an honest author might leave more `none` lines, as the strict column's 7 suggest. Whether `none` fails the gate is already the owner's open call (SKILL.md "Gates and mutation controls"); if it did, the strict map would catch 8 of 31.
+Why so low (INFERRED): the grader's "yes" imagines a test written to the missed requirement; the gate sees the author's tests, which passed at head. If `none` failed the gate (decision 4), the strict map would catch 8 of 31.
 
-Where a gate limit touched Q1 (VERIFIED from reasons): 86 mapped Playwright lines error at head because the gate runs every `.ts` file with Vitest, and 3 live-suite lines. Some PASS_TO_PASS tests "cover no changed line" and the gate passes them as "not checked", including flake-3's TEST finding #1. g10a-post's Stryker run returned "attribution unavailable": the gate found neither of its two PASS_TO_PASS tests in Stryker's `testFiles`, though their template titles expand to the mapped names; why is OPEN, as the gate deletes Stryker's report with its worktree.
+Gate limits in Q1 (VERIFIED): 86 Playwright and 3 live lines error at head (the gate runs every `.ts` file with Vitest); PASS_TO_PASS tests covering no changed line pass as "not checked" (flake-3 #1). g10a-post's changed file has no related Vitest test, so Stryker stops with "No tests were executed", reported as "Stryker failed" (gate defect 2).
+
+**flake-3's two apparent catches are a mapping artefact** (VERIFIED, `scripts/flake3_mutants.py` → `flake3/mutants.json`, per the software-testing mutation-checks procedure: in memory, one process per mutant, a `none` control). Its hygiene guards, mapped FAIL_TO_PASS, scan test files, which the gate copies onto the base, so they pass on any base. Each fails its own assertion on the form it targets (live tests) and misses the reviewer's case (an arrow or promisified sleep; the port in the browser config); the flag would stand for a correct guard too. TEST direct catches: 2 → 0.
 
 ## Q2. Clean controls: false alarms
 
 <!-- table:q2 -->
-| control | Stryker checked | as run (Playwright counted) | map: fails? | kinds | strict: fails? | map, SWE: fails? | kinds (SWE) |
+| control | Stryker checked | as run (Playwright counted) | map: fails? | kinds | strict: fails? | map, permissive: fails? | kinds (permissive) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | gaps-3 | yes | FAIL | FAIL | F2P error on base (missing export) | FAIL | pass | - |
 | drafts | no | FAIL | FAIL | F2P load on base (new module) | FAIL | pass | - |
@@ -180,9 +183,9 @@ Where a gate limit touched Q1 (VERIFIED from reasons): 86 mapped Playwright line
 | f35 | no | FAIL | FAIL | F2P error on base (missing export); F2P load on base (new module) | FAIL | pass | - |
 | s2 | yes | FAIL | FAIL | F2P error on base (missing export) | FAIL | pass | - |
 
-False alarms by kind (count of controls with at least one, map rule; SWE rule):
+False alarms by kind (count of controls with at least one, map rule; permissive rule):
 
-| kind | map | strict | map, SWE | strict, SWE |
+| kind | map | strict | map, permissive | strict, permissive |
 | --- | --- | --- | --- | --- |
 | F2P error on base (missing export) | 7 | 6 | 0 | 0 |
 | F2P error on base (other non-assertion) | 2 | 1 | 0 | 0 |
@@ -190,21 +193,22 @@ False alarms by kind (count of controls with at least one, map rule; SWE rule):
 | F2P passes on base | 1 | 1 | 1 | 1 |
 | none line (reported, not a failure) | 4 | 11 | 4 | 11 |
 | **controls failed** | 10 | 10 | 1 | 1 |
+| controls failed if a PASS_TO_PASS test covering no changed line fails (decision 5, option a) | 10 | 10 | 3 | 2 |
 
 As run, Playwright counted: 12 of 12 fail.
 <!-- /table -->
 
-Every assertion-only false alarm is absent code: a new module (3 controls), a missing export (7), another throw or timeout (2). The alarm both rules share, run-edges, is a FAIL_TO_PASS test passing on the base: a weak test or a mislabelled PASS_TO_PASS (INFERRED). No control raised "PASS_TO_PASS test with no killed mutant" or "attribution unavailable" (Stryker checked the 4 with Vitest PASS_TO_PASS lines). tree and d3 changed only Playwright tests.
+Every assertion-only false alarm is absent code: a new module (3 controls), a missing export (7), another throw or timeout (2). run-edges, failing under both rules, has a FAIL_TO_PASS test passing on the base: weak or mislabelled (INFERRED). No control raised "no killed mutant" or "attribution unavailable". If PASS_TO_PASS tests covering no changed line failed (decision 5a), d1 and s2 would fail too: 3 of 12 permissive (2 strict); D4 stays at 10 (VERIFIED, `fails_nocover`).
 
 ## Q3. Mutants and minutes per change
 
 <!-- table:q3 -->
 | item | set | src lines added | phase | wall min | mutants generated | mutants run | Stryker statuses | gate's PASS_TO_PASS verdicts | ignoreStatic: wall min | ignoreStatic: generated / run |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| g10a-post | finding | 66 | p2p | 0.11 | 146 | 68 | NoCoverage 78, Killed 66, Survived 2 | P2P attribution unavailable | - | - |
+| g10a-post | finding | 41 | p2p | 0.07 (Stryker failed (exit 1):   innerError: u) | unknown | 0 | - | Stryker failed | - | - |
 | panel-menu | control | 40 | cost | 0.2 | 65 | 40 | Killed 36, NoCoverage 25, Survived 4 | - | - | - |
 | live-checks | finding | 20 | cost | 1.32 | 39 | 36 | Survived 23, Killed 13, NoCoverage 3 | - | 1.28 | 39 / 36 |
-| flake-3 | finding | 1 | p2p | 1.43 | 0 | 0 | - | P2P covers no changed line | 1.18 | 0 / 0 |
+| flake-3 | finding | 1 | p2p | 1.43 | 0 | 0 | - | P2P covers no changed line | 1.18 | None / 0 |
 | diff-colour | finding | 133 | cost | 1.43 | 237 | 138 | NoCoverage 99, Killed 91, Survived 47 | - | - | - |
 | s1 | finding | 124 | cost | 2.02 | 347 | 299 | Killed 216, Survived 83, NoCoverage 48 | - | 0.97 | 347 / 278 |
 | d4 | control | 22 | p2p | 2.1 | 30 | 29 | Killed 26, Survived 3, NoCoverage 1 | pass | - | - |
@@ -217,7 +221,9 @@ Every assertion-only false alarm is absent code: a new module (3 controls), a mi
 | f29 | control | 177 | cost | 5.85 | 358 | 277 | Killed 246, NoCoverage 81, Survived 28, Timeout 3 | - | - | - |
 | g10d | finding | 92 | p2p | 5.89 | 228 | 114 | NoCoverage 114, Killed 81, Survived 19, Timeout 14 | pass | - | - |
 | o1 | finding | 137 | cost | 9.94 | 283 | 203 | Killed 167, NoCoverage 80, Survived 21, Timeout 15 | - | - | - |
-| g93a | finding | 231 | p2p | 20.03 (Stryker timed out after 1200.0 s) | 0 | 0 | - | Stryker timed out | - | - |
+| g93a | finding | 231 | p2p | 20.03 (Stryker timed out after 1200.0 s) | unknown | 0 | - | Stryker timed out | - | - |
+
+Mutants generated: median 158, largest 553 over 15 known counts; unknown for 2 (g10a-post, g93a).
 
 median 2.74 min, largest 20.03 min over 17 items.
 
@@ -226,22 +232,22 @@ No Vitest test in the map, so no Stryker run: d3, tree.
 Not reached inside the time budget (larger changes): canvas-b, clusters, diagram, drafts, f35, f6, f7, g10a, g10b, g10c, g91a, g92a, insights-history (10-29), insights-history (10-30), markers, pr-overview, pr-threads, run-edges.
 <!-- /table -->
 
-"Mutants generated" sums Stryker's statuses (`mutant_statuses`, from its `mutation-testing-elements` report); "mutants run" excludes NoCoverage, Ignored and Pending, as the gate does. Wall minutes cover the whole gate run; the FAIL_TO_PASS phase alone took a median 0.26, at most 1.19, minutes per item. The Stryker item's reference points were 110 mutants in 3.2 minutes (`fcfd240`) and 744 in about 60 (`d11a3f6`). The queue ran smallest change first and stopped at the time budget, so the table leans to small changes and is **partial**: 18 larger items were not reached (listed above; VERIFIED). g93a hit the 20-minute cap; the gate discards Stryker's progress on a timeout, so its progress is OPEN (a gate limit). **ignoreStatic** (with and without, 5 items, VERIFIED): s1 2.02 → 0.97 min with 21 of 299 mutants set aside, d1 3.88 → 2.61 min with 1 of 143, gaps-1 and live-checks unchanged, flake-3 has no mutant. Load from other workers varies, so the d1 gain is INFERRED to be partly noise; nothing approaches the Stryker item's 85%. Only Stryker's own statuses are reported, not the gate's `KilledByOtherTests`.
+"Mutants generated" sums Stryker's statuses from its `mutation-testing-elements` report; "mutants run" excludes NoCoverage, Ignored and Pending. Wall minutes cover the whole gate run; the FAIL_TO_PASS phase alone took a median 0.26 minutes. The Stryker item measured 110 mutants in 3.2 minutes (`fcfd240`) and 744 in about 60 (`d11a3f6`). The queue ran smallest first, so the table is **partial**: 18 larger items were not reached. Unknown mutant counts (OPEN, gate limits): g93a hit the 20-minute cap and the gate discards Stryker's progress; g10a-post's Stryker stopped before mutating. The median is over the 15 known counts (the first version zero-filled g93a and used g10a-post's later head: 146). **ignoreStatic** (5 items, VERIFIED): s1 2.02 → 0.97 min (21 of 299 mutants set aside), d1 3.88 → 2.61 (1 of 143; partly load noise, INFERRED), gaps-1 and live-checks unchanged; nothing near the Stryker item's 85%.
 
 ## Q4. New modules and absent code, under both rules
 
-SWE-bench's harness counts a FAIL_TO_PASS test as failing on the base when it is missing from the log or its status is FAILED, ERROR or SKIPPED (`test_failed`, [swebench/harness/grading.py](https://github.com/SWE-bench/SWE-bench/blob/main/swebench/harness/grading.py), read 2026-11-02 with `tvly extract`), and as passing only on PASSED or XFAIL (`test_passed`). The paper defines FAIL_TO_PASS as failing before the PR and passing after ([arXiv 2310.06770](https://arxiv.org/abs/2310.06770), "Execution-based validation"). So an import error on the base is a valid failure for SWE-bench and a gate failure under D4. (VERIFIED)
+**What SWE-bench actually does** (VERIFIED, `tvly extract https://arxiv.org/html/2310.06770v3`): building the benchmark, "we check log_pre for ImportError and AttributeError occurrences … we remove all task instances with such errors in their log_pre from consideration" (Appendix A.3); section 2 also excludes tasks whose tests "invoke newly created functions or classes". The `test_failed` predicate in `swebench/harness/grading.py` grades a *candidate* patch's run (A.4), not base eligibility; the first version wrongly called it "SWE-bench's rule". SWE-bench leaves such instances out, which a merge gate cannot do with an item. The column is renamed **permissive (any non-pass on the base counts as failing)**: an AMC policy option with no industry backing.
 
 <!-- table:q4 -->
-| item | set | FAIL_TO_PASS | fail on assertion | load on base (new module) | error on base: missing export | error on base: other | passes on base | new source files | gate fails (D4) | gate fails (SWE) |
+| item | set | FAIL_TO_PASS | fail on assertion | load on base (new module) | error on base: missing export | error on base: other | passes on base | new source files | gate fails (D4) | gate fails (permissive) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | diagram | finding | 13 | 0 | 8 | 0 | 0 | 0 | 2 | FAIL | pass |
-| big-files | finding | 12 | 9 | 0 | 0 | 1 | 0 | 0 | FAIL | pass |
+| big-files | finding | 12 | 9 | 0 | 0 | 1 | 0 | 0 | pass | pass |
 | gaps-1 | finding | 7 | 7 | 0 | 0 | 0 | 0 | 0 | pass | pass |
 | pr-overview | finding | 13 | 0 | 0 | 2 | 7 | 0 | 1 | FAIL | pass |
 | canvas-b | finding | 18 | 1 | 4 | 4 | 1 | 0 | 3 | FAIL | pass |
 | flake-3 | finding | 3 | 0 | 0 | 0 | 0 | 3 | 0 | FAIL | FAIL |
-| insights-history | finding | 13 | 0 | 12 | 0 | 0 | 0 | 2 | FAIL | pass |
+| insights-history | finding | 11 | 0 | 10 | 0 | 0 | 0 | 1 | FAIL | pass |
 | pr-threads | finding | 15 | 3 | 0 | 0 | 0 | 0 | 1 | pass | pass |
 | clusters | finding | 13 | 0 | 7 | 4 | 0 | 0 | 2 | FAIL | pass |
 | diff-colour | finding | 7 | 0 | 4 | 0 | 0 | 0 | 2 | FAIL | pass |
@@ -251,7 +257,7 @@ SWE-bench's harness counts a FAIL_TO_PASS test as failing on the base when it is
 | f6 | finding | 12 | 0 | 12 | 0 | 0 | 0 | 2 | FAIL | pass |
 | f7 | finding | 9 | 0 | 9 | 0 | 0 | 0 | 1 | FAIL | pass |
 | g10a | finding | 14 | 4 | 3 | 1 | 4 | 0 | 1 | FAIL | pass |
-| g10a-post | finding | 3 | 0 | 2 | 0 | 0 | 0 | 1 | FAIL | FAIL |
+| g10a-post | finding | 1 | 0 | 0 | 0 | 0 | 0 | 0 | FAIL | FAIL |
 | g10b | finding | 14 | 1 | 7 | 0 | 4 | 1 | 1 | FAIL | FAIL |
 | g10c | finding | 9 | 9 | 0 | 0 | 0 | 0 | 0 | pass | pass |
 | g10d | finding | 7 | 3 | 0 | 0 | 1 | 1 | 0 | FAIL | FAIL |
@@ -274,34 +280,91 @@ SWE-bench's harness counts a FAIL_TO_PASS test as failing on the base when it is
 | s2 | control | 9 | 4 | 0 | 2 | 0 | 0 | 0 | FAIL | pass |
 <!-- /table -->
 
-Totals (VERIFIED, `results.json`): of 300 Vitest FAIL_TO_PASS lines on 37 items, 82 fail on an assertion, 145 fail to load a module the branch adds (19 items), 36 call an export the base lacks, 31 throw another error or time out, and 6 pass on the base. Items failing the gate, assertion-only rule against SWE-bench's: findings 21 of 25 against 4; controls 10 of 12 against 1. At finding level (Q1, map against map SWE): requirement-only "flagged, not for this" falls 26 → 11 (the rest Playwright), "miss" rises 4 → 19; TEST "flagged, not for this" falls 16 → 10.
+Totals (VERIFIED, `results.json`): of 296 Vitest FAIL_TO_PASS lines on 37 items, 82 fail on an assertion, 141 fail to load a module the branch adds (18 items), 36 call a missing export, 31 throw another error or time out, 6 pass on the base. Items failing, D4 against permissive: findings 20 of 25 against 5; controls 10 of 12 against 1.
 
-Neither rule tells a strong new-module test from a weak one: under D4 all fail, under SWE-bench's all pass. INFERRED: for code with no base, the established "can this test fail?" check is mutation testing, which the gate already runs on PASS_TO_PASS lines; extending it to FAIL_TO_PASS tests that fail to load on the base closes the gap at the Q3 cost.
+**Gate defect 1, the classifier** (VERIFIED, `reqgate.py` about lines 359–361; every gate JSON searched): a base failure counts as an assertion only if every message starts with `AssertionError`. Vitest's `.rejects` mismatch ("promise resolved … instead of rejecting") lacks it, so big-files' MUST 3 test (`tests/unit/attachments.test.ts` about line 148) read as a runtime error: the only such line of 296. Corrected, big-files passes under D4 (findings failing 21 → 20 of 25); no finding verdict, control or permissive count changes. Borderline, not reclassified: g92a's MUST 3 line fails with Vitest's matcher `TypeError` (`.toMatch()` got undefined).
+
+Neither rule tells a strong new-module test from a weak one (INFERRED): the established check where no base exists is mutation testing, which the gate already runs on PASS_TO_PASS lines.
+
+## Kept and dropped findings
+
+<!-- table:strata -->
+| focus | cause | kept | dropped |
+| --- | --- | --- | --- |
+| requirement | ADJ | 6 | 2 |
+| requirement | BOUND | 2 | 0 |
+| requirement | DESIGN | 2 | 1 |
+| requirement | EDGE | 1 | 6 |
+| requirement | MUST | 15 | 4 |
+| requirement | PLAT | 2 | 0 |
+| requirement | PRE | 1 | 0 |
+| requirement | READ | 1 | 0 |
+| requirement | SPEC | 0 | 1 |
+| requirement | UIQ | 1 | 0 |
+| **requirement, all** | | **31** | **14** |
+| test | ADJ | 2 | 0 |
+| test | CONV | 1 | 0 |
+| test | DESIGN | 1 | 0 |
+| test | MUST | 8 | 0 |
+| test | PLAT | 0 | 1 |
+| test | TEST | 13 | 4 |
+| **test, all** | | **25** | **5** |
+
+Requirement-only findings by the graded column "a named failing test would have caught it":
+
+| graded | kept | dropped |
+| --- | --- | --- |
+| no | 14 | 5 |
+| partial | 9 | 5 |
+| yes | 8 | 4 |
+<!-- /table -->
+
+The 19 dropped findings differ in kind (VERIFIED, `stratify()` in `analyse.py`): 6 of 14 dropped requirement-only findings are EDGE against 1 of 31 kept; 4 of 5 dropped TEST-focus findings have cause TEST. Every number here holds for the **kept cohort** only; boundary-value requirements and dotfiles' Python tests are OPEN.
+
+## How far the after-the-fact maps could explain the low catch rate
+
+The maps were written after the review; `validate_maps.py` checks only that every MUST appears, not that links or FAIL_TO_PASS/PASS_TO_PASS labels are right, and flake-3 shows labels can be wrong. INFERRED bounds: remapping cannot turn the 26 "flagged, not for this" into catches (they fail for absent code or Playwright), and the requirement-only 0 of 8 rests on the author's tests passing at head; the TEST result (2 of 13) is the one most exposed. OPEN: the error rate.
+
+Cheapest separation: (1) **measure on the next run's author-written maps** (the gate needs them anyway; no extra credits); (2) a **blinded remap** of 5 seeded items by a reader from another model family, without the findings, reporting agreement on links and kinds (Cohen's kappa), rerunning only the f2p phase (about 0.3 minutes each). Recommend (1); (2) only if a number is wanted first.
+
+## Acceptance bar: what "rerun clean" means
+
+Proposed (INFERRED), checkable in the rerun's summary table, on author-written maps:
+- **Catch rate**: at least half of blocking TEST findings with cause TEST caught or MUST-flagged; requirement-only rates reported per cause, no bar.
+- **False alarms**: at most 1 of 12 or more seeded clean controls failing, for any reason; unsupported runners "not checked", never passed.
+- **Artefacts**: every apparent catch passes a mutation check before it counts.
+- **Cost**: median Stryker minutes per change at most 5; progress kept at the 20-minute cap.
+
+Today the gate meets only the cost bar, on small changes.
 
 ## What the gate cannot catch, which the four review blocks still must
 
-From the review record note's "What it can and cannot catch" (VERIFIED counts there), confirmed here:
-- **What the author did not imagine.** Among the 167 blocking findings with an unmet requirement: MUST (46), another caller (ADJ, 31), event order (ORDER, 19), boundary values (EDGE, 17). Here 2 of the 16 ADJ, DESIGN, PLAT, BOUND and PRE findings in scope were caught, both flake-3's, by a FAIL_TO_PASS test passing on the base; the other 14 were missed or flagged for something else (VERIFIED, Q1 rows).
-- **Requirements the author's passing tests never reached**, the whole requirement-only class above: 1 of 31 caught.
-- **Anything in Playwright or the live suite**, until the gate can run them: browser and desktop behaviour, accessibility, theming (86 mapped lines here).
-- **PASS_TO_PASS tests that cover no changed line**, which pass the gate as "not checked".
+From the review record note's "What it can and cannot catch", confirmed here:
+- **What the author did not imagine** (ADJ 31, ORDER 19, EDGE 17 of 167 in the note): 0 of the 16 ADJ, DESIGN, PLAT, BOUND and PRE findings in scope caught (VERIFIED).
+- **Requirements the author's passing tests never reached**: 1 of 31 caught.
+- **Anything in Playwright or the live suite** until the gate runs them (86 mapped lines here).
+- **PASS_TO_PASS tests covering no changed line** ("not checked").
 
 ## Owner decisions
 
-1. **Narrow reviews?** Options: (a) now; (b) after the gate is fixed and this evaluation rerun clean; (c) never on this gate. (a) saves credits but drops what the requirement and test blocks find, with almost nothing replacing it; (b) costs one rerun; (c) keeps today's cost. **Recommend (b)**, and keep the requirement and test blocks in full until then.
-2. **Base-run rule for FAIL_TO_PASS.** (a) Keep D4's assertion-only rule: 10 of 12 clean controls fail, all for absent code. (b) SWE-bench's rule: 1 of 12, but a new-module test that cannot fail passes. (c) SWE-bench's rule plus the mutant check on FAIL_TO_PASS tests that fail to load on the base. **Recommend (c)**: the industry rule, plus the standard adequacy check where no base exists.
-3. **Playwright and live tests in the map.** (a) Run them in the gate; (b) mark them and report "not checked"; (c) as is, failing every item with a browser test. **Recommend (b) now, (a) later**: (c) makes the gate unusable on AMC.
-4. **Should `none` fail the gate?** (a) Yes: the strict map would catch 8 of 31 requirement-only findings, but every docs, operations or privacy MUST would need a test or waiver. (b) No, report it (today). **Recommend (b), listing `none` lines first in the review prompt.**
-5. **PASS_TO_PASS tests that cover no changed line.** (a) Fail; (b) report as today. **Recommend (a)**: a guard touching none of the change shows nothing.
-6. **The invented `KilledByOtherTests` key** (paused in p1's discuss.md). **Recommend dropping it** for Stryker's statuses and `killedBy`, per the standing rule on standard names.
-7. **Stryker cost and ignoreStatic.** (a) ignoreStatic on by default: s1 ran in half the time, but static mutants are then untested; (b) off, as today. Keep concurrency 4 and the 20-minute cap either way, and have the gate keep Stryker's progress on a timeout. **Recommend (b)** until large items are measured: only 1 of 5 measured items changed much (Q3).
+1. **Narrow reviews?** (a) Now: saves credits, but nothing measured replaces the requirement and test blocks (0 direct catches). (b) After the gate is fixed and a rerun on author-written maps meets the acceptance bar: one run's cost. (c) Never on this gate. **Recommend (b)**, keeping both blocks in full until then.
+2. **Base-run rule for FAIL_TO_PASS tests of absent code.** (a) D4's assertion-only rule: 10 of 12 controls fail, all for absent code. (b) Permissive: 1 of 12, but a new-module test that cannot fail passes; an AMC policy with no industry backing. (c) SWE-bench-style: as SWE-bench excludes such tests, take them out of the base check and require a killed mutant on the new lines instead, at Q3's cost. (d) (b) now, (c) later. **Recommend (c)**: it follows what SWE-bench does (exclude, not pass) and keeps a can-it-fail check; (d) if Stryker on large items proves too slow.
+3. **Playwright and live tests.** (a) Run them in the gate; (b) report "not checked"; (c) as is, failing every item with a browser test. **Recommend (b) now, (a) later.**
+4. **Should `none` fail the gate?** (a) Yes: the strict map would catch 8 of 31 requirement-only findings, but every docs or operations MUST needs a test or waiver. (b) No, report it. **Recommend (b), listing `none` lines first in the review prompt.**
+5. **PASS_TO_PASS tests that cover no changed line.** (a) Fail: controls rise from 1 to 3 of 12 permissive (d1, s2). (b) Report, as today. (c) Report them first, and fail only when no test of that MUST covers a changed line. **Recommend (c)**, revised from (a): d1 and s2 had other tests covering their change (INFERRED). Treat Stryker's "No tests were executed" as the same case.
+6. **`KilledByOtherTests`** (paused in p1's discuss.md). **Recommend dropping it** for Stryker's statuses and `killedBy`.
+7. **ignoreStatic.** (a) On: s1 ran in half the time, but static mutants go untested; (b) off. **Recommend (b)** until large items are measured; keep concurrency 4 and the 20-minute cap.
+8. **Gate defects** (no gate code changed here): the `AssertionError`-prefix classifier (1 of 296 lines misread, 1 borderline); "No tests were executed" reported as a Stryker failure; progress discarded on timeout. **Recommend fixing all three** before the rerun.
 
 ## Helps other items
 
-- **A check that a test can fail must not run on code that does not exist yet** (category: test adequacy, mutation testing). Base runs say nothing about new modules; mutation does. User level (orchestrator-workers skill).
-- **Grade "would a test catch it" against the test that would actually exist** (category: counterfactual evaluation bias). The note's 12 of 45 assumed a test written to the missed requirement; the gate checks the author's tests. User level.
+- **A can-it-fail check must not run on code that does not exist yet** (category: test adequacy, mutation testing). User level (orchestrator-workers skill).
+- **Grade "would a test catch it" against the test that would actually exist** (category: counterfactual evaluation bias). User level.
 - **A gate must run every test kind its map accepts, or say "not checked"** (category: CI gate failure modes; skill level).
-- **Old AMC commits ran on main's `node_modules` with no package failure across 37 items** (category: environment drift; project level).
-- **Clean controls are needed before trusting a gate's catch rate** (category: false-positive rate, base rates). Without them the 26 "flagged" requirement-only findings would read as catches. User level.
+- **Old AMC commits ran on main's `node_modules` across 37 items** (category: environment drift; project level).
+- **Clean controls before trusting a catch rate** (category: false-positive rate). Without them 26 "flagged" findings would read as catches. User level.
+- **Check a benchmark's protocol before borrowing its rule** (category: construct validity). SWE-bench's grader was read as its base rule. User level.
+- **A test that scans the repo's own test files passes on any base once head tests are copied there** (category: test-kind labelling). Mutation-check each apparent catch. User level (software-testing skill).
+- **Classify a runner's failures by its error types, not a message prefix** (category: test-result parsing). Skill level (orchestrator-workers).
 
-Case against: readers wrote the maps after the fact, and an author working under the gate would write tests to pass it, so past items may not show how the gate changes behaviour. Falsified by a rerun on new items with author-written maps where the fixed gate (decisions 2 and 3) fails the items whose review then finds requirement or test faults, and passes clean ones.
+Case against: an author working under the gate would write tests to pass it, so past items may not show how it changes behaviour. Falsified if the fixed gate, on new items with author-written maps, fails those whose review then finds requirement or test faults and passes clean ones.

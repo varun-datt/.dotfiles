@@ -559,8 +559,8 @@
   ],
   "base": "b89cfaefb73103664e33c4adb955543c6c5dfe51",
   "base_how": "amc-2026-10-28/insights-history.base",
-  "head": "b01f2820d5d8736b095c1a2a9b2c4b583783e702",
-  "head_how": "reflog of ow/insights-history: last entry at 1793244494 <= review start 1793284932 (no first review round; the finding's own round)",
+  "head": "056a7c5c16aa9191414327d3d5a82d4fd97f3197",
+  "head_how": "reflog of ow/insights-history: last entry at 1793211698 <= review start 1793240767; first review amc-2026-10-28/rv-insights-history.start; agrees with amc-2026-10-28/insights-history-fix2.base",
   "problems": [],
   "set": "finding",
   "findings": [
@@ -580,10 +580,8 @@
   ],
   "build_base": "b89cfaefb73103664e33c4adb955543c6c5dfe51",
   "changed": [
-   "M\tpackage.json",
    "M\tplaywright.config.ts",
    "M\tsrc/host/facets.ts",
-   "A\tsrc/host/history-worker.ts",
    "A\tsrc/host/history.ts",
    "M\tsrc/host/http/server.ts",
    "M\tsrc/host/main.ts",
@@ -604,7 +602,6 @@
   "sources": [
    "playwright.config.ts",
    "src/host/facets.ts",
-   "src/host/history-worker.ts",
    "src/host/history.ts",
    "src/host/http/server.ts",
    "src/host/main.ts",
@@ -612,9 +609,12 @@
    "src/ui/insights-view.tsx"
   ],
   "new_sources": [
-   "src/host/history-worker.ts",
    "src/host/history.ts"
-  ]
+  ],
+  "later_head": "b01f2820d5d8736b095c1a2a9b2c4b583783e702",
+  "later_head_how": "reflog of ow/insights-history: last entry at 1793244494 <= review start 1793284932 (no first review round; the finding's own round)",
+  "first_review_run": "amc-2026-10-28",
+  "first_review": "rv-insights-history"
  },
  {
   "run": "amc-2026-10-29",
@@ -1814,8 +1814,8 @@
   ],
   "base": "3fd24325cf1d581c9ddb0170f37b0958f8b38578",
   "base_how": "amc-2026-11-02/g10a-post.base",
-  "head": "3bb9731a648a758bb3ba95ed3efcf143c7a247d9",
-  "head_how": "amc-2026-11-02/g10a-post-rereview.base (the head the round was launched on) (no first review round; the finding's own round)",
+  "head": "3bf211b3d5357abbb953a323d2020727bc31d4d0",
+  "head_how": "reflog of ow/g10a-post: last entry at 1793613907 <= review start 1793614278; first review amc-2026-11-02/g10a-post-review2.start; agrees with amc-2026-11-02/g10a-post-review2.base",
   "problems": [],
   "set": "finding",
   "findings": [
@@ -1835,27 +1835,23 @@
   ],
   "build_base": "3fd24325cf1d581c9ddb0170f37b0958f8b38578",
   "changed": [
-   "A\tsrc/ui/special-view.ts",
    "M\tsrc/ui/special.tsx",
    "M\ttests/e2e/app.spec.ts",
-   "M\ttests/unit/special-settings.test.ts",
-   "A\ttests/unit/special-view.test.ts"
+   "M\ttests/unit/special-settings.test.ts"
   ],
   "tests": [
    "tests/e2e/app.spec.ts",
-   "tests/unit/special-settings.test.ts",
-   "tests/unit/special-view.test.ts"
+   "tests/unit/special-settings.test.ts"
   ],
-  "new_tests": [
-   "tests/unit/special-view.test.ts"
-  ],
+  "new_tests": [],
   "sources": [
-   "src/ui/special-view.ts",
    "src/ui/special.tsx"
   ],
-  "new_sources": [
-   "src/ui/special-view.ts"
-  ]
+  "new_sources": [],
+  "later_head": "3bb9731a648a758bb3ba95ed3efcf143c7a247d9",
+  "later_head_how": "amc-2026-11-02/g10a-post-rereview.base (the head the round was launched on) (no first review round; the finding's own round)",
+  "first_review_run": "amc-2026-11-02",
+  "first_review": "g10a-post-review2"
  },
  {
   "run": "amc-2026-11-02",

@@ -9,18 +9,6 @@
   "FAIL_TO_PASS": [
     {
       "must": "1",
-      "test": "tests/unit/special-view.test.ts::readSpecial > refuses a null entry",
-      "status": "fail",
-      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/special-view.ts' imported from $TMPDIR/reqgate-em5ehyjq/tree/tests/unit/special-view.test.ts"
-    },
-    {
-      "must": "1",
-      "test": "tests/unit/special-view.test.ts::readSpecial > accepts every shape the host sends",
-      "status": "fail",
-      "reason": "load on base, not an assertion: Cannot find module '../../src/ui/special-view.ts' imported from $TMPDIR/reqgate-em5ehyjq/tree/tests/unit/special-view.test.ts"
-    },
-    {
-      "must": "1",
       "test": "tests/e2e/app.spec.ts::a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds",
       "status": "fail",
       "reason": "error at head: Vitest exited 1: no output; it did not report the file"
@@ -43,5 +31,5 @@
   "unmapped": [],
   "mutants_run": 0,
   "mutant_statuses": {},
-  "minutes": 0.09
+  "minutes": 0.05
 }

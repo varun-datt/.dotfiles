@@ -13,6 +13,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/e2e/app.spec.ts::draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard": "unsupported runner (playwright)",
       "2|tests/unit/diagram.test.ts::fences the source as mermaid": "F2P load on base (new module)",
@@ -44,6 +46,8 @@
       "7"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {}
     },
     "map_swe": {
@@ -51,6 +55,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::draws a wide diagram at a readable size that scrolls sideways, with a toolbar reachable by keyboard": "unsupported runner (playwright)",
       "2|tests/unit/diagram.test.ts::fences the source as mermaid": "pass",
@@ -82,6 +88,8 @@
       "7"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {}
     }
    }
@@ -93,14 +101,14 @@
    "p2p_checked": false,
    "variants": {
     "map": {
-     "fails": true,
-     "why": [
-      "F2P error on base (other non-assertion)"
-     ],
+     "fails": false,
+     "why": [],
      "none": [
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB": "pass",
       "1|tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name": "pass",
@@ -108,7 +116,7 @@
       "2|tests/unit/server.test.ts::host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed": "pass",
       "2|tests/unit/attachments.test.ts::attachments > asks above 5 MB: refuses an unconfirmed file with 428, and not at or under 5 MB": "pass",
       "2|tests/e2e/app.spec.ts::asks before sending a file over 5 MB: Cancel and Escape keep the draft, Send delivers it by path": "unsupported runner (playwright)",
-      "3|tests/unit/attachments.test.ts::attachments > still delivers the message when a file is over 100 MB or gone, tells the owner why, and records a by-path file with its size": "F2P error on base (other non-assertion)",
+      "3|tests/unit/attachments.test.ts::attachments > still delivers the message when a file is over 100 MB or gone, tells the owner why, and records a by-path file with its size": "pass",
       "3|tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB": "pass",
       "4|tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name": "pass",
       "6|tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB": "pass",
@@ -125,6 +133,8 @@
       "5"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "2|tests/unit/server.test.ts::host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed": "pass",
       "4|tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name": "pass",
@@ -138,6 +148,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/attachments.test.ts::attachments > inlines up to 64 KB, sends by path above it, and checks the band edges at 2 MB, 5 MB and 100 MB": "pass",
       "1|tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name": "pass",
@@ -162,6 +174,8 @@
       "5"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "2|tests/unit/server.test.ts::host server > refuses a file over 5 MB with 428 unless the owner confirmed it, and sends it by path once confirmed": "pass",
       "4|tests/unit/attachments.test.ts::attachments > gives the agent a fenced path note with size, type and the data warning, and fences a hostile name": "pass",
@@ -181,6 +195,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_ado": "pass",
       "1|tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_kb": "pass",
@@ -200,6 +216,8 @@
       "1"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": true,
      "kinds": {
       "2|tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_run": "pass",
       "3|tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_ado: an Azure DevOps title": "P2P covers no changed line"
@@ -210,6 +228,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_ado": "pass",
       "1|tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_kb": "pass",
@@ -229,6 +249,8 @@
       "1"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": true,
      "kinds": {
       "2|tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_run": "pass",
       "3|tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_ado: an Azure DevOps title": "P2P covers no changed line"
@@ -250,6 +272,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists a failed and a running build, and leaves the passed one to the quiet line": "F2P error on base (other non-assertion)",
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line": "F2P error on base (other non-assertion)",
@@ -282,6 +306,8 @@
       "6"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists a failed and a running build, and leaves the passed one to the quiet line": "F2P error on base (other non-assertion)",
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line": "F2P error on base (other non-assertion)",
@@ -294,6 +320,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists a failed and a running build, and leaves the passed one to the quiet line": "pass",
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line": "pass",
@@ -323,6 +351,8 @@
       "6"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists a failed and a running build, and leaves the passed one to the quiet line": "pass",
       "1|tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line": "pass",
@@ -347,6 +377,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/canvas-message.test.ts::readCanvasMessage > takes a size that is a finite non-negative number, rounded up and capped": "F2P load on base (new module)",
       "1|tests/unit/canvas.test.ts::the prelude > goes inside <head>, else after <html>, else first, and never changes a non-HTML file": "F2P error on base (missing export)",
@@ -380,6 +412,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a canvas card reads as part of the chat: the app's title, no file name, no border, AMC's theme in both schemes": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::a canvas is pinned, opens larger over the view, and Escape closes it and returns focus": "unsupported runner (playwright)",
@@ -395,6 +429,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/canvas-message.test.ts::readCanvasMessage > takes a size that is a finite non-negative number, rounded up and capped": "pass",
       "1|tests/unit/canvas.test.ts::the prelude > goes inside <head>, else after <html>, else first, and never changes a non-HTML file": "pass",
@@ -425,6 +461,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a canvas card reads as part of the chat: the app's title, no file name, no border, AMC's theme in both schemes": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::a canvas is pinned, opens larger over the view, and Escape closes it and returns focus": "unsupported runner (playwright)",
@@ -455,6 +493,8 @@
       "6"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "5|tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion": "F2P passes on base",
       "5|tests/unit/test-hygiene.test.ts::test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0": "F2P passes on base",
@@ -477,6 +517,8 @@
       "6"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "5|tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion": "F2P passes on base",
       "5|tests/unit/test-hygiene.test.ts::test hygiene > catches a new fixed sleep": "F2P passes on base"
@@ -494,6 +536,8 @@
       "6"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "5|tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion": "F2P passes on base",
       "5|tests/unit/test-hygiene.test.ts::test hygiene > uses no shared default port: browser tests take AMC_E2E_PORT and unit tests listen on port 0": "F2P passes on base",
@@ -516,6 +560,8 @@
       "6"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "5|tests/unit/test-hygiene.test.ts::test hygiene > adds no fixed sleep to a test: wait for a condition with until(), vi.waitFor, expect.poll or a web-first assertion": "F2P passes on base",
       "5|tests/unit/test-hygiene.test.ts::test hygiene > catches a new fixed sleep": "F2P passes on base"
@@ -538,17 +584,17 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule": "F2P load on base (new module)",
       "1|tests/unit/history.test.ts::VS Code: replays the chat mutation log and counts its facets": "F2P load on base (new module)",
       "1|tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped": "F2P load on base (new module)",
       "2|tests/unit/history.test.ts::Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts": "F2P load on base (new module)",
       "2|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "F2P load on base (new module)",
-      "2|tests/unit/history.test.ts::a linked folder anywhere below a root is not followed": "F2P load on base (new module)",
       "3|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "F2P load on base (new module)",
       "3|tests/e2e/app.spec.ts::Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read": "unsupported runner (playwright)",
       "5|tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped": "F2P load on base (new module)",
-      "5|tests/unit/history.test.ts::a large snapshot is parsed off the host thread, so the host's timers keep firing": "F2P load on base (new module)",
       "6|tests/unit/history.test.ts::Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts": "F2P load on base (new module)",
       "6|tests/unit/history.test.ts::VS Code: a huge session is replayed": "F2P load on base (new module)",
       "6|tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped": "F2P load on base (new module)"
@@ -565,6 +611,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "3|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "F2P load on base (new module)",
       "3|tests/e2e/app.spec.ts::Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read": "unsupported runner (playwright)",
@@ -580,17 +628,17 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule": "pass",
       "1|tests/unit/history.test.ts::VS Code: replays the chat mutation log and counts its facets": "pass",
       "1|tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped": "pass",
       "2|tests/unit/history.test.ts::Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts": "pass",
       "2|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "pass",
-      "2|tests/unit/history.test.ts::a linked folder anywhere below a root is not followed": "pass",
       "3|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "pass",
       "3|tests/e2e/app.spec.ts::Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read": "unsupported runner (playwright)",
       "5|tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped": "pass",
-      "5|tests/unit/history.test.ts::a large snapshot is parsed off the host thread, so the host's timers keep firing": "pass",
       "6|tests/unit/history.test.ts::Copilot CLI: a truncated last line and unknown events are skipped, the rest still counts": "pass",
       "6|tests/unit/history.test.ts::VS Code: a huge session is replayed": "pass",
       "6|tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped": "pass"
@@ -605,6 +653,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "3|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "pass",
       "3|tests/e2e/app.spec.ts::Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read": "unsupported runner (playwright)",
@@ -628,6 +678,8 @@
       "8"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/ado.test.ts::Azure DevOps work items > reads a pull request's changed files, renames included, and every human thread with nested replies, open ones first": "pass",
       "1|tests/e2e/app.spec.ts::a thread on a line shows under that line in the diff with its author, photo, age and status, read-only": "unsupported runner (playwright)",
@@ -655,6 +707,8 @@
       "8"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a thread on a line shows under that line in the diff with its author, photo, age and status, read-only": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::resolved threads on a file are hidden behind one quiet line that shows them": "unsupported runner (playwright)",
@@ -672,6 +726,8 @@
       "8"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/ado.test.ts::Azure DevOps work items > reads a pull request's changed files, renames included, and every human thread with nested replies, open ones first": "pass",
       "1|tests/e2e/app.spec.ts::a thread on a line shows under that line in the diff with its author, photo, age and status, read-only": "unsupported runner (playwright)",
@@ -699,6 +755,8 @@
       "8"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a thread on a line shows under that line in the diff with its author, photo, age and status, read-only": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::resolved threads on a file are hidden behind one quiet line that shows them": "unsupported runner (playwright)",
@@ -725,6 +783,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/clusters.test.ts::rule-made clusters > group many by kind, largest first, ties by name, with medians": "F2P load on base (new module)",
       "1|tests/unit/clusters.test.ts::rule-made clusters > group topics by shared words after stop words, falling back to the title": "F2P load on base (new module)",
@@ -749,6 +809,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/clusters.test.ts::rule-made clusters > group topics by shared words after stop words, falling back to the title": "F2P load on base (new module)",
       "1|tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press": "F2P error on base (missing export)",
@@ -766,6 +828,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/clusters.test.ts::rule-made clusters > group many by kind, largest first, ties by name, with medians": "pass",
       "1|tests/unit/clusters.test.ts::rule-made clusters > group topics by shared words after stop words, falling back to the title": "pass",
@@ -787,6 +851,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/clusters.test.ts::rule-made clusters > group topics by shared words after stop words, falling back to the title": "pass",
       "1|tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press": "pass",
@@ -814,6 +880,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/diff-colour.test.ts::gives every code line of a diff tokens with all four palettes": "F2P load on base (new module)",
       "1|tests/unit/diff-colour.test.ts::sorts a diff's lines into header, hunk, added, removed and context rows": "F2P load on base (new module)",
@@ -834,6 +902,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/e2e/app.spec.ts::colours the code in a diff with the theme AMC is in, in the permission card, Changes and the pull request's Files pane": "unsupported runner (playwright)",
       "4|tests/unit/diff-colour.test.ts::gives every code line of a diff tokens with all four palettes": "F2P load on base (new module)"
@@ -844,6 +914,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/diff-colour.test.ts::gives every code line of a diff tokens with all four palettes": "pass",
       "1|tests/unit/diff-colour.test.ts::sorts a diff's lines into header, hunk, added, removed and context rows": "pass",
@@ -862,6 +934,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::colours the code in a diff with the theme AMC is in, in the permission card, Changes and the pull request's Files pane": "unsupported runner (playwright)",
       "4|tests/unit/diff-colour.test.ts::gives every code line of a diff tokens with all four palettes": "pass"
@@ -884,6 +958,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule": "F2P load on base (new module)",
       "1|tests/unit/history.test.ts::VS Code: replays the chat mutation log and counts its facets": "F2P load on base (new module)",
@@ -912,6 +988,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "3|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "F2P load on base (new module)",
       "3|tests/e2e/app.spec.ts::Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read": "unsupported runner (playwright)",
@@ -927,6 +1005,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule": "pass",
       "1|tests/unit/history.test.ts::VS Code: replays the chat mutation log and counts its facets": "pass",
@@ -953,6 +1033,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "3|tests/unit/history.test.ts::a missing source shows nothing, and links out of a history folder are not followed": "pass",
       "3|tests/e2e/app.spec.ts::Insights shows Copilot CLI and VS Code history as their own groups, with a source filter and the sessions that could not be read": "unsupported runner (playwright)",
@@ -977,6 +1059,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/live/workflows.live.test.ts::workflows on real Copilot > tool-search": "unsupported runner (live)",
       "1|tests/live/workflows.live.test.ts::workflows on real Copilot > run-findings": "unsupported runner (live)",
@@ -997,6 +1081,8 @@
       "5"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {}
     },
     "map_swe": {
@@ -1007,6 +1093,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/live/workflows.live.test.ts::workflows on real Copilot > tool-search": "unsupported runner (live)",
       "1|tests/live/workflows.live.test.ts::workflows on real Copilot > run-findings": "unsupported runner (live)",
@@ -1027,6 +1115,8 @@
       "5"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {}
     }
    }
@@ -1046,6 +1136,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/markers.test.ts::keeps markers in the store across a restart, edits and deletes them": "F2P load on base (new module)",
       "1|tests/unit/markers.test.ts::accepts only a real date, a name, a known measure and a stated direction": "F2P load on base (new module)",
@@ -1067,6 +1159,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/markers.test.ts::keeps markers in the store across a restart, edits and deletes them": "F2P load on base (new module)",
       "2|tests/unit/markers.test.ts::compares equal windows on each side of the marker's day, counting sessions on each side": "F2P load on base (new module)",
@@ -1083,6 +1177,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/markers.test.ts::keeps markers in the store across a restart, edits and deletes them": "pass",
       "1|tests/unit/markers.test.ts::accepts only a real date, a name, a known measure and a stated direction": "pass",
@@ -1102,6 +1198,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/markers.test.ts::keeps markers in the store across a restart, edits and deletes them": "pass",
       "2|tests/unit/markers.test.ts::compares equal windows on each side of the marker's day, counting sessions on each side": "pass",
@@ -1126,6 +1224,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > sends review's framed message at once, with the pull request and its linked items fenced": "F2P load on base (new module)",
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > leaves Discuss's framed message unsent in the message box, ending at the owner's question": "F2P load on base (new module)",
@@ -1153,6 +1253,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > sends review's framed message at once, with the pull request and its linked items fenced": "F2P load on base (new module)",
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > leaves Discuss's framed message unsent in the message box, ending at the owner's question": "F2P load on base (new module)",
@@ -1169,6 +1271,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > sends review's framed message at once, with the pull request and its linked items fenced": "pass",
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > leaves Discuss's framed message unsent in the message box, ending at the owner's question": "pass",
@@ -1194,6 +1298,8 @@
       "5"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > sends review's framed message at once, with the pull request and its linked items fenced": "pass",
       "1|tests/unit/templates.test.ts::the five buttons, started through one template path > leaves Discuss's framed message unsent in the message box, ending at the owner's question": "pass",
@@ -1220,6 +1326,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task": "F2P load on base (new module)",
       "1|tests/unit/assignments.test.ts::the move keeps a copy of the store from before it, holding every old task": "F2P load on base (new module)",
@@ -1243,6 +1351,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task": "F2P load on base (new module)",
       "1|tests/unit/assignments.test.ts::the move keeps a copy of the store from before it, holding every old task": "F2P load on base (new module)",
@@ -1257,6 +1367,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task": "pass",
       "1|tests/unit/assignments.test.ts::the move keeps a copy of the store from before it, holding every old task": "pass",
@@ -1278,6 +1390,8 @@
       "3"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/assignments.test.ts::every old task state becomes its assignment state, in its workspace's Inbox, with every record field, and the task views read the same task": "pass",
       "1|tests/unit/assignments.test.ts::the move keeps a copy of the store from before it, holding every old task": "pass",
@@ -1304,6 +1418,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/origin.test.ts::a chat session in a repo subfolder stores the git top level; outside git, the folder; through a link, the real path": "pass",
       "1|tests/unit/origin.test.ts::a task try stores the task's root and a run worker the run's root, though each works in AMC's worktrees folder": "pass",
@@ -1330,6 +1446,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/origin.test.ts::a chat session in a repo subfolder stores the git top level; outside git, the folder; through a link, the real path": "pass",
       "1|tests/unit/origin.test.ts::a task try stores the task's root and a run worker the run's root, though each works in AMC's worktrees folder": "pass",
@@ -1351,6 +1469,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/origin.test.ts::a chat session in a repo subfolder stores the git top level; outside git, the folder; through a link, the real path": "pass",
       "1|tests/unit/origin.test.ts::a task try stores the task's root and a run worker the run's root, though each works in AMC's worktrees folder": "pass",
@@ -1373,6 +1493,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/origin.test.ts::a chat session in a repo subfolder stores the git top level; outside git, the folder; through a link, the real path": "pass",
       "1|tests/unit/origin.test.ts::a task try stores the task's root and a run worker the run's root, though each works in AMC's worktrees folder": "pass",
@@ -1400,58 +1522,61 @@
     "map": {
      "fails": true,
      "why": [
-      "F2P load on base (new module)",
-      "P2P attribution unavailable"
+      "Stryker failed"
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
-      "1|tests/unit/special-view.test.ts::readSpecial > refuses a null entry": "F2P load on base (new module)",
-      "1|tests/unit/special-view.test.ts::readSpecial > accepts every shape the host sends": "F2P load on base (new module)",
       "1|tests/e2e/app.spec.ts::a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds": "unsupported runner (playwright)",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "P2P attribution unavailable",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "P2P attribution unavailable"
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "Stryker failed",
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "Stryker failed"
      }
     },
     "strict": {
      "fails": true,
      "why": [
-      "P2P attribution unavailable"
+      "Stryker failed"
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds": "unsupported runner (playwright)",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "P2P attribution unavailable",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "P2P attribution unavailable"
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "Stryker failed",
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "Stryker failed"
      }
     },
     "map_swe": {
      "fails": true,
      "why": [
-      "P2P attribution unavailable"
+      "Stryker failed"
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
-      "1|tests/unit/special-view.test.ts::readSpecial > refuses a null entry": "pass",
-      "1|tests/unit/special-view.test.ts::readSpecial > accepts every shape the host sends": "pass",
       "1|tests/e2e/app.spec.ts::a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds": "unsupported runner (playwright)",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "P2P attribution unavailable",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "P2P attribution unavailable"
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "Stryker failed",
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "Stryker failed"
      }
     },
     "strict_swe": {
      "fails": true,
      "why": [
-      "P2P attribution unavailable"
+      "Stryker failed"
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a special repos list that cannot be loaded says so with a Retry, never None yet, and shows the list once a retry succeeds": "unsupported runner (playwright)",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "P2P attribution unavailable",
-      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "P2P attribution unavailable"
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list": "Stryker failed",
+      "2|tests/unit/special-settings.test.ts::two saved entries that both went bad: removing the missing folder keeps the other, then removing the last empties the list": "Stryker failed"
      }
     }
    }
@@ -1471,6 +1596,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/type-rules.test.ts::a Copilot-style engine gets the type's rules folder as instructionDirectories on create and resume, for chat, task try, run worker, orchestrator and fork": "F2P load on base (new module)",
       "1|tests/unit/type-rules.test.ts::with no folder for the type, or an unknown type, nothing is passed and the view says no rules; a resume after the folder appears passes it": "F2P load on base (new module)",
@@ -1497,6 +1624,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/type-rules.test.ts::a Copilot-style engine gets the type's rules folder as instructionDirectories on create and resume, for chat, task try, run worker, orchestrator and fork": "F2P load on base (new module)",
       "1|tests/unit/type-rules.test.ts::with no folder for the type, or an unknown type, nothing is passed and the view says no rules; a resume after the folder appears passes it": "F2P load on base (new module)",
@@ -1520,6 +1649,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/type-rules.test.ts::a Copilot-style engine gets the type's rules folder as instructionDirectories on create and resume, for chat, task try, run worker, orchestrator and fork": "pass",
       "1|tests/unit/type-rules.test.ts::with no folder for the type, or an unknown type, nothing is passed and the view says no rules; a resume after the folder appears passes it": "pass",
@@ -1544,6 +1675,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/type-rules.test.ts::a Copilot-style engine gets the type's rules folder as instructionDirectories on create and resume, for chat, task try, run worker, orchestrator and fork": "pass",
       "1|tests/unit/type-rules.test.ts::with no folder for the type, or an unknown type, nothing is passed and the view says no rules; a resume after the folder appears passes it": "pass",
@@ -1573,6 +1706,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/kb-scope.test.ts::a chat session in a repo kb knows searches only its origin's source, from the tool, the palette, each message and warm-up": "pass",
       "1|tests/unit/kb-scope.test.ts::a task try and a run worker in AMC's worktrees folder search the origin's source, not the worktree": "pass",
@@ -1591,6 +1726,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/kb-scope.test.ts::a chat session in a repo kb knows searches only its origin's source, from the tool, the palette, each message and warm-up": "pass",
       "1|tests/unit/kb-scope.test.ts::a task try and a run worker in AMC's worktrees folder search the origin's source, not the worktree": "pass",
@@ -1605,6 +1742,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/kb-scope.test.ts::a chat session in a repo kb knows searches only its origin's source, from the tool, the palette, each message and warm-up": "pass",
       "1|tests/unit/kb-scope.test.ts::a task try and a run worker in AMC's worktrees folder search the origin's source, not the worktree": "pass",
@@ -1623,6 +1762,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/kb-scope.test.ts::a chat session in a repo kb knows searches only its origin's source, from the tool, the palette, each message and warm-up": "pass",
       "1|tests/unit/kb-scope.test.ts::a task try and a run worker in AMC's worktrees folder search the origin's source, not the worktree": "pass",
@@ -1648,6 +1789,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/worktree-grouping.test.ts::a chat session, a task try and a run worker of a child repository list under its workspace inside the product repos folder": "F2P passes on base",
       "1|tests/unit/worktree-grouping.test.ts::a session whose origin repository was deleted is still listed under the folder, and its workspace is marked missing only when every session's origin is gone": "pass",
@@ -1666,6 +1809,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/worktree-grouping.test.ts::a chat session, a task try and a run worker of a child repository list under its workspace inside the product repos folder": "F2P passes on base",
       "1|tests/unit/worktree-grouping.test.ts::a session whose origin repository was deleted is still listed under the folder, and its workspace is marked missing only when every session's origin is gone": "pass",
@@ -1682,6 +1827,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/worktree-grouping.test.ts::a chat session, a task try and a run worker of a child repository list under its workspace inside the product repos folder": "F2P passes on base",
       "1|tests/unit/worktree-grouping.test.ts::a session whose origin repository was deleted is still listed under the folder, and its workspace is marked missing only when every session's origin is gone": "pass",
@@ -1700,6 +1847,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/worktree-grouping.test.ts::a chat session, a task try and a run worker of a child repository list under its workspace inside the product repos folder": "F2P passes on base",
       "1|tests/unit/worktree-grouping.test.ts::a session whose origin repository was deleted is still listed under the folder, and its workspace is marked missing only when every session's origin is gone": "pass",
@@ -1724,6 +1873,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/web-search.test.ts::enableCitations on every Copilot session > sets it on create, on resume, and on the create a never-sent resume falls back to": "F2P load on base (new module)",
       "2|tests/unit/web-search.test.ts::the Searched the web row > shows one row for one search, running until it completes, then folded": "F2P load on base (new module)",
@@ -1745,6 +1896,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/web-search.test.ts::enableCitations on every Copilot session > sets it on create, on resume, and on the create a never-sent resume falls back to": "F2P load on base (new module)",
       "2|tests/unit/web-search.test.ts::the Searched the web row > shows one row for one search, running until it completes, then folded": "F2P load on base (new module)",
@@ -1764,6 +1917,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/web-search.test.ts::enableCitations on every Copilot session > sets it on create, on resume, and on the create a never-sent resume falls back to": "pass",
       "2|tests/unit/web-search.test.ts::the Searched the web row > shows one row for one search, running until it completes, then folded": "pass",
@@ -1783,6 +1938,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/web-search.test.ts::enableCitations on every Copilot session > sets it on create, on resume, and on the create a never-sent resume falls back to": "pass",
       "2|tests/unit/web-search.test.ts::the Searched the web row > shows one row for one search, running until it completes, then folded": "pass",
@@ -1813,6 +1970,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/commit-preview.test.ts::the message as git would write it > joins repeated -m as paragraphs, as git does": "F2P load on base (new module)",
       "1|tests/unit/commit-preview.test.ts::the message as git would write it > does not read -F outside the folder, through a link, or after a cd": "F2P load on base (new module)",
@@ -1841,6 +2000,8 @@
       "4"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "5|tests/unit/commit-card.test.ts::a commit card and the turn's end > a host restart with a commit card open leaves it unanswerable, so it cannot approve into a later turn": "P2P not checked"
      }
@@ -1850,6 +2011,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/commit-preview.test.ts::the message as git would write it > joins repeated -m as paragraphs, as git does": "pass",
       "1|tests/unit/commit-preview.test.ts::the message as git would write it > does not read -F outside the folder, through a link, or after a cd": "pass",
@@ -1878,6 +2041,8 @@
       "4"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "5|tests/unit/commit-card.test.ts::a commit card and the turn's end > a host restart with a commit card open leaves it unanswerable, so it cannot approve into a later turn": "P2P not checked"
      }
@@ -1899,6 +2064,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/command-result.test.ts::an agent-prompt shows its notice, then sends its prompt as today": "F2P load on base (new module)",
       "1|tests/unit/command-result.test.ts::a mode in a result goes through AMC's mode switch; an unknown mode refuses a prompt and sends nothing": "F2P load on base (new module)",
@@ -1931,6 +2098,8 @@
       "7"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "5|tests/unit/command-result.test.ts::runtimeSettingsChanged re-reads the session's settings": "F2P load on base (new module)",
       "6|tests/unit/command-result.test.ts::an unhandled kind shows a quiet Not supported row naming the command and kind, and never done": "F2P load on base (new module)",
@@ -1944,6 +2113,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/command-result.test.ts::an agent-prompt shows its notice, then sends its prompt as today": "pass",
       "1|tests/unit/command-result.test.ts::a mode in a result goes through AMC's mode switch; an unknown mode refuses a prompt and sends nothing": "pass",
@@ -1974,6 +2145,8 @@
       "7"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "5|tests/unit/command-result.test.ts::runtimeSettingsChanged re-reads the session's settings": "pass",
       "6|tests/unit/command-result.test.ts::an unhandled kind shows a quiet Not supported row naming the command and kind, and never done": "pass",
@@ -1996,6 +2169,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once": "pass",
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends the whole current list on each session/load, not the change": "pass",
@@ -2018,6 +2193,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once": "pass",
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends the whole current list on each session/load, not the change": "pass",
@@ -2036,6 +2213,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once": "pass",
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends the whole current list on each session/load, not the change": "pass",
@@ -2056,6 +2235,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends zero, one and two roots on session/new, the session's own folder and repeats once": "pass",
       "1|tests/unit/acp-folders.test.ts::an agent that offers additionalDirectories > sends the whole current list on each session/load, not the change": "pass",
@@ -2084,6 +2265,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/row-time.test.ts::a time on every Home row (105) > shows how long a Do now session has waited, from the event that asked, failed or went quiet": "F2P load on base (new module)",
       "1|tests/unit/row-time.test.ts::a time on every Home row (105) > counts a task in Do now from its last change of state, and a stopped one as a last change": "F2P load on base (new module)",
@@ -2113,6 +2296,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "6|tests/e2e/app.spec.ts::Home's row times tick with the clock without moving rows or focus, and say on hover what they measure": "unsupported runner (playwright)"
      }
@@ -2122,6 +2307,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/row-time.test.ts::a time on every Home row (105) > shows how long a Do now session has waited, from the event that asked, failed or went quiet": "pass",
       "1|tests/unit/row-time.test.ts::a time on every Home row (105) > counts a task in Do now from its last change of state, and a stopped one as a last change": "pass",
@@ -2151,6 +2338,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "6|tests/e2e/app.spec.ts::Home's row times tick with the clock without moving rows or focus, and say on hover what they measure": "unsupported runner (playwright)"
      }
@@ -2170,6 +2359,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/acp.test.ts::treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder": "pass",
       "2|tests/unit/watch.test.ts::language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case": "F2P error on base (missing export)",
@@ -2190,6 +2381,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/acp.test.ts::treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder": "pass",
       "2|tests/unit/watch.test.ts::language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case": "F2P error on base (missing export)",
@@ -2201,6 +2394,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/acp.test.ts::treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder": "pass",
       "2|tests/unit/watch.test.ts::language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case": "pass",
@@ -2219,6 +2414,8 @@
       "4"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/acp.test.ts::treats the approved folder spelt with a trailing slash, a . step or through a link as the same folder": "pass",
       "2|tests/unit/watch.test.ts::language servers hear of files changed outside the editor > does not send a change to an open file spelt in another case where the volume ignores case": "pass",
@@ -2242,6 +2439,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/drafts.test.ts::changeDrafts > adds, edits, removes, clears sent pieces and discards all": "F2P load on base (new module)",
       "1|tests/e2e/app.spec.ts::gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message": "unsupported runner (playwright)",
@@ -2267,6 +2466,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "3|tests/unit/drafts.test.ts::composeDraft > sends each piece's quoted anchor, its file and line, and its note, then the owner's text": "F2P load on base (new module)",
       "4|tests/unit/drafts.test.ts::changeDrafts > keeps anchors inside the session's folder and refuses empty quotes and unknown pieces": "F2P load on base (new module)",
@@ -2280,6 +2481,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/drafts.test.ts::changeDrafts > adds, edits, removes, clears sent pieces and discards all": "pass",
       "1|tests/e2e/app.spec.ts::gathers draft pieces from a reply and a file line, edits and removes them, keeps them over a reload and sends them as one message": "unsupported runner (playwright)",
@@ -2303,6 +2506,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "3|tests/unit/drafts.test.ts::composeDraft > sends each piece's quoted anchor, its file and line, and its note, then the owner's text": "pass",
       "4|tests/unit/drafts.test.ts::changeDrafts > keeps anchors inside the session's folder and refuses empty quotes and unknown pieces": "pass",
@@ -2324,6 +2529,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query": "F2P error on base (missing export)",
       "1|tests/unit/knowledge.test.ts::the palette's note search reports a timeout, a failure, bad output and a folder outside every source": "F2P error on base (missing export)",
@@ -2348,6 +2555,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query": "F2P error on base (missing export)",
       "1|tests/e2e/app.spec.ts::the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only": "unsupported runner (playwright)",
@@ -2361,6 +2570,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query": "pass",
       "1|tests/unit/knowledge.test.ts::the palette's note search reports a timeout, a failure, bad output and a folder outside every source": "pass",
@@ -2383,6 +2594,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query": "pass",
       "1|tests/e2e/app.spec.ts::the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only": "unsupported runner (playwright)",
@@ -2406,6 +2619,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty": "F2P error on base (missing export)",
       "1|tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group": "pass",
@@ -2424,6 +2639,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty": "F2P error on base (missing export)",
       "1|tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group": "pass",
@@ -2436,6 +2653,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty": "pass",
       "1|tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group": "pass",
@@ -2452,6 +2671,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/order.test.ts::tab order > keeps the default groups in a customised menu: an id keeps its group, groups follow their first id, none is empty": "pass",
       "1|tests/unit/order.test.ts::tab order > never gives a stray separator when the header takes a whole group": "pass",
@@ -2475,6 +2696,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/runs.test.ts::restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish": "pass",
       "1|tests/unit/runs.test.ts::a restored card whose orchestrator cannot be opened again says so and offers to end the run, which keeps every worktree and branch": "F2P error on base (other non-assertion)",
@@ -2500,6 +2723,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/runs.test.ts::restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish": "pass",
       "1|tests/unit/runs.test.ts::a restored card whose orchestrator cannot be opened again says so and offers to end the run, which keeps every worktree and branch": "F2P error on base (other non-assertion)",
@@ -2515,6 +2740,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/runs.test.ts::restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish": "pass",
       "1|tests/unit/runs.test.ts::a restored card whose orchestrator cannot be opened again says so and offers to end the run, which keeps every worktree and branch": "pass",
@@ -2539,6 +2766,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/runs.test.ts::restart while a review card is open: the card comes back with the same actions, and merging it carries the run on to its finish": "pass",
       "1|tests/unit/runs.test.ts::a restored card whose orchestrator cannot be opened again says so and offers to end the run, which keeps every worktree and branch": "pass",
@@ -2562,6 +2791,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches": "unsupported runner (playwright)",
@@ -2582,6 +2813,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "2|tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches": "unsupported runner (playwright)"
      }
@@ -2593,6 +2826,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches": "unsupported runner (playwright)",
@@ -2613,6 +2848,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "2|tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches": "unsupported runner (playwright)"
      }
@@ -2632,6 +2869,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/inside.test.ts::MUST 1: whatever is linked or swapped, the bytes read come from inside the root": "F2P load on base (new module)",
       "1|tests/unit/inside.test.ts::TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read": "F2P load on base (new module)",
@@ -2657,6 +2896,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/inside.test.ts::MUST 1: whatever is linked or swapped, the bytes read come from inside the root": "F2P load on base (new module)",
       "2|tests/unit/inside.test.ts::MUST 2: a root given with a trailing / or /. is refused even when it is otherwise a plain folder": "F2P load on base (new module)"
@@ -2667,6 +2908,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/inside.test.ts::MUST 1: whatever is linked or swapped, the bytes read come from inside the root": "pass",
       "1|tests/unit/inside.test.ts::TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read": "pass",
@@ -2690,6 +2933,8 @@
       "4"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/inside.test.ts::MUST 1: whatever is linked or swapped, the bytes read come from inside the root": "pass",
       "2|tests/unit/inside.test.ts::MUST 2: a root given with a trailing / or /. is refused even when it is otherwise a plain folder": "pass"
@@ -2710,6 +2955,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a late Report a problem reply, saved or failed, leaves the New session dialog opened after it and what was typed in it": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::saving the work pack folder keeps an unsaved Parent folder draft, and saving the Parent folder keeps a pack folder draft": "unsupported runner (playwright)",
@@ -2726,6 +2973,8 @@
       "4"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {}
     },
     "map_swe": {
@@ -2735,6 +2984,8 @@
       "3"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/e2e/app.spec.ts::a late Report a problem reply, saved or failed, leaves the New session dialog opened after it and what was typed in it": "unsupported runner (playwright)",
       "2|tests/e2e/app.spec.ts::saving the work pack folder keeps an unsaved Parent folder draft, and saving the Parent folder keeps a pack folder draft": "unsupported runner (playwright)",
@@ -2751,6 +3002,8 @@
       "4"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {}
     }
    }
@@ -2768,6 +3021,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::a notes query that looks like one of kb's options reaches kb as the query, from every search path": "pass",
       "1|tests/unit/knowledge.test.ts::every query is the last argument, after kb's end-of-options marker": "F2P error on base (missing export)",
@@ -2793,6 +3048,8 @@
       "4"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::every query is the last argument, after kb's end-of-options marker": "F2P error on base (missing export)"
      }
@@ -2802,6 +3059,8 @@
      "why": [],
      "none": [],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::a notes query that looks like one of kb's options reaches kb as the query, from every search path": "pass",
       "1|tests/unit/knowledge.test.ts::every query is the last argument, after kb's end-of-options marker": "pass",
@@ -2825,6 +3084,8 @@
       "4"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/knowledge.test.ts::every query is the last argument, after kb's end-of-options marker": "pass"
      }
@@ -2845,6 +3106,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/product-repos.test.ts::a pack without productRepos, or with an empty one, sets no folder and reports nothing": "pass",
       "1|tests/unit/product-repos.test.ts::productRepos resolves an absolute or ~/ folder, and refuses a relative path, a missing folder and a file with the reason": "pass",
@@ -2874,6 +3137,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "4|tests/unit/product-repos.test.ts::grouping puts each child repository under one workspace named for the folder, keeps their keys, and leaves the rest as today": "F2P error on base (missing export)"
      }
@@ -2883,6 +3148,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/product-repos.test.ts::a pack without productRepos, or with an empty one, sets no folder and reports nothing": "pass",
       "1|tests/unit/product-repos.test.ts::productRepos resolves an absolute or ~/ folder, and refuses a relative path, a missing folder and a file with the reason": "pass",
@@ -2910,6 +3177,8 @@
       "5"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "4|tests/unit/product-repos.test.ts::grouping puts each child repository under one workspace named for the folder, keeps their keys, and leaves the rest as today": "pass"
      }
@@ -2930,6 +3199,8 @@
      ],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/palette.test.ts::the text-in-files scope > is chosen by % and keeps every other key as it was": "pass",
       "1|tests/unit/palette.test.ts::the text-in-files scope > shows only the latest search's answer when an earlier one answers later": "F2P error on base (missing export)",
@@ -2957,6 +3228,8 @@
       "6"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "3|tests/unit/text-search.test.ts::searching text in a git workspace > is case-sensitive when the query has a capital letter": "F2P load on base (new module)",
       "4|tests/unit/text-search.test.ts::searching text in a folder that is not a git repository > walks the folder, skipping node_modules, big and binary files and symlinks": "F2P load on base (new module)"
@@ -2967,6 +3240,8 @@
      "why": [],
      "none": [],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "1|tests/unit/palette.test.ts::the text-in-files scope > is chosen by % and keeps every other key as it was": "pass",
       "1|tests/unit/palette.test.ts::the text-in-files scope > shows only the latest search's answer when an earlier one answers later": "pass",
@@ -2992,6 +3267,8 @@
       "6"
      ],
      "fails_as_run": false,
+     "fails_raw": false,
+     "fails_nocover": false,
      "kinds": {
       "3|tests/unit/text-search.test.ts::searching text in a git workspace > is case-sensitive when the query has a capital letter": "pass",
       "4|tests/unit/text-search.test.ts::searching text in a folder that is not a git repository > walks the folder, skipping node_modules, big and binary files and symlinks": "pass"
@@ -3014,6 +3291,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/server.test.ts::host server > refuses to start a run without AMC_RUNS=1 and creates nothing, but still lists and ends runs": "pass",
       "1|tests/unit/actions.test.ts::action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1": "F2P error on base (missing export)",
@@ -3037,6 +3316,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": true,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/server.test.ts::host server > refuses to start a run without AMC_RUNS=1 and creates nothing, but still lists and ends runs": "pass",
       "1|tests/unit/actions.test.ts::action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1": "F2P error on base (missing export)",
@@ -3053,6 +3334,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/server.test.ts::host server > refuses to start a run without AMC_RUNS=1 and creates nothing, but still lists and ends runs": "pass",
       "1|tests/unit/actions.test.ts::action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1": "pass",
@@ -3074,6 +3357,8 @@
       "5"
      ],
      "fails_as_run": true,
+     "fails_raw": false,
+     "fails_nocover": true,
      "kinds": {
       "1|tests/unit/server.test.ts::host server > refuses to start a run without AMC_RUNS=1 and creates nothing, but still lists and ends runs": "pass",
       "1|tests/unit/actions.test.ts::action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1": "pass",
@@ -3102,7 +3387,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3114,7 +3412,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3136,7 +3446,19 @@
       "pass"
      ]
     ],
+    "map_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3148,7 +3470,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3170,7 +3504,19 @@
       "pass"
      ]
     ],
+    "map_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_raw": [
      "miss",
      [
       "pass"
@@ -3182,7 +3528,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3204,7 +3562,19 @@
       "pass"
      ]
     ],
+    "map_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_raw": [
      "miss",
      [
       "pass"
@@ -3216,7 +3586,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3239,7 +3621,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3251,7 +3646,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3275,7 +3682,23 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "F2P error on base (other non-assertion)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none",
+      "F2P error on base (missing export)",
+      "F2P error on base (other non-assertion)"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none",
@@ -3289,7 +3712,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3311,7 +3746,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -3323,7 +3770,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -3346,7 +3805,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -3358,7 +3830,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -3380,7 +3864,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -3392,7 +3888,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -3414,7 +3922,19 @@
       "P2P covers no changed line"
      ]
     ],
+    "map_raw": [
+     "miss",
+     [
+      "P2P covers no changed line"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3426,7 +3946,19 @@
       "P2P covers no changed line"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "P2P covers no changed line"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3443,24 +3975,48 @@
    "graded": "-",
    "verdicts": {
     "map": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "map_raw": [
      "caught",
      [
       "F2P passes on base"
      ]
     ],
     "strict": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "strict_raw": [
      "caught",
      [
       "F2P passes on base"
      ]
     ],
     "map_swe": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "map_swe_raw": [
      "caught",
      [
       "F2P passes on base"
      ]
     ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "strict_swe_raw": [
      "caught",
      [
       "F2P passes on base"
@@ -3477,24 +4033,48 @@
    "graded": "-",
    "verdicts": {
     "map": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "map_raw": [
      "caught",
      [
       "F2P passes on base"
      ]
     ],
     "strict": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "strict_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
      ]
     ],
     "map_swe": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "map_swe_raw": [
      "caught",
      [
       "F2P passes on base"
      ]
     ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "mapping artefact: F2P passes on base"
+     ]
+    ],
+    "strict_swe_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
@@ -3516,7 +4096,20 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none",
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none",
@@ -3529,7 +4122,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3551,7 +4156,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3563,7 +4180,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3586,7 +4215,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P error on base (missing export)"
@@ -3598,7 +4240,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3620,7 +4274,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -3632,7 +4298,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3654,7 +4332,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none",
@@ -3667,7 +4358,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none",
@@ -3690,7 +4394,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3702,7 +4418,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3725,7 +4453,20 @@
       "unsupported runner (live)"
      ]
     ],
+    "map_raw": [
+     "none only",
+     [
+      "none",
+      "unsupported runner (live)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3738,7 +4479,20 @@
       "unsupported runner (live)"
      ]
     ],
+    "map_swe_raw": [
+     "none only",
+     [
+      "none",
+      "unsupported runner (live)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3761,7 +4515,20 @@
       "unsupported runner (live)"
      ]
     ],
+    "map_raw": [
+     "none only",
+     [
+      "none",
+      "unsupported runner (live)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3774,7 +4541,20 @@
       "unsupported runner (live)"
      ]
     ],
+    "map_swe_raw": [
+     "none only",
+     [
+      "none",
+      "unsupported runner (live)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -3797,7 +4577,21 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)",
@@ -3810,7 +4604,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -3832,7 +4638,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -3844,7 +4662,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3866,7 +4696,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -3878,7 +4720,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3900,7 +4754,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -3912,7 +4778,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3934,7 +4812,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -3946,7 +4836,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -3968,7 +4870,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -3981,7 +4895,20 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "P2P not checked",
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -4003,7 +4930,19 @@
       "F2P error on base (other non-assertion)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P error on base (other non-assertion)"
@@ -4015,7 +4954,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4037,7 +4988,19 @@
       "F2P error on base (other non-assertion)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P error on base (other non-assertion)"
@@ -4049,7 +5012,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4071,7 +5046,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_raw": [
      "miss",
      [
       "pass"
@@ -4083,7 +5070,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4105,7 +5104,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4117,7 +5128,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4140,7 +5163,21 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P error on base (missing export)",
@@ -4153,7 +5190,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4176,7 +5225,21 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P error on base (missing export)",
@@ -4189,7 +5252,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4208,11 +5283,22 @@
     "map": [
      "flagged, not for this",
      [
-      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "map_raw": [
+     "flagged, not for this",
+     [
       "unsupported runner (playwright)"
      ]
     ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4224,7 +5310,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4247,7 +5345,21 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)",
@@ -4260,7 +5372,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4282,7 +5406,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -4294,7 +5430,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4317,7 +5465,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4329,7 +5490,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4352,7 +5525,21 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)",
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)",
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P error on base (other non-assertion)",
@@ -4365,7 +5552,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4388,7 +5587,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4400,7 +5612,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4422,7 +5646,19 @@
       "pass"
      ]
     ],
+    "map_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_raw": [
      "miss",
      [
       "pass"
@@ -4434,7 +5670,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4456,7 +5704,19 @@
       "pass"
      ]
     ],
+    "map_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_raw": [
      "miss",
      [
       "pass"
@@ -4468,7 +5728,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4490,7 +5762,19 @@
       "F2P passes on base"
      ]
     ],
+    "map_raw": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
     "strict": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
+    "strict_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
@@ -4502,7 +5786,19 @@
       "F2P passes on base"
      ]
     ],
+    "map_swe_raw": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
     "strict_swe": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
+    "strict_swe_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
@@ -4524,7 +5820,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4536,7 +5844,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4558,7 +5878,19 @@
       "F2P passes on base"
      ]
     ],
+    "map_raw": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
     "strict": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
+    "strict_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
@@ -4570,7 +5902,19 @@
       "F2P passes on base"
      ]
     ],
+    "map_swe_raw": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
     "strict_swe": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
+    "strict_swe_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
@@ -4592,7 +5936,19 @@
       "F2P passes on base"
      ]
     ],
+    "map_raw": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
     "strict": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
+    "strict_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
@@ -4604,7 +5960,19 @@
       "F2P passes on base"
      ]
     ],
+    "map_swe_raw": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
     "strict_swe": [
+     "MUST flagged",
+     [
+      "F2P passes on base"
+     ]
+    ],
+    "strict_swe_raw": [
      "MUST flagged",
      [
       "F2P passes on base"
@@ -4626,7 +5994,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -4638,7 +6018,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4661,7 +6053,21 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)",
@@ -4674,7 +6080,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
+    "strict_swe_raw": [
      "flagged, not for this",
      [
       "unsupported runner (playwright)"
@@ -4696,7 +6114,19 @@
       "F2P error on base (other non-assertion)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (other non-assertion)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -4709,7 +6139,20 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "P2P not checked",
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -4731,7 +6174,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -4743,7 +6198,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4765,7 +6232,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -4777,7 +6256,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -4799,7 +6290,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "flagged, not for this",
      [
       "F2P load on base (new module)"
@@ -4811,7 +6314,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4834,7 +6349,21 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)",
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none",
+      "F2P load on base (new module)"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none",
@@ -4847,7 +6376,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -4870,7 +6411,20 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)",
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -4882,7 +6436,19 @@
       "unsupported runner (playwright)"
      ]
     ],
+    "map_swe_raw": [
+     "flagged, not for this",
+     [
+      "unsupported runner (playwright)"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -4904,7 +6470,19 @@
       "F2P error on base (missing export)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P error on base (missing export)"
+     ]
+    ],
     "strict": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_raw": [
      "miss",
      [
       "pass"
@@ -4916,7 +6494,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4938,7 +6528,19 @@
       "pass"
      ]
     ],
+    "map_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_raw": [
      "miss",
      [
       "pass"
@@ -4950,7 +6552,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
+    "strict_swe_raw": [
      "miss",
      [
       "pass"
@@ -4972,7 +6586,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -4984,7 +6610,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -5006,7 +6644,19 @@
       "F2P load on base (new module)"
      ]
     ],
+    "map_raw": [
+     "flagged, not for this",
+     [
+      "F2P load on base (new module)"
+     ]
+    ],
     "strict": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_raw": [
      "none only",
      [
       "none"
@@ -5018,7 +6668,19 @@
       "pass"
      ]
     ],
+    "map_swe_raw": [
+     "miss",
+     [
+      "pass"
+     ]
+    ],
     "strict_swe": [
+     "none only",
+     [
+      "none"
+     ]
+    ],
+    "strict_swe_raw": [
      "none only",
      [
       "none"
@@ -5184,7 +6846,7 @@
    "static_off": {
     "wall_min": 1.18,
     "mutants_run": 0,
-    "generated": 0,
+    "generated": null,
     "statuses": {}
    }
   },
@@ -5236,20 +6898,16 @@
    "id": "amc-2026-11-02__g10a-post",
    "set": "finding",
    "phase": "p2p",
-   "wall_min": 0.11,
+   "wall_min": 0.07,
    "exit": 0,
-   "mutants_run": 68,
-   "statuses": {
-    "NoCoverage": 78,
-    "Killed": 66,
-    "Survived": 2
-   },
-   "generated": 146,
+   "mutants_run": 0,
+   "statuses": {},
+   "generated": null,
    "p2p": [
-    "P2P attribution unavailable"
+    "Stryker failed"
    ],
-   "gate_min": 0.11,
-   "stryker_error": "attribution unavailable: no test in the Stryker report's testFiles is named two saved entries that both went bad: removing the file keeps the other, then removing the last empties the list"
+   "gate_min": 0.07,
+   "stryker_error": "Stryker failed (exit 1):   innerError: undefined | } | Node.js v26.12.1"
   },
   {
    "id": "amc-2026-11-02__g10d",
@@ -5279,7 +6937,7 @@
    "exit": 0,
    "mutants_run": 0,
    "statuses": {},
-   "generated": 0,
+   "generated": null,
    "p2p": [
     "Stryker timed out"
    ],
@@ -5488,9 +7146,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-28__big-files",
@@ -5501,9 +7162,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 9,
+   "rejects": 1,
    "new_sources": 0,
-   "fails_map": true,
-   "fails_swe": false
+   "fails_map": false,
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-28__gaps-1",
@@ -5514,9 +7178,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 7,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": false,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": false,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-28__pr-overview",
@@ -5527,9 +7194,12 @@
    "error_export": 2,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-29__canvas-b",
@@ -5540,9 +7210,12 @@
    "error_export": 4,
    "passes": 0,
    "fails_ok": 1,
+   "rejects": 0,
    "new_sources": 3,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-29__flake-3",
@@ -5553,22 +7226,28 @@
    "error_export": 0,
    "passes": 3,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": true
+   "fails_swe": true,
+   "fails_map_raw": true,
+   "fails_swe_raw": true
   },
   {
    "id": "amc-2026-10-29__insights-history",
    "set": "finding",
-   "f2p": 13,
-   "load": 12,
+   "f2p": 11,
+   "load": 10,
    "error": 0,
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
-   "new_sources": 2,
+   "rejects": 0,
+   "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-29__pr-threads",
@@ -5579,9 +7258,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 3,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": false,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": false,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__clusters",
@@ -5592,9 +7274,12 @@
    "error_export": 4,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__diff-colour",
@@ -5605,9 +7290,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__insights-history",
@@ -5618,9 +7306,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__live-checks",
@@ -5631,9 +7322,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 2,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": false,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": false,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__markers",
@@ -5644,9 +7338,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__f6",
@@ -5657,9 +7354,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__f7",
@@ -5670,9 +7370,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__g10a",
@@ -5683,22 +7386,28 @@
    "error_export": 1,
    "passes": 0,
    "fails_ok": 4,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__g10a-post",
    "set": "finding",
-   "f2p": 3,
-   "load": 2,
+   "f2p": 1,
+   "load": 0,
    "error": 0,
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
-   "new_sources": 1,
+   "rejects": 0,
+   "new_sources": 0,
    "fails_map": true,
-   "fails_swe": true
+   "fails_swe": true,
+   "fails_map_raw": true,
+   "fails_swe_raw": true
   },
   {
    "id": "amc-2026-11-02__g10b",
@@ -5709,9 +7418,12 @@
    "error_export": 0,
    "passes": 1,
    "fails_ok": 1,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": true
+   "fails_swe": true,
+   "fails_map_raw": true,
+   "fails_swe_raw": true
   },
   {
    "id": "amc-2026-11-02__g10c",
@@ -5722,9 +7434,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 9,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": false,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": false,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__g10d",
@@ -5735,9 +7450,12 @@
    "error_export": 0,
    "passes": 1,
    "fails_ok": 3,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": true
+   "fails_swe": true,
+   "fails_map_raw": true,
+   "fails_swe_raw": true
   },
   {
    "id": "amc-2026-11-02__g91a",
@@ -5748,9 +7466,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__g92a",
@@ -5761,9 +7482,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__g93a",
@@ -5774,9 +7498,12 @@
    "error_export": 2,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 2,
    "fails_map": true,
-   "fails_swe": true
+   "fails_swe": true,
+   "fails_map_raw": true,
+   "fails_swe_raw": true
   },
   {
    "id": "amc-2026-11-02__o1",
@@ -5787,9 +7514,12 @@
    "error_export": 2,
    "passes": 0,
    "fails_ok": 7,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__s1",
@@ -5800,9 +7530,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 5,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-28__gaps-3",
@@ -5813,9 +7546,12 @@
    "error_export": 2,
    "passes": 0,
    "fails_ok": 4,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__drafts",
@@ -5826,9 +7562,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 3,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__notes-search",
@@ -5839,9 +7578,12 @@
    "error_export": 6,
    "passes": 0,
    "fails_ok": 1,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__panel-menu",
@@ -5852,9 +7594,12 @@
    "error_export": 3,
    "passes": 0,
    "fails_ok": 3,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-30__run-edges",
@@ -5865,9 +7610,12 @@
    "error_export": 0,
    "passes": 1,
    "fails_ok": 6,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": true
+   "fails_swe": true,
+   "fails_map_raw": true,
+   "fails_swe_raw": true
   },
   {
    "id": "amc-2026-10-30__tree",
@@ -5878,9 +7626,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": false,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": false,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-31__d1",
@@ -5891,9 +7642,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-31__d3",
@@ -5904,9 +7658,12 @@
    "error_export": 0,
    "passes": 0,
    "fails_ok": 0,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": false,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": false,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-31__d4",
@@ -5917,9 +7674,12 @@
    "error_export": 1,
    "passes": 0,
    "fails_ok": 5,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-31__f29",
@@ -5930,9 +7690,12 @@
    "error_export": 5,
    "passes": 0,
    "fails_ok": 6,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-10-31__f35",
@@ -5943,9 +7706,12 @@
    "error_export": 2,
    "passes": 0,
    "fails_ok": 2,
+   "rejects": 0,
    "new_sources": 1,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   },
   {
    "id": "amc-2026-11-02__s2",
@@ -5956,9 +7722,12 @@
    "error_export": 2,
    "passes": 0,
    "fails_ok": 4,
+   "rejects": 0,
    "new_sources": 0,
    "fails_map": true,
-   "fails_swe": false
+   "fails_swe": false,
+   "fails_map_raw": true,
+   "fails_swe_raw": false
   }
  ]
 }
