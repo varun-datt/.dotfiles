@@ -25,7 +25,8 @@ test must kill at least one Stryker mutant on the changed source lines it covers
 runner it is reported "not checked: no mutant runner". When the Stryker report cannot tell which
 mutants the test covers (no testFiles, no test of that name, or mutants with no coveredBy) the test
 fails as "attribution unavailable"; a measured "covers no changed line" is reported and not failed, as is
-"no covering test", when Stryker's dry run ran no test at all.
+"no covering test", when Stryker's dry run ran no test at all. A Stryker run stopped at --stryker-timeout
+keeps the mutants its event-recorder reporter wrote so far, marked partial; a kill seen there passes.
 Mutant counts use only Stryker's MutantStatus names; killedByThisTest is a separate count. A `none` line is reported and counted, and
 is not a failure on its own. Every test runs in a temporary detached worktree, removed afterwards.
 
@@ -66,6 +67,7 @@ TEST_DIRS = {"test", "tests", "__tests__", "fixtures", "__fixtures__", "__snapsh
 TEST_NAME = re.compile(r"(^test_.*\.py$|_test\.py$|\.(test|spec)\.[cm]?[jt]sx?$)")
 HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", re.M)
 STRYKER_REPORT = os.path.join("reports", "mutation", "mutation.json")
+STRYKER_EVENTS = os.path.join("reports", "mutation", "events")
 DETAIL_LINES = 3
 
 
@@ -446,13 +448,43 @@ def has_stryker(tree):
     return any(re.match(r"^\.?stryker\.conf(ig)?\.", f) for f in os.listdir(tree))
 
 
+def partial_report(tree):
+    """A report rebuilt from Stryker's event-recorder files, each written as its event happens; None before the dry run."""
+    folder = os.path.join(tree, STRYKER_EVENTS)
+    try:
+        names = sorted(os.listdir(folder))
+    except OSError:
+        return None
+    report, dry = {"files": {}, "testFiles": {}}, False
+    for n in names:
+        try:
+            with open(os.path.join(folder, n), encoding="utf-8") as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if n.endswith("-onDryRunCompleted.json"):
+            dry = True
+            for t in data.get("result", {}).get("tests", []):
+                report["testFiles"].setdefault(t.get("fileName") or "", {"tests": []})["tests"].append(
+                    {"id": t.get("id"), "name": t.get("name")})
+        elif n.endswith("-onMutantTested.json"):
+            report["files"].setdefault(data.get("fileName") or "", {"mutants": []})["mutants"].append(data)
+    return report if dry else None
+
+
 def stryker_run(tree, ranges, timeout, stryker_cmd):
-    """Run Stryker on the changed line ranges; returns the parsed mutation-testing-elements report."""
+    """Run Stryker on the changed line ranges; returns the parsed mutation-testing-elements report.
+
+    On a timeout the report is rebuilt from the events recorded so far and carries a "partial" note."""
     mutate = ",".join(f"{p}:{s}-{e}" for p, rs in sorted(ranges.items()) for s, e in rs)
-    cmd = split_cmd(stryker_cmd) + ["--mutate", mutate, "--reporters", "json", "--disableBail"]
+    cmd = split_cmd(stryker_cmd) + ["--mutate", mutate, "--reporters", "json,event-recorder", "--disableBail"]
     got = run_cmd(cmd, tree, timeout)
     if got is None:
-        raise SetupError(f"Stryker timed out after {timeout} s")
+        report = partial_report(tree)
+        if report is None:
+            raise SetupError(f"Stryker timed out after {timeout:g} s before its dry run finished")
+        report["partial"] = f"Stryker stopped at the {timeout:g} s limit"
+        return report
     code, out, err = got
     report = os.path.join(tree, STRYKER_REPORT)
     if code and "No tests were executed" in out + err:
@@ -585,6 +617,11 @@ def check(args):
                 e["check"], e["reason"] = "fail", stryker_error
             else:
                 e["check"], e["reason"], e["mutants"] = mutant_check(report, ranges, e["file"], e["name"])
+                if report.get("partial"):
+                    e["partial"] = True
+                    if e["check"] == "fail" and e["reason"].startswith("killed none"):
+                        e["reason"] = "no mutant killed by this test yet" + e["reason"][len("killed none"):]
+                    e["reason"] = f"partial, {report['partial']}: {e['reason']}"
     news = [e for e in runnable if e["kind"] == "FAIL_TO_PASS"]
     if news:
         with worktree(repo, base, node_modules) as tree:
@@ -617,6 +654,7 @@ def check(args):
         "PASS_TO_PASS": [entry(e) for e in tests if e["kind"] == "PASS_TO_PASS"],
         "unmapped": [{"must": n, "status": "fail", "reason": "no line in the REQUIREMENTS MAP"} for n in unmapped],
         "mutants_run": mutants_run,
+        "mutants_partial": bool(report and report.get("partial")),
         "mutant_statuses": statuses,
         "minutes": round((time.monotonic() - started) / 60, 2),
     }
@@ -626,6 +664,8 @@ def entry(e):
     out = {"must": e["must"], "test": f"{e['file']}::{e['name']}", "status": e["check"], "reason": e["reason"]}
     if "mutants" in e:
         out["mutants"] = e["mutants"]
+    if e.get("partial"):
+        out["partial"] = True
     return out
 
 
@@ -645,7 +685,7 @@ def table(result):
     lines.append(f"{'PASS' if result['passed'] else 'FAIL'}: {len(result['musts'])} MUSTs, "
                  f"{sum(r['status'] == 'fail' for k in KINDS for r in result[k])} failing tests, "
                  f"{len(result['problems'])} problems, {len(result['none'])} none (the owner decides whether none should fail), "
-                 f"{result['mutants_run']} mutants, {result['minutes']} min")
+                 f"{result['mutants_run']} mutants{' (partial)' if result.get('mutants_partial') else ''}, {result['minutes']} min")
     return "\n".join(lines)
 
 

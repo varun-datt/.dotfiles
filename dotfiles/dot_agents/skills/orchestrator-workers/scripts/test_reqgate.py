@@ -221,7 +221,7 @@ class PythonGateTest(GateCase):
         p2p = self.row(r, "PASS_TO_PASS", "pkg/test_calc.py::CalcTest.test_add")
         self.assertEqual(("not checked", "not checked: no mutant runner"), (p2p["status"], p2p["reason"]))
         self.assertEqual({"passed", "musts", "problems", "none", "FAIL_TO_PASS", "PASS_TO_PASS", "unmapped", "mutants_run",
-                          "mutant_statuses", "minutes"},
+                          "mutants_partial", "mutant_statuses", "minutes"},
                          set(r) - {"printed", "code"})
         self.assertIn("PASS: 2 MUSTs", r["printed"])
 
@@ -510,6 +510,33 @@ class NoCoveringTestTest(GateCase):
         self.assertTrue(row["reason"].startswith("no covering test: "), row["reason"])
         self.assertNotIn("Stryker failed", row["reason"])
         self.assertNotEqual("pass", row["status"])
+
+
+class StrykerTimeoutTest(GateCase):
+    base_files = dict(StrykerErrorTest.base_files, FAKE_STRYKER="partial\n")
+    head_files = {"src/calc.ts": TS_HEAD}
+
+    def test_timeout_keeps_the_events_recorded_so_far_as_partial_counts(self):
+        r = self.gate([1, 2], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]",
+                               "- MUST 2: src/calc.test.ts::calc > keeps zero [PASS_TO_PASS]"], "--stryker-timeout", "3", code=1)
+        adds, keeps = r["PASS_TO_PASS"]
+        self.assertEqual(("pass", True), (adds["status"], adds.get("partial")))
+        self.assertTrue(adds["reason"].startswith("partial, Stryker stopped at the 3 s limit: this test killed 1 of the 1"), adds["reason"])
+        self.assertEqual("fail", keeps["status"])
+        self.assertTrue(keeps["reason"].startswith("partial, Stryker stopped at the 3 s limit: no mutant killed by this test yet"),
+                        keeps["reason"])
+        self.assertEqual((2, 1, 1), (keeps["mutants"]["attempted"], keeps["mutants"]["statuses"]["Killed"],
+                                     keeps["mutants"]["statuses"]["Survived"]))
+        self.assertTrue(r["mutants_partial"])
+        self.assertIn("2 mutants (partial)", r["printed"])
+        args = self.logged("stryker")[0]
+        self.assertEqual("json,event-recorder", args[args.index("--reporters") + 1])
+
+    def test_timeout_before_the_dry_run_finished_fails_as_a_stryker_error(self):
+        r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]"], "--stryker-timeout", "3",
+                      "--stryker-cmd", STRYKER + " mode=hang", code=1)
+        self.assertEqual(("fail", "Stryker timed out after 3 s before its dry run finished"),
+                         (r["PASS_TO_PASS"][0]["status"], r["PASS_TO_PASS"][0]["reason"]))
 
 
 class NoTestFilesTest(GateCase):
