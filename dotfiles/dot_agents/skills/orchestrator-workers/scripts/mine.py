@@ -45,7 +45,8 @@ whose build is not in the run is listed as unknown provenance. Blockers per firs
 orchestrator's accepted blockers; fix rounds are averaged over every item with at least one fix round,
 and one with no build and first review in the run is listed as provenance missing. A round's kind is
 the kind route.py launched it as (routes.jsonl), else its name's. Averages are rounded once, when printed.
-It also lists each item's fix rounds and flags any after the first whose launch line carries no owner_approved.
+It also lists each item's fix-round launches from routes.jsonl, a relaunch counted again, and flags any after the first
+whose own launch line carries no owner_approved; a fix round with no launch line (an older run) counts from its log.
 Clean under the reviewer: its verdict reads "Blocking: none". Under the orchestrator: no
 Blocker or Major ruled in rulings.jsonl, else the <item>.accepted line ("none", N or "N blocking"),
 else the ACCEPTED list of the item's first fix brief (<fix round>.md), else the reviewer's clean verdict;
@@ -904,16 +905,30 @@ def orchestrator_blocking(run, review, item_rounds, ruled):
 
 
 def fix_rounds(run, rounds):
-    """Each item's fix rounds in start order with the owner_approved their launch line carries; a fix round after the
-    item's first one without it is unapproved (owner, 2026-10-31: one fix round, then the owner decides)."""
-    approved = {}
+    """Each item's fix-round launches in time order, each with the owner_approved its own launch line carries, read from
+    routes.jsonl; a fix round with no launch line (an older run) is listed from its log. Every launch after the item's
+    first without owner_approved is unapproved, a relaunch of the same round included (owner, 2026-10-31: one fix
+    round, then the owner decides)."""
+    starts = {r['name']: r['start'] for r in rounds if r['kind'] == 'fix'}
+    entries, seen, last = [], collections.Counter(), datetime.datetime.min.replace(tzinfo=UTC)
     for _, d in read_routes(run):
-        if d.get('event') == 'launch' and isinstance(d.get('round'), str) and d.get('owner_approved'):
-            approved[d['round']] = d['owner_approved']
+        rnd = d.get('round')
+        if d.get('event') != 'launch' or not isinstance(rnd, str) or d.get('kind') == 'resume' or \
+                (d.get('kind') != 'fix' and split_name(rnd)[1] != 'fix'):
+            continue
+        seen[rnd] += 1
+        last = (parse_time(d['at']) if d.get('at') else None) or starts.get(rnd) or last
+        entries.append({'item': split_name(rnd)[0], 'round': rnd, 'launch': seen[rnd], 't': last,
+                        'owner_approved': d.get('owner_approved') or None})
+    for r in rounds:
+        if r['kind'] == 'fix' and r['name'] not in seen:
+            entries.append({'item': r['item'], 'round': r['name'], 'launch': None, 't': r['start'], 'owner_approved': None})
     by_item = collections.OrderedDict()
-    for r in sorted((r for r in rounds if r['kind'] == 'fix'), key=lambda x: (x['start'], x['name'])):
-        by_item.setdefault(r['item'], []).append({'round': r['name'], 'owner_approved': approved.get(r['name'])})
-    return [{'item': item, 'rounds': rs, 'unapproved': [x['round'] for x in rs[1:] if not x['owner_approved']]}
+    for e in sorted(entries, key=lambda x: x['t']):
+        label = e['round'] + (' (no launch line)' if e['launch'] is None else
+                              f" (launch {e['launch']})" if e['launch'] > 1 else '')
+        by_item.setdefault(e['item'], []).append({'round': e['round'], 'label': label, 'owner_approved': e['owner_approved']})
+    return [{'item': item, 'rounds': rs, 'unapproved': [x['label'] for x in rs[1:] if not x['owner_approved']]}
             for item, rs in by_item.items()]
 
 
@@ -1010,10 +1025,10 @@ def quality_text(q):
     for name in q['unknown_provenance']:
         out.append(f'  unknown provenance: {name} (no build of its item in the run; not a first review)')
     flagged = [f for f in q['fix_rounds'] if f['unapproved']]
-    out.append(f"fix rounds by item: {len(q['fix_rounds'])} items, {len(flagged)} flagged (a second fix round needs "
-               'owner_approved)')
+    out.append(f"fix rounds by item: {len(q['fix_rounds'])} items, {len(flagged)} flagged (each fix launch after the "
+               'first needs owner_approved)')
     for f in q['fix_rounds']:
-        out.append(f"  {f['item']:<24} " + ', '.join(x['round'] + (f" (owner_approved: {x['owner_approved']})"
+        out.append(f"  {f['item']:<24} " + ', '.join(x['label'] + (f" (owner_approved: {x['owner_approved']})"
                                                                if x['owner_approved'] else '') for x in f['rounds']))
     for f in flagged:
         out.append(f"  FLAGGED {f['item']}: {', '.join(f['unapproved'])} launched without owner_approved")

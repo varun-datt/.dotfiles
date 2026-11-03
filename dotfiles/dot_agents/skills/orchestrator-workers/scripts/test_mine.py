@@ -677,7 +677,7 @@ class FixRoundsTest(Base):
                           ('b', [('b-fix1', None), ('b-fix2', 'PLAN 2026-11-02 batch 2 8a')], []),
                           ('c', [('c-fix1', None), ('c-fix3', None)], ['c-fix3'])])
         out = self.cli(self.run.dir, '--quality').stdout
-        self.assertIn('fix rounds by item: 3 items, 1 flagged (a second fix round needs owner_approved)\n', out)
+        self.assertIn('fix rounds by item: 3 items, 1 flagged (each fix launch after the first needs owner_approved)\n', out)
         self.assertRegex(out, r'\n  a\s+a-fix1\n')
         self.assertRegex(out, r'\n  b\s+b-fix1, b-fix2 \(owner_approved: PLAN 2026-11-02 batch 2 8a\)\n')
         self.assertIn('\n  FLAGGED c: c-fix3 launched without owner_approved', out)
@@ -689,7 +689,26 @@ class FixRoundsTest(Base):
             self.run.round(name, at=T0 + i * 1000, credits=10 + i, premium=1)
         out = self.cli(self.run.dir, '--quality').stdout
         self.assertIn('fix rounds by item: 1 items, 1 flagged', out)
-        self.assertIn('FLAGGED d: d-fix2 launched without owner_approved', out)
+        self.assertIn('FLAGGED d: d-fix2 (no launch line) launched without owner_approved', out)
+
+    def test_quality_counts_each_launch_and_checks_the_approval_on_each(self):
+        for i, name in enumerate(('x', 'x-fix1', 'x-fix2', 'y', 'y-fix1')):
+            self.run.round(name, at=T0 + i * 1000, credits=10 + i, premium=1)
+        at = lambda s: mine.datetime.datetime.fromtimestamp(T0 + s, mine.UTC).isoformat()
+        ok = 'PLAN 2026-11-02 batch 2 8a'
+        self.write({**self.launch('x-fix1'), 'at': at(990)}, {**self.launch('x-fix2', approved=ok), 'at': at(1990)},
+                   {**self.launch('x-fix2'), 'at': at(2500)}, {**self.launch('x-fix1-r1', 'resume'), 'at': at(2600)},
+                   {**self.launch('x-fix1', 'resume'), 'at': at(2700)},
+                   {**self.launch('y-fix1'), 'at': at(4000)}, {**self.launch('y-fix1'), 'at': at(4500)})
+        q = mine.quality(self.run.dir, mine.load_rounds(self.run.dir), [])
+        self.assertEqual([(f['item'], [(x['label'], x['owner_approved']) for x in f['rounds']], f['unapproved'])
+                          for f in q['fix_rounds']],
+                         [('x', [('x-fix1', None), ('x-fix2', ok), ('x-fix2 (launch 2)', None)], ['x-fix2 (launch 2)']),
+                          ('y', [('y-fix1', None), ('y-fix1 (launch 2)', None)], ['y-fix1 (launch 2)'])])
+        out = self.cli(self.run.dir, '--quality').stdout
+        self.assertIn('fix rounds by item: 2 items, 2 flagged', out)
+        self.assertIn(f'\n  FLAGGED x: x-fix2 (launch 2) launched without owner_approved', out)
+        self.assertIn('\n  FLAGGED y: y-fix1 (launch 2) launched without owner_approved', out)
 
 
 class CausesTest(unittest.TestCase):
