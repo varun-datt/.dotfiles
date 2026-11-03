@@ -1,0 +1,18 @@
+## REQUIREMENTS MAP
+
+- MUST 1: tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists a failed and a running build, and leaves the passed one to the quiet line [FAIL_TO_PASS]
+- MUST 1: tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line [FAIL_TO_PASS]
+- MUST 1: tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists merge conflicts, open threads with their one file, and a draft [FAIL_TO_PASS]
+- MUST 2: tests/unit/ado-overview.test.ts::reviewer photos > fetches only from the organisation's own Azure DevOps address, and refuses an id that is not a plain id [FAIL_TO_PASS]
+- MUST 2: tests/unit/ado-overview.test.ts::reviewer photos > caps its cache by count, keeps a missing photo as missing, and writes nothing to disk [FAIL_TO_PASS]
+- MUST 2: tests/unit/ado-overview.test.ts::pull request overview: what blocks it > marks nobody as you when the signed-in identity cannot be read [FAIL_TO_PASS]
+- MUST 3: tests/unit/ado.test.ts::Azure DevOps work items > reads a pull request in any project: blockers in fix order, reviewers, builds, open threads by file, size and linked work items [PASS_TO_PASS]
+- MUST 3: tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists nothing when nothing blocks, and sums up what passed in one line [FAIL_TO_PASS]
+- MUST 3: tests/e2e/app.spec.ts::opens an Azure DevOps pull request in a tab from Home and from ! in the palette, with what blocks it, its checks and its linked work items [PASS_TO_PASS]
+- MUST 4: tests/e2e/app.spec.ts::when nothing blocks a pull request, the overview says so in one quiet line, shows each reviewer once with required on the reviewer, You for the signed-in person, initials when a photo fails, and work items last [FAIL_TO_PASS]
+- MUST 4: tests/e2e/app.spec.ts::opens an Azure DevOps pull request in a tab from Home and from ! in the palette, with what blocks it, its checks and its linked work items [FAIL_TO_PASS]
+- MUST 5: tests/e2e/app.spec.ts::when nothing blocks a pull request, the overview says so in one quiet line, shows each reviewer once with required on the reviewer, You for the signed-in person, initials when a photo fails, and work items last [FAIL_TO_PASS]
+- MUST 5: tests/e2e/app.spec.ts::a pull request opens on its sanitised description, lists its changed files with a read-only side-by-side diff, and shows its threads nested [PASS_TO_PASS]
+- MUST 6: tests/unit/ado-overview.test.ts::pull request overview: what blocks it > names who rejected it and who waits for the author, each pointing at the comments [FAIL_TO_PASS]
+- MUST 6: tests/unit/ado-overview.test.ts::pull request overview: what blocks it > lists a rejected and a running policy, and skips the reviewer-count policy [FAIL_TO_PASS]
+- MUST 6: tests/e2e/app.spec.ts::the pull request overview lists a draft blocker: It is a draft [FAIL_TO_PASS]

@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -214,6 +215,177 @@ class BriefTest(unittest.TestCase):
     def test_a_missing_field_names_the_line_that_mentions_it(self):
         found = brief.problems(worker(fields=FIELDS.replace("RISK: UI", "- **RISK:** UI")))
         self.assertEqual(found, ["no RISK line: line 8 names it, but the field must start its own line"])
+
+
+def claims(text):
+    return [re.search(r'"([^"]+)" has no source', w).group(1) for w in brief.number_warnings(text)]
+
+
+class NumberSourceTest(unittest.TestCase):
+    def test_an_unsourced_number_in_goal_cases_or_facts_warns_and_the_exit_code_is_unchanged(self):
+        goal = ("GOAL\nFix rounds cost 6,569 credits, 54% of the run, and 3 of 14 items failed.\n\n" + MUST + "\n"
+                "RISK: UI\nCASES THE ORCHESTRATOR KNOWS: the router lost 994 credits\n"
+                "FACTS TO VERIFY: 120 ms per call\n")
+        text = worker(must=goal, fields="")
+        self.assertEqual(claims(text), ["6,569", "54%", "3 of 14", "994", "120"])
+        self.assertTrue(all(w.startswith("line ") for w in brief.number_warnings(text)))
+        sections = [w.split(": ")[1] for w in brief.number_warnings(text)]
+        self.assertEqual(sections, ["GOAL"] * 3 + ["CASES THE ORCHESTRATOR KNOWS", "FACTS TO VERIFY"])
+        self.assertEqual(brief.problems(text), [])
+        code, err = check(text)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(err.count("warning: line "), 5, err)
+
+    def test_a_source_on_the_same_line_or_bullet_settles_it(self):
+        sourced = ["Fix rounds cost 6,569 credits (`python3 mine.py run --quality`).",
+                   "The guard misses 3 of 14 forms (runqueue.py:74).", "54% of reviews were clean, per 69d558a.",
+                   "Median 994 ms (https://example.com/bench).", "Fix rounds cost 6,569 credits (owner, 2026-11-02).",
+                   "- 994 credits went to fixes\n  as `mine.py run --quality` shows"]
+        for line in sourced:
+            self.assertEqual(claims(worker(must="GOAL\n" + line + "\n\n" + MUST)), [], line)
+        self.assertEqual(claims(worker(must="GOAL\n- 994 credits went to fixes\n- as `mine.py run --quality` shows\n\n"
+                                            + MUST)), ["994"])
+
+    def test_paths_versions_years_dates_and_small_numbers_are_not_claims(self):
+        for line in ("Read research/2026-10-30-build-quality/case-lists.md and docs/v2/page-404.md.",
+                     "The CLI is 1.0.105 and Electron 10.1.1.", "Since 2026, first seen 2026-10-30 at 14:05.",
+                     "Use the 12 cases and 45 minutes.", "The lesson is in references/lessons.md about 72.",
+                     "Port `4173` and `git log -n 200`."):
+            self.assertEqual(claims(worker(must="GOAL\n" + line + "\n\n" + MUST)), [], line)
+
+    def test_numbers_outside_the_three_sections_and_in_other_kinds_are_not_checked(self):
+        text = worker(must=MUST + "2. WHEN 994 rows load, the view SHALL stay under 120 ms.\n")
+        self.assertEqual(brief.number_warnings(text), [])
+        review = "You are a read-only reviewer.\nGOAL\n994 credits.\nTASK: x\n"
+        self.assertEqual(brief.warnings(review), [])
+
+    def test_a_number_alone_in_backticks_is_a_claim(self):
+        self.assertEqual(claims(worker(must="GOAL\nCosts `994` credits.\n\n" + MUST)), ["994"])
+
+    def test_a_rate_is_a_claim(self):
+        self.assertEqual(claims(worker(must="GOAL\nRate is 994/s.\n\n" + MUST)), ["994"])
+
+    def test_an_unsourced_goal_in_a_fix_round_brief_warns(self):
+        fix = "You are a worker session.\nTHIS IS A FIX ROUND\nGOAL\n994 credits.\nTASK: x\nTIME BUDGET: 90 minutes.\n"
+        found = brief.warnings(fix)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn('"994" has no source', found[0])
+
+    def test_a_one_word_command_in_backticks_is_a_source(self):
+        self.assertEqual(claims(worker(must="GOAL\n994 tests passed (`pytest`).\n\n" + MUST)), [])
+
+    def test_a_file_line_without_an_extension_is_a_source(self):
+        self.assertEqual(claims(worker(must="GOAL\n994 tests (Makefile:120).\n\n" + MUST)), [])
+
+    def test_a_version_with_one_dot_and_a_v_is_not_a_claim(self):
+        self.assertEqual(claims(worker(must="GOAL\nThe CLI is v1.105 now.\n\n" + MUST)), [])
+
+    def test_the_task_body_says_where_every_number_comes_from(self):
+        body = (Path(__file__).parent.parent / "assets" / "task-body.md").read_text()
+        self.assertIn("Every number in a brief", body)
+        self.assertIn("comes from a command's output,\nnamed beside it", body)
+
+
+class ReliesOnTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.addCleanup(__import__("shutil").rmtree, self.tmp, True)
+        self.repo = os.path.join(self.tmp, "repo")
+        git = ["git", "-C", self.repo, "-c", "user.name=t", "-c", "user.email=t@example.com"]
+
+        def run(*args):
+            return subprocess.run(list(args), check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL).stdout.strip()
+        run("git", "init", "-q", "-b", "main", self.repo)
+        run(*git, "commit", "-q", "--allow-empty", "-m", "base")
+        self.base = run(*git, "rev-parse", "HEAD")
+        run(*git, "switch", "-q", "-c", "side")
+        run(*git, "commit", "-q", "--allow-empty", "-m", "side fix")
+        self.side = run(*git, "rev-parse", "HEAD")
+        run(*git, "switch", "-q", "main")
+        run(*git, "commit", "-q", "--allow-empty", "-m", "main fix")
+        self.fixed = run(*git, "rev-parse", "HEAD")
+        self.wt = os.path.join(self.tmp, "wt")
+        run(*git, "worktree", "add", "-q", "-b", "item", self.wt, self.side)
+
+    def found(self, line, repo=None, cwd=None):
+        old = os.getcwd()
+        os.chdir(cwd or self.repo)
+        try:
+            return brief.problems(worker() + line + "\n", repo=repo)
+        finally:
+            os.chdir(old)
+
+    def test_an_ancestor_passes_in_every_form(self):
+        for line in (f"RELIES ON: {self.fixed[:7]} the import fix", f"The crash was fixed in {self.fixed}.",
+                     f"Build after `{self.base}` landed.", f"Fixed in commit {self.fixed[:7]}.",
+                     f"RELIES ON: {self.base[:7]} and {self.fixed[:8]}"):
+            self.assertEqual(self.found(line), [], line)
+
+    def test_which_words_name_a_commit(self):
+        named = brief.relied_on(worker() + "Fixed in commit 1234567. Build after `a1b2c3d4`.\nRELIES ON: 7654321 abcdef0\n"
+                                "Run after 1234568 rows; fixed in deadbeefcafe; after 2026-11-02; after the fix.\n")
+        self.assertEqual([c for _, c in named], ["1234567", "a1b2c3d4", "7654321", "abcdef0", "1234568", "deadbeefcafe"])
+
+    def assert_checked(self, line, cid):
+        found = self.found(line)
+        self.assertEqual(len(found), 1, (line, found))
+        self.assertRegex(found[0], rf"^line \d+: relies on {cid}, which the repository at .* does not know")
+
+    def test_fixed_in_an_all_digit_id_is_checked(self):
+        self.assert_checked("It was fixed in 1234567.", "1234567")
+
+    def test_after_an_all_digit_id_in_backticks_is_checked(self):
+        self.assert_checked("Build after `1234567` lands.", "1234567")
+
+    def test_fixed_in_an_all_letter_id_is_checked(self):
+        self.assert_checked("It was fixed in deadbeef.", "deadbeef")
+
+    def test_after_an_all_letter_id_in_backticks_is_checked(self):
+        self.assert_checked("Build after `deadbeef` lands.", "deadbeef")
+
+    def test_relies_on_all_digit_and_all_letter_ids_are_checked(self):
+        found = self.found("RELIES ON: 1234567 deadbeef")
+        self.assertEqual([re.search(r"relies on (\w+), which the repository .* does not know", f).group(1)
+                          for f in found], ["1234567", "deadbeef"])
+
+    def test_commit_before_an_all_digit_or_all_letter_id_is_checked(self):
+        self.assert_checked("Fixed in commit 1234567.", "1234567")
+        self.assert_checked("Build after commit `deadbeef`.", "deadbeef")
+
+    def test_a_commit_on_another_branch_is_refused(self):
+        found = self.found(f"RELIES ON: {self.side[:7]} the side fix")
+        self.assertEqual(len(found), 1, found)
+        self.assertRegex(found[0], rf"^line \d+: relies on {self.side[:7]}, which is not in main of ")
+        self.assertEqual(self.found(f"It was fixed in {self.side}."), [found[0].replace(self.side[:7], self.side)])
+
+    def test_an_unknown_id_is_refused(self):
+        found = self.found("RELIES ON: 1234abcd5678 the missing fix")
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("relies on 1234abcd5678, which the repository at", found[0])
+        self.assertIn("does not know", found[0])
+
+    def test_no_such_line_passes_and_runs_no_git(self):
+        with unittest.mock.patch.object(brief.subprocess, "run", side_effect=AssertionError("git ran")):
+            self.assertEqual(self.found("Build after the merge; fixed in time; after decade."), [])
+
+    def test_repo_means_the_worktree_s_head_not_main(self):
+        self.assertEqual(self.found(f"RELIES ON: {self.side[:7]}", repo=self.wt), [])
+        found = self.found(f"RELIES ON: {self.fixed[:7]}", repo=self.wt)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("which is not in HEAD of", found[0])
+        code, err = check(worker() + f"RELIES ON: {self.side[:7]}\n")
+        self.assertEqual(code, 2)
+
+    def test_no_repository_to_read_is_refused_with_how_to_fix(self):
+        empty = os.path.join(self.tmp, "plain")
+        os.makedirs(empty)
+        found = self.found(f"RELIES ON: {self.fixed[:7]}", cwd=empty)
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("cannot be read: pass --repo <worktree>", found[0])
+
+    def test_the_task_body_offers_an_optional_relies_on_line(self):
+        body = (Path(__file__).parent.parent / "assets" / "task-body.md").read_text()
+        self.assertRegex(body, r"\nRELIES ON: \{\{[A-Z_]*OR_DELETE_THE_LINE\}\}")
 
 
 REGISTER = """# Tech debt

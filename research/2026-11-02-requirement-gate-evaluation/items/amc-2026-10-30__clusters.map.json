@@ -1,0 +1,36 @@
+{
+  "run": "amc-2026-10-30",
+  "item": "clusters",
+  "head": "bca502bec451548ba101dbc68e8f8a8e658c219a",
+  "base": "f914483c64fb7044137ebaa9b25cb0add8f07827",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/clusters.test.ts", "name": "rule-made clusters > group many by kind, largest first, ties by name, with medians", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "rule-made kind clusters with sizes and facet medians"},
+      {"file": "tests/unit/clusters.test.ts", "name": "rule-made clusters > group topics by shared words after stop words, falling back to the title", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "topic grouping by rules; title quotes 'shared words ... after stop words'"},
+      {"file": "tests/unit/clusters-ai.test.ts", "name": "cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "AI naming step sends no more than the cap; title quotes 'at most the Settings cap of groups'"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/clusters.test.ts", "name": "rule-made suggestions > name the evidence and the change, for long sessions with more corrections", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "a rule-made suggestion states its evidence and the change"},
+      {"file": "tests/unit/clusters.test.ts", "name": "rule-made suggestions > show at most five, and none with one session", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "cap of five suggestions; title quotes 'at most five'"},
+      {"file": "tests/unit/clusters.test.ts", "name": "rule-made suggestions > keep a dismissed one dismissed until its evidence changes", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "dismissal survives until evidence changes; title quotes the MUST"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/clusters-ai.test.ts", "name": "cluster AI steps on the fake engine > cost nothing to read, and send outside history only when the press names it", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "no model call on read, outside history sent only for named sources, usage recorded as insight; title echoes the MUST's consent rule"},
+      {"file": "tests/unit/clusters-ai.test.ts", "name": "cluster AI steps on the fake engine > refuse a second press while a pass runs", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "spend only per press: a concurrent second press is refused"},
+      {"file": "tests/e2e/app.spec.ts", "name": "Insights clusters sessions from every source by rule, suggests at no cost, names topic groups with AI only on a press, and wraps long titles at 900 px", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "credits mark on the AI button and the line naming which sources a press sends"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/clusters.test.ts", "name": "rule-made clusters > are empty with no sessions, and suggest nothing", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the 'empty' host case the MUST lists"},
+      {"file": "tests/unit/clusters.test.ts", "name": "rule-made clusters > group many by kind, largest first, ties by name, with medians", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the 'many' and 'ties' host cases the MUST lists"},
+      {"file": "tests/unit/clusters-ai.test.ts", "name": "cluster AI steps on the fake engine > fence the data in tags and send at most the Settings cap of groups per press", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "the fake-engine prompt test (fenced data, caps) the MUST asks for"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "Insights clusters sessions from every source by rule, suggests at no cost, names topic groups with AI only on a press, and wraps long titles at 900 px", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "long title has hover title and accessible name, no overflow at 900 px; title quotes 'long titles at 900 px'"}
+    ]}
+  ],
+  "findings": [
+    {"round": "clusters-review", "n": "1", "musts": ["3"], "tests": ["tests/unit/clusters-ai.test.ts::cluster AI steps on the fake engine > cost nothing to read, and send outside history only when the press names it"], "note": "the consent test uses one outside source, so a cached name from one source is never reused in a press for another; a cross-source test would fail at head, but on the base the whole module is absent, so failing there proves nothing about this gap"},
+    {"round": "clusters-review", "n": "3", "musts": ["2"], "tests": ["tests/unit/clusters.test.ts::rule-made suggestions > add AI suggestions after the rule-made ones, dismissable the same way", "tests/unit/clusters.test.ts::rule-made suggestions > keep a dismissed one dismissed until its evidence changes"], "note": "dismissal tests never reorder an AI reply, so position-keyed ids pass; this is a design flaw a fail-on-base test would not expose"}
+  ],
+  "notes": "clusters.test.ts and clusters-ai.test.ts are new and import new modules (src/host/clusters.ts, new SessionManager methods), so on the base they fail at import or on missing methods rather than on a clean assertion. MUST 5 is UI-only and Playwright-only. Report found as the final message in clusters-review.jsonl."
+}

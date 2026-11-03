@@ -1,0 +1,90 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.notes is not a function"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reports a timeout, a failure, bad output and a folder outside every source",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (intermediate value).notes is not a function"
+    },
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: manager.notes is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reads kb's contract: rows, de-duplicated and capped, openable only for a known source",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (intermediate value).notes is not a function"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/analytics.test.ts::records a palette search as counts and the kind of row picked, never its text, and refuses anything else",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "3",
+      "test": "tests/e2e/app.spec.ts::measures palette searches that find nothing or get no pick, without sending what was typed",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reads kb's contract: rows, de-duplicated and capped, openable only for a known source",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (intermediate value).notes is not a function"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reports a timeout, a failure, bad output and a folder outside every source",
+      "status": "fail",
+      "reason": "error on base, not an assertion: TypeError: (intermediate value).notes is not a function"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::the palette's Notes group shows kb's notes beside the other groups, says when it is slow or failed, and opens a note read-only",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.23
+}

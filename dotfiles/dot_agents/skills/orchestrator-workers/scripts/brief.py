@@ -13,7 +13,16 @@ A worker brief (kind "build") also fails when a top-level numbered MUST item, wi
 it, has no "SHALL", or when its RISK, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY line is
 missing or empty; each may say "none" with a reason, not "none" alone. A bare "none" in backticks,
 bold, italics or with trailing punctuation counts as alone. A worker brief whose TIME BUDGET is over
-45 minutes gets a warning, and the exit code is unchanged.
+45 minutes gets a warning, and the exit code is unchanged. So does each number of 3 or more digits, percentage
+or "N of M" count in the GOAL, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY section of a worker or fix-round
+brief with no source on the same line or bullet: a command in backticks (a number alone in backticks is not one), a
+file:line, a commit id, a URL or a dated owner ruling. Years, dates, times, versions such as 10.1.1 or v1.105, and
+numbers inside paths or URLs are not claims; a rate such as 994/s is.
+
+Any prompt naming a commit it relies on ("fixed in <commit>", "after <commit>", either with "commit" before the id,
+or a "RELIES ON: <commit> ..." line; an id is 7 to 40 hex characters, all digits or all letters included)
+fails unless the commit is an ancestor of HEAD of --repo (the worktree), or of main in the current folder's
+repository when --repo is not given.
 
 With --repo, each open row of DIR/docs/tech-debt.md on a path the prompt names (a backticked token, or a
 word inside a fenced block, that is an existing file or folder relative to DIR) whose TD-<n> id the
@@ -29,6 +38,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 
 WORKER = "You are a worker session"
@@ -135,12 +145,88 @@ def brief_problems(text):
 
 
 def warnings(text, kind=None):
-    if (kind or prompt_kind(text)) != "build":
+    kind = kind or prompt_kind(text)
+    if kind not in ("build", "fix"):
         return []
+    found = number_warnings(text)
     m = re.search(r"^TIME BUDGET:\s*(\d+)", "\n".join(brief_lines(text)), re.M)
-    if m and int(m.group(1)) > SPLIT_MINUTES:
-        return [f"TIME BUDGET of {m.group(1)} minutes is over {SPLIT_MINUTES}: split an item expected over {SPLIT_MINUTES} minutes into two (SKILL.md, Start)"]
-    return []
+    if kind == "build" and m and int(m.group(1)) > SPLIT_MINUTES:
+        found.insert(0, f"TIME BUDGET of {m.group(1)} minutes is over {SPLIT_MINUTES}: split an item expected over {SPLIT_MINUTES} minutes into two (SKILL.md, Start)")
+    return found
+
+
+CLAIM_SECTIONS = ("GOAL", "CASES THE ORCHESTRATOR KNOWS", "FACTS TO VERIFY")
+BULLET = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s")
+FILE_LINE = r"(?<![\w./~-])(?=[\w./~-]*[A-Za-z])[\w./~-]+:\d+(?:-\d+)?"
+COMMIT = r"\b(?=[0-9a-fA-F]*\d)(?=[0-9a-fA-F]*[a-fA-F])[0-9a-fA-F]{7,40}\b"
+DATE = r"\b\d{4}-\d{2}-\d{2}\b"
+SOURCE = re.compile("|".join((r"`(?![\d.,%\s]*`)[^`\n]+`", FILE_LINE, COMMIT, r"https?://\S+",
+                              rf"\b(?:owner|ruled|ruling)\b[^\n]{{0,40}}?{DATE}", rf"{DATE}[^\n]{{0,15}}?\bowner\b")), re.I)
+NOT_A_CLAIM = re.compile("|".join((r"https?://\S+", FILE_LINE, r"(?<!\S)(?![(\[\"'`]?\d[\d.,]*/)\S*/\S*", COMMIT, DATE,
+                                   r"\b\d{1,2}:\d{2}\b", r"\bv\d+(?:\.\d+)*\b", r"\b\d+(?:\.\d+){2,}\b")))
+CLAIM = re.compile(r"\b\d+(?:\.\d+)?\s?%|\b\d+ of \d+\b|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b|\b\d{3,}(?:\.\d+)?\b")
+YEAR = re.compile(r"^(?:19|20)\d{2}$")
+
+
+def claim_units(text):
+    """(line, section, text) for each line or bullet, with its indented continuation lines, in the claim sections."""
+    units, section = [], None
+    for n, line in outside_fences(brief_lines(text)):
+        if HEADING.match(line):
+            section = next((s for s in CLAIM_SECTIONS if line == s or line.startswith((s + ":", s + " ", s + "("))), None)
+        if section is None or not line.strip():
+            continue
+        if units and units[-1][1] == section and line[:1].isspace() and not BULLET.match(line):
+            units[-1][2] += " " + line.strip()
+        else:
+            units.append([n, section, line])
+    return units
+
+
+def number_warnings(text):
+    found = []
+    for n, section, unit in claim_units(text):
+        if SOURCE.search(unit):
+            continue
+        masked = NOT_A_CLAIM.sub(lambda m: " " * len(m.group()), unit)
+        for c in dict.fromkeys(m.group() for m in CLAIM.finditer(masked) if not YEAR.match(m.group())):
+            found.append(f"line {n}: {section}: \"{c}\" has no source beside it: name the command (in backticks) whose "
+                         "output gave it, or a file:line, commit, URL or dated owner ruling (task-body.md)")
+    return found
+
+
+RELIES = re.compile(r"(?i:\bfixed in|\bafter)\s+(?:(?i:commit)\s+)?`?([0-9a-fA-F]{7,40})\b`?")
+HEX = re.compile(r"\b[0-9a-fA-F]{7,40}\b")
+
+
+def relied_on(text):
+    named = []
+    for n, line in outside_fences(brief_lines(text)):
+        ids = HEX.findall(line[len("RELIES ON:"):]) if line.startswith("RELIES ON:") else RELIES.findall(line)
+        named += [(n, c) for c in ids if (n, c) not in named]
+    return named
+
+
+def relies_problems(text, repo=None):
+    """A brief that names a commit it relies on is refused unless that commit is in the worktree's HEAD (--repo), or
+    in main of the current folder's repository when no worktree is given."""
+    named = relied_on(text)
+    if not named:
+        return []
+    where, ref = (repo, "HEAD") if repo else (os.getcwd(), "main")
+
+    def git(*args):
+        return subprocess.run(["git", "-C", where, *args], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    if git("rev-parse", "--verify", "--quiet", ref + "^{commit}").returncode:
+        return [f"line {n}: relies on {c}, but {ref} of {where} cannot be read: pass --repo <worktree>" for n, c in named]
+    found = []
+    for n, c in named:
+        if git("rev-parse", "--verify", "--quiet", c + "^{commit}").returncode:
+            found.append(f"line {n}: relies on {c}, which the repository at {where} does not know: commit the fix "
+                         "first, or correct the id")
+        elif git("merge-base", "--is-ancestor", c, ref).returncode:
+            found.append(f"line {n}: relies on {c}, which is not in {ref} of {where}: merge the fix into it first")
+    return found
 
 
 TICKED = re.compile(r"`([^`\n]+)`")
@@ -185,10 +271,11 @@ def debt_warnings(text, repo):
             for r in rows if not re.search(rf"\b{r['Id']}(?!\d)", visible)]
 
 
-def problems(text, kind=None):
+def problems(text, kind=None, repo=None):
     visible = re.sub(r"<!--.*?-->", "", text, flags=re.S)
     visible = re.sub(r"`[^`\n]*`", "", visible)
     found = [f"unfilled placeholder {m}" for m in sorted(set(re.findall(r"\{\{[^{}\n]+\}\}", visible)))]
+    found += relies_problems(text, repo)
     kind = kind or prompt_kind(text)
     if WORKER in text or kind in ("build", "fix"):
         lines = list(enumerate(brief_lines(text), 1))
@@ -224,7 +311,7 @@ def main(argv=None):
     for path in args.prompts:
         with open(path, encoding="utf-8") as f:
             text = f.read()
-        found = problems(text, kind)
+        found = problems(text, kind, repo)
         for w in warnings(text, kind) + (debt_warnings(text, repo) if repo else []):
             print(f"{path}: warning: {w}", file=sys.stderr)
         for p in found:

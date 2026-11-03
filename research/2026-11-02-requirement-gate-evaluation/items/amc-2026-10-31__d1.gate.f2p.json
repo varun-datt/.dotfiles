@@ -1,0 +1,91 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/inside.test.ts::MUST 1: whatever is linked or swapped, the bytes read come from inside the root",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/inside.test.ts::TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/inside.test.ts::TD-10: a folder under a history root swapped for an outward link between the check and the read is not read",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/inside.test.ts::MUST 2: a root given with a trailing / or /. is refused even when it is otherwise a plain folder",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/inside.test.ts::TD-9: a history root given with a trailing /, /. or // through a link is refused as unsafe",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/inside.test.ts::TD-11: a history root whose parent folder is a link is refused as unsafe",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/inside.test.ts::TD-1: the notes and pin file read refuses a file swapped for an escaping link between the check and the read",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/inside.test.ts::TD-10: a folder under a history root swapped for an outward link between the check and the read is not read",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/inside.ts' imported from $TMPDIR/reqgate-fgq_xkqb/tree/tests/unit/inside.test.ts"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "3",
+      "test": "tests/unit/history.test.ts::a history root that is itself a link is not read, and the source is reported as unsafe",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/history.test.ts::Copilot CLI: counts a normal session's facets by rule",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/history.test.ts::reads incrementally: only files changed since the last read are parsed again, and broken ones are counted as skipped",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/file-write.test.ts::writeTextFile > reads a file that is not valid UTF-8 as read-only, hashed on its own bytes, and refuses to save it",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.23
+}

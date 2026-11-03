@@ -1,0 +1,72 @@
+{
+  "passed": true,
+  "musts": [
+    "1",
+    "2",
+    "3"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_ado",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_kb",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_pins: a pin title in the list",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_run: a worker's reply in status",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_run",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_code",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_pins",
+      "status": "pass",
+      "reason": "fails on base on an assertion"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_kb: kb's hits",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_ado: an Azure DevOps title",
+      "status": "not checked",
+      "reason": "not checked: no mutant runner"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.18
+}

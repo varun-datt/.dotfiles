@@ -1,0 +1,184 @@
+{
+  "passed": true,
+  "musts": [
+    "1",
+    "2",
+    "3"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_ado",
+      "status": "pass",
+      "reason": "killed 3 of 4 mutants it covers (Killed 3, KilledByOtherTests 1)",
+      "mutants": {
+        "attempted": 4,
+        "Killed": 3,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 1
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_kb",
+      "status": "pass",
+      "reason": "killed 3 of 4 mutants it covers (Killed 3, KilledByOtherTests 1)",
+      "mutants": {
+        "attempted": 4,
+        "Killed": 3,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 1
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_kb: kb's hits",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_pins: a pin title in the list",
+      "status": "pass",
+      "reason": "killed 6 of 9 mutants it covers (Killed 6, Survived 3)",
+      "mutants": {
+        "attempted": 9,
+        "Killed": 6,
+        "Survived": 3,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_run: a worker's reply in status",
+      "status": "pass",
+      "reason": "killed 8 of 19 mutants it covers (Killed 8, Survived 5, Timeout 6)",
+      "mutants": {
+        "attempted": 19,
+        "Killed": 8,
+        "Survived": 5,
+        "Timeout": 6,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_run",
+      "status": "pass",
+      "reason": "killed 4 of 5 mutants it covers (Killed 4, KilledByOtherTests 1)",
+      "mutants": {
+        "attempted": 5,
+        "Killed": 4,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 1
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_code",
+      "status": "pass",
+      "reason": "killed 3 of 4 mutants it covers (Killed 3, KilledByOtherTests 1)",
+      "mutants": {
+        "attempted": 4,
+        "Killed": 3,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 1
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/tool-fences.test.ts::every amc_ tool fences outside text in its failure, both in textResultForLlm and in error > amc_pins",
+      "status": "pass",
+      "reason": "killed 4 of 5 mutants it covers (Killed 4, KilledByOtherTests 1)",
+      "mutants": {
+        "attempted": 5,
+        "Killed": 4,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 1
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/tool-fences.test.ts::amc_ tool results that carry outside text come back fenced > amc_ado: an Azure DevOps title",
+      "status": "not checked",
+      "reason": "covers no changed line",
+      "mutants": {
+        "attempted": 0,
+        "Killed": 0,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 36,
+  "mutant_statuses": {
+    "NoCoverage": 1,
+    "Killed": 20,
+    "Survived": 10,
+    "Timeout": 6
+  },
+  "minutes": 1.98
+}

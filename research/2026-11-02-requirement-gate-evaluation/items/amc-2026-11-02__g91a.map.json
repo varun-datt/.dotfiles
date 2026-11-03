@@ -1,0 +1,32 @@
+{
+  "run": "amc-2026-11-02", "item": "g91a",
+  "head": "cd27ee62c897e38d44c6cf941ab5cb6835a69447", "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/web-search.test.ts", "name": "enableCitations on every Copilot session > sets it on create, on resume, and on the create a never-sent resume falls back to", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "captures the Copilot create and resume configs and asserts enableCitations true; describe title names the MUST's setting"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/web-search.test.ts", "name": "the Searched the web row > shows one row for one search, running until it completes, then folded", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 2 one-search case with fold on completion; describe quotes the row's wording"},
+      {"file": "tests/unit/web-search.test.ts", "name": "the Searched the web row > updates one row in place for three searches in a turn", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 2 three-searches case, updated in place"},
+      {"file": "tests/unit/web-search.test.ts", "name": "the Searched the web row > folds an unfinished search when the turn ends, and attaches late events after Stop to the ended turn without reopening it", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 2 progress-after-Stop case"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/web-search.test.ts", "name": "source links in the view > numbers two sources cited three times, deduplicates a repeated address, and marks each span's end", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "title quotes MUST 3's two-sources-cited-three-times case"},
+      {"file": "tests/unit/web-search.test.ts", "name": "source links in the view > shows no Sources and no marks when a reply has no citations", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 3 no-citations case"},
+      {"file": "tests/unit/web-search.test.ts", "name": "source links in the view > does not link javascript:alert(1)", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 3 javascript: URL case; it.each title printed with its first argument"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/web-search.test.ts", "name": "Allow this domain for the session > https://a.example.com/x offers its host as the URL parser reads it", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "domain from the URL parser and the approve-for-session answer with that domain; it.each title printed with its first argument; describe echoes the choice's wording"},
+      {"file": "tests/unit/web-search.test.ts", "name": "Allow this domain for the session > offers no domain choice for a URL the parser rejects", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "MUST 4 rejected-URL case"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a URL approval offers Allow <domain> for this session and approves for the session", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "only test of the rendered card's button; title quotes MUST 4"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/unit/web-search.test.ts", "name": "a Cursor (ACP) session is unchanged > raises a URL request with no domain choice and sends nothing new", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "URL request through the fake ACP agent carries no domain and no search events; describe names MUST 5's Cursor (ACP) case"}
+    ]}
+  ],
+  "findings": [
+    {"round": "g91a-review", "n": "4", "musts": ["1"], "tests": ["tests/unit/web-search.test.ts::enableCitations on every Copilot session > sets it on create, on resume, and on the create a never-sent resume falls back to"], "note": "The one-shot path used for titles and insights builds its own session config without the flag; the mapped test captures only the main create and resume paths, so extending it to the one-shot callers would fail at head (ruled rejected by the orchestrator)."},
+    {"round": "g91a-review", "n": "5", "musts": ["4"], "tests": ["tests/unit/web-search.test.ts::Allow this domain for the session > https://a.example.com/x offers its host as the URL parser reads it", "tests/e2e/app.spec.ts::a URL approval offers Allow <domain> for this session and approves for the session"], "note": "The domain tests exercise the helper functions, not the rendered permission card, and the browser test covers only an ASCII host; a missing-test finding, so no behaviour fails on base beyond what the helpers already show."}
+  ],
+  "notes": "Several chosen names come from it.each with %s; given as Vitest prints them with the first row's value. One it.each row in the domain test holds a URL with credentials that printed masked in this terminal, so that row was not chosen. MUST 1 and MUST 5 each have only one direct test. web-search.test.ts imports src/ui/citations.ts, new on the branch, so base runs fail at import."
+}

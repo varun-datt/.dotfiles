@@ -1,0 +1,26 @@
+{
+  "run": "amc-2026-11-02", "item": "s2", "head": "7ebb8444b2f9eb7776efd7a644cc5ba27d14e2e3", "base": "8c9fdd9dcdec47151475f9f9f37b65629a41a5c8",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/server.test.ts", "name": "host server > refuses to start a run without AMC_RUNS=1 and creates nothing, but still lists and ends runs", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "new test: POST /api/runs refused with 403 naming the setting, no run created, list and end still served; title quotes the MUST's setting and refusal"},
+      {"file": "tests/unit/actions.test.ts", "name": "action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "new test: menu items drop new-run when the setting is off; hiddenActions is new in src/ui/actions.ts"},
+      {"file": "tests/e2e/app.spec.ts", "name": "hides New run everywhere and refuses to start a run when the host runs without AMC_RUNS=1", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "browser test of palette, help, New session dialog and the API refusal on a host started without the setting"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/unit/server.test.ts", "name": "host server > passes a new run to the manager with AMC_RUNS=1, and says so on health", "kind": "FAIL_TO_PASS", "strict": true, "runner": "vitest", "why": "new test: with runs on, health reports it and POST /api/runs reaches the manager (git-repo error, not 403)"},
+      {"file": "tests/unit/actions.test.ts", "name": "action registry > leaves New run out of the menu bar unless the host runs with AMC_RUNS=1", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "second assertion: with the setting on every action including new-run is listed"},
+      {"file": "tests/e2e/app.spec.ts", "name": "lists New run in the palette, help and New session when the host runs with AMC_RUNS=1", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "browser test that palette, help and New session still offer New run with the setting"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "hides New run everywhere and refuses to start a run when the host runs without AMC_RUNS=1", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "the one test checking the entry hidden without the setting; the config changes themselves (playwright.config.ts, tests/desktop/window.spec.ts env) have no direct test"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/task-loop.test.ts", "name": "a task whose check passes waits for the owner, and Merge brings it into the checkout's current branch", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "changed assertion: a brief without tries starts with maxTries 2"},
+      {"file": "tests/unit/task-loop.test.ts", "name": "a failed check starts a fresh try told why, and the last failed try leaves the task in Do now", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "changed assertion: retry prompt says try 2 of 2 under the new default"},
+      {"file": "tests/unit/task-loop.test.ts", "name": "a brief takes 1 to 5 tries and refuses 0 or 6", "kind": "PASS_TO_PASS", "strict": true, "runner": "vitest", "why": "new test of the 1..5 range and 0/6 refusal, behaviour the base already had; title quotes the MUST's range and cases"}
+    ]},
+    {"must": "5", "none": "help and docs wording changes (src/ui/help.tsx, docs/*.md, AGENTS.md) have no test asserting the stated default tries or how to start a run; the browser test only checks New run is absent from help"}
+  ],
+  "findings": [],
+  "notes": "Control item, no findings. MUST 4's view default (src/ui/tasks.tsx) is checked only by the changed Tries-field assertion inside the e2e test 'makes a chat into a task the owner reviews, ...' (Playwright), not listed to keep three Vitest tests. Strict marks rest on titles quoting the setting name or the 1-to-5 / 0-or-6 cases; no test cites a MUST number."
+}

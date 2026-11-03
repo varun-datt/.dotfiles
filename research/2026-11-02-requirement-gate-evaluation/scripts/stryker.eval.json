@@ -1,0 +1,13 @@
+{
+  "testRunner": "vitest",
+  "vitest": { "configFile": "vitest.config.ts", "related": true, "pool": "forks" },
+  "mutate": [],
+  "reporters": ["json", "clear-text", "progress"],
+  "jsonReporter": { "fileName": "reports/mutation/mutation.json" },
+  "tsconfigFile": "no-tsconfig-rewrite.json",
+  "tempDirName": ".stryker-tmp",
+  "cleanTempDir": "always",
+  "concurrency": 4,
+  "disableBail": true,
+  "ignorePatterns": ["dist", ".gates", "reports", "test-results", "playwright-report", "src/rust/target", "samples/**/bin", "samples/**/obj"]
+}

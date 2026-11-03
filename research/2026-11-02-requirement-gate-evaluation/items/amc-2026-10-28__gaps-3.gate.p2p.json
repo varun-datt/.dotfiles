@@ -1,0 +1,73 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [
+    "MUST 2 has no line in the REQUIREMENTS MAP",
+    "MUST 4 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/acp.test.ts::asks again when an approved command comes back with other environment variables or another folder, and says so on the card",
+      "status": "pass",
+      "reason": "killed 5 of 11 mutants it covers (Killed 5, Survived 4, KilledByOtherTests 2)",
+      "mutants": {
+        "attempted": 11,
+        "Killed": 5,
+        "Survived": 4,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 2
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/code-tool.test.ts::hover on a symbol declared outside the folder says so instead of showing its signature and docs",
+      "status": "pass",
+      "reason": "killed 4 of 7 mutants it covers (Killed 4, Survived 1, KilledByOtherTests 2)",
+      "mutants": {
+        "attempted": 7,
+        "Killed": 4,
+        "Survived": 1,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 2
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "2",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "4",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 71,
+  "mutant_statuses": {
+    "NoCoverage": 5,
+    "Killed": 24,
+    "Survived": 42,
+    "Timeout": 5
+  },
+  "minutes": 2.74
+}

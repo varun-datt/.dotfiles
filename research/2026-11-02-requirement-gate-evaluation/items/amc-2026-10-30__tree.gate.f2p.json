@@ -1,0 +1,72 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "3",
+      "why": "start-up size is a build measure; tests/unit/entry-budget.test.ts checks only the byte counter and touches no changed line"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::next change reveals a file whose folder is closed and moves the tree's focus to it",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::the Files tree follows the tree pattern: roles with level and position, one tab stop, arrows, Home, End, type-ahead, and next change opens the folder of the file it reaches",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::next change reveals a file whose folder is closed and moves the tree's focus to it",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::a pull request opens on its sanitised description, lists its changed files with a read-only side-by-side diff, and shows its threads nested",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::the Files pane shows a file side by side, inline, as a Markdown preview or raw, shows an image as before and after, and remembers the view over a reload",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/e2e/app.spec.ts::Alt+F5 and Shift+Alt+F5 move between changes, past a file's last change to the next file, and the help lists them",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.17
+}

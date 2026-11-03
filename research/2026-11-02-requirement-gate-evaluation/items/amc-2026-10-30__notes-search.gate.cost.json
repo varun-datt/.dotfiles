@@ -1,0 +1,149 @@
+{
+  "passed": true,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query",
+      "status": "pass",
+      "reason": "killed 53 of 87 mutants it covers (Killed 53, Survived 23, KilledByOtherTests 11)",
+      "mutants": {
+        "attempted": 87,
+        "Killed": 53,
+        "Survived": 23,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 11
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reports a timeout, a failure, bad output and a folder outside every source",
+      "status": "pass",
+      "reason": "killed 27 of 41 mutants it covers (Killed 27, Survived 10, KilledByOtherTests 4)",
+      "mutants": {
+        "attempted": 41,
+        "Killed": 27,
+        "Survived": 10,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 4
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/knowledge.test.ts::the host reads a note only from inside its source's folder, records kb health, and refuses a short query",
+      "status": "pass",
+      "reason": "killed 53 of 87 mutants it covers (Killed 53, Survived 23, KilledByOtherTests 11)",
+      "mutants": {
+        "attempted": 87,
+        "Killed": 53,
+        "Survived": 23,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 11
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reads kb's contract: rows, de-duplicated and capped, openable only for a known source",
+      "status": "pass",
+      "reason": "killed 20 of 28 mutants it covers (Killed 20, Survived 5, KilledByOtherTests 3)",
+      "mutants": {
+        "attempted": 28,
+        "Killed": 20,
+        "Survived": 5,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 3
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/analytics.test.ts::records a palette search as counts and the kind of row picked, never its text, and refuses anything else",
+      "status": "pass",
+      "reason": "killed 13 of 14 mutants it covers (Killed 13, Survived 1)",
+      "mutants": {
+        "attempted": 14,
+        "Killed": 13,
+        "Survived": 1,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reads kb's contract: rows, de-duplicated and capped, openable only for a known source",
+      "status": "pass",
+      "reason": "killed 20 of 28 mutants it covers (Killed 20, Survived 5, KilledByOtherTests 3)",
+      "mutants": {
+        "attempted": 28,
+        "Killed": 20,
+        "Survived": 5,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 3
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/knowledge.test.ts::the palette's note search reports a timeout, a failure, bad output and a folder outside every source",
+      "status": "pass",
+      "reason": "killed 27 of 41 mutants it covers (Killed 27, Survived 10, KilledByOtherTests 4)",
+      "mutants": {
+        "attempted": 41,
+        "Killed": 27,
+        "Survived": 10,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 4
+      }
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 159,
+  "mutant_statuses": {
+    "NoCoverage": 394,
+    "Survived": 52,
+    "Timeout": 8,
+    "Killed": 99
+  },
+  "minutes": 5.45
+}

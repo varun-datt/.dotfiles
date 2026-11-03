@@ -1,0 +1,79 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "problems": [
+    "MUST 1 has no line in the REQUIREMENTS MAP",
+    "MUST 3 has no line in the REQUIREMENTS MAP",
+    "MUST 4 has no line in the REQUIREMENTS MAP"
+  ],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "2",
+      "test": "tests/unit/one-shot.test.ts::Copilot tool search option > reaches the session config only when set",
+      "status": "pass",
+      "reason": "killed 1 of 1 mutants it covers (Killed 1)",
+      "mutants": {
+        "attempted": 1,
+        "Killed": 1,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/transcript.test.ts::buildView > shows a hand-over summary without the model's analysis block",
+      "status": "pass",
+      "reason": "killed 10 of 11 mutants it covers (Killed 10, Survived 1)",
+      "mutants": {
+        "attempted": 11,
+        "Killed": 10,
+        "Survived": 1,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 0
+      }
+    }
+  ],
+  "unmapped": [
+    {
+      "must": "1",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "3",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    },
+    {
+      "must": "4",
+      "status": "fail",
+      "reason": "no line in the REQUIREMENTS MAP"
+    }
+  ],
+  "mutants_run": 36,
+  "mutant_statuses": {
+    "NoCoverage": 3,
+    "Killed": 13,
+    "Survived": 23
+  },
+  "minutes": 1.28
+}

@@ -1,0 +1,42 @@
+{
+  "run": "amc-2026-10-29",
+  "item": "pr-threads",
+  "head": "1306db7669bf5a4d10a4f090ab3d13c821e370ec",
+  "base": "2198954c0844f60fcb87a9176adbd30430e245a7",
+  "map": [
+    {"must": "1", "tests": [
+      {"file": "tests/unit/ado.test.ts", "name": "Azure DevOps work items > reads a pull request's changed files, renames included, and every human thread with nested replies, open ones first", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "changed to expect each comment's author id, which the thread card needs for the avatar; comment order checked"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a thread on a line shows under that line in the diff with its author, photo, age and status, read-only", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "zone sits under line 12 with author, avatar, age, status and no reply controls; title echoes the MUST's list"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a pull request opens on its sanitised description, lists its changed files with a read-only side-by-side diff, and shows its threads nested", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "changed: inline thread folds after three comments and opens to four"}
+    ]},
+    {"must": "2", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "resolved threads on a file are hidden behind one quiet line that shows them", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "fixed thread hidden by default, one quiet line shows and hides it; title quotes 'one quiet line'"}
+    ]},
+    {"must": "3", "tests": [
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > lists merge conflicts, open threads with their one file, and a draft", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "changed: the open-threads blocker's 'Go to them' now targets the threads pane, not Comments"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a thread on no file shows in the Overview's discussion", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "a general thread appears under a Discussion heading in Overview"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the pull request overview lists a threads blocker: 3 open threads in ExportSettings.tsx", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "template-literal title from the blocker table; changed so 'Go to them' opens Files at the first thread"}
+    ]},
+    {"must": "4", "tests": [
+      {"file": "tests/unit/ado-overview.test.ts", "name": "pull request overview: what blocks it > names who rejected it and who waits for the author, each pointing at the threads", "kind": "FAIL_TO_PASS", "strict": false, "runner": "vitest", "why": "changed: blockers that pointed at the Comments pane now point at threads"},
+      {"file": "tests/e2e/app.spec.ts", "name": "a pull request opens on its sanitised description, lists its changed files with a read-only side-by-side diff, and shows its threads nested", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "changed: asserts no Comments tab and that the thread content it held now shows inline"}
+    ]},
+    {"must": "5", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "fifty open threads in one file all show under their lines and the diff still scrolls", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "measures long frames while scrolling and typing with 50 threads; title echoes '50 threads in one file'"}
+    ]},
+    {"must": "6", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "a thread on a line shows under that line in the diff with its author, photo, age and status, read-only", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "the 'thread under its line' browser test the MUST lists"},
+      {"file": "tests/e2e/app.spec.ts", "name": "resolved threads on a file are hidden behind one quiet line that shows them", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "the hidden-resolved browser test the MUST lists"},
+      {"file": "tests/e2e/app.spec.ts", "name": "fifty open threads in one file all show under their lines and the diff still scrolls", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "the 50-threads browser test the MUST lists"}
+    ]},
+    {"must": "7", "tests": [
+      {"file": "tests/e2e/app.spec.ts", "name": "at 900 px wide the Files diff switches to inline", "kind": "FAIL_TO_PASS", "strict": true, "runner": "playwright", "why": "no side-by-side class at 900 px; title quotes the MUST's 900 px / inline wording"},
+      {"file": "tests/e2e/app.spec.ts", "name": "the Files tree folds folders with their totals, counts lines and threads per file, and folds the lock and generated files under one row that says why", "kind": "FAIL_TO_PASS", "strict": false, "runner": "playwright", "why": "changed to expect '1 file' and '1 open thread' (singular)"}
+    ]},
+    {"must": "8", "none": "a render-and-inspect step for the worker's report, not something a test checks"}
+  ],
+  "findings": [
+    {"round": "pr-threads-review1", "n": "4", "musts": ["3"], "tests": ["tests/e2e/app.spec.ts::when nothing blocks a pull request, the overview says so in one quiet line, shows each reviewer once with required on the reviewer, You for the signed-in person, initials when a photo fails, and work items last"], "note": "an existing, unchanged browser test pins the Overview's section headings and broke when the new Discussion section was added; it is a pass-to-pass Playwright guard, so the gate's Vitest fail-on-base run would neither see nor need it"}
+  ],
+  "notes": "Most MUSTs are UI behaviour checked only by Playwright tests; Vitest coverage is limited to two data-shape changes (author id, blocker pane target). The finding's test is not in the map because the branch did not change it. Report found as the final message in pr-threads-review1.jsonl."
+}

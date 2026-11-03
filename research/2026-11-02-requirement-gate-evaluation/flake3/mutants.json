@@ -1,0 +1,66 @@
+[
+ {
+  "mutant": "none",
+  "guard": "sleep",
+  "added_to": "tests/unit/x.test.ts",
+  "guard_assertion": "passes",
+  "should": "passes",
+  "guard_sees_it": true
+ },
+ {
+  "mutant": "known sleep form",
+  "guard": "sleep",
+  "added_to": "tests/unit/x.test.ts",
+  "guard_assertion": "fails",
+  "should": "fails",
+  "guard_sees_it": true
+ },
+ {
+  "mutant": "finding 2: sleep through an arrow",
+  "guard": "sleep",
+  "added_to": "tests/unit/x.test.ts",
+  "guard_assertion": "passes",
+  "should": "fails",
+  "guard_sees_it": false
+ },
+ {
+  "mutant": "finding 2: promisified setTimeout",
+  "guard": "sleep",
+  "added_to": "tests/unit/x.test.ts",
+  "guard_assertion": "passes",
+  "should": "fails",
+  "guard_sees_it": false
+ },
+ {
+  "mutant": "finding 2: sleep named in a comment",
+  "guard": "sleep",
+  "added_to": "tests/unit/x.test.ts",
+  "guard_assertion": "fails",
+  "should": "passes",
+  "guard_sees_it": false
+ },
+ {
+  "mutant": "none",
+  "guard": "port",
+  "added_to": "tests/unit/x.test.ts",
+  "guard_assertion": "passes",
+  "should": "passes",
+  "guard_sees_it": true
+ },
+ {
+  "mutant": "port in a test file",
+  "guard": "port",
+  "added_to": "tests/unit/x.test.ts",
+  "guard_assertion": "fails",
+  "should": "fails",
+  "guard_sees_it": true
+ },
+ {
+  "mutant": "finding 3: port in the browser config at head",
+  "guard": "port",
+  "added_to": "playwright.config.ts",
+  "guard_assertion": "passes",
+  "should": "fails",
+  "guard_sees_it": false
+ }
+]

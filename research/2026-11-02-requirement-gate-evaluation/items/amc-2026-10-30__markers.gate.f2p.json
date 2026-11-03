@@ -1,0 +1,77 @@
+{
+  "passed": false,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4"
+  ],
+  "problems": [],
+  "none": [
+    {
+      "must": "3",
+      "why": "no test checks that no credits are spent or that nothing leaves the machine"
+    }
+  ],
+  "FAIL_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/markers.test.ts::keeps markers in the store across a restart, edits and deletes them",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/markers.ts' imported from $TMPDIR/reqgate-s3y_8rxk/tree/tests/unit/markers.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/markers.test.ts::accepts only a real date, a name, a known measure and a stated direction",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/markers.ts' imported from $TMPDIR/reqgate-s3y_8rxk/tree/tests/unit/markers.test.ts"
+    },
+    {
+      "must": "1",
+      "test": "tests/e2e/app.spec.ts::adds a marker in Insights, reads its before and after figures with session counts, edits it and deletes it",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/markers.test.ts::compares equal windows on each side of the marker's day, counting sessions on each side",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/markers.ts' imported from $TMPDIR/reqgate-s3y_8rxk/tree/tests/unit/markers.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/markers.test.ts::says too few sessions below the threshold on either side and states no verdict",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/markers.ts' imported from $TMPDIR/reqgate-s3y_8rxk/tree/tests/unit/markers.test.ts"
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/markers.test.ts::gives a verdict only when the owner stated the direction",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/markers.ts' imported from $TMPDIR/reqgate-s3y_8rxk/tree/tests/unit/markers.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/markers.test.ts::puts a session that starts at the marker's midnight after it and one a minute earlier before it, and leaves out the day past the window",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/markers.ts' imported from $TMPDIR/reqgate-s3y_8rxk/tree/tests/unit/markers.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/markers.test.ts::has no value for a measure with no data, and for a marker dated after today",
+      "status": "fail",
+      "reason": "load on base, not an assertion: Cannot find module '../../src/host/markers.ts' imported from $TMPDIR/reqgate-s3y_8rxk/tree/tests/unit/markers.test.ts"
+    },
+    {
+      "must": "4",
+      "test": "tests/e2e/app.spec.ts::adds a marker in Insights, reads its before and after figures with session counts, edits it and deletes it",
+      "status": "fail",
+      "reason": "error at head: Vitest exited 1: no output; it did not report the file"
+    }
+  ],
+  "PASS_TO_PASS": [],
+  "unmapped": [],
+  "mutants_run": 0,
+  "mutant_statuses": {},
+  "minutes": 0.18
+}

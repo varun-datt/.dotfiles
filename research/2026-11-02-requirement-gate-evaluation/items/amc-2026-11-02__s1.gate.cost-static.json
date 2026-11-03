@@ -1,0 +1,259 @@
+{
+  "passed": true,
+  "musts": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6"
+  ],
+  "problems": [],
+  "none": [],
+  "FAIL_TO_PASS": [],
+  "PASS_TO_PASS": [
+    {
+      "must": "1",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > shows how long a Do now session has waited, from the event that asked, failed or went quiet",
+      "status": "pass",
+      "reason": "killed 14 of 20 mutants it covers (Killed 14, Survived 1, KilledByOtherTests 5)",
+      "mutants": {
+        "attempted": 20,
+        "Killed": 14,
+        "Survived": 1,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 5
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > counts a task in Do now from its last change of state, and a stopped one as a last change",
+      "status": "pass",
+      "reason": "killed 17 of 22 mutants it covers (Killed 17, Survived 1, KilledByOtherTests 4)",
+      "mutants": {
+        "attempted": 22,
+        "Killed": 17,
+        "Survived": 1,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 4
+      }
+    },
+    {
+      "must": "1",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > uses when a review was asked when the source says, and says when it does not",
+      "status": "pass",
+      "reason": "killed 30 of 39 mutants it covers (Killed 30, Survived 3, KilledByOtherTests 6)",
+      "mutants": {
+        "attempted": 39,
+        "Killed": 30,
+        "Survived": 3,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 6
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > shows a Plan or background session's last change as a relative time, the later of its last event and its last update",
+      "status": "pass",
+      "reason": "killed 20 of 28 mutants it covers (Killed 20, Survived 3, KilledByOtherTests 5)",
+      "mutants": {
+        "attempted": 28,
+        "Killed": 20,
+        "Survived": 3,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 5
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > shows an outside row's last change in Plan and the background, and nothing when its source gave no time",
+      "status": "pass",
+      "reason": "killed 25 of 35 mutants it covers (Killed 25, Survived 2, KilledByOtherTests 8)",
+      "mutants": {
+        "attempted": 35,
+        "Killed": 25,
+        "Survived": 2,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 8
+      }
+    },
+    {
+      "must": "2",
+      "test": "tests/unit/home-items.test.ts::Home's outside work (4) > gives a work item its last change, and a parent shown for context its own last change rather than its newest child's",
+      "status": "pass",
+      "reason": "killed 21 of 68 mutants it covers (Killed 21, Survived 15, KilledByOtherTests 32)",
+      "mutants": {
+        "attempted": 68,
+        "Killed": 21,
+        "Survived": 15,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 32
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > shows no time for a missing or unreadable date, or before the clock is read, and none in the future",
+      "status": "pass",
+      "reason": "killed 13 of 15 mutants it covers (Killed 13, Survived 1, KilledByOtherTests 1)",
+      "mutants": {
+        "attempted": 15,
+        "Killed": 13,
+        "Survived": 1,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 1
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/home-items.test.ts::Home's outside work (4) > gives each row the time its source says, and none where the source says nothing (105)",
+      "status": "pass",
+      "reason": "killed 14 of 59 mutants it covers (Killed 14, Survived 23, KilledByOtherTests 22)",
+      "mutants": {
+        "attempted": 59,
+        "Killed": 14,
+        "Survived": 23,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 22
+      }
+    },
+    {
+      "must": "3",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > uses when a review was asked when the source says, and says when it does not",
+      "status": "pass",
+      "reason": "killed 30 of 39 mutants it covers (Killed 30, Survived 3, KilledByOtherTests 6)",
+      "mutants": {
+        "attempted": 39,
+        "Killed": 30,
+        "Survived": 3,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 6
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/home-items.test.ts::Home's outside work (4) > puts the owner's draft in Plan from either source, keeps others' drafts out, and moves a draft on when it turns ready (106)",
+      "status": "pass",
+      "reason": "killed 20 of 61 mutants it covers (Killed 20, Survived 22, KilledByOtherTests 19)",
+      "mutants": {
+        "attempted": 61,
+        "Killed": 20,
+        "Survived": 22,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 19
+      }
+    },
+    {
+      "must": "4",
+      "test": "tests/unit/home-items.test.ts::Home's outside work (4) > orders the owner's own pull request as the dashboard does: draft, failed build, then reviewers' changes, never counting the author's own vote",
+      "status": "pass",
+      "reason": "killed 6 of 26 mutants it covers (Killed 6, Survived 9, KilledByOtherTests 11)",
+      "mutants": {
+        "attempted": 26,
+        "Killed": 6,
+        "Survived": 9,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 11
+      }
+    },
+    {
+      "must": "5",
+      "test": "tests/unit/bands.test.ts::Home's bands > states each band's rule as the owner worded it (106)",
+      "status": "pass",
+      "reason": "killed 9 of 15 mutants it covers (Killed 9, KilledByOtherTests 6)",
+      "mutants": {
+        "attempted": 15,
+        "Killed": 9,
+        "Survived": 0,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 6
+      }
+    },
+    {
+      "must": "6",
+      "test": "tests/unit/row-time.test.ts::a time on every Home row (105) > moves with the clock: the same row reads longer a minute later",
+      "status": "pass",
+      "reason": "killed 13 of 20 mutants it covers (Killed 13, Survived 1, KilledByOtherTests 6)",
+      "mutants": {
+        "attempted": 20,
+        "Killed": 13,
+        "Survived": 1,
+        "Timeout": 0,
+        "NoCoverage": 0,
+        "CompileError": 0,
+        "RuntimeError": 0,
+        "Pending": 0,
+        "Ignored": 0,
+        "KilledByOtherTests": 6
+      }
+    }
+  ],
+  "unmapped": [],
+  "mutants_run": 278,
+  "mutant_statuses": {
+    "NoCoverage": 48,
+    "Killed": 201,
+    "Survived": 77,
+    "Ignored": 21
+  },
+  "minutes": 0.97
+}

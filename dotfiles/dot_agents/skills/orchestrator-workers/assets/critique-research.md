@@ -2,8 +2,9 @@
 Before launching, the orchestrator copies a snapshot into {{SNAPSHOT_DIR}}, outside the worktree, so
 the author's later edits cannot change what is critiqued: the note as `note.md`, its page and shots,
 the research task as `task.md`, and the author's last report as `report.md` (from `result.py`). Launch
-with `bash scripts/review.sh --author-model <author's model> --add-dir {{SNAPSHOT_DIR}} <item>-critique
-<worktree> <this prompt filled>`; a research round leaves no REVIEW-DIFF.patch to read.
+with `bash scripts/review.sh --author-model <author's model> --add-dir {{SNAPSHOT_DIR}} --project <project repository>
+<item>-critique <worktree> <this prompt filled>`; a research round leaves no REVIEW-DIFF.patch to read. review.sh
+adds the run folder itself, and says on stderr when no --project was given (the critic then reads the run folder only).
 Placeholders: {{ALREADY_FOUND|none}} lists what the orchestrator already found or the owner already
 ruled, so the critic does not re-raise it. {{ITEM_CHECKS_OR_DELETE}} adds checks for this note: the
 owner's words it must answer, sources or skills it should have weighed, numbers to recheck. -->
@@ -17,6 +18,7 @@ WHAT TO READ: the snapshot in {{SNAPSHOT_DIR}}:
 - `report.md`: the author's last report, whose OPEN list says what it could not find;
 - `task.md`: the task the author was given (its question, the owner's words, what is already ruled, what to read and survey, and the decisions asked for).
 The worktree (current directory) is {{PROJECT}} at the note's base: read its code to check the note's code claims, and {{RULES_FILES}} for the rules it must respect. Earlier research is in {{RESEARCH_DIR}}.
+You can also read the run folder (the rounds' logs, briefs and reports) and the project repository, when the launch gave it: check the note's claims about past runs, decisions and code against them, read-only.
 
 Already found or ruled (do not re-raise): {{ALREADY_FOUND|none}}
 
@@ -26,6 +28,7 @@ CHECK, in this order:
 3. Reasoning. Is each INFERRED step sound? Is any recommendation stated more strongly than its evidence allows? Do the decisions offer real alternatives, and is each Recommended option defensible? Does any recommendation reopen something `task.md` lists as already ruled, or break the rules in {{RULES_FILES}}: {{PROJECT_RULES}}?
 4. The page against the note: does the picture match the recommendations, would the owner misread anything, and does the widest dark shot show cut-off or overlapping text?
 5. Reuse. Does the note propose building, or researching from scratch, what something that already exists covers: a dependency in the manifest (read the file; never judge what is installed from a `node_modules` folder), a recorded decision, an earlier note, or an installed skill under `~/.agents/skills/`? Name each with its file and line; a missed one that changes a recommendation is blocking.
+6. Standards' names. For each standard, specification or established format the note cites, does its design use that standard's field names, values and terms? List each place it invents its own name where the standard has one: the note's name, the standard's name, and the section or URL that defines it.
 {{ITEM_CHECKS_OR_DELETE}}
 
 REPORT, nothing else:
@@ -33,6 +36,7 @@ REPORT, nothing else:
 2. **Blocking**: each with the evidence (URL or file:line), what it changes, and the fix in one line.
 3. **Faithfulness table**: row id, grade, one-line reason.
 4. **Coverage gaps**: each with the source found and what it would add.
-5. **Minor**: one line each.
-6. **Not checked**, and why.
+5. **Invented names**: one line each, the note's name against the standard's, with its source; `none` when the note uses the standard's names throughout.
+6. **Minor**: one line each.
+7. **Not checked**, and why.
 Mark every claim of yours VERIFIED (read or ran) or INFERRED. Under {{WORD_LIMIT|1400}} words. {{REDACTION_RULE}}
