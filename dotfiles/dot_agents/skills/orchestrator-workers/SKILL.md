@@ -348,10 +348,13 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **The requirement gate** (`scripts/reqgate.py`) checks each MUST has a test that can fail, from
   the report's REQUIREMENTS MAP in SWE-bench's two lists: a FAIL_TO_PASS test must exist, pass at
   head and fail on the base commit on an assertion (with only the branch's test files applied; a
-  load, import or compile failure fails the gate); a PASS_TO_PASS test must pass at head and, our
+  load, import or compile failure fails the gate, unless it names a module or export the branch
+  adds: then the test must kill a Stryker mutant of the new lines instead); a PASS_TO_PASS test must pass at head and, our
   extension to SWE-bench, kill at least one Stryker mutant on the changed lines it covers (Stryker
-  on TypeScript only; Python's are reported "not checked: no mutant runner"). A `none` line is
-  counted and reported, not failed; whether it should fail is the owner's call. It cannot catch
+  on TypeScript only; Python's are reported "not checked: no mutant runner"). One that covers no
+  changed line fails only when no other test of its MUST covers one. Playwright and live tests are
+  reported "not checked: no runner". A Stryker run stopped at its time limit keeps its partial
+  counts. A `none` line is counted and reported first, not failed. It cannot catch
   what the author did not imagine: another caller, event order, a boundary value. It catches the
   test that cannot fail, so the review keeps the SHALLs as context.
 
