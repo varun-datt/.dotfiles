@@ -649,7 +649,7 @@ class Launcher(unittest.TestCase):
 
     def test_a_review_logs_the_size_of_the_diff_it_routes_and_runs_at_high(self):
         self.author_log(OPUS)
-        patch = 'diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -1 +1 @@\n-x\n+caf\u00e9\n'
+        patch = 'diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -1 +1 @@\n-x\n+café\n'
         path = self.write_patch(patch)
         for rnd in ('x-review', 'x-rereview'):
             p = self.launch(rnd, 'review')
@@ -720,7 +720,7 @@ class Launcher(unittest.TestCase):
         os.remove(path)
         snap = os.path.join(self.tmp, 'snap')
         os.makedirs(os.path.join(snap, 'sub'))
-        for rel, data in (('note.md', 'caf\u00e9 note\n'.encode()), ('sub/report.md', b'report\n'), ('shot.png', b'\x89PNG\0\0')):
+        for rel, data in (('note.md', 'café note\n'.encode()), ('sub/report.md', b'report\n'), ('shot.png', b'\x89PNG\0\0')):
             with open(os.path.join(snap, rel), 'wb') as f:
                 f.write(data)
         project = os.path.join(self.tmp, 'project')
@@ -732,7 +732,7 @@ class Launcher(unittest.TestCase):
         p = self.launch('x-critique', 'review', '--author-model', OPUS, '--add-dir', snap, '--add-dir', self.run_dir,
                         '--add-dir', project)
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
-        want = (len('caf\u00e9 note\n') + len('report\n'), snap)
+        want = (len('café note\n') + len('report\n'), snap)
         self.assertEqual(self.measured('x-critique'), [want])
         d = self.decision('x-critique')
         self.assertEqual((d['inputs']['diff_chars'], d['inputs']['diff_source']), want)
