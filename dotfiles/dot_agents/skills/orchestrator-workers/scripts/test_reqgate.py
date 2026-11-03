@@ -500,6 +500,18 @@ class StrykerErrorTest(GateCase):
         self.assertIn("ConfigError: no test runner", r["PASS_TO_PASS"][0]["reason"])
 
 
+class NoCoveringTestTest(GateCase):
+    base_files = dict(StrykerErrorTest.base_files, FAKE_STRYKER="notests\n")
+    head_files = {"src/calc.ts": TS_HEAD}
+
+    def test_stryker_running_no_tests_is_no_covering_test_not_a_stryker_failure(self):
+        r = self.gate([1], ["- MUST 1: src/calc.test.ts::calc > adds [PASS_TO_PASS]"])
+        row = r["PASS_TO_PASS"][0]
+        self.assertTrue(row["reason"].startswith("no covering test: "), row["reason"])
+        self.assertNotIn("Stryker failed", row["reason"])
+        self.assertNotEqual("pass", row["status"])
+
+
 class NoTestFilesTest(GateCase):
     base_files = {"src/calc.ts": TS_BASE, "src/calc.test.ts": "// t\n", "FAKE_VITEST": "vitest-head.json\n",
                   "FAKE_STRYKER": "mutation-notestfiles.json\n", "stryker.config.json": "{}\n"}

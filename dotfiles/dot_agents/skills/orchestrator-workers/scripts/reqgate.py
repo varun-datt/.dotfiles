@@ -24,7 +24,8 @@ fails the gate. Extension to SWE-bench: when the head tree has a Stryker config,
 test must kill at least one Stryker mutant on the changed source lines it covers; without a mutant
 runner it is reported "not checked: no mutant runner". When the Stryker report cannot tell which
 mutants the test covers (no testFiles, no test of that name, or mutants with no coveredBy) the test
-fails as "attribution unavailable"; a measured "covers no changed line" is reported and not failed.
+fails as "attribution unavailable"; a measured "covers no changed line" is reported and not failed, as is
+"no covering test", when Stryker's dry run ran no test at all.
 Mutant counts use only Stryker's MutantStatus names; killedByThisTest is a separate count. A `none` line is reported and counted, and
 is not a failure on its own. Every test runs in a temporary detached worktree, removed afterwards.
 
@@ -69,6 +70,10 @@ DETAIL_LINES = 3
 
 
 class SetupError(Exception):
+    pass
+
+
+class NoCoveringTest(Exception):
     pass
 
 
@@ -450,6 +455,8 @@ def stryker_run(tree, ranges, timeout, stryker_cmd):
         raise SetupError(f"Stryker timed out after {timeout} s")
     code, out, err = got
     report = os.path.join(tree, STRYKER_REPORT)
+    if code and "No tests were executed" in out + err:
+        raise NoCoveringTest("no covering test: Stryker's dry run ran no test on the changed lines")
     if code or not os.path.exists(report):
         raise SetupError(f"Stryker failed (exit {code}): " + (last_lines(err) or last_lines(out) or "no report"))
     return load_json(report, "Stryker's report")
@@ -548,7 +555,7 @@ def check(args):
             return "error", f"no runner for {e['file']}: pass --runner"
         return RUNNERS[runner](tree, e["file"], e["name"], args.timeout, **opts)
 
-    mutants_run, stryker_error, statuses = 0, None, {}
+    mutants_run, stryker_error, no_cover, statuses = 0, None, None, {}
     with worktree(repo, head, node_modules) as tree:
         for e in runnable:
             e["head"], e["head_detail"] = run(tree, e)
@@ -563,6 +570,8 @@ def check(args):
                     for m in r.get("mutants", []):
                         statuses[m.get("status")] = statuses.get(m.get("status"), 0) + 1
                 mutants_run = sum(v for k, v in statuses.items() if k not in NOT_RUN)
+            except NoCoveringTest as err:
+                no_cover = str(err)
             except SetupError as err:
                 stryker_error = str(err)
         for e in keeps:
@@ -570,6 +579,8 @@ def check(args):
                 e["check"], e["reason"] = "not checked", "not checked: no mutant runner"
             elif not ranges:
                 e["check"], e["reason"] = "not checked", "no changed source lines: no mutants run"
+            elif no_cover:
+                e["check"], e["reason"] = "not checked", no_cover
             elif stryker_error:
                 e["check"], e["reason"] = "fail", stryker_error
             else:

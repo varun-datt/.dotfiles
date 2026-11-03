@@ -11,5 +11,9 @@ with open("FAKE_STRYKER", encoding="utf-8") as f:
 if fixture == "error":
     print("ERROR Stryker Unexpected error occurred while running Stryker ConfigError: no test runner", file=sys.stderr)
     sys.exit(1)
+if fixture == "notests":
+    print("ERROR Stryker Unexpected error occurred while running Stryker ConfigError: No tests were executed. "
+          "Stryker will exit prematurely. Please check your configuration.")
+    sys.exit(1)
 os.makedirs(os.path.join("reports", "mutation"), exist_ok=True)
 shutil.copy(os.path.join(os.path.dirname(os.path.abspath(__file__)), fixture), os.path.join("reports", "mutation", "mutation.json"))
