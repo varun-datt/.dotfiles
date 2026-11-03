@@ -22,4 +22,9 @@ Known findings that did not block a merge, kept by `debt.py` (the orchestrator-w
 | TD-16 | 2026-10-31 | orchestrator-workers | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/debt.py | brief check takes about 4 s on a large register (estimated, not remeasured after the fix) | p6 reviews, 2026-10-31 | 20 | open |
 | TD-17 | 2026-11-02 | queue | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/runqueue.py | runqueue.py wait records an acknowledgment before printing, so an interrupted wait can hide a suspend until status is read | qs-review | 10 | open |
 | TD-18 | 2026-11-02 | records | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/mine.py | two concurrent mine.py --findings rebuilds of one run folder share temporary file names and can publish mismatched findings and defects files (r1, unmerged) | r1-review | 15 | open |
-<!-- debt.py next id: 19 -->
+| TD-19 | 2026-11-02 | COST | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/route.py | Two launches of the same second fix round at the same moment can both pass the owner_approved guard (demoted Blocker: only the orchestrator launches, one at a time) | rx-review | 20 | open |
+| TD-20 | 2026-11-02 | SEC | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/route.py | A fix round launched with --kind resume skips the second-fix guard although route.py starts a fresh session | rx-review | 15 | open |
+| TD-21 | 2026-11-02 | SEC | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/review.sh | Patch file names go into the review prompt's scope line unfenced, so a crafted name could steer the reviewer | rx-review | 15 | open |
+| TD-22 | 2026-11-02 | COR | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/route.py | route.py pick without --diff logs inputs.diff_chars as 0 instead of null | rx-fix1 | 10 | open |
+| TD-23 | 2026-11-02 | VERIF | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/merge_check.py | The escape check flags deliberate \\u escapes inside Python test strings as corrupted prose | rx-merge | 15 | open |
+<!-- debt.py next id: 24 -->
