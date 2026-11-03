@@ -80,17 +80,29 @@ class Pick(unittest.TestCase):
         self.assertEqual(self.pick('review', call=stub('review'), author=OPUS, changed=['src/host/sessions.ts'])['floor'],
                          'owner-2026-10-29-sessions-ts')
 
-    def test_risk_area_gets_strongest_high_and_review_max_other_family(self):
+    def test_risk_area_gets_strongest_high_and_review_high_other_family(self):
         text = BRIEF + 'It stores the sign-in token in the session.\n'
         rec = self.pick(text=text)
         self.assertEqual((rec['choice']['model'], rec['choice']['effort'], rec['floor']), (OPUS, 'high', 'risk-area'))
         rec = self.pick('review', text=text, author=OPUS, call=stub('review'))
-        self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (GPT, 'max'))
+        self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (GPT, 'high'))
 
-    def test_short_rereview_runs_at_medium_in_another_family_even_on_a_floor(self):
+    def test_short_rereview_runs_at_high_in_another_family_even_on_a_floor(self):
         text = 'You are a read-only reviewer. This is a SHORT RE-REVIEW.\n1. Late event after Stop. Where: src/host/sessions.ts:10.\n'
         rec = self.pick('review', text=text, author=OPUS, call=stub('review'), changed=['src/host/sessions.ts'])
-        self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (GPT, 'medium'))
+        self.assertEqual((rec['choice']['model'], rec['choice']['effort']), (GPT, 'high'))
+
+    def test_review_rereview_and_critique_run_at_high_even_when_medium_has_the_better_record(self):
+        good = [dict(rnd(GPT, True, 'review', 'easy', kind='review', item=str(i)), effort='medium') for i in range(30)]
+        texts = ('You are a read-only reviewer.\n' + BRIEF, 'You are a read-only reviewer. This is a SHORT RE-REVIEW.\n',
+                 'You are a read-only critic from a different model family.\n')
+        for text in texts:
+            for seed in range(10):
+                rec = self.pick('review', text=text, author=OPUS, call=stub('review'), hist=history(good), seed=seed)
+                self.assertEqual(rec['choice']['effort'], 'high', (text, seed))
+                self.assertIn('owner, 2026-11-02, batch 2', rec['reason'])
+        ok = [dict(rnd(SONNET, True, item=str(i)), effort='medium') for i in range(12)]
+        self.assertEqual(self.pick(hist=history(ok))['choice']['effort'], 'medium')
 
     def test_risk_in_the_diff_counts(self):
         rec = self.pick(diff='+ fs.rmSync(dir); // deletion of the data files\n')
@@ -622,6 +634,93 @@ class Launcher(unittest.TestCase):
         self.sp.run(pick, capture_output=True, env=self.env, stdin=self.sp.DEVNULL)
         self.sp.run(pick + ['--fresh'], capture_output=True, env=self.env, stdin=self.sp.DEVNULL)
         self.assertEqual(len(self.decisions()), 4)
+
+    def write_patch(self, text):
+        path = os.path.join(self.wt, 'REVIEW-DIFF.patch')
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(text)
+        return path
+
+    def decision(self, rnd):
+        return [d for d in self.decisions() if d.get('item') == rnd][-1]
+
+    def effort(self):
+        return self.argv()[self.argv().index('--reasoning-effort') + 1]
+
+    def test_a_review_logs_the_size_of_the_diff_it_routes_and_runs_at_high(self):
+        self.author_log(OPUS)
+        patch = 'diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -1 +1 @@\n-x\n+caf\u00e9\n'
+        path = self.write_patch(patch)
+        for rnd in ('x-review', 'x-rereview'):
+            p = self.launch(rnd, 'review')
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            d = self.decision(rnd)
+            self.assertEqual((d['inputs']['diff_chars'], d['inputs'].get('diff_source')), (len(patch), path), rnd)
+            self.assertEqual((d['choice']['effort'], self.effort()), ('high', 'high'), rnd)
+            patch += '+more\n'
+            self.write_patch(patch)
+        os.remove(path)
+        p = self.launch('x-critique', 'review', '--author-model', OPUS)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        d = self.decision('x-critique')
+        self.assertEqual((d['inputs']['diff_chars'], d['inputs'].get('diff_source', 'absent')), (None, None))
+        self.assertEqual(self.effort(), 'high')
+        p = self.launch('x-fix1', 'fix')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertEqual(self.decision('x-fix1')['inputs']['diff_chars'], 0)
+
+    def test_a_review_override_to_max_is_honoured_and_logged(self):
+        self.author_log(OPUS)
+        self.write_patch('diff --git a/a b/a\n')
+        p = self.launch('x-review', 'review', '--override', 'effort=max,reason=risk area the router missed')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        d = self.decision('x-review')
+        self.assertEqual(d['override'], {'effort': 'max', 'reason': 'risk area the router missed'})
+        self.assertEqual((d['routed_choice']['effort'], d['choice']['effort'], self.effort()), ('high', 'max', 'max'))
+        self.assertEqual(d['inputs']['diff_chars'], len('diff --git a/a b/a\n'))
+
+    def launches(self):
+        import mine
+        return [d for _, d in mine.read_routes(self.run_dir) if d.get('event') == 'launch']
+
+    def test_a_second_fix_round_is_refused_without_the_owner_and_launched_with_approval(self):
+        p = self.launch('x-fix1', 'fix')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        os.remove(self.args)
+        for rnd, kind, why in (('x-fix2', 'fix', 'x-fix2 is fix round 2 of x'), ('x-fix3', 'small', 'x-fix3 is fix round 3 of x'),
+                               ('x-fix', 'fix', 'x already had fix round x-fix1'),
+                               ('x-fix1', 'fix', 'x already had fix round x-fix1')):
+            p = self.launch(rnd, kind)
+            self.assertEqual(p.returncode, 2, (rnd, p.stdout, p.stderr))
+            self.assertEqual(p.stderr.count('\n'), 1, p.stderr)
+            self.assertIn(f'route.py run: refused: {why}', p.stderr)
+            self.assertIn('owner_approved=', p.stderr)
+            self.assertFalse(os.path.exists(self.args), rnd)
+        self.assertEqual([d['round'] for d in self.launches()], ['x-fix1'])
+        self.assertEqual([(d['round'], d['reason'].split(':')[0]) for d in self.refusals()],
+                         [(r, 'second fix round without the owner') for r in ('x-fix2', 'x-fix3', 'x-fix', 'x-fix1')])
+        self.assertEqual([d['item'] for d in self.decisions()], ['x-fix1'])
+        approval = 'PLAN 2026-11-02 batch 2 8a'
+        p = self.launch('x-fix2', 'fix', '--override', f'owner_approved={approval},reason=owner approved a second fix round')
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertEqual([(d['round'], d.get('owner_approved')) for d in self.launches()], [('x-fix1', None), ('x-fix2', approval)])
+        self.assertEqual(self.decision('x-fix2')['override']['owner_approved'], approval)
+        for rnd, kind in (('y-fix1', 'fix'), ('x-fix1-resume1', 'resume'), ('x-fix2-review', 'review'), ('rv-x-fix2', 'review'),
+                          ('x', 'build')):
+            p = self.launch(rnd, kind, *(('--author-model', OPUS) if kind == 'review' else ()))
+            self.assertEqual(p.returncode, 0, (rnd, p.stdout, p.stderr))
+        self.assertEqual(self.launch('x-fix2', 'fix', '--override', 'owner_approved=,reason=x').returncode, 2)
+
+    def test_resume_py_resumes_a_fix_round_without_the_fix_check(self):
+        self.assertEqual(self.launch('x-fix1', 'fix').returncode, 0)
+        with open(os.path.join(self.run_dir, 'x-fix1-r1.prompt.md'), 'w') as f:
+            f.write('Continue.\n')
+        p = self.sp.run([sys.executable, '-B', os.path.join(HERE, 'resume.py'), 'x-fix1', 'x-fix1-r1', 'none', '60'],
+                        capture_output=True, text=True, env={**self.env, 'OW_RUN_DIR': self.run_dir}, timeout=120,
+                        stdin=self.sp.DEVNULL)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertEqual(self.argv()[self.argv().index('-r') + 1], 'ow-x-fix1')
+        self.assertEqual(self.refusals(), [])
 
 
 class Outcome(unittest.TestCase):
