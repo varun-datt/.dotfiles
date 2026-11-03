@@ -9,11 +9,13 @@ Python's `unittest.mock` documentation, ["Where to patch"](https://docs.python.o
 1. **Write one wrapper with named mutants.** It imports the code and the test suite, replaces one function, method or constant per mutant name, runs the suite's entry point with its output captured, and prints the mutant's name, the exit code and the checks that failed. Nothing on disk changes.
 2. **Run each mutant in its own process,** plus a `none` control that must pass: one mutant's patch cannot leak into the next, and a broken wrapper shows up in the control.
 3. **Patch the name where it is looked up.** A module that did `from x import f` holds its own binding, so patching `x.f` does not reach it; patch the importer's name, or the module attribute its callers go through.
-4. **Make each mutant the old behaviour, guards included.** A mutant that crashes the run (a missing folder, a file it deletes that it does not own) proves nothing: the check must fail on its assertion. Copy the old code's guards into the mutant and run it again.
+4. **Make each mutant the old behaviour, guards included.** A mutant that crashes the run (a missing folder, a file it deletes that it does not own) proves nothing: the check must fail on its assertion. Copy the old code's guards into the mutant and run it again. A check that expects a refusal asserts its message (`assertRaisesRegex`), never only the exception type: an earlier step raising the same type passes it under every mutant.
 5. **Do not swap in the old file whole** when the new tests call a new parameter or function: the run crashes on the call instead of failing the check. Patch the one behaviour the test is for.
-6. **Name what a runtime patch cannot reach,** such as argument parsing or wiring done at import time: cover it with a check that runs the program in a subprocess and asserts its exit code and output, or report it as uncovered.
+6. **Name what a runtime patch cannot reach,** such as argument parsing or wiring done at import time: cover it with a check that runs the program in a subprocess and asserts its exit code and output, or report it as uncovered. When the suite can be pointed at another install path, a mutant can instead be a text edit to a temporary copy of the code, which reaches that wiring too.
 7. **Read which checks failed, not only the exit code.** Each mutant must fail the check written for it; other checks failing as well is fine when they depend on the same behaviour, and a mutant that fails none means the tests cannot see that bug.
 
 Intermittent behaviour needs about 30 runs per mutant: see [flaky tests](flaky-tests.md).
 
 Seen 2026-10-30: seven runtime mutants each failed the check written for it, while a first attempt that swapped in the old file crashed on a new keyword argument, and a mutant that left out the old code's guards crashed on a missing folder.
+
+Seen 2026-11-02: two "refuses" tests passed only because a step before the guard raised the same exception type; the fix was to assert the message. Copy-based mutants also reached CLI wiring that a runtime patch could not.
