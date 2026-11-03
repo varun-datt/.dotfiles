@@ -15,7 +15,7 @@ No: it is **Pre-existing**. It never blocks. Say it in one line; if it would be 
 ## 3. Impact
 
 - **I1 Harm.** The owner's data or typed text is lost or corrupted; a secret or private content goes where it should not (a model, another person, a public repository); an approval, confinement or sandbox is bypassed; an action runs without the owner's approval.
-- **I2 Wrong.** A wrong result is shown or recorded; a MUST in the brief or an owner ruling is unmet; a flow cannot be completed; paid spend can pass an approved limit; a check cannot fail, or fails on unchanged code.
+- **I2 Wrong.** A wrong result is shown or recorded; a MUST in the brief or an owner ruling is unmet (in scope product, see Scope in section 4); a flow cannot be completed; paid spend can pass an approved limit; a check cannot fail, or fails on unchanged code.
 - **I3 Degraded.** Slow, confusing or misleading but workable; an accessibility barrier with a workaround; sensitive text in a local-only log.
 - **I4 Cosmetic**, or negligible at the owner's scale.
 
@@ -30,7 +30,8 @@ No: it is **Pre-existing**. It never blocks. Say it in one line; if it would be 
 
 Where the matrix gives way:
 
-- **Tests.** A missing or weak test is Minor, unless the brief names that test or the change is to the checks themselves (harness, gate script, mutation control): then Major. An existing test that now fails, or flakes on a loaded machine, is Major.
+- **Scope.** The review prompt names the change's scope after this rubric (owner, 2026-11-02). In a product's own code (scope product), a finding blocks only when it has an owner-visible effect: user experience, data, security, spend, performance, or a broken workflow; an unmet MUST and a missing or weak test are Minor unless they cause one of those, and then keep their matrix grade. In check tools (scope tool: a gate, a findings record, a router, a queue, any script that grades or launches work), an unmet MUST and a missing, weak or unfailable test stay Major as below, since a wrong tool gives the owner wrong numbers. In a diff with both, a finding in a file the prompt lists as a check tool is graded as tool.
+- **Tests.** A missing or weak test is Minor, unless the brief names that test or the change is to the checks themselves (harness, gate script, mutation control): then Major, in scope product only with an owner-visible effect (Scope). An existing test that now fails, or flakes on a loaded machine, is Major.
 - **Nit.** Style, naming, wording, comments and preference are Nits whatever the matrix says.
 - **Correction.** The author's report claims something the diff does not do. It does not block; the orchestrator corrects the record. If the unmet claim is a MUST, report the MUST as its own Major.
 - **Already ruled.** Do not re-raise a finding the orchestrator or owner rejected, unless you have new evidence; cite the ruling.
@@ -58,7 +59,7 @@ A finding with no concrete scenario is not Major: list it under **Check** for th
 
 | Code | Area | Major when |
 |---|---|---|
-| COR | Correctness against the brief | A MUST or owner ruling is unmet, or a normal input gives a wrong result |
+| COR | Correctness against the brief | A MUST or owner ruling is unmet (in scope product, only with an owner-visible effect), or a normal input gives a wrong result |
 | DATA | Data integrity, loss, migration | Owner data or typed text can be lost, corrupted, overwritten or misattributed |
 | SEC | Security and privacy | Outside text can steer a model or command; secrets or private content leak; an approval or confinement is bypassed |
 | PERF | Performance and resources | Normal data makes a flow hang or slow visibly, or a stated budget (start-up, size) is exceeded |
@@ -66,6 +67,6 @@ A finding with no concrete scenario is not Major: list it under **Check** for th
 | UX | User experience and accessibility | A flow breaks, misleads, steals focus, fails WCAG AA, or calls attention to a normal state |
 | COMP | Compatibility and operability | Start-up, upgrade, install or a supported platform fails, or owner settings are dropped |
 | COST | Paid spend | Paid calls can pass an approved budget or repeat without the owner asking |
-| VERIF | The checks | A check cannot fail, an existing test breaks or flakes, or a test the brief names is missing |
+| VERIF | The checks | A check cannot fail, an existing test breaks or flakes, or a test the brief names is missing (in scope product, only with an owner-visible effect) |
 | MAINT | Maintainability | Only when it blocks the next planned change |
 | REPORT | The author's report | Never Major: a Correction |

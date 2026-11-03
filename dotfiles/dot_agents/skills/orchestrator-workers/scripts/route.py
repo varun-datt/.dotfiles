@@ -106,6 +106,45 @@ def changed_files(diff):
     return re.findall(r'^\+\+\+ b/(\S+)', diff, re.M) + re.findall(r'^--- a/(\S+)', diff, re.M)
 
 
+TOOL_PATH = re.compile(r'dotfiles/dot_agents/skills/[^/]+/scripts/')
+
+
+def patch_paths(diff):
+    """Every path a git patch names, old and new, including renames and binary or mode-only changes."""
+    paths = []
+    for line in diff.splitlines():
+        m = re.match(r'(?:\+\+\+ b/|--- a/|rename (?:from|to) |copy (?:from|to) )(.+)', line)
+        if m:
+            paths.append(m.group(1).split('\t')[0].strip('"'))
+            continue
+        if line.startswith('diff --git '):
+            rest = line[len('diff --git '):]
+            q = re.fullmatch(r'"a/(.+)" "b/(.+)"', rest)
+            if q:
+                paths += [q.group(1), q.group(2)]
+                continue
+            h = (len(rest) - 1) // 2
+            if rest[:2] == 'a/' and rest[h:h + 3] == ' b/' and rest[2:h] == rest[h + 3:]:
+                paths.append(rest[2:h])
+            else:
+                paths += re.findall(r'(?:^| )[ab]/(\S+)', rest)
+    return sorted(set(p for p in paths if p))
+
+
+def review_scope(diff):
+    """(scope, tool files, note): tool when every changed file is a skill script, else product; a mixed diff's
+    tool files are graded as tool whatever the scope."""
+    if diff is None:
+        return 'product', [], 'no REVIEW-DIFF.patch in the worktree'
+    paths = patch_paths(diff)
+    if not paths:
+        return 'product', [], 'REVIEW-DIFF.patch names no file'
+    tools = [p for p in paths if TOOL_PATH.match(p)]
+    if len(tools) == len(paths):
+        return 'tool', tools, 'every changed file is under dotfiles/dot_agents/skills/*/scripts/'
+    return 'product', tools, 'some changed files are outside dotfiles/dot_agents/skills/*/scripts/'
+
+
 def sessions_touch(text, cfg, changed=()):
     floor = next((f for f in cfg['floors'] if 'text' in f['when']), None)
     if not floor:

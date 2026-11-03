@@ -7,6 +7,7 @@ import unittest
 
 import brief
 import mine
+import route
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
@@ -261,7 +262,7 @@ class ReviewShTest(unittest.TestCase):
         filled = os.path.join(self.run_dir, 'x-review.filled.md')
         with open(filled, encoding='utf-8') as f:
             body = f.read()
-        rubric = read('references', 'rubric.md').rstrip('\n')
+        rubric = filled_rubric()
         self.assertEqual(body, text.replace('\n{{RUBRIC}}\n', '\n' + rubric + '\n'))
         self.assertIn('<!-- {{RUBRIC}} is filled -->', body)
         self.assertTrue(self.launched_prompt().startswith(body))
@@ -297,7 +298,7 @@ class ReviewShTest(unittest.TestCase):
             return f.read()
 
     def test_quoted_placeholder_examples_are_left_as_written(self):
-        rubric = read('references', 'rubric.md').rstrip('\n')
+        rubric = filled_rubric()
         examples = ('Say `{{RUBRIC}} {{TASK}}` here.', '| slot | `{{RUBRIC}}` | `{{TASK}}` |',
                     'Spans: `` `{{RUBRIC}}` `` and `{{TASK}}`.', '> quoted: `{{RUBRIC}}` and `{{TASK}}`',
                     '> {{RUBRIC}} `{{TASK}}`'.replace('{{RUBRIC}}', '`{{RUBRIC}}`'),
@@ -328,7 +329,7 @@ class ReviewShTest(unittest.TestCase):
             self.assertFalse(os.path.exists(self.args), ex)
 
     def test_a_bare_slot_outside_fences_and_code_is_filled(self):
-        rubric = read('references', 'rubric.md').rstrip('\n')
+        rubric = filled_rubric()
         for head, tail in (('````\n```\n````\n', '\n'), ('    ```\n', '\n'), ('```a`b\n', '\n'),
                            ('   ~~~ md\n`x`\n   ~~~\n', '\n'), ('x ` ', ' y\n'), ('<!-- ```\n-->\n', '\n'),
                            ('`a` ', ' `{{TASK}}`\n'), ('', ' and {{RUBRIC}} twice\n'), ('`` ', ' ``\n'),
@@ -348,6 +349,82 @@ class ReviewShTest(unittest.TestCase):
         self.assertNotEqual(p.returncode, 0)
         self.assertIn('would be overwritten', p.stderr)
         self.assertFalse(os.path.exists(self.args))
+
+    def patch(self, *paths):
+        with open(os.path.join(self.wt, 'REVIEW-DIFF.patch'), 'w', encoding='utf-8') as f:
+            f.writelines(f'diff --git a/{p} b/{p}\n--- a/{p}\n+++ b/{p}\n@@ -1 +1 @@\n-a\n+b\n' for p in paths)
+
+    def scope_line(self, extra=(), want_rc=0):
+        p = self.review('==== RUBRIC ====\n{{RUBRIC}}\n==== END ====\n', extra=extra)
+        self.assertEqual(p.returncode, want_rc, p.stderr)
+        body = self.filled().split('==== END ====')[0].rstrip('\n')
+        self.assertTrue(body.startswith('==== RUBRIC ====\n' + read('references', 'rubric.md').rstrip('\n') + '\n\nScope'))
+        self.assertTrue(self.launched_prompt().startswith(self.filled()))
+        return body.rsplit('\n', 1)[1], p.stderr
+
+    def test_a_tool_diff_is_graded_at_scope_tool(self):
+        self.patch(TOOL_A, TOOL_B)
+        line, err = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: tool (every changed file is under dotfiles/dot_agents/skills/*/scripts/).'
+                               ' Grade with the Scope rule in section 4.')
+        self.assertNotIn('REVIEW-DIFF', err)
+
+    def test_a_product_diff_is_graded_at_scope_product(self):
+        self.patch('src/app.ts', 'dotfiles/dot_agents/skills/kb/SKILL.md', 'scripts/route.py')
+        line, _ = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: product (some changed files are outside'
+                               ' dotfiles/dot_agents/skills/*/scripts/). Grade with the Scope rule in section 4.')
+
+    def test_a_mixed_diff_is_product_with_its_check_tool_files_listed_as_tool(self):
+        self.patch('src/app.ts', TOOL_B, TOOL_A)
+        line, _ = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: product (some changed files are outside'
+                               ' dotfiles/dot_agents/skills/*/scripts/). Grade with the Scope rule in section 4.'
+                               f' Graded as tool whatever the scope, being check tools: {TOOL_B}, {TOOL_A}.')
+
+    def test_an_explicit_scope_wins_and_a_bad_one_is_refused(self):
+        self.patch(TOOL_A)
+        line, _ = self.scope_line(extra=('--scope', 'product'))
+        self.assertEqual(line, 'Scope of this change: product (given by --scope). Grade with the Scope rule in section 4.'
+                               f' Graded as tool whatever the scope, being check tools: {TOOL_A}.')
+        self.patch('src/app.ts')
+        line, _ = self.scope_line(extra=('--scope', 'tool'))
+        self.assertEqual(line, 'Scope of this change: tool (given by --scope). Grade with the Scope rule in section 4.')
+        os.remove(self.args)
+        for bad in (('--scope', 'Tool'), ('--scope',)):
+            p = self.review('{{RUBRIC}}\n', extra=bad)
+            self.assertEqual(p.returncode, 2, bad)
+            self.assertIn('review.sh: --scope takes product or tool', p.stderr)
+            self.assertFalse(os.path.exists(self.args))
+
+    def test_no_patch_is_graded_at_scope_product_and_said_on_stderr(self):
+        line, err = self.scope_line()
+        self.assertEqual(line, 'Scope of this change: product (no REVIEW-DIFF.patch in the worktree). Grade with the Scope rule'
+                               ' in section 4.')
+        self.assertIn('review.sh: no REVIEW-DIFF.patch in ', err)
+        with open(os.path.join(self.wt, 'REVIEW-DIFF.patch'), 'w') as f:
+            f.write('')
+        line, err = self.scope_line()
+        self.assertIn('product (REVIEW-DIFF.patch names no file)', line)
+        self.assertNotIn('REVIEW-DIFF', err)
+
+    def test_patch_paths_reads_renames_binaries_quoted_and_spaced_names(self):
+        diff = ('diff --git a/old name.py b/old name.py\nindex 1..2 100644\nBinary files differ\n'
+                'diff --git a/x.py b/y.py\nsimilarity index 90%\nrename from x.py\nrename to y.py\n'
+                'diff --git "a/caf\\303\\251.py" "b/caf\\303\\251.py"\nold mode 100644\nnew mode 100755\n'
+                'diff --git a/n.py b/n.py\nnew file mode 100644\n--- /dev/null\n+++ b/n.py\t\n')
+        self.assertEqual(route.patch_paths(diff), ['caf\\303\\251.py', 'n.py', 'old name.py', 'x.py', 'y.py'])
+        self.assertEqual(route.review_scope('diff --git a/x.py b/' + TOOL_A + '\nrename from x.py\nrename to ' + TOOL_A + '\n')[0],
+                         'product')
+
+
+TOOL_A = 'dotfiles/dot_agents/skills/orchestrator-workers/scripts/route.py'
+TOOL_B = 'dotfiles/dot_agents/skills/kb/scripts/kb.py'
+
+
+def filled_rubric():
+    return (read('references', 'rubric.md').rstrip('\n') + '\n\nScope of this change: product (no REVIEW-DIFF.patch in the'
+            ' worktree). Grade with the Scope rule in section 4.')
 
 
 if __name__ == '__main__':
