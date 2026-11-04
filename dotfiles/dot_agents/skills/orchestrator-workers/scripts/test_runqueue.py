@@ -447,6 +447,26 @@ class PipelineTest(unittest.TestCase):
         self.assertTrue(self.items()['a']['done'])
         self.assertEqual(len(self.launched()), 4)
 
+    def test_the_fix_step_resumes_the_build_session_when_the_build_launch_is_logged(self):
+        self.assertEqual(self.add('a'), 0)
+        t = self.start()
+        self.at('a', 'suspend:rulings')
+        self.write('routes.jsonl', json.dumps({'event': 'launch', 'round': 'a-review'}) + '\n'
+                   + json.dumps({'event': 'launch', 'round': 'a', 'argv': ['copilot', '-n', 'ow-a', '-p']}) + '\n')
+        self.write('a-fix1.body.md', FIX_BODY.format(id='a'))
+        self.write('a.rulings.done', 'fix 1 and 2\n')
+        self.at('a', 'suspend:merge')
+        fix = next(c for c in self.calls() if c[0] == 'a-fix1' and c[1] != 'end')
+        self.assertEqual(fix[fix.index('--resume-session') + 1], 'a')
+        self.assertEqual(fix[fix.index('--brief') + 1], os.path.join(self.rd, 'a-fix1.body.md'))
+        self.assertFalse(os.path.exists(os.path.join(self.rd, 'a-fix1.prompt.md')))
+        self.assertIn('1. Lost rows on restart.', self.read('a-rereview.md'))
+        build = next(c for c in self.calls() if c[0] == 'a' and c[1] != 'end')
+        self.assertNotIn('--resume-session', build)
+        self.write('a.merge.done', '')
+        t.join(5)
+        self.assertFalse(t.is_alive())
+
     def test_a_failed_build_stops_the_pipeline_until_retried(self):
         self.add('a')
         self.write('a.fake-exit', '1')

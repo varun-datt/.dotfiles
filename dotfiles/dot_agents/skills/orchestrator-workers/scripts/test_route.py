@@ -794,6 +794,38 @@ class Launcher(unittest.TestCase):
         self.assertEqual(self.launch('x-fix1', 'fix').returncode, 0)
         self.assertEqual(self.launch('x', 'build').returncode, 0)
 
+    def test_a_fix_round_resumes_the_build_session_with_the_same_checks(self):
+        self.assertEqual(self.launch('x', 'build', '--add-dir', self.tmp).returncode, 0)
+        build = self.argv()
+        p = self.launch('x-fix1', 'fix', '--resume-session', 'x', '--add-dir', self.run_dir)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertIn('resuming ow-x', p.stdout)
+        argv = self.argv()
+        self.assertNotIn('-n', argv)
+        self.assertEqual(argv[argv.index('-r') + 1], 'ow-x')
+        for flag in ('--model', '--reasoning-effort', '--context', '-C'):
+            self.assertEqual(argv[argv.index(flag) + 1], build[build.index(flag) + 1], flag)
+        self.assertEqual([argv[i + 1] for i, x in enumerate(argv) if x == '--add-dir'], [self.tmp, self.run_dir])
+        with open(self.fix_brief) as f:
+            self.assertEqual(argv[-1], f.read())
+        self.assertEqual(argv[-2], '-p')
+        launch = self.launches()[-1]
+        self.assertEqual((launch['round'], launch['kind'], launch['resumes']), ('x-fix1', 'fix', 'x'))
+        d = self.decision('x-fix1')
+        self.assertEqual((d['inputs']['resumes'], d['choice']), ('x', self.decision('x')['choice']))
+        self.assertNotIn('resumes', self.launches()[0])
+        os.remove(self.args)
+        for rnd, kind, why in (('x-fix2', 'fix', 'x-fix2 is fix round 2 of x'), ('y-fix1', 'fix', 'no launch of y in routes.jsonl'),
+                               ('z', 'small', 'only for a fix round')):
+            p = self.launch(rnd, kind, '--resume-session', 'y' if rnd == 'y-fix1' else 'x')
+            self.assertEqual(p.returncode, 2, (rnd, p.stdout, p.stderr))
+            self.assertIn(why, p.stderr)
+        with open(self.fix_brief, 'w') as f:
+            f.write(FIX_BRIEF.replace('1 HARM: the owner misreads the diff\n', '') + 'TIME BUDGET: 20\n')
+        p = self.launch('w-fix1', 'fix', '--resume-session', 'x')
+        self.assertEqual(p.returncode, 5, p.stdout + p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+
     def test_resume_py_resumes_a_fix_round_without_the_fix_check(self):
         self.assertEqual(self.launch('x-fix1', 'fix').returncode, 0)
         with open(os.path.join(self.run_dir, 'x-fix1-r1.prompt.md'), 'w') as f:

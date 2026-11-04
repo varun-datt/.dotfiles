@@ -40,6 +40,9 @@ Pipeline: `add <id> --pipeline build,review,suspend:rulings,fix,recheck,suspend:
 steps in order, each when the one before ended with exit 0, through the skill's own launchers: build and fix with
 route.py run (rounds <id> and <id>-fix1, briefs <run>/<id>.prompt.md and <id>-fix1.prompt.md), review and recheck
 with review.sh (<id>-review, <id>-rereview) after reviewprep.py writes their inputs. Reviews never take a slot.
+The fix step resumes the build's own session (route.py run --resume-session <id>, with <id>-fix1.body.md alone as its
+prompt) when routes.jsonl records the build's launch, so the builder fixes its own work (owner, 2026-11-02); else it
+starts a fresh session with the build's prompt, its body swapped for the fix body.
 A step that exits non-zero (or whose prep fails, exit 2) stops the pipeline: it waits on the chat with its exit
 code, until `retry <id>` relaunches it or `retry <id> --passed` marks it passed. `suspend:<name>` waits on the
 chat until <run>/<id>.<name>.done exists; a rulings.done whose first word is `none` skips the fix and recheck.
@@ -410,8 +413,9 @@ def round_pid(rd, rnd, pid=None):
     return next((p for p in known if p in ours), None) or next(iter(ours), None)
 
 
-def fix_prompt(rd, it):
-    """<id>-fix1.prompt.md, else the build's prompt with its body swapped for <id>-fix1.body.md."""
+def fix_prompt(rd, it, resume=False):
+    """<id>-fix1.prompt.md; else, for a resumed build session, <id>-fix1.body.md alone; else the build's prompt with its
+    body swapped for <id>-fix1.body.md."""
     fix = round_name(it, 'fix')
     path = os.path.join(rd, fix + '.prompt.md')
     if os.path.isfile(path):
@@ -419,6 +423,8 @@ def fix_prompt(rd, it):
     body_path, build_body = os.path.join(rd, fix + '.body.md'), os.path.join(rd, it['id'] + '.body.md')
     if not os.path.isfile(body_path):
         raise reviewprep.PrepError(f'no {fix}.prompt.md or {fix}.body.md')
+    if resume:
+        return body_path
     try:
         prompt, body = reviewprep.read(it['brief']), reviewprep.read(build_body)
     except OSError:
@@ -429,16 +435,27 @@ def fix_prompt(rd, it):
     return path
 
 
+def build_launched(rd, build):
+    """True when the run's routes.jsonl records a launch of the round `build`."""
+    try:
+        with open(os.path.join(rd, 'routes.jsonl'), encoding='utf-8') as f:
+            rows = [json.loads(ln) for ln in f if ln.strip()]
+    except FileNotFoundError:
+        return False
+    return any(r.get('event') == 'launch' and r.get('round') == build for r in rows)
+
+
 def step_argv(rd, it, s):
     name = s['name']
     rnd, wt = round_name(it, name), it['worktree']
     if name in ('build', 'fix'):
-        brief = it['brief'] if name == 'build' else fix_prompt(rd, it)
+        resume = name == 'fix' and build_launched(rd, it['id'])
+        brief = it['brief'] if name == 'build' else fix_prompt(rd, it, resume)
         if not os.path.isfile(brief):
             raise reviewprep.PrepError(f'no brief at {brief}')
         s['brief'] = brief
         return [sys.executable, '-B', ROUTE, 'run', rnd, '--kind', name, '--run', rd, '--brief', brief,
-                '--worktree', wt, *it.get('route_args', [])]
+                '--worktree', wt, *(('--resume-session', it['id']) if resume else ()), *it.get('route_args', [])]
     # route.py run rewrites <round>.base on every launch, so a retried round would hide its first attempt's commits.
     author = next((t for t in it['pipeline'] if t['name'] == ('build' if name == 'review' else 'fix')), {})
     brief = author.get('brief') or (it['brief'] if name == 'review' else None)

@@ -207,8 +207,13 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   undid it.
 - **Bring main into a branch before its review** when main has moved under the files the item
   touches, so the reviewer reads the code that will merge (one stale selector, 2026-10-30).
-- **Fix rounds** start a fresh session named `<prefix><item>-fixN` (owner, 2026-10-29: resumed
-  rounds averaged 92k tokens per request against 75k for builds) and are narrow (owner,
+- **Fix rounds** (`<prefix><item>-fixN`) go back to the builder: `route.py run <item>-fix1 --kind fix
+  --resume-session <item>` resumes the build's own session, with the fix brief alone as its prompt, so
+  it does not relearn the item (owner, 2026-11-02, reversing 2026-10-29's fresh fix sessions, which were
+  chosen when resumed rounds averaged 92k tokens per request against 75k for builds; compare the first
+  resumed fixes with run amc-2026-11-02-p1's fresh ones, median 421 credits). The pipeline does this
+  whenever `routes.jsonl` holds the build's launch, and starts a fresh session otherwise. Fix rounds are
+  narrow (owner,
   2026-11-02, after fix rounds cost more than builds): the brief carries only the blocking findings,
   each with where, what goes wrong and what done looks like; one test per finding that fails first;
   only the checks for the changed files; no impact map, case table or mutation runs, and screenshots

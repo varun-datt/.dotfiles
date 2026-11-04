@@ -1,10 +1,11 @@
-<!-- Fix-round prompt for a fresh session: prepend preamble-worker.md. Name the session
-<prefix><item>-fix<N>, and write the worktree's HEAD to <run>/<item>-fix<N>.base for the re-review diff.
+<!-- Fix-round prompt for round <item>-fix<N>. Sent alone to the build's own session (route.py run
+--resume-session <item>, owner 2026-11-02), or after preamble-worker.md to a fresh session when that one
+cannot be resumed; route.py writes the worktree's HEAD to <run>/<item>-fix<N>.base for the re-review diff.
 Narrow by ruling (owner, 2026-11-02): fix rounds cost more than builds (6,569 against 6,421 credits)
 because each re-read the item and redid the whole build method; a kind with no end of cases goes to
 the structural fix and the owner, not to another round. Every fix round names why each finding cannot wait
 (owner, 2026-11-02); brief.py refuses a fix round without a WHY NOW line per finding. -->
-THIS IS A FIX ROUND in a fresh session, for {{ITEM_TITLE}}. Branch `{{BRANCH}}` in worktree `{{WORKTREE}}` already holds the item's build. Read only the files the findings name and the tests next to them; do not re-read the item's brief or the build's report.
+THIS IS A FIX ROUND for {{ITEM_TITLE}}: a review of the build on branch `{{BRANCH}}` in worktree `{{WORKTREE}}` found what follows. If this session built the item, you already know it; otherwise read only the files the findings name and the tests next to them, not the item's brief or the build's report.
 
 THIS ROUND REPLACES the preamble's "HOW TO BUILD" and "REPORT" sections: no impact map, no case table, no facts survey and no mutation runs. Everything else in the preamble holds.
 

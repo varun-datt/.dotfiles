@@ -4,7 +4,7 @@
 Usage:
     python3 route.py run ROUND --kind K --brief FILE --worktree DIR [--run RUN] [--author-model M]
                           [--override "model=..,effort=..,context=..,cap=N|none,owner_approved=..,reason=.."] [--add-dir DIR ...]
-                          [--timeout S] [--fresh] [pick's options]
+                          [--timeout S] [--fresh] [--resume-session ROUND] [pick's options]
     python3 route.py pick --run RUN --item ID --kind build|fix|review|research|small|resume|merge --prompt FILE
                           [--author-model M] [--diff FILE] [--budget-left F] [--run-fraction F] [--seed N] [--fresh]
     python3 route.py escalate --run RUN --item ID
@@ -30,6 +30,9 @@ else a critique's snapshot folders named by --add-dir (text files only), else nu
 A second fix round for an item (named <item>-fixN with N >= 2, or after a fix launch for it in routes.jsonl) is
 refused (exit 2, a refuse event) unless the override carries owner_approved=<where the owner said so>, logged with
 the launch. resume.py continues a round and is not checked.
+A fix round with --resume-session ROUND resumes ROUND's session (its last launch's argv, with -r) instead of starting a
+fresh one, so the builder fixes its own work (owner, 2026-11-02); it passes every check a fresh fix round does, keeps the
+build's model, effort, context and stop, and its launch line names the round it resumes.
 The policies (categories, floors, targets) and the model mapping live in ../references/routes.json.
 Design and reading guide: ../references/routing.md.
 """
@@ -755,6 +758,43 @@ def cli_version():
     return lines[0].strip() if done.returncode == 0 and lines else None
 
 
+def build_launch(run, build):
+    """The last launch of round `build` in routes.jsonl, else None."""
+    launches = [d for d in read_decisions(run) if d.get('event') == 'launch' and d.get('round') == build]
+    return launches[-1] if launches else None
+
+
+def resumed_decision(run, rnd, kind, launch):
+    """A fix round that resumes the build's session keeps the build's model, effort and context (owner, 2026-11-02)."""
+    built = next((d for d in reversed(read_decisions(run)) if d.get('event') in ('pick', 'escalate')
+                  and d.get('item') == launch['round'] and d.get('at') == launch.get('decision_at')), {})
+    argv = launch['argv']
+    flag = {f: argv[argv.index(f) + 1] for f in ('--model', '--reasoning-effort', '--context') if f in argv}
+    choice = dict(built.get('choice') or {}) or {
+        'model': flag.get('--model'), 'effort': flag.get('--reasoning-effort'), 'context': flag.get('--context'), 'cap': None}
+    return {'event': 'pick', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'), 'item': rnd,
+            'kind': kind, 'category': built.get('category'), 'tier': built.get('tier'), 'choice': choice,
+            'reason': f"resumes {launch['round']}'s session, so it keeps that session's model, effort and context",
+            'inputs': {'resumes': launch['round']}}
+
+
+def resumed_argv(launch, choice, add_dirs, prompt):
+    argv = list(launch['argv'])
+    argv[argv.index('-n')] = '-r'
+    for f, k in (('--model', 'model'), ('--reasoning-effort', 'effort'), ('--context', 'context')):
+        if f in argv and choice.get(k):
+            argv[argv.index(f) + 1] = choice[k]
+    if '--max-ai-credits' in argv:
+        i = argv.index('--max-ai-credits')
+        del argv[i:i + 2]
+    at = argv.index('--output-format') if '--output-format' in argv else len(argv) - 1
+    for d in add_dirs:
+        if d not in argv:
+            argv[at:at] = ['--add-dir', d]
+            at += 2
+    return argv + [prompt]
+
+
 def launch_argv(rnd, kind, wt, choice, add_dirs, prompt):
     argv = ['copilot', '-C', wt, '-n', os.environ.get('OW_PREFIX', 'ow-') + rnd, '--model', choice['model'],
             '--reasoning-effort', choice['effort'], '--context', choice.get('context') or 'default']
@@ -903,6 +943,12 @@ def run_round(a, cfg):
         return 2
     if fix_round_refused(run, rnd, kind, ov):
         return 2
+    resumed = build_launch(run, a.resume_session) if a.resume_session else None
+    if a.resume_session and (resumed is None or not is_fix_round(rnd, kind)):
+        why = (f'no launch of {a.resume_session} in routes.jsonl to resume; drop --resume-session for a fresh session'
+               if resumed is None else '--resume-session is only for a fix round')
+        print(f'route.py run: refused: {why}', file=sys.stderr)
+        return 2
     brief = os.path.abspath(os.path.expanduser(a.brief))
     as_fix = ('--kind', 'fix') if is_fix_round(rnd, kind) else ()
     if subprocess.run([sys.executable, '-B', os.path.join(HERE, 'brief.py'), 'check', '--repo', wt, *as_fix, brief],
@@ -924,7 +970,7 @@ def run_round(a, cfg):
         if rec is not None and ov is not None and rec.get('override') != ov:
             new = apply_override(rec, ov, rnd)
         elif rec is None:
-            new = draw(a, run, rnd, kind, text, cfg)
+            new = resumed_decision(run, rnd, kind, resumed) if resumed else draw(a, run, rnd, kind, text, cfg)
             new['inputs']['author_source'] = author_src
             if ov is not None:
                 new = apply_override(new, ov, rnd)
@@ -944,7 +990,11 @@ def run_round(a, cfg):
     if a.load_wait and sweep('load', '--wait', str(a.load_wait)):
         print(f'LOAD: {rnd} not launched', file=sys.stderr)
         return 12
-    argv = launch_argv(rnd, kind, wt, c, a.add_dir or [], text + (REVIEW_TAIL if kind == 'review' else ''))
+    if resumed:
+        argv = resumed_argv(resumed, c, a.add_dir or [], text)
+    else:
+        argv = launch_argv(rnd, kind, wt, c, a.add_dir or [], text + (REVIEW_TAIL if kind == 'review' else ''))
+    session = argv[argv.index('-r' if resumed else '-n') + 1]
     jsonl = os.path.join(run, rnd + '.jsonl')
     measured = {}
     if kind == 'review':
@@ -961,11 +1011,12 @@ def run_round(a, cfg):
         log(run, {'event': 'launch', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
                   'round': rnd, 'kind': kind, 'decision_at': rec['at'], 'cli_version': version, 'model_id': c['model'],
                   'timeout_s': secs, 'brief': brief, 'argv': argv[:-1], **measured,
+                  **({'resumes': resumed['round']} if resumed else {}),
                   **({'owner_approved': ov['owner_approved']} if (ov or {}).get('owner_approved') else {})})
         env = {**os.environ, 'COPILOT_TASK_WAIT_TIMEOUT_SECONDS': str(min(5400, secs)), 'GIT_CONFIG_COUNT': '1',
                'GIT_CONFIG_KEY_0': 'url.blocked-by-orchestrator://.pushInsteadOf', 'GIT_CONFIG_VALUE_0': ''}
         print(f"launch {rnd} {c['model']}/{c['effort']}/{c.get('context', 'default')} cap {c.get('cap')} timeout {secs}s "
-              f"at {datetime.datetime.now():%H:%M:%S}", flush=True)
+              f"{'resuming ' + session + ' ' if resumed else ''}at {datetime.datetime.now():%H:%M:%S}", flush=True)
         with open(jsonl, 'wb') as out, open(os.path.join(run, rnd + '.err'), 'wb') as err:
             try:
                 p = subprocess.Popen(argv, cwd=wt, stdin=subprocess.DEVNULL, stdout=out, stderr=err, env=env,
@@ -974,7 +1025,7 @@ def run_round(a, cfg):
                 print(f'route.py run: cannot start copilot: {ex}', file=sys.stderr)
                 return 127
             import mine
-            spend = Spend(os.environ.get('OW_PREFIX', 'ow-') + rnd, mine.load_prices(run))
+            spend = Spend(session, mine.load_prices(run))
             rc, stopped_at = wait_round(p, secs, c.get('cap'), spend)
             if stopped_at is not None:
                 write_json(os.path.join(run, rnd + '.stopped'), {'credits': stopped_at, 'stop': c.get('cap'),
@@ -1110,6 +1161,8 @@ def main(argv=None):
     n.add_argument('--worktree', required=True)
     n.add_argument('--override', help='"model=..,effort=..,context=..,cap=N|none,owner_approved=..,reason=.." (reason required, last)')
     n.add_argument('--add-dir', action='append', help='passed to copilot; repeatable')
+    n.add_argument('--resume-session', metavar='ROUND',
+                   help="a fix round only: resume ROUND's session (its last launch in routes.jsonl) instead of a fresh one")
     n.add_argument('--timeout', type=int, help='seconds (default: from the time budget)')
     n.add_argument('--load-wait', type=float, default=15, help='minutes sweep.py load waits; 0 skips it (default 15)')
     e = sub.add_parser('escalate')
