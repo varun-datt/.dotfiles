@@ -12,7 +12,8 @@ Usage:
     python3 route.py eval-classifier --run RUN [--models a,b,c] [--max-credits N]
 
 run is the one way to launch a worker or review round: it refuses to start under caffeinate (exit 2; this Mac kills
-caffeinate, and the round with it), checks the brief (brief.py check, exit 5), picks or
+caffeinate, and the round with it), checks the brief (brief.py check, exit 5; a fix round's brief, kind fix or named
+<item>-fixN, is checked as a fix round, so each finding needs its WHY NOW line), picks or
 takes the override (whose reason is required), logs the decision with the CLI version, waits for load
 (sweep.py load --wait 15, exit 12), writes ROUND.start, ROUND.base and the time budget, launches `copilot -p`
 with exactly the logged model, effort, context and cap under a timeout, sweeps leftovers on exit, and exits
@@ -658,12 +659,18 @@ def same_family_refused(run, rnd, kind, rec, author, cfg):
     return True
 
 
+def is_fix_round(rnd, kind):
+    """A round launched as kind fix, or named <item>-fixN; a resume continues a round, so it is never a new one."""
+    import mine
+    return kind == 'fix' or (kind != 'resume' and mine.split_name(rnd)[1] == 'fix')
+
+
 def earlier_fix_round(run, rnd, kind):
     """Why rnd would be an item's second fix round (its name is <item>-fixN with N >= 2, or routes.jsonl already
     has a fix launch for the item), else None. A resume continues a round, so it is never a new fix round."""
     import mine
     item, name_kind = mine.split_name(rnd)
-    if kind == 'resume' or (kind != 'fix' and name_kind != 'fix'):
+    if not is_fix_round(rnd, kind):
         return None
     m = FIX_N.search(rnd)
     if name_kind == 'fix' and m and int(m.group(1)) >= 2:
@@ -897,7 +904,8 @@ def run_round(a, cfg):
     if fix_round_refused(run, rnd, kind, ov):
         return 2
     brief = os.path.abspath(os.path.expanduser(a.brief))
-    if subprocess.run([sys.executable, '-B', os.path.join(HERE, 'brief.py'), 'check', '--repo', wt, brief],
+    as_fix = ('--kind', 'fix') if is_fix_round(rnd, kind) else ()
+    if subprocess.run([sys.executable, '-B', os.path.join(HERE, 'brief.py'), 'check', '--repo', wt, *as_fix, brief],
                       stdin=subprocess.DEVNULL).returncode:
         return 5
     with open(brief, encoding='utf-8') as f:

@@ -32,6 +32,10 @@ def rnd(model, ok, category='change-existing', tier='easy', kind='build', item='
 
 
 BRIEF = 'TASK: Tidy the colour of a diff view (branch `ow/x`)\n\nMUST\n1. Change one colour.\n'
+FIX_BRIEF = ('You are a worker session.\nTHIS IS A FIX ROUND for x.\n\nFIX THESE, one at a time:\n'
+             '1. A colour is wrong. Where: `a.css` line 1. Done when: it reads right.\n\n'
+             'WHY NOW, one line per finding:\n1 HARM: the owner misreads the diff\n\n'
+             'REUSE CHECK: not needed, a fix\nALLOWED DEPENDENCIES: none\n')
 # A bash whose argv[0] is caffeinate stays the parent of what it runs; the real caffeinate is never started.
 UNDER_CAFFEINATE = ['bash', '-c', 'exec -a caffeinate /bin/bash -c "\\"\\$@\\"; exit \\$?" inner "$@"', 'outer']
 
@@ -382,10 +386,14 @@ class Launcher(unittest.TestCase):
         self.brief = os.path.join(self.tmp, 'brief.md')
         with open(self.brief, 'w') as f:
             f.write(BRIEF + 'TIME BUDGET: 20\n')
+        self.fix_brief = os.path.join(self.tmp, 'fix-brief.md')
+        with open(self.fix_brief, 'w') as f:
+            f.write(FIX_BRIEF + 'TIME BUDGET: 20\n')
 
     def launch(self, rnd='x', kind='small', *extra, mode='ok', under=()):
+        brief = self.fix_brief if route.is_fix_round(rnd, kind) else self.brief
         cmd = [sys.executable, '-B', os.path.join(HERE, 'route.py'), 'run', rnd, '--kind', kind, '--run', self.run_dir,
-               '--brief', self.brief, '--worktree', self.wt, '--no-classifier', '--seed', '1', '--load-wait', '0', *extra]
+               '--brief', brief, '--worktree', self.wt, '--no-classifier', '--seed', '1', '--load-wait', '0', *extra]
         return self.sp.run([*under, *cmd], capture_output=True, text=True, env={**self.env, 'FAKE_MODE': mode},
                            timeout=120, stdin=self.sp.DEVNULL)
 
@@ -769,6 +777,22 @@ class Launcher(unittest.TestCase):
             p = self.launch(rnd, kind, *(('--author-model', OPUS) if kind == 'review' else ()))
             self.assertEqual(p.returncode, 0, (rnd, p.stdout, p.stderr))
         self.assertEqual(self.launch('x-fix2', 'fix', '--override', 'owner_approved=,reason=x').returncode, 2)
+
+    def test_a_fix_round_without_a_why_now_line_is_refused_before_launch(self):
+        for text, why in ((FIX_BRIEF.replace('1 HARM: the owner misreads the diff\n', ''), 'finding 1 has no WHY NOW line'),
+                          (BRIEF, 'no numbered findings under a FIX THESE line')):
+            with open(self.fix_brief, 'w') as f:
+                f.write(text + 'TIME BUDGET: 20\n')
+            for rnd, kind in (('x-fix1', 'fix'), ('y-fix1', 'small')):
+                p = self.launch(rnd, kind)
+                self.assertEqual(p.returncode, 5, (rnd, p.stdout, p.stderr))
+                self.assertIn(why, p.stderr)
+        self.assertFalse(os.path.exists(self.args))
+        self.assertEqual(self.launches(), [])
+        with open(self.fix_brief, 'w') as f:
+            f.write(FIX_BRIEF + 'TIME BUDGET: 20\n')
+        self.assertEqual(self.launch('x-fix1', 'fix').returncode, 0)
+        self.assertEqual(self.launch('x', 'build').returncode, 0)
 
     def test_resume_py_resumes_a_fix_round_without_the_fix_check(self):
         self.assertEqual(self.launch('x-fix1', 'fix').returncode, 0)

@@ -34,6 +34,18 @@ def check(text):
         return code, err.getvalue()
 
 
+FINDINGS = ("FIX THESE, one at a time:\n"
+            "1. Rows vanish on restart. Where: `store.py`:40. Done when: a restart keeps every row.\n"
+            "2. A wrong total. Where: `sum.py`:12. Done when: the total matches.\n\n")
+WHY = "WHY NOW, one line per finding:\n1 HARM: the owner's rows are lost\n2 DEPENDS: the totals view (112) reads it\n\n"
+METHOD = "For each finding:\n1. Write one test that fails.\n"
+
+
+def fix_prompt(findings=FINDINGS, why=WHY, method=METHOD):
+    return (PREAMBLE + "THIS IS A FIX ROUND in a fresh session.\n\n" + findings + why + method
+            + "REUSE CHECK: not needed, a fix\nALLOWED DEPENDENCIES: none\n")
+
+
 class BriefTest(unittest.TestCase):
     def test_a_filled_worker_prompt_passes(self):
         self.assertEqual(brief.problems(worker()), [])
@@ -104,10 +116,53 @@ class BriefTest(unittest.TestCase):
             self.assertRegex(found[0], r"^line \d+: ")
 
     def test_a_fix_prompt_composed_from_the_preamble_still_passes(self):
-        fix = PREAMBLE + "THIS IS A FIX ROUND in a fresh session.\nORIGINAL BRIEF\nTASK: x\nMUST\n1. Pan.\n" \
+        fix = PREAMBLE + "THIS IS A FIX ROUND in a fresh session.\nORIGINAL BRIEF\nTASK: x\nMUST\n1. Pan.\n" + FINDINGS + WHY \
             + "REUSE CHECK: not needed, a fix\nALLOWED DEPENDENCIES: none\nTIME BUDGET: 90\n"
         self.assertEqual(brief.problems(fix), [])
         self.assertEqual(brief.warnings(fix), [])
+
+    def test_a_fix_round_names_why_each_finding_cannot_wait(self):
+        self.assertEqual(brief.prompt_kind(fix_prompt()), "fix")
+        self.assertEqual(brief.problems(fix_prompt()), [])
+        self.assertEqual(brief.problems(fix_prompt(why=WHY.replace("1 HARM", "1. HARM").replace("2 DEPENDS", "2) DEPENDS"))), [])
+
+    def test_a_fix_round_without_a_why_now_section_is_refused(self):
+        found = brief.problems(fix_prompt(why=""))
+        self.assertEqual(len(found), 1, found)
+        self.assertTrue(found[0].startswith("no WHY NOW section: for each finding, write `N HARM:"), found[0])
+        self.assertIn("goes to the tech-debt list", found[0])
+        self.assertEqual(check(fix_prompt(why=""))[0], 2)
+
+    def test_each_finding_needs_its_own_why_now_line(self):
+        found = brief.problems(fix_prompt(why=WHY.replace("2 DEPENDS: the totals view (112) reads it\n", "")))
+        self.assertEqual([p.split(":")[0] for p in found], ["finding 2 has no WHY NOW line"])
+        moved = fix_prompt(why=WHY.replace("2 DEPENDS: the totals view (112) reads it\n", ""),
+                           method=METHOD + "2 HARM: written after the section ends\n")
+        self.assertEqual([p.split(":")[0] for p in brief.problems(moved)], ["finding 2 has no WHY NOW line"])
+
+    def test_a_why_now_line_must_use_harm_or_depends_and_give_a_reason(self):
+        for line, want in (("1 HARM:", "WHY NOW 1 is empty"), ("1 HARM: none.", "WHY NOW 1 is empty"),
+                           ("1 HARM: `n/a`", "WHY NOW 1 is empty"), ("1 because rows are lost", "finding 1 has no WHY NOW line"),
+                           ("1 harm: rows are lost", "finding 1 has no WHY NOW line"),
+                           ("1 LATER: rows are lost", "finding 1 has no WHY NOW line")):
+            found = brief.problems(fix_prompt(why=WHY.replace("1 HARM: the owner's rows are lost", line)))
+            self.assertEqual(len(found), 1, (line, found))
+            self.assertIn(want, found[0], line)
+
+    def test_a_why_now_line_for_a_finding_that_is_not_listed_is_refused(self):
+        found = brief.problems(fix_prompt(why=WHY + "3 HARM: a third harm\n"))
+        self.assertEqual(len(found), 1, found)
+        self.assertIn("WHY NOW 3 names no finding 3 under FIX THESE", found[0])
+        self.assertRegex(found[0], r"^line \d+: ")
+
+    def test_a_fix_round_with_no_findings_is_refused(self):
+        for findings in ("", "FIX THESE, one at a time:\n\n"):
+            self.assertEqual(brief.problems(fix_prompt(findings=findings)),
+                             ["no numbered findings under a FIX THESE line: a fix round fixes named findings"], findings)
+
+    def test_a_fenced_why_now_line_does_not_count(self):
+        fenced = WHY.replace("2 DEPENDS: the totals view (112) reads it\n", "```\n2 HARM: in a fence\n```\n")
+        self.assertEqual([p.split(":")[0] for p in brief.problems(fix_prompt(why=fenced))], ["finding 2 has no WHY NOW line"])
 
     def test_a_review_prompt_quoting_a_worker_brief_is_not_held_to_brief_rules(self):
         review = "You are a read-only reviewer.\nTASK\n" + worker(fields="")
@@ -159,13 +214,14 @@ class BriefTest(unittest.TestCase):
         self.assertEqual(brief.prompt_kind("Note: You are a worker session\n" + worker()), "other")
 
     def test_an_explicit_kind_overrides_detection(self):
-        self.assertEqual(len(brief.problems(worker(fields=""), kind="fix")), 0)
+        self.assertEqual(brief.problems(worker(fields="") + FINDINGS + WHY, kind="fix"), [])
+        self.assertEqual(len(brief.problems(worker(fields=""), kind="fix")), 1)
         self.assertEqual(len(brief.problems(worker(fields=""), kind="build")), 3)
         code, err = check(worker(fields=""))
         self.assertEqual(code, 2)
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "x.prompt.md")
-            Path(path).write_text(worker(fields="", budget="TIME BUDGET: 90\n"))
+            Path(path).write_text(worker(fields="", budget="TIME BUDGET: 90\n") + FINDINGS + WHY)
             err = io.StringIO()
             with contextlib.redirect_stderr(err):
                 self.assertEqual(brief.main(["check", "--kind", "fix", path]), 0)
@@ -488,7 +544,8 @@ class DebtTest(unittest.TestCase):
             self.assertEqual(r.returncode, 2, order)
             self.assertIn("bad.md: no REUSE CHECK line", r.stderr, order)
             self.assertEqual(re.findall(r"warning: (TD-\d+)", r.stderr), ["TD-4"], order)
-        self.assertEqual(self.cli("check", good, "--kind", "fix").returncode, 0)
+        self.assertEqual(self.cli("check", good, "--kind", "build").returncode, 0)
+        self.assertEqual(self.cli("check", good, "--kind", "fix").returncode, 2)
         for usage in (["check", good, "--kind", "bogus"], ["check", good, "--repo"], ["check", good, "--repo", "nope"],
                       ["check", "--repo", self.repo], ["check"], [], ["list", good]):
             self.assertEqual(self.cli(*usage).returncode, 2, usage)

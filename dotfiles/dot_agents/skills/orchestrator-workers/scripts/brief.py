@@ -19,6 +19,10 @@ brief with no source on the same line or bullet: a command in backticks (a numbe
 file:line, a commit id, a URL or a dated owner ruling. Years, dates, times, versions such as 10.1.1 or v1.105, and
 numbers inside paths or URLs are not claims; a rate such as 994/s is.
 
+A fix round (kind "fix") fails unless it lists numbered findings under a FIX THESE line and, under a WHY NOW line,
+gives each finding one line "N HARM: <what the owner loses if it merges>" or "N DEPENDS: <the planned item that
+builds on it>" (owner, 2026-11-02: a fix round must earn its place; other findings go to the tech-debt list).
+
 Any prompt naming a commit it relies on ("fixed in <commit>", "after <commit>", either with "commit" before the id,
 or a "RELIES ON: <commit> ..." line; an id is 7 to 40 hex characters, all digits or all letters included)
 fails unless the commit is an ancestor of HEAD of --repo (the worktree), or of main in the current folder's
@@ -141,6 +145,42 @@ def brief_problems(text):
              for num, n, body in must_items(lines) if not re.search(r"\bSHALL\b", body)]
     found += [p for p in (field_problem(outside_fences(lines), f, "name it, or say \"none\" and why") for f in BRIEF_FIELDS) if p]
     found += [p for p in (hot_spot_problem(lines),) if p]
+    return found
+
+
+WHY_NOW = "WHY NOW"
+WHY_LINE = re.compile(r"^\s*(\d+)[.)]?\s+(HARM|DEPENDS):(.*)$")
+WHY_HOW = ("write `N HARM: <what the owner loses if it merges>` or `N DEPENDS: <the planned item (id) that builds on "
+           "it>`; a finding that meets neither goes to the tech-debt list (owner, 2026-11-02)")
+
+
+def why_now_problems(text):
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    import reviewprep
+    lines = brief_lines(text)
+    numbers = [num for num, *_ in reviewprep.findings("\n".join(lines))]
+    if not numbers:
+        return ["no numbered findings under a FIX THESE line: a fix round fixes named findings"]
+    body = list(outside_fences(lines))
+    start = next((i for i, (_, line) in enumerate(body) if line.startswith(WHY_NOW)), None)
+    if start is None:
+        return [f"no WHY NOW section: for each finding, {WHY_HOW}"]
+    found, given = [], set()
+    for n, line in body[start + 1:]:
+        m = WHY_LINE.match(line)
+        if not m:
+            if line.strip() and not line[0].isspace() and (HEADING.match(line) or line.rstrip().endswith(":")):
+                break
+            continue
+        num = m.group(1)
+        given.add(num)
+        if num not in numbers:
+            found.append(f"line {n}: WHY NOW {num} names no finding {num} under FIX THESE")
+        elif bare(m.group(3)) in EMPTY:
+            found.append(f"line {n}: WHY NOW {num} is empty: {WHY_HOW}")
+    found += [f"finding {num} has no WHY NOW line: {WHY_HOW}" for num in numbers if num not in given]
     return found
 
 
@@ -283,6 +323,8 @@ def problems(text, kind=None, repo=None):
                               field_problem(lines, "ALLOWED DEPENDENCIES", "name them, or say \"none\"", True)) if p]
     if kind == "build":
         found += brief_problems(text)
+    if kind == "fix":
+        found += why_now_problems(text)
     return found
 
 

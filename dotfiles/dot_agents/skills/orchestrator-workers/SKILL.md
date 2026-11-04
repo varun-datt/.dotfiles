@@ -183,7 +183,10 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   may say "none" with a reason, and a bare "none" in backticks or with punctuation is still empty.
   A TIME BUDGET over 45 minutes only warns: split the item. The prompt's kind comes from its first
   line (the preamble's opening, then a "THIS IS A FIX ROUND" line before "TASK:"), not from a quote
-  further down; `brief.py check --kind <kind>` overrides it.
+  further down; `brief.py check --kind <kind>` overrides it. A fix round (kind fix, or a round named
+  `<item>-fixN`, which `route.py run` checks as one) is refused unless each finding under FIX THESE has a
+  WHY NOW line, `N HARM: <what the owner loses if it merges>` or `N DEPENDS: <the planned item that builds
+  on it>` (owner, 2026-11-02: a fix round must earn its place; other findings go to the tech-debt list).
 - **Model, effort, context tier and credit cap:** `route.py run` (or `route.py pick` to see the choice without launching) chooses them per round and logs why ([router](references/routing.md#the-router)); the static table in [references/routing.md](references/routing.md) is its fallback. The cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --history <earlier run> ... --caps`. A kind with under 5 rounds on a model gets a cap derived from another model's rounds by price (`scripts/prices.json`, refreshed from the SDK's `listModels()`). `--chat <debug-log-dir> --budget N` prints the run's spend, chat included (an upper bound), against N and how many more rounds fit.
 - **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
   launches it through `route.py run --kind review` (`--help` lists the options it passes on, such
