@@ -73,6 +73,7 @@ Event orders were 9 of the 24 accepted findings on these items.
 - **Configuration is in scope:** a guard over `tests/` misses the config file that sets the default.
 - **Removing coverage to fix a flake** needs a replacement test for what it covered.
 - **Meters and counters see every call,** including calls the system makes on its own (titles, retries).
+- **The test reaches the path at risk.** Starting an app misses what it sets up on first use (a connection pool, a Kerberos login): call something that uses it. A harness whose settings switch the risky part off (security off, an unencrypted broker) proves nothing about it; a smoke test on a local plaintext Kafka reported healthy while the encrypted broker failed in the cluster.
 
 ## Keeping the lists true
 

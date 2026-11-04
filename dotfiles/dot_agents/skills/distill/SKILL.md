@@ -52,7 +52,7 @@ Take the first that applies, per kind of record:
 
 1. Read all of the source, not only what is in view. For a session that is its full log on disk: after a compaction the context window holds only a summary. [references/session.md](references/session.md) condenses the log into chunks and checks that every chunk was read.
 2. Ask the review questions of each part: what did we expect, what happened, why (ask twice), what will we do next time. Include what went well.
-3. Write down every candidate: corrections the user made, mistakes made twice, facts the code does not show (decisions and their reasons, where outside information lives, tool traps), open work with what releases it, and what worked. Gather generously; step 3 judges.
+3. Write down every candidate: corrections the user made, mistakes made twice, facts the code does not show (decisions and their reasons, where outside information lives, tool traps), open work with what releases it, and what worked. Gather generously; step 3 judges. When subagents read the source, hand each one the list of what is already recorded (the repository's AGENTS.md rules, the personal instructions, the trap tables of the skills the source touched) and ask for only what those do not already say, each with the record it checked. Say which topics the source has already moved elsewhere (such as findings already in a skill) so readers skip them.
 4. Check the source's own claims and outputs for errors; report only the major ones.
 
 ## 3. Judge, then sort each candidate
