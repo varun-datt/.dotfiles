@@ -134,7 +134,11 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   listed file names its rows (`debt.py for-files <repo> <paths>`) and fixes those under about 15
   minutes: its `TECH DEBT:` line lists the ids it fixes with their lines, or says why not, and
   `route.py run` warns (exit unchanged) for each open row on a named path whose id the brief leaves out; the worktree's root folder itself is not matched, since every brief names it in YOUR RESOURCES. A class seen 3 times becomes a planned item; past about 30 open rows, each run plans one
-  debt item; `debt.py stale` lists rows untouched for 3 runs, to close "won't fix" or keep.
+  debt item; `debt.py stale` lists rows untouched for 3 runs, to close "won't fix" or keep. In a run
+  the owner is away for, a finding that needs the owner soon goes in with `--follow-up` (a Blocker
+  only goes in that way, and keeps the mark until closed); `debt.py flag <repo> TD-<n> [--off]` sets
+  or clears the mark, and the end-of-run report opens with `debt.py list <repo> --follow-up` for each
+  repository the run touched (owner, 2026-11-02).
 - A finding the re-review leaves open pauses the item for the owner (owner, 2026-10-31, confirmed
   2026-11-02): one fix round, then the owner decides. `route.py run` refuses any fix round after an item's first (exit 2) unless `--override` carries `owner_approved=<where the owner said so>`, and `mine.py --quality` flags one launched without it.
   A fix made after the re-review, once the owner

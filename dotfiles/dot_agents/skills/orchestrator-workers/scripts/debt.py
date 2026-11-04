@@ -2,8 +2,9 @@
 """Keeper of a repository's tech-debt register, <repo>/docs/tech-debt.md: known findings that did not block a merge.
 
 Usage:
-    python3 debt.py add <repo> --area A --grade Major|Minor --file PATH --scenario "one line" --source ROUND --minutes N
-    python3 debt.py list <repo> [--open|--all]                 the table's rows (default: open ones)
+    python3 debt.py add <repo> --area A --grade Blocker|Major|Minor --file PATH --scenario "one line" --source ROUND --minutes N [--follow-up]
+    python3 debt.py list <repo> [--open|--all|--follow-up]      the table's rows (default: open ones)
+    python3 debt.py flag <repo> TD-<n> [--off]                  mark an open row for follow-up, or take the mark off
     python3 debt.py close <repo> TD-<n> --reason "one line"     mark a row closed; it is never deleted
     python3 debt.py for-files <repo> PATH ...                   open rows on these files or under these folders,
                                                                 as lines a brief pastes under a heading
@@ -11,6 +12,8 @@ Usage:
     python3 debt.py import-plan PLAN.md --dry-run [--counts]    rows a PLAN.md's "Known gaps" passages would give,
                                                                 by item number (a column-0 "N."), or "?" under a bullet
 
+A row's Status is open, follow-up (open, and deferred from a run with the owner away: the owner looks at it after the
+run; owner, 2026-11-02) or "closed <date>: <reason>". A Blocker goes in only as follow-up and keeps the mark until closed.
 The register is a markdown table; text outside the table is kept as written. Ids are TD-<n>, one above the
 highest ever used (a `<!-- debt.py next id: n -->` line after the table remembers it if a row is deleted by hand).
 A run, for `stale`, is a line of FILE that starts with its date (YYYY-MM-DD); a row's runs are those dated
@@ -22,7 +25,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from state import Refused, one_line, regular_or_absent, write_atomic  # noqa: E402
 
 REGISTER = os.path.join('docs', 'tech-debt.md')
-GRADES = ('Major', 'Minor')
+GRADES = ('Blocker', 'Major', 'Minor')
+FOLLOW_UP = 'follow-up'
 COLUMNS = ('Id', 'Date', 'Area', 'Grade', 'File', 'Scenario', 'Source', 'Minutes', 'Status')
 HEADER = re.compile(r'^\|\s*Id\s*\|\s*Date\s*\|')
 NEXT = re.compile(r'^<!-- debt\.py next id: (\d+) -->$')
@@ -31,7 +35,7 @@ DATE = re.compile(r'^(\d{4}-\d{2}-\d{2})\b')
 CELL_SPLIT = re.compile(r'(?<!\\)\|')
 TITLE = """# Tech debt
 
-Known findings that did not block a merge, kept by `debt.py` (the orchestrator-workers skill). A brief that touches a listed file names its rows and fixes those under about 15 minutes; a class seen 3 times becomes a planned item; past about 30 open rows, each run plans one debt item; a row untouched for 3 runs is re-graded. Edit text outside the table freely.
+Known findings that did not block a merge, kept by `debt.py` (the orchestrator-workers skill). A brief that touches a listed file names its rows and fixes those under about 15 minutes; a class seen 3 times becomes a planned item; past about 30 open rows, each run plans one debt item; a row untouched for 3 runs is re-graded. A row whose status is follow-up was deferred during a run the owner was away for, and the owner looks at it after that run. Edit text outside the table freely.
 
 """
 
@@ -147,7 +151,7 @@ def change(repo, fn):
 
 
 def is_open(row):
-    return row['Status'] == 'open'
+    return row['Status'] in ('open', FOLLOW_UP)
 
 
 def cmd_add(a):
@@ -156,20 +160,45 @@ def cmd_add(a):
               'Scenario': cell(a.scenario, '--scenario'), 'Source': cell(a.source, '--source')}
     if a.minutes < 1:
         raise Refused('--minutes must be 1 or more')
+    if a.grade == 'Blocker' and not a.follow_up:
+        raise Refused('a Blocker goes in only with --follow-up, so the owner looks at it after the run')
 
     def add(reg):
-        row = {'Id': f'TD-{reg.next_id}', 'Date': today(), **fields, 'Minutes': str(a.minutes), 'Status': 'open'}
+        row = {'Id': f'TD-{reg.next_id}', 'Date': today(), **fields, 'Minutes': str(a.minutes),
+               'Status': FOLLOW_UP if a.follow_up else 'open'}
         reg.rows.append(row)
         reg.next_id += 1
-        return f"added {row['Id']} to {REGISTER}"
+        return f"added {row['Id']} to {REGISTER}" + (' for follow-up' if a.follow_up else '')
     return change(repo, add)
 
 
 def cmd_list(a):
     _, text = read(repo_dir(a.repo))
     rows = [] if text is None else Register(text).rows
-    rows = rows if a.all else [r for r in rows if is_open(r)]
+    if a.follow_up:
+        rows = [r for r in rows if r['Status'] == FOLLOW_UP]
+    elif not a.all:
+        rows = [r for r in rows if is_open(r)]
     return '\n'.join(Register.render(r) for r in rows)
+
+
+def cmd_flag(a):
+    repo = repo_dir(a.repo)
+    if not os.path.isfile(os.path.join(repo, REGISTER)):
+        raise Refused(f'{a.repo} has no {REGISTER}')
+    want = 'open' if a.off else FOLLOW_UP
+
+    def flag(reg):
+        row = next((r for r in reg.rows if r['Id'] == a.id), None)
+        if row is None:
+            raise Refused(f'no row {a.id!r} in {REGISTER}')
+        if not is_open(row) or row['Status'] == want:
+            raise Refused(f'{a.id} is already {row["Status"]}')
+        if a.off and row['Grade'] == 'Blocker':
+            raise Refused(f'{a.id} is a Blocker, which keeps its follow-up mark until it is closed')
+        row['Status'] = want
+        return f'{a.id} is now {want}'
+    return change(repo, flag)
 
 
 def cmd_close(a):
@@ -205,7 +234,7 @@ def rows_for_files(repo, paths):
 def for_files_line(repo, r):
     f = r['File']
     gone = '' if os.path.lexists(os.path.join(repo, f)) else ' (the file no longer exists; close the row if the finding went with it)'
-    return f"- {r['Id']} ({r['Grade']}, {r['Area']}, about {r['Minutes']} min) `{f}`: {r['Scenario']}{gone}"
+    return f"- {r['Id']} ({r['Grade']}{', follow-up' if r['Status'] == FOLLOW_UP else ''}, {r['Area']}, about {r['Minutes']} min) `{f}`: {r['Scenario']}{gone}"
 
 
 def cmd_for_files(a):
@@ -312,13 +341,21 @@ def parser():
     p.add_argument('--scenario', required=True, help='one line, no "|"')
     p.add_argument('--source', required=True, help='the review round that found it')
     p.add_argument('--minutes', type=int, required=True, help='estimated minutes to fix')
+    p.add_argument('--follow-up', action='store_true',
+                   help='deferred from a run the owner was away for: the owner looks at it after the run')
     p.set_defaults(fn=cmd_add)
     p = sub.add_parser('list', help='print the rows')
     p.add_argument('repo')
     g = p.add_mutually_exclusive_group()
     g.add_argument('--open', action='store_true', help='open rows only (the default)')
     g.add_argument('--all', action='store_true', help='open and closed rows')
+    g.add_argument('--follow-up', action='store_true', help='rows marked for follow-up only')
     p.set_defaults(fn=cmd_list)
+    p = sub.add_parser('flag', help='mark an open row for follow-up, or take the mark off')
+    p.add_argument('repo')
+    p.add_argument('id', help='TD-<n>')
+    p.add_argument('--off', action='store_true', help='take the follow-up mark off')
+    p.set_defaults(fn=cmd_flag)
     p = sub.add_parser('close', help='mark a row closed with today\'s date and a reason')
     p.add_argument('repo')
     p.add_argument('id', help='TD-<n>')

@@ -115,6 +115,57 @@ class DebtTest(unittest.TestCase):
         self.cli('close', self.repo, 'TD-1', '--reason', 'x', ok=False)
         self.assertFalse(os.path.exists(self.reg))
 
+    def ids(self, *flags):
+        return [r.split('|')[1].strip() for r in self.rows(*flags)]
+
+    def test_a_follow_up_row_is_open_listed_apart_and_closable(self):
+        self.add()
+        self.assertIn('added TD-2 to docs/tech-debt.md for follow-up',
+                      self.cli('add', self.repo, '--area', 'DATA', '--grade', 'Major', '--file', 'src/host/a.ts', '--scenario',
+                               'rows still vanish on a crash', '--source', 'x-review', '--minutes', '30', '--follow-up').stdout)
+        self.assertTrue(self.text().splitlines()[-2].endswith('| x-review | 30 | follow-up |'), self.text())
+        self.assertEqual((self.ids(), self.ids('--follow-up')), (['TD-1', 'TD-2'], ['TD-2']))
+        self.assertIn('- TD-2 (Major, follow-up, DATA, about 30 min)', self.cli('for-files', self.repo, 'src').stdout)
+        self.assertIn('- TD-1 (Minor, host-io, about 10 min)', self.cli('for-files', self.repo, 'src').stdout)
+        self.cli('close', self.repo, 'TD-2', '--reason', 'fixed in item y')
+        self.assertEqual((self.ids(), self.ids('--follow-up'), self.ids('--all')), (['TD-1'], [], ['TD-1', 'TD-2']))
+
+    def test_flag_marks_and_unmarks_only_open_rows(self):
+        self.add()
+        self.add(scenario='second one')
+        self.cli('close', self.repo, 'TD-2', '--reason', 'done')
+        self.assertIn('TD-1 is now follow-up', self.cli('flag', self.repo, 'TD-1').stdout)
+        self.assertEqual(self.ids('--follow-up'), ['TD-1'])
+        before = self.text()
+        for args in (('TD-1',), ('TD-2',), ('TD-9',), ('TD-2', '--off')):
+            self.cli('flag', self.repo, *args, ok=False)
+            self.assertEqual(self.text(), before, args)
+        self.assertIn('TD-1 is now open', self.cli('flag', self.repo, 'TD-1', '--off').stdout)
+        self.assertEqual((self.ids('--follow-up'), self.ids()), ([], ['TD-1']))
+        self.cli('flag', self.repo, 'TD-1', '--off', ok=False)
+
+    def test_a_blocker_goes_in_only_for_follow_up_and_keeps_the_mark(self):
+        self.add()
+        before = self.text()
+        self.add(grade='Blocker', ok=False)
+        self.assertEqual(self.text(), before)
+        self.cli('add', self.repo, '--area', 'SEC', '--grade', 'Blocker', '--file', 'src/host/a.ts', '--scenario', 'x',
+                 '--source', 'r', '--minutes', '5', '--follow-up')
+        self.assertEqual(self.ids('--follow-up'), ['TD-2'])
+        self.cli('flag', self.repo, 'TD-2', '--off', ok=False)
+        self.assertEqual(self.ids('--follow-up'), ['TD-2'])
+        self.cli('close', self.repo, 'TD-2', '--reason', 'fixed')
+        self.assertEqual(self.ids('--follow-up'), [])
+
+    def test_stale_and_briefs_treat_a_follow_up_row_as_open(self):
+        self.add()
+        self.cli('flag', self.repo, 'TD-1')
+        self.assertEqual([r['Id'] for r in debt.rows_for_files(self.repo, ['src/host/a.ts'])], ['TD-1'])
+        runs = os.path.join(self.tmp.name, 'runs.txt')
+        with open(runs, 'w') as f:
+            f.write('2999-01-01 a\n2999-01-02 b\n2999-01-03 c\n')
+        self.assertIn('TD-1 3 runs since', self.cli('stale', self.repo, '--runs', runs).stdout)
+
     def test_hand_written_text_outside_the_table_is_kept(self):
         os.makedirs(os.path.dirname(self.reg))
         hand = ('# Our debt\n\nA note above, with a | pipe.\n\n'
