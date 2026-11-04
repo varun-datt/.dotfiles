@@ -4,9 +4,10 @@ for 994 credits). REVIEW-DIFF.patch holds only the fix commits (`git diff <fix-b
 REVIEW-REPORT.md is the fix round's report. A reviewer of another family than the author; route.py
 runs it at medium effort. "Same kind, not fixed" lines from the fix report go to the tech-debt list,
 and a kind seen in 3 or more items goes to the owner as a structural fix.
-After this check: a finding it leaves open pauses the item for the owner (owner, 2026-10-31,
+After this check, when the owner is watching: a finding it leaves open pauses the item for the owner (owner, 2026-10-31,
 confirmed 2026-11-02): one fix round, then the owner decides; never a second fix round or a third
-check without the owner. -->
+check without the owner. In a run the owner is away for, what it leaves open goes to tech debt marked
+follow-up and the item merges (owner, 2026-11-02). -->
 You are a read-only reviewer from a different model family than the author. This is a SHORT RE-REVIEW. Do not edit files; use the shell only to read. Read `REVIEW-DIFF.patch` at this worktree's root (the fix commits {{FIX_COMMITS}} on branch `{{BRANCH}}`) and `REVIEW-REPORT.md` (the fix round's report).
 
 Findings the fix round was given:

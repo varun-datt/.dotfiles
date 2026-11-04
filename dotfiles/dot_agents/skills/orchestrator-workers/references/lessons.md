@@ -237,3 +237,15 @@ that point at it), and no work product, repository, customer, host or cloud reso
   unattended run; `scripts/review.sh` runs each review under `timeout`; and `scripts/runqueue.py run`
   launches the next item when a slot frees, and notifies the owner, not the chat, when the chat
   has been idle 20 minutes while something waits on it. [notes]
+
+## 2026-11-02: a grade had been deciding the fix
+
+- 2026-11-02: In run amc-2026-11-02-p1, fix rounds cost 5,428 of 13,838 worker credits, more than the
+  builds' 4,286. None of 9 first reviews was clean (6.4 accepted Blocker or Major findings each), so
+  every item got a fix round, and a fix round cost about a build (median 421 against 483) whatever its
+  size, because a fresh session relearned the item; 55% of fix credits went to the method's own check
+  tools, held to a stricter bar. The root: a finding's grade (its severity) decided the fix (its
+  priority). Now a fix round needs a WHY NOW line per finding, harm to the owner once merged or a
+  planned item that builds on it; everything else goes to tech debt; the fix resumes the builder's
+  session; and in a run the owner is away for, what is left is marked follow-up and the item merges.
+  [notes; `mine.py --quality`]

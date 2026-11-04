@@ -11,7 +11,7 @@ import route
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
-D1 = 'Blocker and Major block (I1 at L1–L2; I2 at L1–L2; I3 at L1). Minor goes to debt'
+D1 = 'Blocker and Major are the candidates for a fix now (I1 at L1–L2; I2 at L1–L2; I3 at L1)'
 CAUSES = ('MUST', 'SPEC', 'ADJ', 'ORDER', 'FAIL', 'BOUND', 'EDGE', 'PLAT', 'DESIGN', 'READ', 'REUSE', 'UIQ', 'CONV',
           'TEST', 'PRE')
 
@@ -120,7 +120,9 @@ class PromptTextTest(unittest.TestCase):
                                 'I4': ['Minor', 'Nit', 'Nit']})
         blocking = {(i, f'L{n + 1}') for i, cells in rows.items() for n, c in enumerate(cells) if c in ('Blocker', 'Major')}
         self.assertEqual(blocking, {('I1', 'L1'), ('I1', 'L2'), ('I2', 'L1'), ('I2', 'L2'), ('I3', 'L1')})
-        for row in ('| Blocker, Major | Blocks: one fix round | Fix brief; re-review checks the fix |',
+        for row in ('| Blocker, Major | Fixed first only with a WHY NOW line: harm to the owner once merged, or a planned '
+                    'item builds on it | Fix brief, and the re-review checks the fix; otherwise the tech-debt list (a Blocker '
+                    'marked follow-up) |',
                     '| Minor | Does not block | One line on the repository\'s tech-debt list |',
                     '| Nit | Does not block | Counted in one line, never listed |',
                     '| Pre-existing | Does not block | Tech-debt list if it would be Major, else dropped |',
@@ -172,7 +174,9 @@ class PromptTextTest(unittest.TestCase):
             for said in ('one more fix round', 'another fix round', 'a second fix round', 'Fixes made after the re-review go'):
                 self.assertNotIn(said, flat, path)
         lifecycle = ' '.join(read('SKILL.md').split('## Lifecycle', 1)[1].split('\n## ', 1)[0].split())
-        self.assertIn('A finding the re-review leaves open pauses the item for the owner (owner, 2026-10-31, confirmed '
+        self.assertIn('When the owner is watching, the earlier rule holds: a finding the re-review leaves open pauses the item '
+                      'for the owner (owner, 2026-10-31, confirmed 2026-11-02)', lifecycle)
+        self.assertIn('what the re-review leaves open goes to tech debt marked follow-up, and the item merges (owner, '
                       '2026-11-02)', lifecycle)
 
     def test_the_critique_asks_for_each_cited_standard_s_own_names(self):

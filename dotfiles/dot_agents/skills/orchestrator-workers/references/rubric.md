@@ -40,7 +40,7 @@ Where the matrix gives way:
 
 | Level | Merge | Where it goes |
 |---|---|---|
-| Blocker, Major | Blocks: one fix round | Fix brief; re-review checks the fix |
+| Blocker, Major | Fixed first only with a WHY NOW line: harm to the owner once merged, or a planned item builds on it | Fix brief, and the re-review checks the fix; otherwise the tech-debt list (a Blocker marked follow-up) |
 | Minor | Does not block | One line on the repository's tech-debt list |
 | Nit | Does not block | Counted in one line, never listed |
 | Pre-existing | Does not block | Tech-debt list if it would be Major, else dropped |

@@ -70,8 +70,9 @@ which answers you inferred from the repository.
 4. **Models:** settled per kind of round by [references/routing.md](references/routing.md) (owner, 2026-10-13). Ask only which models are today's strongest, mid-tier and other-family reviewer, and which items touch a risk area.
 5. **Order:** proposed waves and dependencies, and the most workers at once (recommended: 3).
    Propose any extra items now.
-6. **Rules:** confirm one review per item; one fixes-only re-review only when blocking findings were
-   fixed; the blocking rule (§Lifecycle); and `--no-ff` merges to main, never pushed.
+6. **Rules:** confirm one review per item; a fix round only for the findings that meet the fix-now bar
+   (§Lifecycle), in the builder's own session; one fixes-only re-review after it; what goes to tech debt
+   marked follow-up while the owner is away; and `--no-ff` merges to main, never pushed.
 7. **Boundaries:**
    - sibling repositories workers may read (`--add-dir`, read-only);
    - external systems that stay read-only;
@@ -112,8 +113,9 @@ timeout and blocks the orchestrator until it returns. Run that work as a CLI pro
 ## Lifecycle
 
 ```
-task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, short brief)
-  -> ONE fixes-only re-review, only if blocking findings were fixed
+task -> worker -> grade report -> ONE review -> rulings: each Blocker or Major fixed now (a WHY NOW
+  line) or sent to tech debt -> ONE fix round in the builder's own session, only for findings fixed now
+  -> ONE fixes-only re-review, only if a fix round ran
   -> trial merge -> merge -> gates on main -> restart owner's instance -> records
 ```
 
@@ -121,9 +123,14 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   launches the review, the fix round and the re-check itself, and stops at two suspend points, ruling the
   review's findings and merging, because only those need judgement. The chat waits for the next one with
   `runqueue.py wait`; a failed step also stops the pipeline and waits on the chat.
-- **The blocking rule** ([references/rubric.md](references/rubric.md), owner, 2026-10-30): the
-  reviewer grades every finding by likelihood and impact; Blocker and Major block (I1 at L1–L2; I2
-  at L1–L2; I3 at L1). Minor goes to debt: one line on the repository's `docs/tech-debt.md`.
+- **The fix-now bar** ([references/rubric.md](references/rubric.md); grades owner, 2026-10-30; bar
+  owner, 2026-11-02): the reviewer grades every finding by likelihood and impact; Blocker and Major are the
+  candidates for a fix now (I1 at L1–L2; I2 at L1–L2; I3 at L1). A grade is the finding's severity;
+  whether it is fixed now is its priority, a separate call, as ISTQB's glossary keeps the two apart. A
+  Blocker or Major is fixed now only when it would harm the owner once merged (data lost, a security
+  hole, credits wasted, a flow the owner uses broken) or a planned item builds on the broken code; its
+  WHY NOW line says which, and `brief.py` refuses a fix round without one. Every other finding goes to
+  debt, where repeats show patterns; Minor always does: one line on the repository's `docs/tech-debt.md`.
 - The orchestrator accepts or rejects each finding, with a reason.
 - **Research learnings travel** (owner, 2026-11-01): after merging a research proposal, the
   orchestrator adds a one-line pointer to each item its "Helps other items" list names, at the
@@ -139,7 +146,10 @@ task -> worker -> grade report -> ONE review -> ONE fix round (a fresh session, 
   only goes in that way, and keeps the mark until closed); `debt.py flag <repo> TD-<n> [--off]` sets
   or clears the mark, and the end-of-run report opens with `debt.py list <repo> --follow-up` for each
   repository the run touched (owner, 2026-11-02).
-- A finding the re-review leaves open pauses the item for the owner (owner, 2026-10-31, confirmed
+- In a run the owner is away for, the builder fixes each finding fixed now, or at least makes its harm
+  stop; what the re-review leaves open goes to tech debt marked follow-up, and the item merges (owner,
+  2026-11-02). When the owner is watching, the earlier rule holds: a finding the re-review leaves open
+  pauses the item for the owner (owner, 2026-10-31, confirmed
   2026-11-02): one fix round, then the owner decides. `route.py run` refuses any fix round after an item's first (exit 2) unless `--override` carries `owner_approved=<where the owner said so>`, and `mine.py --quality` flags one launched without it.
   A fix made after the re-review, once the owner
   approves it, goes to a **post-merge review (commit-then-review)** on main, so nothing lands unreviewed.
@@ -218,7 +228,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   resumed fixes with run amc-2026-11-02-p1's fresh ones, median 421 credits). The pipeline does this
   whenever `routes.jsonl` holds the build's launch, and starts a fresh session otherwise. Fix rounds are
   narrow (owner,
-  2026-11-02, after fix rounds cost more than builds): the brief carries only the blocking findings,
+  2026-11-02, after fix rounds cost more than builds): the brief carries only the findings fixed now,
   each with where, what goes wrong and what done looks like; one test per finding that fails first;
   only the checks for the changed files; no impact map, case table or mutation runs, and screenshots
   only for a UI finding ([fix.md](assets/fix.md)). A whole kind is fixed only when the finding lists
@@ -290,7 +300,7 @@ every script in the folder.)
     and `suspend:merge`. The item waits on the chat, the idle alert names it, and it resumes when
     `<run>/<id>.<name>.done` exists. For rulings, write `<id>-fix1.body.md` (or the whole
     `<id>-fix1.prompt.md`; otherwise the build's prompt with its body swapped is used) and then
-    `<id>.rulings.done`; write `none` in it to skip the fix and re-check when nothing blocks. Writing
+    `<id>.rulings.done`; write `none` in it to skip the fix and re-check when no finding meets the fix-now bar. Writing
     `<id>.merge.done` after the merge marks the item done. `add` refuses a done file left from before.
   - **A failed step stops the pipeline**: a non-zero exit (3 capped, 4 errored, 5 brief refused, 12 load,
     124 timed out) or a prep failure (exit 2: no base, an empty diff, no report or findings) waits on the chat
