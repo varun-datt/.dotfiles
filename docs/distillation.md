@@ -84,7 +84,7 @@ Settled on 2026-10-24 and described in [knowledge-layout.md](knowledge-layout.md
 | procedure | `.agents/skills/` | `.agents/skills/` |
 | fact | `20-areas/`, `30-resources/` | `docs/` |
 | event | `YYYY-MM-DD-slug.md` with `type: decision` or `type: event`, in its area or project | `docs/decisions/` for decisions; git history for the rest |
-| lesson | the area's `gotchas.md` | `AGENTS.md` once it is a rule, else the handoff note |
+| lesson | the area's `gotchas.md` | `AGENTS.md` once it is a rule, else `docs/gotchas.md` |
 | working | `10-projects/` or `00-inbox/research-<topic>/` | `research/` |
 
 Why these names: `AGENTS.md` at the root is the one entry point the tools share ([agents.md](https://agents.md)), and `.agents/skills/` is a default skill path for VS Code, Copilot CLI and Cursor (checked 2026-10-17). Decision files follow MADR, which allows any folder ("MADR does not enforce any repository or directory organization structure", [MADR](https://adr.github.io/madr)). One known cost: Claude Code does not read "anything under a `.agents/` directory" ([Claude Code docs](https://code.claude.com/docs/en/memory)), so `AGENTS.md` links every folder it relies on.

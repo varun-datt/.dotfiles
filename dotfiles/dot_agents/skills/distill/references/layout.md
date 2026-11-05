@@ -24,9 +24,10 @@ Decisions and events live in the area or project they concern; repository-wide o
 | `AGENTS.md`, `.agents/skills/` | always-on rules; procedures | rule, procedure |
 | `docs/<topic>.md` | what is true now | fact |
 | `docs/decisions/NNNN-slug.md` | a choice and why (MADR) | event |
+| `docs/gotchas.md` | one line per wrong answer, as in a knowledge repository | lesson |
 | `research/YYYY-MM-DD-topic.md`, `research/YYYY-MM-DD-topic/` | dated investigations and their probes | working |
 
-Other events stay in git history; a lesson becomes an `AGENTS.md` rule once it recurs, otherwise it goes in the handoff note.
+Other events stay in git history; a lesson moves to `AGENTS.md` once it recurs.
 
 A fact lives in one place. When a lesson hardens into a rule, the rule moves to `AGENTS.md` or `.agents/`, and the dated note keeps the event and a link. Dated notes are not edited once written; a superseded one gets a new note that links back. Mark each claim VERIFIED, INFERRED or OPEN.
 

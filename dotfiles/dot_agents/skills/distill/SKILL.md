@@ -76,7 +76,7 @@ Give it a **destination**:
 | Who reads it next | True only in this repository | True everywhere |
 | --- | --- | --- |
 | An agent | workspace: `AGENTS.md`, skills, instructions | personal agent layer: propose only (step 6) |
-| The user | workspace: reference, timeline, handoff | wiki inbox (step 5) |
+| The user | workspace: reference, timeline, state file (open work only, step 6) | wiki inbox (step 5) |
 
 True for this repository but unsafe to commit there (private, employer or personal content in a shared or public repository): treat as personal. Fits two homes: store it once in the narrower one and link from the other. Team or organisation rules: flag, never write.
 
@@ -100,9 +100,10 @@ True for this repository but unsafe to commit there (private, employer or person
 ## 6. Finish
 
 1. Remove temporary files this run made; ask if you are unsure whether something is temporary. A research folder or document is removed only as its mode's reference says.
-2. Commit every workspace file you changed, with a message that says what was recorded. Never push.
-3. Personal agent rules (true for this user in every repository) are not written: list them in the report as proposed text for the user's personal instructions.
-4. You are done when every candidate has a home or an explicit "not worth keeping", and every repository you touched is clean.
+2. Drain the state file, `~/.agents/state/<workspace>/state.md`: update the topics this source touched in place, move anything there that lasts to its home from step 3, and delete finished topics. Write it only with `python3 ~/.agents/skills/distill/scripts/state.py write`, then run `state.py check` on it and report its warnings.
+3. Commit every workspace file you changed, with a message that says what was recorded. Never push.
+4. Personal agent rules (true for this user in every repository) are not written: list them in the report as proposed text for the user's personal instructions.
+5. You are done when every candidate has a home or an explicit "not worth keeping", and every repository you touched is clean.
 
 ## 7. Report
 
