@@ -3,7 +3,8 @@
 
   state.py check FILE...                 warn on size, dated diary lines and an old template; exit 1 if any
   state.py hash FILE                     print the token to pass to write
-  state.py write FILE --expect TOKEN     replace FILE with stdin, refused if FILE changed since TOKEN
+  state.py write FILE --expect TOKEN     replace FILE with stdin, refused if FILE changed since TOKEN;
+                                         committed when it lies in ~/.agents/state and that is a git repo
 """
 
 import argparse
@@ -11,10 +12,12 @@ import fcntl
 import hashlib
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+STATE_ROOT = Path(os.path.realpath(Path.home() / ".agents" / "state"))
 LIMIT = 25 * 1024
 SCHEMA = "agent-state/v2"
 DATE = r"20\d\d-\d\d-\d\d"
@@ -55,6 +58,21 @@ def check(files):
     return 1 if bad else 0
 
 
+def record(path):
+    if STATE_ROOT not in path.parents or not (STATE_ROOT / ".git").exists():
+        return
+    rel = str(path.relative_to(STATE_ROOT))
+    git = ["git", "-C", str(STATE_ROOT)]
+    done = subprocess.run(git + ["add", "--", rel], capture_output=True, text=True)
+    if done.returncode == 0:
+        if subprocess.run(git + ["diff", "--cached", "--quiet", "--", rel]).returncode == 0:
+            return
+        msg = f"state: {path.parent.name}"
+        done = subprocess.run(git + ["commit", "-q", "--only", "-m", msg, "--", rel], capture_output=True, text=True)
+    if done.returncode != 0:
+        print(f"{path}: written but not committed: {done.stderr.strip()}", file=sys.stderr)
+
+
 def write(file, expect, content):
     path = Path(os.path.realpath(file))
     if not content.strip():
@@ -76,6 +94,7 @@ def write(file, expect, content):
         except BaseException:
             os.unlink(tmp.name)
             raise
+        record(path)
     finally:
         os.close(fd)
     for msg in findings(path):

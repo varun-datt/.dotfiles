@@ -1,10 +1,12 @@
 import io
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).parent))
 import state  # noqa: E402
@@ -121,6 +123,45 @@ class StateTest(unittest.TestCase):
         finally:
             sys.stdout = old
         self.assertEqual(out.getvalue().strip(), state.token(self.file))
+
+    def git_root(self):
+        root = Path(os.path.realpath(self.dir)) / "state"
+        (root / "ws").mkdir(parents=True)
+        git = ["git", "-C", str(root)]
+        subprocess.run(git + ["init", "-q"], check=True)
+        for key, value in (("user.name", "t"), ("user.email", "t@t"), ("commit.gpgsign", "false")):
+            subprocess.run(git + ["config", key, value], check=True)
+        f = root / "ws" / "state.md"
+        f.write_text(CURRENT)
+        return root, f
+
+    def subjects(self, root):
+        out = subprocess.run(["git", "-C", str(root), "log", "--format=%s"], capture_output=True, text=True).stdout
+        return out.split()
+
+    def test_write_commits_each_change_inside_a_git_state_root(self):
+        root, f = self.git_root()
+        new = CURRENT.replace("Decide X", "Decide Z")
+        with mock.patch.object(state, "STATE_ROOT", root):
+            self.assertEqual(run(["write", str(f), "--expect", state.token(f)], new), (0, ""))
+            self.assertEqual(run(["write", str(f), "--expect", state.token(f)], new), (0, ""))
+        self.assertEqual(self.subjects(root), ["state:", "ws"])
+
+    def test_write_commits_only_the_state_file(self):
+        root, f = self.git_root()
+        other = root / "ws" / "notes.md"
+        other.write_text("x")
+        subprocess.run(["git", "-C", str(root), "add", "ws/notes.md"], check=True)
+        with mock.patch.object(state, "STATE_ROOT", root):
+            run(["write", str(f), "--expect", state.token(f)], CURRENT + "\n")
+        files = subprocess.run(["git", "-C", str(root), "show", "--name-only", "--format="], capture_output=True, text=True).stdout.split()
+        self.assertEqual(files, ["ws/state.md"])
+
+    def test_write_outside_the_state_root_makes_no_commit(self):
+        root, _ = self.git_root()
+        with mock.patch.object(state, "STATE_ROOT", root):
+            self.assertEqual(run(["write", str(self.file), "--expect", state.token(self.file)], CURRENT + "\n"), (0, ""))
+        self.assertEqual(self.subjects(root), [])
 
 
 if __name__ == "__main__":
