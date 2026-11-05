@@ -67,6 +67,15 @@ Event orders were 9 of the 24 accepted findings on these items.
 - **The owner's own commands still work** with optional settings unset.
 - **The documentation that names the behaviour** (SKILL.md, README, plan lines) changes with it.
 
+## config edits: YAML, pipeline files, CODEOWNERS, branch filters
+
+From one migration skill's five review rounds (2026-11-02 to 11-03), where editing YAML as text and judging branch-filter coverage each caused several blocking findings.
+
+- **Every way the same value can be written:** quoted and unquoted, a folded or literal block (`>-`, `|`) over several lines, a trailing comment, CRLF line ends, a UTF-8 BOM. Text inserted before a BOM moves it into the next key, which then parses as `\ufefftrigger` with no error.
+- **YAML indicators in generated values:** a bare `*` starts an alias and `&` an anchor, so a generated `- *` does not parse. Quote every generated scalar.
+- **Order semantics:** in CODEOWNERS the last matching line wins, so removing a duplicate keeps its last occurrence.
+- **One pattern covering another is not a glob match:** `fnmatch('release/*', 'release/?')` is true because `?` matches the literal `*`, and an exclude removes coverage an include gave. Decide coverage from the patterns' structure, and treat what cannot be proved as uncovered.
+
 ## test-suite: guards, harnesses, flaky-test fixes
 
 - **A guard parses; it does not pattern-match.** Use the language's own scanner: a regular expression matches comments and misses variants.
