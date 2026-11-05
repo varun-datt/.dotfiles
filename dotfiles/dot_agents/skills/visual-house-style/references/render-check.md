@@ -30,3 +30,26 @@ Look at the rendered result before calling it done. Commands are for macOS.
   page measured 206 px). Give every image an `aspect-ratio`, or a width and height.
 - Chrome can break a long command at a hyphen, between `--` and the flag name. Set
   `white-space: nowrap` on commands and put a `<br>` where a break is wanted.
+- Headless Chrome `--virtual-time-budget` on a page with infinite animations can screenshot at time
+  zero, with everything still hidden. Check motion with `agent-browser` and a real `wait`; for final
+  states, give the page a `?still` switch that turns animation off.
+- An inlined SVG filled with `url(#id)`: stripping `id` attributes breaks the fill, and a gradient
+  defined inside a `display:none` slide paints nothing for later copies that share its id. Give each
+  inlined copy its own ids.
+- A delayed CSS animation shows the element's unanimated style until it starts, so a loop can open
+  on its end state. Set `animation-fill-mode: both`.
+
+## A .pptx on this Mac
+
+LibreOffice, pdftoppm and markitdown are not installed, and pptxgenjs and sharp are not global,
+although the pptx skill says they are preinstalled. Install those two into a local folder, then
+render through PowerPoint and PyMuPDF (absolute paths):
+
+```sh
+osascript -e 'tell application "Microsoft PowerPoint"' -e "open POSIX file \"$PWD/deck.pptx\"" \
+  -e 'delay 3' -e "save active presentation in POSIX file \"$PWD/deck.pdf\" as save as PDF" \
+  -e 'close active presentation saving no' -e 'end tell'
+uv run --with pymupdf python -c "import fitz; [p.get_pixmap(dpi=110).save(f'slide-{i+1}.png') for i, p in enumerate(fitz.open('deck.pdf'))]"
+```
+
+PowerPoint's `open` returns nothing, so `set p to open …` fails; use `active presentation`.
