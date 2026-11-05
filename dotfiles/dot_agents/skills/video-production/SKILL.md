@@ -56,6 +56,7 @@ What a reviewer catches, and an audience does not forgive.
 - **The contrast check reports drawn text that a screenshot card covers.** Confirm the card is on top at that moment, then treat those warnings as false positives; never dismiss one you haven't looked at.
 - **A still on screen for under 2 s can't be read.** Hold it, or drop it.
 - **Teams screen share turns mostly-still animation choppy** unless the presenter presses Optimize; Include sound must be on before sharing.
+- **`hyperframes check` passes some layout defects.** It reported nothing for text overflowing a fixed-height card that does not clip, and reports a class that picks up another scene's unscoped rule in the one-file composition only as a text overlap. Grep the stylesheet for a class name, unscoped, before using it; scoping your own rule does not stop a global one matching. When inlining an icon, remove `width` and `height` from the root `<svg>` only: stripping them from every element empties inner `<rect>`s and the icon renders without its body, with no error. After changing a scene's text, classes or icons, snapshot that scene and look at it.
 
 ## Files
 

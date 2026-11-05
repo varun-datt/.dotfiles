@@ -15,7 +15,7 @@ The build step generates the page from `script.json`: it fills each scene's star
 Commands, from the project folder, with `HYPERFRAMES_NO_TELEMETRY=1` and with `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` and `HEYGEN_API_KEY` removed from the environment:
 
 ```sh
-hyperframes check <dir> --json            # lint, runtime errors, layout overflow, motion, WCAG AA contrast
+hyperframes check <dir> --json            # lint, runtime errors, layout overflow (not text overflowing a box that does not clip), motion, WCAG AA contrast
 hyperframes snapshot <dir> --at 9,30,76 --no-end --describe false --output frames/
 hyperframes render <dir> --quality draft --fps 30 --workers 4 --output draft.mp4
 hyperframes render <dir> --quality delivery --resolution 4k --fps 30 --workers 4 --output master-4k.mp4
