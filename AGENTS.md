@@ -23,3 +23,7 @@ Keep log messages in scripts to a minimum. Add one only when it earns its place,
 ## Chezmoi validation
 
 Run `chezmoi execute-template` and `chezmoi apply --dry-run` for read-only validation. Do not run a non-dry-run `chezmoi apply` unless the user explicitly asks; the user applies changes after review by default.
+
+Scope `apply` and `apply --dry-run` to the paths you changed: a full-tree dry run has hung past 60 s. When a target changed since chezmoi last wrote it, `apply` asks on /dev/tty, which `</dev/null` does not stop and a pipe hides: diff that target first, then `--force` that one file.
+
+The source for `~/.copilot` is `private_dot_copilot`: a `dot_copilot` folder made `apply` refuse everything ("inconsistent state"). Applying a file in a new folder needs the folder's target too.

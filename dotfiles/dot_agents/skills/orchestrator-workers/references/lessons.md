@@ -249,3 +249,17 @@ that point at it), and no work product, repository, customer, host or cloud reso
   planned item that builds on it; everything else goes to tech debt; the fix resumes the builder's
   session; and in a run the owner is away for, what is left is marked follow-up and the item merges.
   [notes; `mine.py --quality`]
+
+## 2026-11-05: traps from the AMC runs of 2026-10-26 to 11-02
+
+Moved from that project's state file, which now keeps only current state.
+
+- `route.py` writes `<item>.base` in the run folder, not the worktree; briefs that said "base in .base" had workers report it missing: name the full path. A worker stopped after 8 of its 45 minutes, believing its time was up: briefs ask for `date` at start and end (run amc-2026-11-02-p1). [notes]
+- `runqueue.py add` returned 0 for a review whose prompt was not written yet, and the review then failed: write the prompt before queueing it. `premium_requests=15` says nothing about cost: read `ai_credits` (run amc-2026-11-02). [notes]
+- Hand a fix round the peer reviewer's final note, and give page work its own round (2026-11-01). [notes]
+- `runqueue.py` has no remove, and `--after` releases only on `done`: to re-gate, `done` the dependents, add `<gate>b` and re-add them `--after <gate>b`. Pass `OW_RUN_DIR=<run>` on every command. Workers cannot read outside their worktree, so copy the reports they need into `<worktree>/.gates/` (2026-10-31). [notes]
+- Never commit to main while a merge gate runs: the gate fast-forwards main at its end and fails when main moved (2026-10-29; recovered with `git merge --no-ff <gated commit>`). Hold plan and state commits until the gate ends, and make them before `runqueue.py done` on it, since `done` starts the gate queued `--after` it (2026-10-31). Chain merges when every gate uses the same merge worktree (2026-10-30). [notes]
+- `watch.py` counted `copilot` workers only, so it said IDLE during a merge gate and before a launched round started; wait on the item's runner log or its `.start` file. OPEN: it now also counts the queue runner's pipeline steps, and whether a gate still reads as IDLE is unchecked. SIGTERM to the queue runner leaves launched items running, and they stay "running" in `queue.json` until marked done (2026-10-30). [notes]
+- `mine.py`'s chat figure falls as `main.jsonl` drops its oldest lines (1,937 to 845 on 2026-11-01): note each reading and count the chat by request key across them. [notes]
+- A new owner message ends the running turn mid-item, and the item's uncommitted work stays in the tree (2026-10-26): resume it from `/memories/session/`, which subagents share and write too. [notes]
+- A resumed round keeps the ports of its first prompt: state the new ports in the fix prompt (2026-10-27). [notes]
