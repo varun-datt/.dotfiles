@@ -263,3 +263,4 @@ Moved from that project's state file, which now keeps only current state.
 - `mine.py`'s chat figure falls as `main.jsonl` drops its oldest lines (1,937 to 845 on 2026-11-01): note each reading and count the chat by request key across them. [notes]
 - A new owner message ends the running turn mid-item, and the item's uncommitted work stays in the tree (2026-10-26): resume it from `/memories/session/`, which subagents share and write too. [notes]
 - A resumed round keeps the ports of its first prompt: state the new ports in the fix prompt (2026-10-27). [notes]
+- Run-folder helper scripts came back after the skill gained commands for them (2026-11-02: `budget.py` counted resumes twice, `waitq2.py` was piped). At a run's start, list the run folder's scripts, map each to its skill command (`mine.py --chat --budget`, `runqueue.py wait`, `reviewprep.py`) and delete those the skill covers. [notes]

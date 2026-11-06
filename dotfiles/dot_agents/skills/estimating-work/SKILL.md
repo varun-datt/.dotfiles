@@ -99,7 +99,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   gaps between a round's consecutive events, leaving out any gap over 10 minutes (`IDLE_GAP` in
   `mine.py`), so a round resumed hours later does not count the wait; `wall_min` is kept as its own
   field. For an id with an imported row, history uses that row only; the hand-logged row's estimate
-  is kept, so `report` compares it with the imported `active_min`.
+  is kept, so `report` compares it with the imported `active_min`. Give each worker item in the plan
+  the id its launcher logs as the round name (`<item>`, `<item>-fixN`, `<item>-review`).
 - Per-item credits for workers come from the worker's own log (`mine.py`), not the account
   counter: the counter's delta double counts when workers overlap and includes the owner's other
   chats. Imported items carry `credits_source: "log"`; stamped in-chat items show
