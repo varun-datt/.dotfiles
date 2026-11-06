@@ -27,7 +27,7 @@ If no log is found, distill from the context window and say so at the top of the
 
 ## Chunk prompt
 
-Fill in the paths and send it as is. A subagent does not inherit the user's rules, so the prompt restates them.
+Fill in the paths and the list of records, and send it as is. A subagent does not inherit the user's rules, so the prompt restates them.
 
 ```text
 Read all of <chunk path>, start to end: one slice of an agent session's log. Change nothing and run nothing that changes state, except writing your answer to <ledger part path>.
@@ -36,7 +36,7 @@ List candidates for lasting records, not a summary. A candidate is any of: a cor
 
 For each, one line: time | kind | the claim, conclusion first | the log line that shows it, quoted in at most 20 words.
 
-Answer "none" if nothing qualifies. Do not judge whether it is already recorded or worth keeping; that is done later. Quote no private or work content beyond the evidence.
+Answer "none" if nothing qualifies. Skip what these already say: <list of the records already holding this source's topics>. Do not judge whether a candidate is worth keeping; that is done later. Quote no private or work content beyond the evidence.
 
 Write your answer under the heading `## chunk-NN`, with the chunk's number, to <ledger part path>, and reply with only the number of candidates.
 ```
