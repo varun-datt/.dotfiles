@@ -1,0 +1,23 @@
+{
+  "numTotalTestSuites": 1,
+  "numPassedTestSuites": 0,
+  "numFailedTestSuites": 1,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 0,
+  "numPassedTests": 0,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "startTime": 1762100000000,
+  "success": false,
+  "testResults": [
+    {
+      "assertionResults": [],
+      "startTime": 1762100000000,
+      "endTime": 1762100000000,
+      "status": "failed",
+      "message": "Failed to load url ./fromat (resolved id: ./fromat) in /work/src/calc.test.ts. Does the file exist?",
+      "name": "__FILE__"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "2",
+  "thresholds": {"high": 80, "low": 60},
+  "projectRoot": "/work",
+  "framework": {"name": "StrykerJS", "version": "10.1.1"},
+  "files": {
+    "src/format.ts": {
+      "language": "typescript",
+      "source": "export const format = (x: number) => `#${x}`;\n",
+      "mutants": [
+        {"id": "1", "mutatorName": "StringLiteral", "replacement": "``", "location": {"start": {"line": 1, "column": 38}, "end": {"line": 1, "column": 45}}, "status": "Killed", "killedBy": ["src/calc.test.ts#calc adds"], "coveredBy": ["src/calc.test.ts#calc adds", "src/calc.test.ts#calc formats"], "testsCompleted": 2},
+        {"id": "2", "mutatorName": "ArrowFunction", "replacement": "() => undefined", "location": {"start": {"line": 1, "column": 22}, "end": {"line": 1, "column": 45}}, "status": "Survived", "killedBy": [], "coveredBy": ["src/calc.test.ts#calc formats"], "testsCompleted": 1}
+      ]
+    },
+    "src/calc.ts": {
+      "language": "typescript",
+      "source": "export const add = (a: number, b: number) => a + b;\n",
+      "mutants": [
+        {"id": "3", "mutatorName": "ArithmeticOperator", "replacement": "a - b", "location": {"start": {"line": 3, "column": 10}, "end": {"line": 3, "column": 15}}, "status": "Killed", "killedBy": ["src/calc.test.ts#calc adds"], "coveredBy": ["src/calc.test.ts#calc adds"], "testsCompleted": 1}
+      ]
+    }
+  },
+  "testFiles": {
+    "src/calc.test.ts": {
+      "tests": [
+        {"id": "src/calc.test.ts#calc adds", "name": "calc adds"},
+        {"id": "src/calc.test.ts#calc formats", "name": "calc formats"}
+      ]
+    }
+  }
+}

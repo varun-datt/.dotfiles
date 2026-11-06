@@ -46,6 +46,7 @@ REPORT: your final message, in this order, plain words, no preamble.
 6. Known limits, and anything TEMPORARY (a stopgap, placeholder or interim file), named as temporary with what replaces it.
 7. Drafts for orchestrator-owned records: {{RECORD_DRAFTS}}. Findings use placeholder ids F-NEW-1, F-NEW-2 … with evidence tags. Generic lessons carry no project names, numbers or paths.
 8. OPEN questions.
+9. REQUIREMENTS MAP, one line per numbered MUST, in exactly this form (`reqgate.py` reads it): `- MUST <n>: <test file path>::<test name> [FAIL_TO_PASS|PASS_TO_PASS]`; a Vitest test name is its full title (`describe > test`), a Python one `<TestClass.test_name>`. FAIL_TO_PASS (SWE-bench's term) is a test you added for new behaviour, which must fail on the base commit on an assertion, not on a missing import; PASS_TO_PASS is a test that guards behaviour the base already had and still passes. Several lines per MUST are allowed; a MUST with no test gets `- MUST <n>: none (<why>)`.
 Mark every claim VERIFIED (you ran or read it), INFERRED or OPEN. A claim about N files needs N files read.
 
 {{STANDING_OWNER_RULES}}

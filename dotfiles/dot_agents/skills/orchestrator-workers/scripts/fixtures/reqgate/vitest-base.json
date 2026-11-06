@@ -1,0 +1,27 @@
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 1,
+  "numFailedTestSuites": 1,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 3,
+  "numPassedTests": 1,
+  "numFailedTests": 2,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "startTime": 1762100000000,
+  "success": false,
+  "testResults": [
+    {
+      "assertionResults": [
+        {"ancestorTitles": ["calc"], "fullName": "calc adds", "status": "failed", "title": "adds", "duration": 2, "failureMessages": ["AssertionError: expected 3 to be 4 // Object.is equality\n    at /work/src/calc.test.ts:6:22"], "meta": {}, "tags": []},
+        {"ancestorTitles": ["calc"], "fullName": "calc formats", "status": "passed", "title": "formats", "duration": 1, "failureMessages": [], "meta": {}, "tags": []},
+        {"ancestorTitles": ["calc"], "fullName": "calc throws", "status": "failed", "title": "throws", "duration": 1, "failureMessages": ["TypeError: format is not a function\n    at /work/src/calc.test.ts:12:5"], "meta": {}, "tags": []}
+      ],
+      "startTime": 1762100000000,
+      "endTime": 1762100000010,
+      "status": "failed",
+      "message": "",
+      "name": "__FILE__"
+    }
+  ]
+}
