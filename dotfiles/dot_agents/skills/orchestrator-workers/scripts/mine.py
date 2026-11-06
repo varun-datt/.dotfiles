@@ -8,6 +8,7 @@ Usage:
     python3 mine.py [RUN] --audit                                each round against its routes.jsonl decision
     python3 mine.py [RUN] --rulings                              rulings.jsonl (rule.py) per area and reviewer model
     python3 mine.py [RUN] --quality                              first-review clean rate, blockers, fixes, causes
+    python3 mine.py [RUN] --findings [--out DIR] [--sarif]       every review finding as a SARIF result (findings.py)
     options: --history RUN...  earlier runs join the caps' window; --prices FILE; --chat DEBUG_LOG_DIR; --budget N
     python3 mine.py --help
 
@@ -1126,6 +1127,10 @@ def main(argv=None):
     out.add_argument('--audit', action='store_true', help='print each round against its routes.jsonl decision')
     out.add_argument('--rulings', action='store_true', help='print rulings.jsonl per area and reviewer model')
     out.add_argument('--quality', action='store_true', help="print the run's first-review quality and cause Pareto")
+    out.add_argument('--findings', action='store_true',
+                     help='write findings.jsonl (a SARIF 2.1.0 result per review finding) and defects.jsonl')
+    ap.add_argument('--out', metavar='DIR', help='with --findings: the folder to write into (default: the run folder)')
+    ap.add_argument('--sarif', action='store_true', help='with --findings: also write findings.sarif, one SARIF 2.1.0 log')
     ap.add_argument('--history', nargs='+', default=[], metavar='RUN', help="earlier run folders whose rounds join the caps' window")
     ap.add_argument('--prices', help='prices.json (default: <run>/prices.json, else the one beside this script)')
     ap.add_argument('--chat', help='VS Code debug-log folder (or main.jsonl) of the orchestrator chat to price')
@@ -1137,12 +1142,22 @@ def main(argv=None):
     if not os.path.isdir(run):
         print(f'mine.py: no run folder at {run}', file=sys.stderr)
         return 2
+    if a.sarif and not a.findings:
+        print('mine.py: --sarif needs --findings', file=sys.stderr)
+        return 2
     since = None
     if a.since:
         since = parse_time(a.since)
         if since is None:
             print(f'mine.py: --since {a.since!r} is not an ISO date or time', file=sys.stderr)
             return 2
+    if a.findings:
+        if a.since:
+            print('mine.py: --findings records the whole run; --since is refused with it', file=sys.stderr)
+            return 2
+        import findings
+        print(findings.write(run, a.out and os.path.abspath(os.path.expanduser(a.out)), a.sarif)[0])
+        return 0
     merge_rows = None
     if a.repo:
         try:

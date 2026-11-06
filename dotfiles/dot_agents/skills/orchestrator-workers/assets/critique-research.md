@@ -39,4 +39,7 @@ REPORT, nothing else:
 5. **Invented names**: one line each, the note's name against the standard's, with its source; `none` when the note uses the standard's names throughout.
 6. **Minor**: one line each.
 7. **Not checked**, and why.
+
+FINDINGS BLOCK: after the prose, which stays for people, end the report with one fenced `json` block holding a SARIF 2.1.0 `runs[0].results` array (an empty array when you have no findings; the block does not count toward the word limit). One result per finding in Blocking and Minor, with `ruleId` (a cause code such as MUST, ADJ or REUSE when one fits; leave it out otherwise), `level` ("error" for a blocking finding, "warning" for a Minor), `message.text` (its title), `locations[0].physicalLocation.artifactLocation.uri` and `locations[0].physicalLocation.region.startLine` (its file and line; leave `locations` out when it has none), and in `properties`: `n` (its label: "B1", "M1"), `grade` ("Major" for a blocking finding, "Minor"), `area`, `likelihood`, `impact` and `class` (null when you have none).
+
 Mark every claim of yours VERIFIED (read or ran) or INFERRED. Under {{WORD_LIMIT|1400}} words. {{REDACTION_RULE}}

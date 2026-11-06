@@ -67,4 +67,6 @@ REPORT, in this order, nothing else (no summary tables of severities, no offers 
 7. `Nits: N` as one line; do not list them.
 8. **Not checked**, and why.
 
+FINDINGS BLOCK: after the prose, which stays for people, end the report with one fenced `json` block holding a SARIF 2.1.0 `runs[0].results` array (an empty array when you have no findings; the block does not count toward the word limit). One result per finding in Blocking, Minor and Pre-existing, with `ruleId` (its cause code), `level` ("error" for Blocker and Major, "warning" for Minor, "note" otherwise), `message.text` (its title), `locations[0].physicalLocation.artifactLocation.uri` and `locations[0].physicalLocation.region.startLine` (its file and line; leave `locations` out when it has none), and in `properties`: `n` (its label as in the prose: "B1", "M1", "P1"), `grade`, `area`, `likelihood`, `impact` and `class` (null when the prose has none).
+
 Mark every claim VERIFIED (read or ran), INFERRED or OPEN. You ran nothing unless you say so, so effects are INFERRED unless the code makes them certain. Under {{WORD_LIMIT|900}} words.

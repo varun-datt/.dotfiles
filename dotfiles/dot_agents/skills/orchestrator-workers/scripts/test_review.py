@@ -191,6 +191,33 @@ class PromptTextTest(unittest.TestCase):
         self.assertEqual([r.split('.', 1)[0] for r in report], [str(n) for n in range(1, len(report) + 1)])
 
 
+class FindingsBlockTest(unittest.TestCase):
+    """Each review prompt, filled, asks for a findings block naming exactly the fields findings.py reads."""
+
+    def asked(self, name):
+        import findings
+        import reviewprep
+        raw = read('assets', name)
+        filled = reviewprep.fill(raw, {m: 'x' for m in re.findall(r'\{\{([^}|]+)', raw)})
+        para = [p for p in visible(filled).split('\n\n') if p.startswith('FINDINGS BLOCK:')]
+        self.assertEqual(len(para), 1, name)
+        self.assertIn('one fenced `json` block holding a SARIF 2.1.0 `runs[0].results` array', para[0])
+        self.assertIn('stays for people', para[0])
+        return set(re.findall(r'`([^`]+)`', para[0])) - {'json', 'runs[0].results'}, findings
+
+    def test_review_and_critique_name_the_result_fields(self):
+        for name in ('review.md', 'critique-research.md'):
+            fields, findings = self.asked(name)
+            self.assertEqual(fields, set(findings.BLOCK_FIELDS), name)
+
+    def test_rereview_also_names_the_earlier_finding_its_status_and_new_harm(self):
+        fields, findings = self.asked('rereview.md')
+        self.assertEqual(fields, set(findings.BLOCK_FIELDS) | set(findings.REREVIEW_FIELDS))
+        t = visible(read('assets', 'rereview.md'))
+        for status in ('"fixed"', '"partly"', '"not fixed"', '(true)'):
+            self.assertIn(status, t.split('FINDINGS BLOCK:', 1)[1])
+
+
 class VerdictTest(unittest.TestCase):
     def test_new_format_messages_give_the_same_verdict(self):
         cases = {

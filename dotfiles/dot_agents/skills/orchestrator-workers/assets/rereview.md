@@ -27,4 +27,6 @@ REPORT, in this order, nothing else:
 3. **New harm.** For each: `B1. [Major] AREA L1/I2 CAUSE: title`, its scenario, file:line, VERIFIED or INFERRED with what would confirm it, and a fix in one line.
 4. **Corrections** to the fix report: one line each.
 
+FINDINGS BLOCK: after the prose, which stays for people, end the report with one fenced `json` block holding a SARIF 2.1.0 `runs[0].results` array (the block does not count toward the word limit). One result per finding you were given and per new harm, with `ruleId` (its cause code), `level` ("error" for Blocker and Major and for a finding not fixed or partly fixed, "note" otherwise), `message.text` (its title), `locations[0].physicalLocation.artifactLocation.uri` and `locations[0].physicalLocation.region.startLine` (its file and line; leave `locations` out when it has none), and in `properties`: `n` (its label as in the prose: "1", "B1"), `grade`, `area`, `likelihood`, `impact` and `class` (null when the prose has none); for a finding you were given, `earlierN` (its number in the list above) and `rereviewVerdict` ("fixed", "partly" or "not fixed"); for new harm, `introducedByFix` (true).
+
 Mark every claim VERIFIED (read or ran), INFERRED or OPEN. Under {{WORD_LIMIT|400}} words.
