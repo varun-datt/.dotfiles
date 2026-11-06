@@ -7,6 +7,7 @@ Reads VS Code chat transcripts, Copilot CLI session state and Cursor agent trans
   session_log.py digest [--session ID] [--cwd DIR] [--out DIR] [--chunk-chars N]
   session_log.py coverage --out DIR --ledger FILE
   session_log.py quotes --out DIR --ledger FILE
+  session_log.py cost [--out DIR] [--session ID] [--since TIME]
 """
 
 import argparse
@@ -452,7 +453,8 @@ def cmd_digest(args):
     for old in out.glob("chunk-*.md"):
         old.unlink()
     chunks = split(render(events), args.chunk_chars)
-    index = {"source": str(path), "surface": surface, "session": sid, **meta, "chunks": []}
+    index = {"source": str(path), "surface": surface, "session": sid, "digested_at": datetime.now(timezone.utc).isoformat(),
+             **meta, "chunks": []}
     for number, chunk in enumerate(chunks, 1):
         cid, times = f"chunk-{number:02d}", [at for at, _ in chunk if at]
         start, end = (times[0], times[-1]) if times else (None, None)
@@ -556,6 +558,82 @@ def cmd_quotes(args):
     return 0
 
 
+def debug_folder(session):
+    for root in vscode_roots():
+        if root.is_dir():
+            for workspace in root.iterdir():
+                folder = workspace / "GitHub.copilot-chat" / "debug-logs" / session
+                if (folder / "main.jsonl").is_file():
+                    return folder
+    return None
+
+
+def turn_start(main_log, at):
+    """When the user sent the message the distill answers: the last one at or before `at` (epoch ms)."""
+    sent = [o["ts"] for o in read_jsonl(main_log, keep=lambda line: '"user_message"' in line)
+            if o.get("type") == "user_message" and isinstance(o.get("ts"), (int, float)) and o["ts"] <= at]
+    return max(sent, default=at)
+
+
+def requests(path, since):
+    rows = []
+    for o in read_jsonl(path, keep=lambda line: '"llm_request"' in line):
+        if o.get("type") != "llm_request" or not isinstance(o.get("ts"), (int, float)) or o["ts"] < since:
+            continue
+        a = o.get("attrs") or {}
+        rows.append({"ts": o["ts"], "model": a.get("model") or "?", "input": a.get("inputTokens") or 0,
+                     "cached": a.get("cachedTokens") or 0, "nano": a.get("copilotUsageNanoAiu"),
+                     "compaction": str(a.get("debugName") or "").startswith("summarize")})
+    return sorted(rows, key=lambda r: r["ts"])
+
+
+def credits(rows):
+    return sum(r["nano"] for r in rows if isinstance(r["nano"], (int, float))) / 1e9
+
+
+def cmd_cost(args):
+    index = json.loads((Path(args.out) / "index.json").read_text()) if args.out else {}
+    session = args.session or index.get("session")
+    folder = debug_folder(session) if session else None
+    if not folder:
+        print(f"no VS Code debug log for session {session}; cost is read from VS Code's debug log only")
+        return 1
+    if args.since:
+        since = when(args.since).timestamp() * 1000
+    elif index.get("digested_at"):
+        since = turn_start(folder / "main.jsonl", when(index["digested_at"]).timestamp() * 1000)
+    else:
+        print("pass --since, or --out with a folder the digest wrote")
+        return 1
+    parts = [("chat", folder / "main.jsonl")]
+    for path in sorted(folder.glob("*.jsonl")):
+        if path.name != "main.jsonl":
+            agent, _, call = path.stem.removeprefix("runSubagent-").rpartition("-")
+            parts.append((f"{agent} ..{call[-6:]}", path))
+    print(f"cost since {local(when(since), '%Y-%m-%d %H:%M:%S')}, in credits from VS Code's debug log (session {session})")
+    print(f"{'part':28} {'model':18} {'requests':>8} {'credits':>8} {'start':>7} {'peak':>7}  {'cache misses':14} compactions")
+    total, unpriced = 0.0, 0
+    for name, path in parts:
+        rows = requests(path, since)
+        if not rows:
+            continue
+        work = [r for r in rows if not r["compaction"]]
+        misses = [r for i, r in enumerate(work) if (i or name == "chat")
+                  and r["cached"] * 2 < min(r["input"], work[i - 1]["input"] if i else r["input"])]
+        models = [r["model"] for r in work] or ["?"]
+        start = "" if name == "chat" or not work else f"{work[0]['input'] / 1000:.1f}k"
+        peak = max(r["input"] for r in rows) / 1000
+        spent = credits(rows)
+        total += spent
+        unpriced += sum(not isinstance(r["nano"], (int, float)) for r in rows)
+        print(f"{name:28} {max(set(models), key=models.count):18} {len(rows):>8} {spent:>8.1f} {start:>7} {peak:>6.1f}k  "
+              f"{f'{len(misses)} ({credits(misses):.1f})':14} {sum(r['compaction'] for r in rows)}")
+    print(f"{'total':47} {total:>17.1f}")
+    if unpriced:
+        print(f"{unpriced} requests carry no price in the log and are not counted")
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -570,8 +648,13 @@ def main(argv=None):
         p = sub.add_parser(name)
         p.add_argument("--out", required=True)
         p.add_argument("--ledger", required=True)
+    p = sub.add_parser("cost")
+    p.add_argument("--out", help="the digest's folder: its session, and the message before its digest as the start")
+    p.add_argument("--session", help="the VS Code chat that ran the distill (default: the digest's session)")
+    p.add_argument("--since", help="ISO time to count from, instead of the digest's folder")
     args = parser.parse_args(argv)
-    return {"find": cmd_find, "digest": cmd_digest, "coverage": cmd_coverage, "quotes": cmd_quotes}[args.command](args)
+    return {"find": cmd_find, "digest": cmd_digest, "coverage": cmd_coverage, "quotes": cmd_quotes,
+            "cost": cmd_cost}[args.command](args)
 
 
 if __name__ == "__main__":

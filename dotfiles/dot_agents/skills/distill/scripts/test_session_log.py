@@ -251,6 +251,44 @@ class SessionLogTest(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
         self.assertIn("context window", result.stdout)
 
+    def test_cost_prices_the_chat_and_each_subagent_from_the_message_that_started_the_distill(self):
+        self.vscode_session()
+        self.digest_text("--session", "s1")
+        now = ms(json.loads((self.out / "index.json").read_text())["digested_at"])
+        logs = self.root / "storage" / "abc" / "GitHub.copilot-chat" / "debug-logs" / "s1"
+
+        def req(at, model, given, cached, nano, name="panel/editAgent"):
+            return {"ts": now + at, "type": "llm_request", "attrs": {
+                "model": model, "debugName": name, "inputTokens": given, "cachedTokens": cached, "copilotUsageNanoAiu": nano}}
+
+        with open(logs / "main.jsonl", "a") as f:
+            for row in [req(-60000, "claude-opus-5.5", 90000, 90000, 9e9),
+                        {"ts": now - 5000, "type": "user_message", "attrs": {}},
+                        req(-4000, "claude-opus-5.5", 120000, 10000, 60e9),
+                        req(1000, "claude-opus-5.5", 121000, 120000, 3e9)]:
+                f.write(json.dumps(row) + "\n")
+        write_jsonl(logs / "runSubagent-distill-reader-toolu_01ABCDEF.jsonl", [
+            req(2000, "gpt-6.1-sol", 27000, 0, 7e9, "tool/runSubagent"),
+            req(3000, "gpt-6.1-sol", 60000, 27000, 9e9, "tool/runSubagent"),
+            req(4000, "gpt-6.1-sol", 170000, 60000, 13e9, "summarizeConversationHistory"),
+            req(5000, "gpt-6.1-sol", 50000, 40000, None, "tool/runSubagent"),
+            req(6000, "gpt-6.1-sol", 52000, 10000, 10e9, "tool/runSubagent"),
+        ])
+        result = self.run_script("cost", "--out", str(self.out))
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        lines = result.stdout.splitlines()
+        chat = next(line for line in lines if line.startswith("chat "))
+        self.assertRegex(chat, r"claude-opus-5\.5\s+2\s+63\.0\s+121\.0k\s+1 \(60\.0\)\s+0$")
+        reader = next(line for line in lines if line.startswith("distill-reader ..ABCDEF"))
+        self.assertRegex(reader, r"gpt-6\.1-sol\s+5\s+39\.0\s+27\.0k\s+170\.0k\s+1 \(10\.0\)\s+1$")
+        self.assertFalse(any(line.startswith("default ") for line in lines))
+        self.assertRegex(result.stdout, r"total\s+102\.0\n1 requests carry no price")
+
+    def test_cost_needs_a_vscode_debug_log(self):
+        result = self.run_script("cost", "--session", "missing", "--since", "2026-10-26T02:00:00Z")
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("no VS Code debug log", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
