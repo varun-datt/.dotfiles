@@ -44,6 +44,11 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
      a round until the log corrects it).
    - `judged`: a minute figure, only when neither works, flagged as a guess.
 
+   The order is a rule, not a menu: an agent left to choose takes a lower-ranked method. On
+   2026-11-05 four in-chat items were estimated by rounds while `fix` and `feature` had 69 and 121
+   logged items: 117 minutes estimated, 19.1 actual; their history P50s give 25.5. Known defect:
+   `start` accepts `--method rounds` for a kind with 5 or more logged items; it should refuse it.
+
    An item a person would need hours for is where agents fail more often (METR: the 80% time
    horizon is about a fifth of the 50% one), so split it until each piece ends in a commit.
 5. Forecast: write the plan as JSON (`[{"id", "what", "kind", "estimate", "method"}]`, where
@@ -106,7 +111,10 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   `gh-error`, `bad-json`, `no-quota`, `no-figure`). On 2026-10-28, 21 reads 15 s apart from 11:16:50 to
   11:22:06, while this session made paid calls, read 858929 first and 858929 last: it did
   not move in those five minutes. That shows nothing about how often it moves; the lag after a
-  known spend is not yet measured.
+  known spend is not yet measured. On 2026-11-05 it rose 6 over a 20-minute in-chat run, then
+  1,578 in the next 25 minutes: it lags or batches, so an item's delta reads near zero. Known
+  defect: in-chat items still take credits from it; take them from the chat's debug log
+  (`main.jsonl` tokens times prices) as workers do from theirs.
 - Re-run the forecast after each item, and move the overflow line if it shifts.
 - Count each live run's paid calls against the approved budget, and ask before a run that would
   go over it.
