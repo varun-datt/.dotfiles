@@ -75,9 +75,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    VS Code is the last folder of the session's debug-log path. Other agent sessions (SDK and CLI
    runs) load the same hook, so the guard holds only the chat named by `--session` (2026-10-26:
    unscoped, it held an SDK spike's autopilot session). Each chat's run is its own file,
-   `~/.agents/state/active-runs/<chat id>.json`, so two chats can each run a guard at once
-   (2026-11-05: a second chat would have replaced the first's single `active-run.json`, which is
-   still honoured until it is disarmed). Each check is logged to
+   `~/.agents/state/active-runs/<chat id>.json`, so two chats can each run a guard at once; an
+   older single `active-run.json` is still honoured until it is disarmed. Each check is logged to
    `~/.agents/state/run-guard.log`. Write the plan, the stop time and the
    owner's decisions into the session memory too: a compaction or a terminal notification can
    start a turn with all of it out of view (2026-10-26).
