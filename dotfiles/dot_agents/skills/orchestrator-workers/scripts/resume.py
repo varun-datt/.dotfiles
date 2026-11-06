@@ -7,6 +7,7 @@ A round's credits are its cumulative ai_credits minus the previous round's.
 The worker sees no credit cap (owner, 2026-11-02): <stop> is the unseen stop route.py uses, read from
 the session's usage records; past it the round ends with exit 3 and writes <round>.stopped.
 Refuses (exit 2) when this process runs under caffeinate, however it was started: this Mac kills caffeinate.
+Refuses (exit 2) a fix round (<item>-fixN): route.py run --kind fix --resume-session checks its approval.
 """
 import json
 import os
@@ -51,6 +52,10 @@ def main(args):
     import route
     import runqueue
     item, round_name, timeout = args[0], args[1], int(args[3])
+    if route.FIX_N.search(round_name):
+        print(f'resume.py: refused: {round_name} is a fix round; start it with route.py run {round_name} --kind fix '
+              f'--resume-session {item}, which checks its approval and WHY NOW lines', file=sys.stderr)
+        return 2
     stop = None if args[2].lower() == 'none' else float(args[2])
     run = pathlib.Path(os.environ.get('OW_RUN_DIR', '')).expanduser()
     if not (run / 'routes.jsonl').is_file():

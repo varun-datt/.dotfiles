@@ -4,7 +4,7 @@ stalled orchestrator chat no longer stops the run, and alerts the owner when the
 
 Usage:
     python3 runqueue.py add <id> --cmd "<shell command>" [--after id1,id2] [--no-slot] [--priority N]
-                                 [--unrouted-reason "<why>"]
+                                 [--unrouted-reason "<why>"] [--plain-reason "<why>"]
     python3 runqueue.py done <id>        # merged or closed; items waiting on it become ready
     python3 runqueue.py status           # one line per item
     timeout 172800 python3 runqueue.py run [--slots 3] [--poll 30] [--idle-alert 20] [--chat-log PATH]
@@ -18,6 +18,10 @@ is refused too), unless the one program it invokes is the skill's own route.py r
 nohup, timeout, env, assignments or a `sh|bash|zsh -c '...'` whose string is only that. Any ; && || | or $(...)
 loses the exemption. A false refusal is acceptable; --unrouted-reason says why it may run anyway and is kept with
 the item. A copilot call it still cannot see is caught afterwards by `mine.py --audit`.
+`add --cmd` also refuses a command that runs the skill's route.py run or review.sh, in its text or in a file it names
+(three deep), unless --plain-reason says why the item's steps are queued one by one and not as a --pipeline. A plain
+item queued without that reason runs with OW_PLAIN_ITEM=<id>, and route.py run and review.sh refuse (exit 2) under it,
+however the command reached them.
 `add` and `run` refuse (exit 2) when started by a caffeinate process, which this Mac kills within seconds. Command
 text is not checked for caffeinate: an item that runs it fails at launch, where route.py run and review.sh refuse
 because caffeinate is then their ancestor process.
@@ -50,7 +54,8 @@ The last step must be a suspend; when it resumes, the item is done. A step's exi
 <run>/<round>.queue-exit, so a restarted runner never relaunches a step that started.
 States of a pipeline item: waiting, ready, running, failed N, suspended, done (status names the step).
 
-    python3 runqueue.py wait [--max-min 30]   # the chat's one blocking call: returns when something needs it
+    python3 runqueue.py wait [--max-min 4]    # the chat's one blocking call: returns when something needs it;
+                                              # more than 4 minutes is refused: the chat's cache goes cold after 5
 """
 import argparse, contextlib, fcntl, filecmp, json, os, re, shlex, shutil, signal, subprocess, sys, tempfile, threading, time
 
@@ -69,6 +74,9 @@ PYTHON = re.compile(r'^python[\d.]*$')
 ASSIGN = re.compile(r'^[A-Za-z_]\w*=')
 REDIR = re.compile(r'\d*(?:>>?|<)(?:&?\d+\b|&-)?(?:\s*[^\s;&|()<>\'"`]+)?')
 SCRIPT = re.compile(r'\.(?:z|ba)?sh$|\.py$|\.command$')
+LAUNCHER = re.compile(r'(?:^|[\s/;&|=(])(?:route\.py\s+run|review\.sh)(?=$|[\s;&|)])')
+PLAIN_ENV = 'OW_PLAIN_ITEM'
+WAIT_MAX_MIN = 4
 
 
 def guard(cmd, cwd=None):
@@ -76,6 +84,19 @@ def guard(cmd, cwd=None):
     program it invokes is not the skill's route.py run or review.sh; 'unreadable' when it names a script it cannot read."""
     cwd = cwd or os.getcwd()
     return None if exempt(cmd, cwd) else mentions(cmd, [cwd], set(), 0)
+
+
+def launches_round(cmd, cwd=None):
+    """True when the command runs the skill's route.py run or review.sh, in its text or a readable file it names."""
+    cwd = cwd or os.getcwd()
+    return exempt(cmd, cwd) or mentions(cmd, [cwd], set(), 0, says_launcher, 'launcher') == 'launcher'
+
+
+def plain_refusal():
+    """The refusal when a plain queue item queued with no --plain-reason started this launcher; else None."""
+    item = os.environ.get(PLAIN_ENV)
+    return item and (f'refused: queue item {item} runs this launcher as a plain --cmd with no --plain-reason, so its '
+                     'steps are queued one by one: queue it with runqueue.py add --pipeline, or give --plain-reason')
 
 
 def own(path):
@@ -196,13 +217,21 @@ def exempt(cmd, cwd, depth=0):
     return prog == 'review.sh' and ours(rest[0], 'review.sh', cwd, True)
 
 
-def mentions(text, bases, seen, depth):
-    """'copilot' when the text, with quotes, $(...), ${...} and backticks removed, or a readable file it names (to
-    depth 3, skipping the skill's own route.py and review.sh) holds the word copilot."""
+def says_copilot(flat, bare):
+    return 'copilot' in flat.lower() or 'copilot' in bare.lower()
+
+
+def says_launcher(flat, bare):
+    return bool(LAUNCHER.search(flat))
+
+
+def mentions(text, bases, seen, depth, said=says_copilot, tag='copilot'):
+    """tag when said() finds it in the text, with quotes, $(...), ${...} and backticks removed, or in a readable file
+    it names (to depth 3, skipping the skill's own route.py and review.sh); by default, the word copilot."""
     flat = re.sub(r'\\\n|[\'"`\\]|\$[({]|[(){}]', '', text)
     bare = re.sub(r'\$\{[^}]*\}|\$\w+', '', re.sub(r'\\\n|[\'"`\\]', '', text))
-    if 'copilot' in flat.lower() or 'copilot' in bare.lower():
-        return 'copilot'
+    if said(flat, bare):
+        return tag
     toks, found = set(re.split(r'[\s;&|<>=]+', flat)), None
     with contextlib.suppress(ValueError):
         toks.update(shlex.split(text))
@@ -229,8 +258,8 @@ def mentions(text, bases, seen, depth):
             continue
         if b'\0' in raw[:8192]:
             continue
-        if mentions(raw.decode('utf-8', 'replace'), [bases[0], os.path.dirname(f)], seen, depth + 1) == 'copilot':
-            return 'copilot'
+        if mentions(raw.decode('utf-8', 'replace'), [bases[0], os.path.dirname(f)], seen, depth + 1, said, tag) == tag:
+            return tag
     return found
 
 
@@ -590,9 +619,11 @@ def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
                         procs[round_name(it, s['name'])] = p
                         busy += takes_slot(it)
                     continue
+                env = {k: v for k, v in os.environ.items() if k != PLAIN_ENV}
+                env.update(OW_RUN_DIR=rd, **({} if it.get('plain_reason') else {PLAIN_ENV: it['id']}))
                 with open(os.path.join(rd, f"{it['id']}.runner.log"), 'ab') as log:
                     p = subprocess.Popen(it['cmd'], shell=True, start_new_session=True, stdin=subprocess.DEVNULL,
-                                         stdout=log, stderr=subprocess.STDOUT, env={**os.environ, 'OW_RUN_DIR': rd})
+                                         stdout=log, stderr=subprocess.STDOUT, env=env)
                 procs[it['id']] = p
                 it.update(pid=p.pid, start=time.time(), end=None, exit=None)
                 busy += it['slot']
@@ -635,6 +666,8 @@ def main(argv=None):
     a.add_argument('--no-slot', action='store_true', help='does not count against --slots (reviews)')
     a.add_argument('--priority', type=int, default=0, help='higher launches first (default 0)')
     a.add_argument('--unrouted-reason', help='why a command that runs copilot skips route.py run (logged with the item)')
+    a.add_argument('--plain-reason', help='why a command that runs route.py run or review.sh is queued as a plain '
+                   '--cmd and not as a --pipeline (logged with the item)')
     d = sub.add_parser('done', parents=[common], help='mark an item merged or closed')
     d.add_argument('id')
     t = sub.add_parser('retry', parents=[common], help="relaunch a pipeline item's failed step")
@@ -645,7 +678,8 @@ def main(argv=None):
                    '<round>-resumeN rounds)')
     sub.add_parser('status', parents=[common], help='one line per item')
     w = sub.add_parser('wait', parents=[common], help='block until an item newly needs the chat, then print it')
-    w.add_argument('--max-min', type=float, default=30, help='give up after this many minutes, exit 1 (default 30)')
+    w.add_argument('--max-min', type=float, default=WAIT_MAX_MIN,
+                   help=f'give up after this many minutes, exit 1 (default and most {WAIT_MAX_MIN})')
     w.add_argument('--settle', type=float, default=30, help='seconds to wait for others once one is seen (default 30)')
     w.add_argument('--poll', type=float, default=20, help='seconds between checks (default 20)')
     r = sub.add_parser('run', parents=[common], help='the long-running loop')
@@ -684,6 +718,10 @@ def main(argv=None):
 
     touch(rd)
     if args.cmd == 'wait':
+        if args.max_min > WAIT_MAX_MIN:
+            print(f'queue: wait checks at most {WAIT_MAX_MIN} minutes at a time: the chat\'s prompt cache goes cold '
+                  'after 5, and its next request then costs many times more', file=sys.stderr)
+            return 2
         return wait(rd, args.max_min, args.settle, args.poll)
     with locked(rd):
         q = load(rd)
@@ -715,10 +753,16 @@ def main(argv=None):
                 print(f'queue: this command {why}; launch it with route.py run, '
                       'or pass --unrouted-reason "<why>"', file=sys.stderr)
                 return 2
+            plain = (args.plain_reason or '').strip()
+            if not plain and launches_round(args.shell):
+                print('queue: this command runs route.py run or review.sh as a plain item, so the item\'s steps are '
+                      'queued one by one; queue it with --pipeline, or pass --plain-reason "<why>"', file=sys.stderr)
+                return 2
             items.append({'id': args.id, 'cmd': args.shell, 'after': after, 'slot': not args.no_slot,
                           'priority': args.priority, 'added': time.time(), 'done': False,
                           'pid': None, 'start': None, 'end': None, 'exit': None,
-                          **({'unrouted_reason': reason} if reason else {})})
+                          **({'unrouted_reason': reason} if reason else {}),
+                          **({'plain_reason': plain} if plain else {})})
             save(rd, q)
         elif args.cmd == 'done':
             if args.id not in by_id:

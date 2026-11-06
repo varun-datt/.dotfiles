@@ -40,7 +40,7 @@ UNDER_CAFFEINATE = ['bash', '-c', 'exec -a caffeinate /bin/bash -c "\\"\\$@\\"; 
 
 
 class CaffeinateTest(unittest.TestCase):
-    def resume(self, under=()):
+    def resume(self, under=(), rnd='x-r1'):
         with tempfile.TemporaryDirectory() as tmp:
             run, wt, bin_ = pathlib.Path(tmp, 'run'), pathlib.Path(tmp, 'wt'), pathlib.Path(tmp, 'bin')
             for d in (run, wt, bin_):
@@ -52,12 +52,12 @@ class CaffeinateTest(unittest.TestCase):
                 f.chmod(0o755)
             argv = ['copilot', '-C', str(wt), '-n', 'ow-x', '--model', 'm', '-p']
             (run / 'routes.jsonl').write_text(json.dumps({'event': 'launch', 'round': 'x', 'argv': argv}) + '\n')
-            (run / 'x-r1.prompt.md').write_text('go on; caffeinate was killed last time\n')
+            (run / f'{rnd}.prompt.md').write_text('go on; caffeinate was killed last time\n')
             env = {**os.environ, 'OW_RUN_DIR': str(run), 'PATH': f'{bin_}:/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE': '1'}
-            p = subprocess.run([*under, sys.executable, '-B', str(SCRIPTS / 'resume.py'), 'x', 'x-r1', 'none', '30'],
+            p = subprocess.run([*under, sys.executable, '-B', str(SCRIPTS / 'resume.py'), 'x', rnd, 'none', '30'],
                                capture_output=True, text=True, env=env, timeout=60, stdin=subprocess.DEVNULL)
             ran = wt / 'worker-ran'
-            return p, (run / 'x-r1.start').exists(), ran.read_text().split('\n') if ran.exists() else None
+            return p, (run / f'{rnd}.start').exists(), ran.read_text().split('\n') if ran.exists() else None
 
     def test_a_plain_launch_starts_the_worker_with_the_resume_argv(self):
         p, started, worker = self.resume()
@@ -81,6 +81,17 @@ class CaffeinateTest(unittest.TestCase):
         self.assertIn('resume.py: refused: this launcher runs under caffeinate (pid ', p.stderr)
         self.assertFalse(started)
         self.assertIsNone(worker)
+
+    def test_a_fix_round_is_refused_and_a_stopped_fix_round_s_resume_is_not(self):
+        p, started, worker = self.resume(rnd='x-fix3')
+        self.assertEqual(p.returncode, 2, p.stderr)
+        self.assertIn('resume.py: refused: x-fix3 is a fix round; start it with route.py run x-fix3 --kind fix '
+                      '--resume-session x', p.stderr)
+        self.assertFalse(started)
+        self.assertIsNone(worker)
+        p, started, worker = self.resume(rnd='x-fix3-resume1')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertTrue(started)
 
 
 if __name__ == '__main__':

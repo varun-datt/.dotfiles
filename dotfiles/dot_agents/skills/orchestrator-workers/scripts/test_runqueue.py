@@ -148,8 +148,9 @@ class QueueTest(unittest.TestCase):
         with mock.patch('sys.stderr'):
             self.assertEqual(self.cli('add', 'a', '--cmd', 'copilot -p "do it" --model m'), 2)
         self.assertEqual(self.cli('add', 'a', '--cmd', 'copilot -p "do it"', '--unrouted-reason', 'owner probe'), 0)
-        self.assertEqual(self.cli('add', 'b', '--cmd', f'python3 {S}/route.py run b --kind build --brief b.md --worktree w'), 0)
-        self.assertEqual(self.cli('add', 'c', '--cmd', f'bash {S}/review.sh b-review w'), 0)
+        self.assertEqual(self.cli('add', 'b', '--cmd', f'python3 {S}/route.py run b --kind build --brief b.md --worktree w',
+                                  '--plain-reason', 'probe'), 0)
+        self.assertEqual(self.cli('add', 'c', '--cmd', f'bash {S}/review.sh b-review w', '--plain-reason', 'probe'), 0)
         with open(os.path.join(self.rd, 'queue.json')) as f:
             items = {it['id']: it for it in json.load(f)['items']}
         self.assertEqual(items['a']['unrouted_reason'], 'owner probe')
@@ -180,15 +181,67 @@ class QueueTest(unittest.TestCase):
         for n, cmd in enumerate(refused):
             with mock.patch('sys.stderr'):
                 self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd), 2, cmd)
-            self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe'), 0, cmd)
+            self.assertEqual(self.cli('add', f'r{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe',
+                                      '--plain-reason', 'owner probe'), 0, cmd)
         run = f'python3 -B {S}/route.py run a --kind build --brief b --worktree w'
         for n, cmd in enumerate([run, f'bash {S}/review.sh a-review w >a.log 2>&1', f'{S}/review.sh a-review w',
                                  f'nohup zsh -c "{run} >a.log 2>&1" &', f'nohup zsh -c "bash {S}/review.sh a-review w" &',
                                  f'timeout --signal TERM 9000 env A=1 {run}', f'sh {tidy}', 'sleep 1',
                                  f'cd /tmp && bash {S}/review.sh a-review w >a.log 2>&1']):
-            self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd), 0, cmd)
+            self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd, '--plain-reason', 'owner probe'), 0, cmd)
         items = self.items()
         self.assertEqual({items[f'r{n}']['unrouted_reason'] for n in range(len(refused))}, {'owner probe'})
+
+    def test_add_refuses_a_skill_launcher_queued_as_a_plain_item_unless_given_a_plain_reason(self):
+        gate = os.path.join(self.tmp.name, 'gate.zsh')
+        with open(gate, 'w') as f:
+            f.write('#!/bin/zsh\ncd w\nbash "$HOME/x/review.sh" a-rereview w\n')
+        merge = os.path.join(self.tmp.name, 'merge.zsh')
+        with open(merge, 'w') as f:
+            f.write('#!/bin/zsh\ngit merge --no-ff ow/a\n')
+        run = f'python3 -B {S}/route.py run a-fix3 --kind fix --resume-session a --brief b --worktree w'
+        refused = [run, f'bash {S}/review.sh a-review w', f'nohup zsh -c "{run} >a.log 2>&1" &',
+                   f'cd /tmp && bash {S}/review.sh a-review w >a.log 2>&1', f'cd {S} && python3 route.py run a',
+                   f'zsh {gate}']
+        for n, cmd in enumerate(refused):
+            with mock.patch('sys.stderr', new_callable=io.StringIO) as err:
+                self.assertEqual(self.cli('add', f'p{n}', '--cmd', cmd), 2, cmd)
+            self.assertIn('queue it with --pipeline, or pass --plain-reason', err.getvalue())
+            self.assertEqual(self.cli('add', f'p{n}', '--cmd', cmd, '--plain-reason', 'round names taken'), 0, cmd)
+        for n, cmd in enumerate([f'python3 {S}/route.py pick a', f'zsh {merge}', 'sleep 1', 'echo review.shx']):
+            self.assertEqual(self.cli('add', f'k{n}', '--cmd', cmd), 0, cmd)
+        items = self.items()
+        self.assertEqual({items[f'p{n}']['plain_reason'] for n in range(len(refused))}, {'round names taken'})
+        self.assertNotIn('plain_reason', items['k0'])
+
+    def test_a_plain_item_with_no_plain_reason_cannot_start_a_round_however_its_command_reaches_the_launcher(self):
+        wt = os.path.join(self.tmp.name, 'no-worktree')
+        forms = {'route': f'python3 -B {S}/route.p? run a --kind build --brief b --worktree {wt}',
+                 'review': f'bash {S}/review.s? a-review {wt}'}
+        for name, cmd in forms.items():
+            self.assertEqual(self.cli('add', name, '--cmd', cmd), 0, cmd)
+            self.assertEqual(self.cli('add', f'{name}-why', '--cmd', cmd, '--plain-reason', 'probe'), 0, cmd)
+        ids = [i for n in forms for i in (n, f'{n}-why')]
+        t = self.start()
+        self.assertTrue(wait_until(lambda: all(self.items()[i]['end'] is not None for i in ids), 60), self.items())
+        self.finish(t, ids)
+        for i in ids:
+            with open(os.path.join(self.rd, f'{i}.runner.log')) as f:
+                log = f.read()
+            self.assertEqual(self.items()[i]['exit'], 2, f'{i}: {log}')
+            if i.endswith('-why'):
+                self.assertNotIn('plain --cmd', log)
+                self.assertIn('no worktree', log)
+            else:
+                self.assertIn(f'refused: queue item {i} runs this launcher as a plain --cmd', log)
+
+    def test_wait_refuses_a_check_longer_than_four_minutes(self):
+        with mock.patch('sys.stderr', new_callable=io.StringIO) as err:
+            self.assertEqual(self.cli('wait', '--max-min', '5'), 2)
+        self.assertIn('at most 4 minutes', err.getvalue())
+        with mock.patch.object(q, 'wait', return_value=0) as w:
+            self.assertEqual(self.cli('wait'), 0)
+        self.assertEqual(w.call_args.args[1], 4)
 
     def test_add_queues_any_command_text_because_text_is_not_checked_for_caffeinate(self):
         run = f'python3 -B {S}/route.py run a --kind build --brief b --worktree w'
@@ -196,7 +249,8 @@ class QueueTest(unittest.TestCase):
                  f'CAFFEINATE_BIN=/usr/bin/caffeinate {run}', f"env -S 'caffeinate -i {run}'",
                  f"zsh -c 'exec -a name caffeinate -i {run}'", f'caffeinate -i {run}']
         for n, cmd in enumerate(texts):
-            self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe'), 0, cmd)
+            self.assertEqual(self.cli('add', f'ok{n}', '--cmd', cmd, '--unrouted-reason', 'owner probe',
+                                      '--plain-reason', 'owner probe'), 0, cmd)
         self.assertEqual(len(self.items()), len(texts))
 
     def test_each_form_is_decided_at_launch_by_the_ancestor_check(self):
@@ -223,7 +277,8 @@ class QueueTest(unittest.TestCase):
                  'route': (f"env -S 'caffeinate -i python3 -B {S}/route.py run a --kind build --brief {brief} "
                            f"--worktree {self.tmp.name}'", 2)}
         for name, (cmd, _) in forms.items():
-            self.assertEqual(self.cli('add', name, '--cmd', cmd, '--unrouted-reason', 'owner probe'), 0, cmd)
+            self.assertEqual(self.cli('add', name, '--cmd', cmd, '--unrouted-reason', 'owner probe',
+                                      '--plain-reason', 'owner probe'), 0, cmd)
         with mock.patch.dict(os.environ, {'PATH': f"{fakebin}:{os.environ['PATH']}"}):
             t = self.start()
             self.assertTrue(wait_until(lambda: all(it['end'] is not None for it in self.items().values()), 60),

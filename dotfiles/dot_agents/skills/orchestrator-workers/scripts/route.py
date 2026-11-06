@@ -924,7 +924,7 @@ REVIEW_TAIL = '\n\nYour LAST message is the only one read: repeat every finding 
 
 def run_round(a, cfg):
     import runqueue
-    refusal = runqueue.caffeinate_refusal()
+    refusal = runqueue.caffeinate_refusal() or runqueue.plain_refusal()
     if refusal:
         print(f'route.py run: {refusal}', file=sys.stderr)
         return 2

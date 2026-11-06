@@ -42,7 +42,7 @@ run="${OW_RUN_DIR:?set OW_RUN_DIR to the run folder}"
 prompt="${3:-$run/$name.md}"
 here="$(cd "$(dirname "$0")" && pwd)"
 
-python3 -B -c 'import sys; sys.path.insert(0, sys.argv[1]); import runqueue; r = runqueue.caffeinate_refusal()
+python3 -B -c 'import sys; sys.path.insert(0, sys.argv[1]); import runqueue; r = runqueue.caffeinate_refusal() or runqueue.plain_refusal()
 r and print("review.sh: " + r, file=sys.stderr); sys.exit(2 if r else 0)' "$here" </dev/null || exit 2
 [ -d "$wt" ] || { echo "review.sh: no worktree at $wt" >&2; exit 2; }
 [ -f "$prompt" ] || { echo "review.sh: no prompt at $prompt" >&2; exit 2; }

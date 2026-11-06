@@ -236,7 +236,9 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   the owner as a structural fix. One round per item; a further round goes on the owner's list.
 - **Resume rounds** (`<item>-resumeN`, a stopped worker): `copilot -r ow-<item>` with the same
   flags; `python3 -B scripts/resume.py <item> <round> <stop|none> <timeout>` does it from the item's
-  last launch in `routes.jsonl`, with the prompt in `$OW_RUN_DIR/<round>.prompt.md`. Credit caps
+  last launch in `routes.jsonl`, with the prompt in `$OW_RUN_DIR/<round>.prompt.md`. It refuses a fix
+  round (`<item>-fixN`): that goes through `route.py run <round> --kind fix --resume-session <item>`, which
+  checks its approval. Credit caps
   for both: [routing](references/routing.md#credit-caps).
 - **Before merging a note or page,** `python3 -B scripts/merge_check.py --patterns <file> <files>`
   checks the redaction patterns on word boundaries and literal `\u` escapes.
@@ -283,6 +285,9 @@ every script in the folder.)
   `review.sh`, bare or through `nohup`, `timeout`, `env` or a `zsh -c "..."` holding only that (any `;`, `&&`,
   `|` or `$(...)` loses the exemption), or it carries `--unrouted-reason "<text>"`, which is stored with the item.
   A false refusal is acceptable; pass the reason or drop the extra commands.
+  `add --cmd` also refuses a command that runs `route.py run` or `review.sh`, in its text or a file it names,
+  unless `--plain-reason "<why>"` says why the item's steps are queued one by one and not as a pipeline (below);
+  a plain item queued without one runs with `OW_PLAIN_ITEM`, under which both launchers refuse (exit 2).
 - **After each merge,** call `runqueue.py done <id>`. Items that wait on it become ready.
 - **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done; a pipeline item also
   names its step and what it waits on (a running round, the chat's done file, or a failure with its exit code).
@@ -315,9 +320,10 @@ every script in the folder.)
     `<run>/<round>.queue-pid` or its command line; one that vanished without an exit code shows `failed ?`.
   - **Finish before starting:** a ready fix, re-check or other later step of a started item takes a freed slot
     before any new build, oldest started first, whatever the build's priority.
-  - **Wait in one blocking call:** `runqueue.py wait [--max-min 30]` returns when an item newly needs the chat
+  - **Wait in one blocking call:** `runqueue.py wait [--max-min 4]` returns when an item newly needs the chat
     (a suspend, a failed step, a plain item that exited), printing one line each, and exits 1 on timeout.
-    Run it in a foreground terminal; it prints a tick each minute.
+    Run it in a foreground terminal; it prints a tick each minute. More than 4 minutes is refused: the chat's
+    prompt cache goes cold after 5, and each wake after that re-reads its whole context.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
   line to `ALERT.log`, once for each new item waiting: it does not repeat while the same items
