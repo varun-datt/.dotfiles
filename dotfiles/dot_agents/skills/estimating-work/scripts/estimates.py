@@ -20,6 +20,7 @@ GUARD_LIMIT = 3
 CREDITS_TIMEOUT = 20
 GH_ENV = {"GH_PROMPT_DISABLED": "1", "GH_NO_UPDATE_NOTIFIER": "1", "NO_COLOR": "1"}
 CLOSES = ("end", "drop", "done")
+LEFT_OPEN_AFTER = timedelta(days=1)
 REASON = re.compile(r"(start|end):(gh-missing|gh-exit-\d{1,3}|timeout|gh-error|bad-json|no-quota|no-figure|not-read|unknown)")
 
 
@@ -349,6 +350,12 @@ def running(records, at):
     return [{**s, "started": s["at"], "at": at.isoformat()} for s in starts.values()]
 
 
+def left_open(records, at):
+    """Items started more than LEFT_OPEN_AFTER before `at` and never closed: every later item overlaps them."""
+    return [{"id": s["id"], "run": s.get("run", ""), "started": s["started"]}
+            for s in running(records, at) if at - parse_time(s["started"]) > LEFT_OPEN_AFTER]
+
+
 def window(item):
     return (parse_time(item["started"]), parse_time(item["at"])) if item.get("started") else None
 
@@ -619,8 +626,9 @@ def main(argv=None):
         records = read()
         logged = completed(records)
         items = [i for i in logged if args.run is None or i.get("run") == args.run]
-        logged += running(records, now())
-        print(json.dumps(report(items, logged), indent=2))
+        at = now()
+        logged += running(records, at)
+        print(json.dumps(report(items, logged) | {"left_open": left_open(records, at)}, indent=2))
     elif args.command == "kinds":
         print(kinds_table(recent(completed(read()), args.days)))
     elif args.command == "arm":

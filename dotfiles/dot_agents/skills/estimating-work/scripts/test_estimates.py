@@ -212,6 +212,23 @@ class CreditsTest(Isolated):
         credits = json.loads(out.getvalue())["credits"]
         self.assertEqual([(r["id"], r.get("overlaps")) for r in credits["items"]], [("a", ["b"])])
 
+    def test_report_lists_items_open_more_than_a_day_and_not_closed_ones(self):
+        now = datetime.now(timezone.utc)
+        at = lambda hours: (now - timedelta(hours=hours)).isoformat()
+        for r in [
+            {"event": "start", "id": "stale", "kind": "fix", "estimate": 5, "run": "old", "at": at(50)},
+            {"event": "start", "id": "dropped", "kind": "fix", "estimate": 5, "run": "old", "at": at(49)},
+            {"event": "drop", "id": "dropped", "reason": "covered", "at": at(48)},
+            {"event": "start", "id": "ended", "kind": "fix", "estimate": 5, "run": "old", "at": at(47)},
+            {"event": "end", "id": "ended", "at": at(46)},
+            {"event": "start", "id": "today", "kind": "fix", "estimate": 5, "run": "new", "at": at(2)},
+        ]:
+            estimates.append(r)
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            estimates.main(["report"])
+        self.assertEqual(json.loads(out.getvalue())["left_open"], [{"id": "stale", "run": "old", "started": at(50)}])
+
     def test_report_for_one_run_marks_an_overlap_with_another_runs_item(self):
         at = lambda minutes: datetime(2026, 10, 28, 9, minutes, tzinfo=timezone.utc).isoformat()
         for r in [

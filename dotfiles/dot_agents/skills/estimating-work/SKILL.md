@@ -142,5 +142,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   figure counts every session's spend on the account, so an item whose window overlaps another's
   is marked `overlaps`: their actuals double count the shared spend. Put it in the final message
   and the state file.
+- The report's `left_open` lists items started more than a day ago and never closed. Drop each
+  (`estimates.py drop`), since an `end` now would log the days it sat open; left alone, every
+  later item is marked as overlapping it (2026-11-05: 19 such items, 10-25 to 11-03).
 - Regenerate the pace table with `estimates.py kinds` and add the run to its runs table.
 - Run the tests after changing the script: `python3 -B scripts/test_estimates.py`.
