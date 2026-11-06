@@ -69,7 +69,10 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    let that chat's turn end before the stop time while a planned item has no `end`. The chat id in
    VS Code is the last folder of the session's debug-log path. Other agent sessions (SDK and CLI
    runs) load the same hook, so the guard holds only the chat named by `--session` (2026-10-26:
-   unscoped, it held an SDK spike's autopilot session). Each check is logged to
+   unscoped, it held an SDK spike's autopilot session). Each chat's run is its own file,
+   `~/.agents/state/active-runs/<chat id>.json`, so two chats can each run a guard at once
+   (2026-11-05: a second chat would have replaced the first's single `active-run.json`, which is
+   still honoured until it is disarmed). Each check is logged to
    `~/.agents/state/run-guard.log`. Write the plan, the stop time and the
    owner's decisions into the session memory too: a compaction or a terminal notification can
    start a turn with all of it out of view (2026-10-26).
@@ -113,8 +116,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   research decide it, say so in the commit and the plan, and keep it for the owner's review.
 - When an item blocks on a decision, write the question down and take the next item. A question
   that blocks nothing never ends a turn: it goes in the session memory for the final report. Only
-  when something blocks every remaining item, `estimates.py block --reason "<what, why>"` lets the
-  turn end; the next `start` re-arms the guard.
+  when something blocks every remaining item, `estimates.py block --session <chat id> --reason "<what,
+  why>"` lets the turn end; the next `start --run <run>` re-arms the guard.
 - A turn that starts without the plan in view reads the session memory before anything else: on
   2026-10-26 a turn begun by a terminal notification lost the plan and ended on a question about
   an unrelated failing test, mid-run.
@@ -135,7 +138,7 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 ## After
 
-- `estimates.py disarm` first, so the wrap-up's final message can end the turn.
+- `estimates.py disarm --session <chat id>` first, so the wrap-up's final message can end the turn.
 - `estimates.py report --run <run>`: estimate against actual, how many came within 25%, minutes by
   kind, and features with their enablers as one share, against the mix asked for. Its `credits`
   part lists each item's minutes and credits, estimate beside actual, and the run's totals. The

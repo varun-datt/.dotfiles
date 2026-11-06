@@ -446,13 +446,53 @@ def until_time(text, at):
     return parse_time(text)
 
 
-def load_run():
-    path = run_path()
-    return json.loads(path.read_text()) if path.exists() else None
+def runs_dir():
+    return Path(os.environ.get("ESTIMATES_RUNS") or run_path().with_name("active-runs"))
 
 
-def save_run(run):
-    path = run_path()
+def session_file(session):
+    return runs_dir() / (re.sub(r"[^\w.-]", "_", session) + ".json")
+
+
+def armed():
+    """Every armed run as (path, run), one file per chat and then the single file runs were armed in before;
+    a file that cannot be read goes to the errors instead."""
+    runs, errors = [], []
+    paths = sorted(runs_dir().glob("*.json")) if runs_dir().is_dir() else []
+    for path in [*paths, run_path()]:
+        if not path.exists():
+            continue
+        try:
+            runs.append((path, json.loads(path.read_text())))
+        except (OSError, ValueError) as error:
+            errors.append(f"{path.name}: {error}")
+    return runs, errors
+
+
+def pick(session=None):
+    """The (path, run) a command acts on, or None, and every armed run: the chat's own when --session is given,
+    else the single file of old, else the only run armed."""
+    runs, _ = armed()
+    if session:
+        mine = [pr for pr in runs if isinstance(pr[1], dict) and pr[1].get("session") == session][:1]
+    else:
+        mine = [pr for pr in runs if pr[0] == run_path()] or runs
+    return (mine[0] if len(mine) == 1 else None), runs
+
+
+def unpicked(runs):
+    if not runs:
+        return "no armed run"
+    sessions = ", ".join(str(r.get("session")) if isinstance(r, dict) else p.name for p, r in runs)
+    return f"{len(runs)} runs are armed; pass --session with one of: {sessions}"
+
+
+def load_run(session=None):
+    choice, _ = pick(session)
+    return choice[1] if choice else None
+
+
+def save_run(path, run):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(run, indent=1))
 
@@ -483,17 +523,23 @@ def guard_decision(run, records, at, payload=None):
     reason = (
         f"Run {run['run']} is armed until {stop} and {what}. Do not end the turn: put any question that blocks "
         "nothing in the session memory for the final report, and take the next item. Only if something blocks "
-        "every remaining item, run `estimates.py block --reason \"...\"` first; at the wrap-up, `estimates.py disarm`."
+        f"every remaining item, run `estimates.py block --session {run['session']} --reason \"...\"` first; at the "
+        f"wrap-up, `estimates.py disarm --session {run['session']}`."
     )
     return reason, {**run, "blocks": blocks, "seen": len(records)}
 
 
 def guard(payload=None):
-    """The Stop hook: prints a block decision while an armed run has work left; fails open on any error."""
+    """The Stop hook: prints a block decision while this chat's armed run has work left; fails open on any error."""
     try:
-        reason, run = guard_decision(load_run(), read(), now(), payload)
-        if run is not None:
-            save_run(run)
+        runs, errors = armed()
+        text = session_text(payload)
+        path, run = next(((p, r) for p, r in runs if r.get("session") and r["session"] in text), (None, None))
+        if run is None and errors:
+            return {"systemMessage": f"Run guard: not checked ({'; '.join(errors)})"}
+        reason, run = guard_decision(run, read(), now(), payload)
+        if path is not None and run is not None:
+            save_run(path, run)
         with run_path().with_name("run-guard.log").open("a") as log:
             log.write(json.dumps({"at": now().isoformat(), "fields": sorted(payload or {}), "session": session_text(payload)[-160:], "blocked": reason is not None}) + "\n")
     except Exception as error:  # noqa: BLE001 - a broken guard must never trap the agent
@@ -559,7 +605,9 @@ def main(argv=None):
     p.add_argument("--plan", default=None, help="plan JSON; the guard lets the turn end once every item in it is done")
     p = sub.add_parser("block", help="a blocker stops every remaining item: let the turn end until the next start")
     p.add_argument("--reason", required=True)
-    sub.add_parser("disarm", help="end the run guard at the wrap-up")
+    p.add_argument("--session", default=None, help="the chat's session id; needed when several runs are armed")
+    p = sub.add_parser("disarm", help="end the run guard at the wrap-up")
+    p.add_argument("--session", default=None, help="the chat's session id; needed when several runs are armed")
     sub.add_parser("guard", help="the Stop hook's check; reads the hook's JSON on stdin")
     args = parser.parse_args(argv)
 
@@ -567,9 +615,10 @@ def main(argv=None):
         credits = credits_fields("start")
         record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "credits_estimate": args.credits} | credits | {"at": now().isoformat()}
         append(record)
-        run = load_run()
-        if run and run.get("blocked"):
-            save_run({k: v for k, v in run.items() if k not in ("blocked", "blockedAt")})
+        targets = [pr for pr in armed()[0] if isinstance(pr[1], dict) and pr[1].get("run") == args.run] if args.run else [c for c in [pick()[0]] if c]
+        for path, run in targets:
+            if run.get("blocked"):
+                save_run(path, {k: v for k, v in run.items() if k not in ("blocked", "blockedAt")})
         shown = ("id", "kind", "estimate", "method", "credits_estimate", "credits_at_start", "credits_unknown")
         print(json.dumps({k: record[k] for k in shown if k in record} | {"started": record["at"]}))
     elif args.command == "end":
@@ -634,16 +683,26 @@ def main(argv=None):
     elif args.command == "arm":
         at = now()
         planned = [item["id"] for item in json.loads(Path(args.plan).read_text())] if args.plan else None
-        save_run({"run": args.run, "until": until_time(args.until, at).isoformat(), "session": args.session, "planned": planned, "armedAt": at.isoformat()})
-        print(json.dumps(load_run()))
+        path = session_file(args.session)
+        save_run(path, {"run": args.run, "until": until_time(args.until, at).isoformat(), "session": args.session, "planned": planned, "armedAt": at.isoformat()})
+        legacy = next((r for p, r in armed()[0] if p == run_path()), None)
+        if isinstance(legacy, dict) and legacy.get("session") == args.session:
+            run_path().unlink()
+        print(json.dumps(json.loads(path.read_text())))
     elif args.command == "block":
-        run = load_run()
-        if not run:
-            print("no armed run", file=sys.stderr)
-            return 1
-        save_run({**run, "blocked": args.reason, "blockedAt": now().isoformat()})
+        choice, runs = pick(args.session)
+        if not choice:
+            print(unpicked(runs if not args.session else []), file=sys.stderr)
+            return 1 if args.session or not runs else 2
+        path, run = choice
+        save_run(path, {**run, "blocked": args.reason, "blockedAt": now().isoformat()})
     elif args.command == "disarm":
-        run_path().unlink(missing_ok=True)
+        choice, runs = pick(args.session)
+        if choice:
+            choice[0].unlink(missing_ok=True)
+        elif runs and not args.session:
+            print(unpicked(runs), file=sys.stderr)
+            return 2
     elif args.command == "guard":
         try:
             payload = json.loads(sys.stdin.read() or "{}")

@@ -595,6 +595,66 @@ class RunGuardTest(Isolated):
         self.assertNotIn("decision", output)
         self.assertIn("Run guard: not checked", output["systemMessage"])
 
+    def arm(self, session, run="night"):
+        plan = Path(self.dir.name) / "plan.json"
+        plan.write_text(json.dumps([{"id": "a"}, {"id": "b"}]))
+        until = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        with contextlib.redirect_stdout(io.StringIO()):
+            return estimates.main(["arm", "--run", run, "--until", until, "--session", session, "--plan", str(plan)])
+
+    def old_file(self, session):
+        until = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        Path(os.environ["ESTIMATES_RUN"]).write_text(json.dumps({"run": "perf", "until": until, "session": session, "planned": ["x"]}))
+
+    def reason(self, session):
+        output = estimates.guard({"sessionId": session})
+        return output and output["reason"]
+
+    def test_two_chats_armed_at_once_are_each_held_by_their_own_run_only(self):
+        self.arm("chat-1", "night")
+        self.arm("chat-2", "day")
+        self.assertIn("Run night", self.reason("chat-1"))
+        self.assertIn("Run day", self.reason("chat-2"))
+        self.assertIsNone(estimates.guard({"sessionId": "sdk-9"}))
+        with contextlib.redirect_stderr(io.StringIO()) as err:
+            self.assertEqual(estimates.main(["block", "--reason", "x"]), 2)
+            self.assertEqual(estimates.main(["disarm"]), 2)
+        self.assertIn("pass --session with one of: chat-1, chat-2", err.getvalue())
+        estimates.main(["block", "--reason", "waits on the owner", "--session", "chat-2"])
+        self.assertIsNone(self.reason("chat-2"))
+        self.assertIn("Run night", self.reason("chat-1"))
+        self.assertEqual(estimates.main(["disarm", "--session", "chat-1"]), 0)
+        self.assertIsNone(self.reason("chat-1"))
+        self.assertEqual(estimates.load_run("chat-2")["blocked"], "waits on the owner")
+
+    def test_the_single_file_of_old_still_holds_its_chat_and_bare_commands_act_on_it_alone(self):
+        self.old_file("old-chat")
+        self.arm("chat-1")
+        self.assertIn("Run perf", self.reason("old-chat"))
+        estimates.main(["block", "--reason", "x"])
+        self.assertIsNone(self.reason("old-chat"))
+        self.assertIn("Run night", self.reason("chat-1"))
+        estimates.main(["block", "--reason", "y", "--session", "chat-1"])
+        estimates.main(["start", "--id", "x", "--kind", "fix", "--estimate", "4", "--method", "history", "--run", "perf"])
+        self.assertIn("Run perf", self.reason("old-chat"))
+        self.assertIsNone(self.reason("chat-1"))
+        estimates.main(["disarm"])
+        self.assertFalse(Path(os.environ["ESTIMATES_RUN"]).exists())
+        self.assertEqual(estimates.load_run("chat-1")["blocked"], "y")
+
+    def test_arming_the_chat_the_old_file_holds_moves_its_run_to_its_own_file(self):
+        self.old_file("chat-1")
+        self.arm("chat-1")
+        self.assertFalse(Path(os.environ["ESTIMATES_RUN"]).exists())
+        self.assertTrue(estimates.session_file("chat-1").exists())
+        self.assertIn("Run night", self.reason("chat-1"))
+
+    def test_another_chats_broken_file_never_frees_this_chat(self):
+        self.arm("chat-1")
+        (estimates.runs_dir() / "chat-2.json").write_text("{not json")
+        self.assertIn("Run night", self.reason("chat-1"))
+        self.assertIn("chat-2.json", estimates.guard({"sessionId": "sdk-9"})["systemMessage"])
+
 
 class ThroughputTest(Isolated):
     today = datetime(2026, 11, 1).date()
