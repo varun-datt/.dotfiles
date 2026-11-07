@@ -291,3 +291,11 @@ The rules give a one-clause reason; these are the incidents behind them.
   runner calls the installed scripts. Expected the item's new rules in its own rounds; got the old ones: mf's
   re-check dropped each finding's Cases, rw's review asked for no why-it-got-in fields, and whether rw's fix
   round got the new fixed/left format is unknown. Write the new requirement into the round's body by hand. [notes]
+
+## 2026-11-07: traps from the ram item (remove-at-merge)
+
+- A dotfiles source file whose name starts with a chezmoi attribute prefix is not installed as that file: `remove_merged.py` was read as "remove the target `merged.py`", so it never reached `~/.agents` while its test file did, and the merge gate's deploy diff caught it only after the merge. Run `chezmoi target-path <source file>` for each new file before a review. [notes]
+- A brief that put a destructive step "before removal" let the builder stop leftover processes after taking the archive, so their last writes would be lost; the review traced the Blocker to the brief. For a destructive step, a brief states the whole order: stop, check nothing runs, snapshot, delete. [notes]
+- Extras the orchestrator marked `not approved` were still written as MUSTs, so the worker built them; about 4 of the 9 debt rows from the item's review sit in them. Anything beyond the owner's words goes to the owner as a question, never into a MUST. [notes]
+- A fix round resumed into the builder's session 15 minutes after the build re-cached the builder's whole context: 97 of its 205 credits were cache writes (`mine.py`, 2026-11-07). [notes]
+- The orchestrating chat cost 1,459 of the session's 2,558 credits: it ran at the 872K context size and max effort, its requests reached 434K tokens, and two pauses by the owner cost 308 credits in cold re-reads (the chat's debug log, 2026-11-07). [notes]
