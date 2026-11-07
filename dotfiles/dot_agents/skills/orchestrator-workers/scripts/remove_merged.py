@@ -5,12 +5,14 @@
 
 Each run's merge script calls it once main has moved. The branch counts as merged when its tip is an ancestor of
 main (git merge-base --is-ancestor), a branch with no commits of its own included. In order, it finds the branch's
-worktree, notes the tip, and, when the worktree's folder exists, archives into <archive>/<repo>/<item>/ (<repo> the
+worktree, notes the tip, and, when the worktree's folder exists, stops orphans whose working folder is inside it
+(sweep.py) and scans again, so what they write as they stop is archived; it keeps the worktree while any process is
+still inside or when the scan (ps, lsof) fails. Then it archives into <archive>/<repo>/<item>/ (<repo> the
 folder name of the main worktree, <item> that of the item's; <item>-<tip, 10 characters>[-N] when taken, never
 overwritten): status.txt (git status --porcelain=v1), uncommitted.patch (git diff --binary HEAD, only when not
 empty) and every untracked path git does not ignore, under the same relative path, symlinks as symlinks; inside an
-untracked nested repository or worktree, .git, node_modules and .vitest are skipped and named. It then stops orphans
-whose working folder is inside the worktree (sweep.py), removes the worktrees registered inside it, then the
+untracked nested repository or worktree, .git, node_modules and .vitest are skipped and named. It then removes the
+worktrees registered inside it, then the
 worktree (git worktree remove --force; for a folder already deleted this clears only its registration), deletes
 the branch only if it still points at the noted tip (git update-ref -d <ref> <tip>) and no worktree holds it, and
 appends one line to <archive>/index.tsv under a lock (tabs, newlines and backslashes in a field escaped as \\t, \\n,
@@ -19,7 +21,8 @@ appends one line to <archive>/index.tsv under a lock (tabs, newlines and backsla
 Outcomes follow worktrunk's `wt remove`. branch: deleted, retained_unmerged, retained_checked_out, retained_raced,
 retained_failed, not_attempted. worktree: removed, already_gone (folder deleted by hand, registration cleared),
 none (the branch has no worktree), not_attempted, retained_locked, retained_in_use (a live process that is not an
-orphan works inside it), retained_failed (a failed archive is deleted and nothing is removed).
+orphan works inside it, or a process is still inside after the stop), retained_failed (a failed process scan or
+archive; a failed archive is deleted and nothing is removed).
 Exit 0: the worktree is gone and the branch deleted. Exit 1: something was kept, for the owner's list, not a
 failed merge; nothing is archived or removed unless the worktree outcome says so. Exit 2: usage error (no such
 branch, the branch is main, it is checked out in the main worktree), nothing changed.
@@ -100,8 +103,10 @@ def find_skips(src, top):
 
 
 def processes_in(root):
-    """(orphans, live) whose working folder is inside root; a descendant of such an orphan is the orphan's."""
-    procs, dirs = sweep.processes(), sweep.cwds()
+    """(orphans, live) whose working folder is inside root; a descendant of such an orphan is the orphan's.
+
+    Raises sweep.ScanFailed when ps or lsof fails, so a failed scan never reads as an unused worktree."""
+    procs, dirs = sweep.processes(check=True), sweep.cwds(check=True)
     orphans = [x for x in sweep.leftovers(root, procs, dirs) if x[2] and inside(x[2], root)]
     left = {pid for pid, _, _ in orphans}
     live = []
@@ -118,6 +123,7 @@ def processes_in(root):
 
 
 def stop_orphans(root):
+    """(stopped, left): left names every process, orphan or not, still inside root after the stops."""
     stopped = []
     for _ in range(3):  # stopping a parent orphans its children, so look again
         found, _ = processes_in(root)
@@ -125,7 +131,10 @@ def stop_orphans(root):
             break
         sweep.stop([pid for pid, _, _ in found])
         stopped += found
-    return stopped
+    orphans, live = processes_in(root)
+    left = [(p, c) for p, c, _ in orphans] + live
+    still = {p for p, _ in left}
+    return [s for s in stopped if s[0] not in still], left
 
 
 def pick_dest(base, item, tip, dry):
@@ -248,7 +257,12 @@ def remove(a, res):
             return
         exists = os.path.isdir(path)
         if exists:
-            orphans, live = processes_in(root)
+            try:
+                orphans, live = processes_in(root)
+            except sweep.ScanFailed as e:
+                res['worktree_outcome'] = 'retained_failed'
+                res['error'] = f'process scan failed: {e}'
+                return
             res['in_use'] = [{'pid': p, 'command': c} for p, c in live]
             if live:
                 res['worktree_outcome'] = 'retained_in_use'
@@ -267,6 +281,18 @@ def remove(a, res):
         res['worktree_outcome'] = 'none'
     else:
         if exists:
+            if not a.dry_run:
+                try:
+                    stopped, left = stop_orphans(root)
+                except sweep.ScanFailed as e:
+                    res['worktree_outcome'] = 'retained_failed'
+                    res['error'] = f'process scan failed: {e}'
+                    return
+                res['stopped'] = [{'pid': p, 'command': c, 'cwd': d} for p, c, d in stopped]
+                if left:
+                    res['in_use'] = [{'pid': p, 'command': c} for p, c in left]
+                    res['worktree_outcome'] = 'retained_in_use'
+                    return
             try:
                 archive(path, os.path.join(archive_root, repo_name), os.path.basename(path.rstrip('/')), tip,
                         a.dry_run, res)
@@ -280,8 +306,6 @@ def remove(a, res):
                         f'; the partial archive is left at {dest}'
                 res['archive_dir'] = None
                 return
-            if not a.dry_run:
-                res['stopped'] = [{'pid': p, 'command': c, 'cwd': d} for p, c, d in stop_orphans(root)]
         if not a.dry_run:
             try:
                 remove_worktrees(main_wt, nested, path)

@@ -447,9 +447,10 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **Remove the merged item.** Each run's merge script, once main has moved and it has printed `MERGED`, calls
   `python3 -B ~/.agents/skills/orchestrator-workers/scripts/remove_merged.py --repo $REPO --branch ow/$I --run-dir $R </dev/null > $G/remove.log 2>&1; RC=$?`,
   prints that log, prints a WARN when `RC` is not 0, and still exits 0. Only when the branch's tip is in main, the script
-  archives what the item's worktree holds uncommitted (`status.txt`, `uncommitted.patch` from `git diff --binary HEAD`,
+  stops orphans left in the item's worktree and scans again, keeping the worktree while any process is still inside or
+  the scan fails; then it archives what the worktree holds uncommitted (`status.txt`, `uncommitted.patch` from `git diff --binary HEAD`,
   and the untracked files git does not ignore) into `~/.local/state/orchestrator-workers/_archive/worktrees/<repo>/<item>/`
-  (`<item>-<tip>` when taken, never overwritten), appends a line to `index.tsv` there, stops orphans left in the folder,
+  (`<item>-<tip>` when taken, never overwritten), appends a line to `index.tsv` there,
   removes the worktree and the worktrees nested in it, and deletes the branch if it has not moved. Its exit 1 is a kept
   worktree or branch for the owner's list (`retained_unmerged`, `retained_locked`, `retained_in_use` with the process ids,
   `retained_checked_out`, `retained_raced`, `retained_failed`), not a failed merge; exit 2 is a usage error and changed

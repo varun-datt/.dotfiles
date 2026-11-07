@@ -130,8 +130,8 @@ class RemoveMergedBase(unittest.TestCase):
         with open(index or os.path.join(self.archive, 'index.tsv'), encoding='utf-8') as f:
             return [line.split('\t') for line in f.read().split('\n') if line]
 
-    def orphan(self, cwd):
-        p = subprocess.run(['sh', '-c', 'sleep 300 >/dev/null 2>&1 & echo $!'], cwd=cwd, capture_output=True,
+    def orphan(self, cwd, body='sleep 300'):
+        p = subprocess.run(['sh', '-c', f'{body} >/dev/null 2>&1 & echo $!'], cwd=cwd, capture_output=True,
                            text=True, stdin=subprocess.DEVNULL)
         pid = int(p.stdout.strip())
         self.procs.append(pid)
@@ -286,6 +286,67 @@ class ArchiveAndRemoveTest(RemoveMergedBase):
         self.assertRegex(out, rf'(?m)^stopped {pid} \S*sleep cwd=')
         self.assertFalse(remove_merged.sweep.alive(pid))
         self.assertFalse(os.path.exists(wt))
+
+
+LAST_WORDS = ('import signal, sys, time\n'
+              'def bye(*_):\n'
+              '    open("last words.txt", "w").write("bye\\n")\n'
+              '    sys.exit(0)\n'
+              'signal.signal(signal.SIGTERM, bye)\n'
+              'time.sleep(300)\n')
+
+
+class StopFirstTest(RemoveMergedBase):
+    def assert_kept(self, before, code, out, outcome):
+        self.assertEqual(code, 1, out)
+        self.assertEqual(self.state()[:2] + self.state()[3:], before[:2] + before[3:])
+        self.assertFalse(os.path.exists(os.path.join(self.archive, 'repo')), out)
+        self.assertIn(outcome, out)
+
+    def test_what_an_orphan_writes_as_it_stops_is_archived(self):
+        wt = self.item()
+        pid = self.orphan(wt, f"{sys.executable} -B -c '{LAST_WORDS}'")
+        code, out, err = self.call()
+        self.assertEqual(code, 0, out + err)
+        self.assertRegex(out, rf'(?m)^stopped {pid} ')
+        with open(os.path.join(self.archive, 'repo', 'it', 'last words.txt')) as f:
+            self.assertEqual(f.read(), 'bye\n')
+        self.assertFalse(os.path.exists(wt))
+
+    def test_an_orphan_that_outlives_the_stop_keeps_the_worktree(self):
+        wt = self.item()
+        pid = self.orphan(wt)
+        before = self.state()
+        with mock.patch.object(remove_merged.sweep, 'stop', lambda pids: None):
+            code, out, err = self.call()
+        self.assert_kept(before, code, out, f'worktree retained_in_use {wt}: in use by {pid} ')
+        self.assertIn('branch not_attempted', out)
+        self.assertTrue(remove_merged.sweep.alive(pid))
+
+    def failing(self, prog):
+        real = subprocess.run
+
+        def run(argv, *a, **kw):
+            if os.path.basename(argv[0]) == prog:
+                return subprocess.CompletedProcess(argv, 1, '', f'{prog}: cannot read the process table\n')
+            return real(argv, *a, **kw)
+        return mock.patch.object(remove_merged.sweep.subprocess, 'run', run)
+
+    def test_a_failed_ps_keeps_the_worktree(self):
+        wt = self.item()
+        self.write(wt, 'left.txt', 'left\n')
+        before = self.state()
+        with self.failing('ps'):
+            code, out, err = self.call()
+        self.assert_kept(before, code, out, f'worktree retained_failed {wt}: process scan failed: ps exited 1')
+
+    def test_a_failed_lsof_keeps_the_worktree(self):
+        wt = self.item()
+        self.write(wt, 'left.txt', 'left\n')
+        before = self.state()
+        with self.failing('lsof'):
+            code, out, err = self.call()
+        self.assert_kept(before, code, out, f'worktree retained_failed {wt}: process scan failed: lsof exited 1')
 
 
 class KeepTest(RemoveMergedBase):
