@@ -9,10 +9,10 @@ Owner rulings, 2026-10-13. The orchestrator applies them to every round it launc
 | Fix after review (`<item>-fixN`) | claude-sonnet-5.5, in a fresh session with a short brief | medium | - |
 | Resume (`<item>-resumeN`) | The model of the round it resumes | high | - |
 | Catch-up merge (`<item>-catchup`, `<item>-mergeN`) | Mid-tier model of the same family | high | Strongest model for 3 or more conflicts, code-level conflicts, or any risk area |
-| Review, re-review and critique (`<item>-reviewN`, `<item>-rereviewN`, `<item>-critique`) | Another model family than the author | high | - (max only by `--override`) |
+| Review, optional re-review and critique (`<item>-reviewN`, `<item>-rereviewN`, `<item>-critique`) | Another model family than the author | high | - (max only by `--override`) |
 | Research (`<item>-research`) and documents | claude-sonnet-5.5 | medium | - |
 
-Reviews, re-reviews and critiques run at high, risk areas included, since a max-effort review can run past its 45 minutes.
+Reviews, re-reviews (run only when a brief's STEPS line names `recheck`) and critiques run at high, risk areas included, since a max-effort review can run past its 45 minutes.
 
 ## The router
 

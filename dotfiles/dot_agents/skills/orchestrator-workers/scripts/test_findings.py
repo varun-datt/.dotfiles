@@ -651,6 +651,90 @@ class CliTest(unittest.TestCase):
         self.assertIn('--sarif', p.stdout)
 
 
+class FixCheckTest(unittest.TestCase):
+    """findings.py fixcheck: every finding of the fix brief is fixed with a test that exists, or listed."""
+    BRIEF = ('THIS IS A FIX ROUND for a.\n\nFIX THESE, one at a time:\n3. Lost rows. Where: `a.py` 4. Done when: kept.\n'
+             '4. Vacuous check. Where: `b.py` 2. Done when: fails.\n5. Late event. Where: `c.py` 9. Done when: ignored.\n\n'
+             'WHY NOW:\n3 HARM: rows lost\n')
+
+    def setUp(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.wt = os.path.join(tmp.name, 'wt')
+        os.makedirs(os.path.join(self.wt, 'tests'))
+        with open(os.path.join(self.wt, 'tests', 'test_a.py'), 'w') as f:
+            f.write('SCRIPT = 1\n\n\nclass StoreTest:\n    def test_rows_survive(self): pass\n    def test_check_fails(self): pass\n'
+                    '    def helper(self): pass\n\n\ndef test_late_event_ignored(): pass\n')
+        with open(os.path.join(self.wt, 'store.py'), 'w') as f:
+            f.write('def record(): pass\n')
+        with open(os.path.join(self.wt, 'tests', 'test_broken.py'), 'w') as f:
+            f.write('def test_x(:\n')
+        with open(os.path.join(self.wt, 'tests', 'pan.test.ts'), 'w') as f:
+            f.write("describe('pan', () => {\n  it(\"keeps the view's edge\", () => {});\n  test.skip(`zooms`, () => {});\n});\n"
+                    "test('alone', () => {});\n")
+
+    def check(self, report):
+        return findings.fix_check(self.BRIEF, report, self.wt)
+
+    def test_all_fixed_with_tests_that_exist_is_exit_0(self):
+        report = ('Done.\n\n- 3: fixed, tests/test_a.py::StoreTest.test_rows_survive\n'
+                  '-  **4**:  fixed,  `tests/test_a.py::StoreTest.test_check_fails`.\n'
+                  '**- 5: fixed, tests/test_a.py::test_late_event_ignored**\n')
+        self.assertEqual(self.check(report), ([], 0))
+
+    def test_left_unmentioned_and_missing_tests_are_listed_with_exit_1(self):
+        report = ('- 3: left, the restart path needs a design.\n'
+                  '- 4: fixed, tests/test_a.py::StoreTest.test_no_such_test\n'
+                  '- 9: fixed, tests/test_a.py::StoreTest.test_rows_survive\n')
+        lines, rc = self.check(report)
+        self.assertEqual(rc, 1)
+        self.assertEqual(lines, ['- 3: left, the restart path needs a design',
+                                 '- 4: fixed, but no test StoreTest.test_no_such_test in tests/test_a.py: no class StoreTest '
+                                 'with that method',
+                                 "- 5: not mentioned on a `- 5: fixed|left` line of the fixer's report"])
+        lines, _ = self.check('- 3: fixed, tests/test_gone.py::test_rows_survive\n- 4: fixed, test_check_fails\n'
+                              '- 5: fixed, tests/test_a.py::test_late_event_ignored\n')
+        self.assertEqual(lines, ['- 3: fixed, but no test file tests/test_gone.py in the worktree',
+                                 "- 4: fixed, but 'test_check_fails' names no <test file>::<test name>"])
+
+    def test_a_name_that_is_not_a_test_is_refused(self):
+        refused = {'store.py::record': 'store.py is not a test file',
+                   'tests/test_a.py::NoSuchTest.test_rows_survive': 'no class NoSuchTest with that method',
+                   'tests/test_a.py::NonexistentClass.SCRIPT': 'no class NonexistentClass with that method',
+                   'tests/test_a.py::SCRIPT': 'no module-level test SCRIPT in tests/test_a.py',
+                   'tests/test_a.py::StoreTest.helper': 'StoreTest.helper in tests/test_a.py is not a test: its name',
+                   'tests/test_a.py::test_rows_survive': 'no module-level test test_rows_survive',
+                   'tests/test_broken.py::test_x': 'tests/test_broken.py does not parse (',
+                   'tests/pan.test.ts::pan > rotates': "no test titled 'rotates' in tests/pan.test.ts after the parts",
+                   'tests/pan.test.ts::alone > pan': "no test titled 'pan' in tests/pan.test.ts after the parts"}
+        for spec, want in refused.items():
+            self.assertIn(want, findings.test_found(self.wt, spec), spec)
+        for spec in ('tests/test_a.py::StoreTest.test_rows_survive', 'tests/test_a.py::test_late_event_ignored',
+                     "tests/pan.test.ts::pan > keeps the view's edge", 'tests/pan.test.ts::pan > zooms',
+                     'tests/pan.test.ts::alone'):
+            self.assertEqual(findings.test_found(self.wt, spec), '', spec)
+
+    def test_the_real_report_before_the_line_form_lists_every_finding_as_not_mentioned(self):
+        fx = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures', 'findings')
+        run = tempfile.mkdtemp(dir=self.wt)
+        with open(os.path.join(fx, 'mf-fix1.report.md'), encoding='utf-8') as f:
+            report = f.read()
+        with open(os.path.join(run, 'mf-fix1-resume1.jsonl'), 'w', encoding='utf-8') as f:
+            f.write(json.dumps(message(report)) + '\n' + json.dumps({'type': 'result', 'exitCode': 0}) + '\n')
+        with open(os.path.join(run, 'queue.json'), 'w', encoding='utf-8') as f:
+            json.dump({'items': [{'id': 'mf', 'worktree': self.wt, 'pipeline': [
+                {'name': 'fix', 'brief': os.path.join(fx, 'mf-fix1.body.md'), 'report': 'mf-fix1-resume1'}]}]}, f)
+        p = subprocess.run([sys.executable, '-B', SCRIPT.replace('mine.py', 'findings.py'), 'fixcheck', 'mf', '--run-dir',
+                            run], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        self.assertEqual(p.returncode, 1, p.stderr)
+        self.assertEqual(p.stdout.splitlines(), [f"- {n}: not mentioned on a `- {n}: fixed|left` line of the fixer's report"
+                                                  for n in ('1', '2')])
+        p = subprocess.run([sys.executable, '-B', SCRIPT.replace('mine.py', 'findings.py'), 'fixcheck', 'nope',
+                            '--run-dir', run], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        self.assertEqual(p.returncode, 2)
+        self.assertIn('no worktree for nope', p.stderr)
+
+
 class BlockTest(unittest.TestCase):
     """Reviewers' structured findings blocks."""
 
@@ -747,6 +831,76 @@ class BlockTest(unittest.TestCase):
         self.run.round('job-rereview', at=T0 + 30, report='Blocking: none\n' + self.block(re_block))
         self.record()
         self.assertTrue(any(u.get('kind') == 'block' and 'earlierN 7' in u['why'] for u in self.unparsed), self.unparsed)
+
+    WHY = {'age': 'New', 'phaseInjected': 'brief', 'phaseShouldHaveCaught': 'brief-cases', 'qualifier': 'Missing',
+           'missing': 'the brief named one case of two',
+           'evidence': {'age': 'git blame: abc1234', 'phaseInjected': 'brief line 12: "not named"',
+                        'phaseShouldHaveCaught': 'not named', 'qualifier': 'unknown', 'missing': 'unknown'}}
+
+    def why_block(self, *props, asked=True):
+        results = [dict(self.FIRST[i], properties=dict(self.FIRST[i]['properties'], **p)) for i, p in enumerate(props)]
+        if asked:
+            write(self.run, 'job-review.filled.md', 'ask for `phaseShouldHaveCaught`\n')
+        self.run.round('job', at=T0)
+        self.run.round('job-review', at=T0 + 10, report='2 blocking\n' + self.block(results))
+        return self.record()
+
+    def test_why_it_got_in_is_stored_with_a_major_and_unknown_is_accepted(self):
+        unknown = {k: 'unknown' for k in self.WHY if k != 'evidence'}
+        by = self.why_block(self.WHY, dict(unknown, evidence={k: 'unknown' for k in unknown}))
+        self.assertEqual({k: by[('job-review', '1')]['properties'][k] for k in self.WHY}, self.WHY)
+        self.assertEqual(by[('job-review', '2')]['properties']['age'], 'unknown')
+        self.assertEqual((self.counts['blocks'], self.unparsed), (1, []))
+
+    def test_a_major_without_the_fields_is_stored_and_flagged_a_minor_is_not(self):
+        by = self.why_block({}, self.WHY, {})
+        self.assertNotIn('age', by[('job-review', '1')]['properties'])
+        self.assertEqual(self.counts['blocks'], 1)
+        notes = [u['why'] for u in self.unparsed if u.get('kind') == 'why']
+        self.assertEqual(notes, ['1 (Major) has no age, phaseInjected, phaseShouldHaveCaught, qualifier, missing, evidence'])
+        self.assertEqual(self.counts['unparsed'], 0)
+        out = findings.write(self.run.dir)[0]
+        self.assertIn('  why it got in: job-review: 1 (Major) has no age, phaseInjected', out)
+
+    def test_a_review_whose_prompt_did_not_ask_is_not_flagged(self):
+        by = self.why_block({}, asked=False)
+        self.assertNotIn('ageProposed', by[('job-review', '1')]['properties'])
+        self.assertEqual(self.unparsed, [])
+
+    def test_with_no_prompt_kept_a_major_carrying_some_why_fields_is_flagged(self):
+        self.why_block({'age': 'unknown'}, self.WHY, {'age': 'New'}, asked=False)
+        notes = [u['why'] for u in self.unparsed if u.get('kind') == 'why']
+        self.assertEqual(notes, ['1 (Major) has no phaseInjected, phaseShouldHaveCaught, qualifier, missing, evidence'])
+
+    def test_a_why_value_outside_its_list_or_evidence_not_an_object_is_a_validation_problem(self):
+        for bad, want in (({'age': 'Old'}, "age 'Old'"), ({'phaseInjected': 'Build'}, "phaseInjected 'Build'"),
+                          ({'phaseShouldHaveCaught': 'reviewer'}, "phaseShouldHaveCaught 'reviewer'"),
+                          ({'qualifier': 'missing'}, "qualifier 'missing'"), ({'evidence': 'a quote'}, 'evidence is not an object'),
+                          ({'missing': 3}, 'missing 3 is not text')):
+            with self.subTest(bad=bad):
+                self.setUp()
+                self.why_block(dict(self.WHY, **bad))
+                whys = [u['why'] for u in self.unparsed if u.get('kind') == 'block']
+                self.assertEqual(len(whys), 1, self.unparsed)
+                self.assertIn(f'result 1 (B1): {want}', whys[0])
+                self.assertEqual(self.counts['blocks'], 0)
+
+    def test_the_real_review_before_these_fields_records_as_before(self):
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures', 'findings', 'mf-review.report.md'),
+                  encoding='utf-8') as f:
+            report = f.read()
+        self.run.round('mf', at=T0)
+        self.run.round('mf-review', at=T0 + 10, report=report)
+        by = self.record()
+        self.assertEqual(sorted((k[1], r['properties']['grade'], r['properties']['blocking']) for k, r in by.items()),
+                         [('1', 'Major', True), ('2', 'Major', True), ('3', 'Major', True), ('4', 'Major', True),
+                          ('5', 'Major', True), ('p1', None, False), ('x1', None, False), ('x2', None, False)])
+        for r in by.values():
+            self.assertFalse(set(r['properties']) & (set(findings.WHY_FIELDS) | {'ageProposed', 'ageDisagrees'}))
+        # The block is rejected for its "Pre-existing" grade, so the prose, kept whole in the fixture, is read.
+        self.assertEqual([(u.get('kind'), u['why'][:60]) for u in self.unparsed],
+                         [('block', "findings block not read (result 6 (P1): grade 'Pre-existing'")])
+        self.assertEqual(self.counts['blocks'], 0)
 
 
 if __name__ == '__main__':

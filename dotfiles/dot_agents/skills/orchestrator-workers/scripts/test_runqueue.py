@@ -426,7 +426,8 @@ class PipelineTest(unittest.TestCase):
             f.write('x\n')
         subprocess.run(git + ['add', 'README'], check=True)
         subprocess.run(git + ['commit', '-qm', 'init'], check=True)
-        body = f'TASK: item {i}\nRISK: processes (a runner that relaunches wastes credits), checks (a wrong base)\n'
+        body = (f'TASK: item {i}\nRISK: processes (a runner that relaunches wastes credits), checks (a wrong base)\n'
+                'STEPS: build, review, fix, recheck ("made-up owner words for the test")\n')
         self.write(f'{i}.body.md', body)
         self.write(f'{i}.prompt.md', 'PREAMBLE for the worker\n' + body)
         return wt
@@ -476,7 +477,7 @@ class PipelineTest(unittest.TestCase):
         self.assertIn('- Processes: what starts', prompt)
         self.assertIn('- The checks themselves:', prompt)
         self.assertNotIn('Trust boundaries', prompt)
-        self.assertEqual(re.findall(r'\{\{[^}]+\}\}', prompt), ['{{RUBRIC}}'])
+        self.assertEqual(re.findall(r'\{\{[^}]+\}\}', prompt), ['{{RUBRIC}}', '{{LENSES}}'])
         self.assertIn('+++ b/a.txt', self.read('a-review.seen-diff'))
         with open(os.path.join(self.items()['a']['worktree'], 'REVIEW-REPORT.md')) as f:
             self.assertEqual(f.read().strip(), 'REPORT of a')
@@ -768,7 +769,7 @@ class PipelineTest(unittest.TestCase):
         os.makedirs(briefs)
         custom = os.path.join(briefs, 'custom.prompt.md')
         with open(custom, 'w') as f:
-            f.write('PREAMBLE\nTASK: the custom task\nRISK: paid calls\n')
+            f.write('PREAMBLE\nTASK: the custom task\nRISK: paid calls\nSTEPS: build, review, fix, recheck ("words")\n')
         self.add('a', FULL, '--brief', custom)
         self.write('a.body.md', 'TASK: a stale task\nRISK: trust boundaries\n')
         os.remove(os.path.join(self.rd, 'a.prompt.md'))
@@ -823,6 +824,147 @@ class PipelineTest(unittest.TestCase):
             self.assertEqual(f.read().strip(), 'REPORT of a-fix1-resume1')
         for i in ('a', 'b'):
             self.cli('done', i)
+        t.join(5)
+
+    def steps(self, i, line):
+        self.write(f'{i}.prompt.md', f'PREAMBLE for the worker\nTASK: item {i}\n{line}\n')
+
+    def add_out(self, i, pipeline, wt=None):
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as out, \
+                mock.patch('sys.stderr', new_callable=io.StringIO) as err:
+            rc = self.cli('add', i, '--pipeline', pipeline, '--worktree', wt or self.worktree(i))
+        return rc, out.getvalue(), err.getvalue()
+
+    def test_add_lists_the_steps_and_refuses_a_step_the_steps_line_does_not_name(self):
+        wt = self.worktree('a')
+        self.steps('a', 'STEPS: build, review, fix ("one review by another model, then one fix round, then the merge")')
+        rc, out, err = self.add_out('a', 'build,review,suspend:rulings,fix,recheck,suspend:merge', wt)
+        self.assertEqual(rc, 2)
+        self.assertEqual(out, '1. build\n2. review\n3. suspend:rulings\n4. fix\n5. recheck\n6. suspend:merge\n')
+        self.assertIn('refused, nothing queued: recheck not named on the STEPS: line (line 3 of', err)
+        self.assertEqual(self.items(), {})
+        rc, out, err = self.add_out('a', 'build,review,suspend:rulings,fix,suspend:merge', wt)
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(out, '1. build\n2. review\n3. suspend:rulings\n4. fix\n5. suspend:merge\n')
+        self.assertEqual([s['name'] for s in self.items()['a']['pipeline']],
+                         ['build', 'review', 'suspend:rulings', 'fix', 'suspend:merge'])
+
+    def test_add_refuses_a_steps_line_that_is_missing_unquoted_fenced_doubled_or_names_an_unknown_step(self):
+        wt = self.worktree('a')
+        cases = [('TASK: no steps here', 'has no STEPS: line; add one in the form STEPS: build, review, fix ('),
+                 ('STEPS: build, review, fix', "line 3 of"),
+                 ('STEPS: build, review, fix (the owner asked)', "quotes none of the owner's words"),
+                 ('```\nSTEPS: build, review, fix ("words")\n```', 'has no STEPS: line'),
+                 ('````md\n```\nSTEPS: build, review, fix, recheck ("words")\n```\n````', 'has no STEPS: line'),
+                 ('<!--\nSTEPS: build, review, fix ("words")\n-->', 'has no STEPS: line'),
+                 ('STEPS: build, review, fix ("a")\nSTEPS: build ("b")', 'has 2 STEPS: lines (lines 3, 4); keep one'),
+                 ('STEPS: build, review, fix, merge ("words")', 'unknown step on the STEPS: line: merge'),
+                 ('STEPS: ("words")', 'unknown step on the STEPS: line: (none named)')]
+        for line, want in cases:
+            self.steps('a', line)
+            rc, out, err = self.add_out('a', 'build,review,suspend:rulings,fix,suspend:merge', wt)
+            self.assertEqual(rc, 2, line)
+            self.assertIn(want, err, line)
+            self.assertIn('refused, nothing queued', err, line)
+            self.assertEqual(self.items(), {}, line)
+        os.remove(os.path.join(self.rd, 'a.prompt.md'))
+        rc, _, err = self.add_out('a', 'build,suspend:merge', wt)
+        self.assertEqual(rc, 2)
+        self.assertIn('no brief at ' + os.path.join(self.rd, 'a.prompt.md'), err)
+        self.assertEqual(self.items(), {})
+
+    def test_steps_are_matched_without_case_or_spaces_and_a_shorter_pipeline_is_accepted(self):
+        wt = self.worktree('a')
+        self.steps('a', 'STEPS:  Build ,RE VIEW,  Fix , ReCheck, suspend:merge (\u201cthe owner\u2019s words\u201d)')
+        rc, _, err = self.add_out('a', FULL, wt)
+        self.assertEqual(rc, 0, err)
+        wt = self.worktree('b')
+        self.steps('b', 'STEPS: build, review, fix ("words")')
+        rc, _, err = self.add_out('b', 'build,suspend:merge', wt)
+        self.assertEqual(rc, 0, err)
+
+    def test_the_default_pipeline_is_one_review_one_fix_then_the_merge(self):
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as out, self.assertRaises(SystemExit):
+            q.main(['add', '--help'])
+        with open(os.path.join(os.path.dirname(q.__file__), '..', 'SKILL.md'), encoding='utf-8') as f:
+            skill = f.read()
+        examples = (re.findall(r'e\.g\. (\S+)', ' '.join(out.getvalue().split()))
+                    + re.findall(r'--pipeline (\S+?)[ `]', q.__doc__ + skill))
+        self.assertGreaterEqual(len(examples), 3, examples)
+        for pipe in examples:
+            self.assertEqual(pipe, 'build,review,suspend:rulings,fix,suspend:merge')
+        wt = self.worktree('a')
+        self.steps('a', 'STEPS: build, review, fix ("one review by another model, then one fix round, then the merge")')
+        self.write('a.body.md', 'TASK: item a\n')
+        rc, _, err = self.add_out('a', examples[0], wt)
+        self.assertEqual(rc, 0, err)
+        t = self.start()
+        self.at('a', 'suspend:rulings')
+        self.write('a-fix1.body.md', FIX_BODY.format(id='a'))
+        self.write('a.rulings.done', 'fix 1 and 2\n')
+        self.at('a', 'suspend:merge')
+        time.sleep(0.3)
+        self.assertEqual(self.launched(), ['a', 'a-review', 'a-fix1'])
+        self.write('a.merge.done', '')
+        t.join(5)
+        self.assertTrue(self.items()['a']['done'])
+
+    def test_a_step_the_brief_no_longer_names_is_refused_at_launch_and_wakes_the_chat(self):
+        self.assertEqual(self.add('a'), 0)
+        t = self.start()
+        self.at('a', 'suspend:rulings')
+        self.steps('a', 'STEPS: build, review ("only a review")')
+        self.write('a-fix1.prompt.md', 'PREAMBLE\n' + FIX_BODY.format(id='a'))
+        self.write('a.rulings.done', 'fix 1 and 2\n')
+        self.at('a', 'fix', 'failed 2')
+        self.assertEqual(self.launched(), ['a', 'a-review'])
+        reason = q.current(self.items()['a'])['reason']
+        self.assertIn('fix not launched: fix not named on the STEPS: line (line 3 of', reason)
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as out:
+            self.assertEqual(q.wait(self.rd, 0.2, 0, 0.02), 0)
+        self.assertIn('a fix failed 2: fix not launched', out.getvalue())
+        self.steps('a', 'STEPS: build, review, fix, recheck ("words")')
+        self.assertEqual(self.cli('retry', 'a'), 0)
+        self.at('a', 'suspend:merge')
+        self.assertEqual(self.launched(), ['a', 'a-review', 'a-fix1', 'a-rereview'])
+        self.write('a.merge.done', '')
+        t.join(5)
+
+    def test_rulings_none_skips_a_fix_the_brief_no_longer_names_without_a_refusal(self):
+        self.assertEqual(self.add('a'), 0)
+        t = self.start()
+        self.at('a', 'suspend:rulings')
+        self.steps('a', 'STEPS: build, review ("only a review")')
+        self.write('a.rulings.done', 'none')
+        self.at('a', 'suspend:merge')
+        self.assertEqual(self.launched(), ['a', 'a-review'])
+        self.write('a.merge.done', '')
+        t.join(5)
+        self.assertTrue(self.items()['a']['done'])
+
+    def test_a_restarted_runner_keeps_a_started_step_even_when_the_brief_dropped_it(self):
+        self.add('a')
+        self.write('a.sleep', '0.8')
+        ev = threading.Event()
+        t = self.start(stop=ev)
+        self.at('a', 'build', 'running')
+        self.stop(t, ev)
+        self.steps('a', 'STEPS: review, fix, recheck ("words")')
+        t = self.start()
+        self.at('a', 'suspend:rulings')
+        self.assertEqual(self.launched(), ['a', 'a-review'])
+        self.cli('done', 'a')
+        t.join(5)
+
+    def test_an_item_queued_before_steps_lines_is_refused_at_its_next_launch(self):
+        self.add('a')
+        self.write('a.prompt.md', 'PREAMBLE for the worker\nTASK: item a\n')
+        t = self.start()
+        self.at('a', 'build', 'failed 2')
+        self.assertEqual(self.launched(), [])
+        self.assertIn('build not launched: ' + os.path.join(self.rd, 'a.prompt.md') + ' has no STEPS: line; add one',
+                      q.current(self.items()['a'])['reason'])
+        self.cli('done', 'a')
         t.join(5)
 
 
@@ -950,6 +1092,65 @@ class ReviewPrepTest(unittest.TestCase):
         self.write('a.prompt.md', 'PREAMBLE\n' + task)
         self.write('a.jsonl', report_log('REPORT of a'))
         return q.reviewprep.review(self.rd, 'a', self.wt)
+
+    def history(self, prompt):
+        self.assertIn('==== BRANCH HISTORY ====\n', prompt)
+        return prompt.split('==== BRANCH HISTORY ====\n', 1)[1].split('\n==== END OF BRANCH HISTORY', 1)[0]
+
+    def test_the_review_prompt_holds_the_base_and_each_commit_labelled_build(self):
+        base = self.git('rev-parse', 'HEAD')
+        prompt = self.read(os.path.basename(self.built('TASK: t\nRISK: none\n')))
+        build = self.git('rev-parse', 'HEAD')
+        self.assertEqual(self.history(prompt), f'Base commit: {base}\nCommits from the base to HEAD, oldest first (no fix '
+                         'round has run, so none is fix; merge is a merge commit on the branch, merged a commit it brought '
+                         f"in, from main or elsewhere, not this item's work):\n- {build[:12]} build: feat: a.txt")
+        for part in ('WHY IT GOT IN', 'phaseShouldHaveCaught, the step', '1. Does the brief name the case? Quote the line, '
+                     'or write "not named".', 'the phase injected is still the brief, with cause SPEC',
+                     'evidence for and against', '`git blame -w -L <line>,<line> <base>..HEAD -- <file>`',
+                     'or says "unknown"', '==== LENSES ====\n{{LENSES}}'):
+            self.assertIn(part, prompt)
+
+    def test_commits_after_the_fix_start_are_fix_and_a_merged_branch_is_labelled(self):
+        base = self.git('rev-parse', 'HEAD')
+        self.write('a.base', base)
+        self.commit('a.txt')
+        self.git('checkout', '-q', '-b', 'main', base)
+        self.commit('main.txt')
+        self.git('checkout', '-q', 'ow/a')
+        self.git('merge', '-q', '--no-ff', '-m', 'Merge main into ow/a', 'main')
+        start = self.git('rev-parse', 'HEAD')
+        q.save(self.rd, {'items': [{'id': 'a', 'pipeline': [{'name': 'build', 'head': base},
+                                                              {'name': 'fix', 'head': start}]}]})
+        self.write('a-fix1.base', base)
+        self.commit('fix | `x` {{TASK}}.txt')
+        self.write('a.prompt.md', 'PREAMBLE\nTASK: t\nRISK: none\n')
+        self.write('a.jsonl', report_log('REPORT of a'))
+        def labels():
+            rows = self.history(self.read(os.path.basename(q.reviewprep.review(self.rd, 'a', self.wt)))).split('\n')[2:]
+            return {r.split(': ', 1)[1]: r.split(' ', 2)[2].split(':', 1)[0] for r in rows}
+        self.assertEqual(labels(), {'feat: a.txt': 'build', 'feat: main.txt': 'merged', 'Merge main into ow/a': 'merge',
+                                    'feat: fix | `x` {{TASK}}.txt': 'fix'})
+        os.remove(os.path.join(self.rd, 'queue.json'))
+        self.assertEqual(labels(), {'feat: a.txt': 'fix', 'feat: main.txt': 'merged', 'Merge main into ow/a': 'merge',
+                                    'feat: fix | `x` {{TASK}}.txt': 'fix'})
+
+    def test_a_short_hash_a_tag_or_a_relative_name_gives_the_full_base_hash(self):
+        base = self.git('rev-parse', 'HEAD')
+        self.git('tag', 'v1')
+        self.built('TASK: t\nRISK: none\n')
+        self.commit('b.txt')
+        for given in (base[:7], base, 'v1', 'HEAD~2'):
+            with self.subTest(given=given):
+                self.write('a.reviewbase', given + '\n')
+                prompt = self.read(os.path.basename(q.reviewprep.review(self.rd, 'a', self.wt)))
+                rows = self.history(prompt).split('\n')
+                self.assertEqual(rows[0], f'Base commit: {base}')
+                self.assertEqual([r.split(': ', 1)[1] for r in rows[2:]], ['feat: a.txt', 'feat: b.txt'])
+                self.assertIn(f'base {base}, commits:', prompt)
+        self.write('a.reviewbase', 'no-such-commit\n')
+        with self.assertRaises(q.reviewprep.PrepError) as e:
+            q.reviewprep.review(self.rd, 'a', self.wt)
+        self.assertIn('git rev-parse --verify --quiet no-such-commit^{commit} failed', str(e.exception))
 
     def test_inserted_text_is_never_read_as_a_placeholder(self):
         for quoted in ('{{TASK}}', '{{GATES_RUN}}', '{{WORD_LIMIT|900}}'):

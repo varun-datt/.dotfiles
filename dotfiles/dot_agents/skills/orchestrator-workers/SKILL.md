@@ -70,7 +70,7 @@ which answers you inferred from the repository.
 5. **Order:** proposed waves and dependencies, and the most workers at once (recommended: 3).
    Propose any extra items now.
 6. **Rules:** confirm one review per item; a fix round only for the findings that meet the fix-now bar
-   (§Lifecycle), in the builder's own session; one fixes-only re-review after it; what goes to tech debt
+   (§Lifecycle), in the builder's own session; no second review after it; what goes to tech debt
    marked follow-up while the owner is away; and `--no-ff` merges to main, never pushed.
 7. **Boundaries:**
    - sibling repositories workers may read (`--add-dir`, read-only);
@@ -101,7 +101,7 @@ which answers you inferred from the repository.
 | --- | --- | --- |
 | **Orchestrator** | Plans waves, writes prompts, dispatches, grades reports claim by claim, re-runs load-bearing claims, merges, runs gates on main, writes records, reports | Writes product code: it dispatches instead |
 | **Worker** (`copilot -p`, own worktree and branch) | One item; commits each step with explicit paths; runs every gate; reports with labels | Pushes; edits the orchestrator's records; touches the owner's instance |
-| **Reviewer** (read-only, another model family) | One review of the diff against the task; at most one fixes-only re-review | Writes, runs a shell, fetches URLs |
+| **Reviewer** (read-only, another model family) | One review of the diff against the task; a fixes-only re-review only when the brief's STEPS line names it | Writes, runs a shell, fetches URLs |
 | **Research worker** | A proposal with options and a recommendation; commits only its proposal files | Changes product code |
 
 **No in-chat subagents in an unattended run.** Never use an in-chat subagent tool (VS Code
@@ -114,14 +114,26 @@ timeout and blocks the orchestrator until it returns. Run that work as a CLI pro
 ```
 task -> worker -> grade report -> ONE review -> rulings: each Blocker or Major fixed now (a WHY NOW
   line) or sent to tech debt -> ONE fix round in the builder's own session, only for findings fixed now
-  -> ONE fixes-only re-review, only if a fix round ran
   -> trial merge -> merge -> gates on main -> restart owner's instance -> records
 ```
 
+- **The review rule:** one review by another model family, then one fix round, then the merge. The fixer's
+  report and the tests at merge decide whether the fix worked; there is no second look, and what is left over
+  goes on the tech-debt list. A Blocker or Major still open after the fix stops the item and waits for the
+  owner when the owner is watching; in a run the owner has left, the item merges with the problem on the
+  tech-debt list marked follow-up. A second fix round needs the owner's yes, which `route.py run` enforces
+  (below). A fixes-only re-check (`recheck`, [rereview.md](assets/rereview.md)) runs only when the brief's
+  STEPS line names it.
+- **Steps declared before work starts:** each item's brief carries one line `STEPS: build, review, fix ("<the
+  owner's words that ask for these steps>")`. `runqueue.py add` lists the pipeline's steps and refuses any build,
+  review, fix or recheck step the line does not name, and the runner checks the line again before each launch,
+  as Terraform shows its plan before it applies it ([terraform plan](https://developer.hashicorp.com/terraform/cli/commands/plan)).
 - **Only judgement wakes the chat.** Queue each item as a [pipeline](#queue-runner): the runner prepares and
-  launches the review, the fix round and the re-check itself, and stops at two suspend points, ruling the
+  launches the review and the fix round itself, and stops at two suspend points, ruling the
   review's findings and merging, because only those need judgement. The chat waits for the next one with
-  `runqueue.py wait`; a failed step also stops the pipeline and waits on the chat.
+  `runqueue.py wait`; a failed step also stops the pipeline and waits on the chat. At `suspend:merge`,
+  `findings.py fixcheck <item>` lists each finding the fixer left, did not mention, or claimed fixed with a
+  test that does not exist.
 - **The fix-now bar** ([references/rubric.md](references/rubric.md)): the reviewer grades every finding by likelihood and impact; Blocker and Major are the
   candidates for a fix now (I1 at L1–L2; I2 at L1–L2; I3 at L1). A grade is the finding's severity;
   whether it is fixed now is its priority, a separate call, as ISTQB's glossary keeps the two apart. A
@@ -145,9 +157,9 @@ task -> worker -> grade report -> ONE review -> rulings: each Blocker or Major f
   or clears the mark, and the end-of-run report opens with `debt.py list <repo> --follow-up` for each
   repository the run touched.
 - In a run the owner is away for, the builder fixes each finding fixed now, or at least makes its harm
-  stop; what the re-review leaves open goes to tech debt marked follow-up, and the item merges. When the owner is watching, the earlier rule holds: a finding the re-review leaves open
+  stop; what the fix round leaves open goes to tech debt marked follow-up, and the item merges. When the owner is watching, a Blocker or Major the fix round leaves open
   pauses the item for the owner: one fix round, then the owner decides. `route.py run` refuses any fix round after an item's first (exit 2) unless `--override` carries `owner_approved=<where the owner said so>`, and `mine.py --quality` flags one launched without it.
-  A fix made after the re-review, once the owner
+  A fix made after the fix round, once the owner
   approves it, goes to a **post-merge review (commit-then-review)** on main, so nothing lands unreviewed.
 - **Parallelism** is decided per item, from its dependencies and the files it touches.
 - **Finish before starting**. A freed slot goes first to the oldest started
@@ -252,8 +264,11 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   against a snapshot of the note, page, task and report; the critic also asks whether the note
   builds what already exists.
 - **Reviews:** [review.md](assets/review.md), which grades on [references/rubric.md](references/rubric.md)
-  (`review.sh` fills `{{RUBRIC}}`) and tags each finding's cause and class, and the short
-  [rereview.md](assets/rereview.md), which only checks each named finding was fixed (each of its listed
+  (`review.sh` fills `{{RUBRIC}}`, and `{{LENSES}}` with the lens table of the
+  [code-review-lenses](../code-review-lenses/SKILL.md) skill) and tags each finding's cause and class, and for each
+  Blocker or Major why it got in, and the short
+  [rereview.md](assets/rereview.md), the optional re-check's prompt, run only when the brief's STEPS line names
+  `recheck`, which only checks each named finding was fixed (each of its listed
   cases too), its test, and harm the fix itself adds, at high effort.
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
   fresh session, so it names the branch, worktree, base commit and ports.
@@ -286,33 +301,42 @@ every script in the folder.)
 - **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done; a pipeline item also
   names its step and what it waits on (a running round, the chat's done file, or a failure with its exit code).
 - **Pipelines: queue the whole item once**, so the chat does not re-read its context at every round's end:
-  `runqueue.py add <id> --pipeline build,review,suspend:rulings,fix,recheck,suspend:merge --worktree <wt>
-  [--brief <prompt>] [--route-args "<route.py run options>"] [--review-args "<review.sh options>"]`. The runner
+  `runqueue.py add <id> --pipeline build,review,suspend:rulings,fix,suspend:merge --worktree <wt>
+  [--brief <prompt>] [--route-args "<route.py run options>"] [--review-args "<review.sh options>"]`. `add` first
+  prints the steps, one per line, and refuses (exit 2, nothing queued) unless the brief has one `STEPS:` line,
+  outside code blocks and comments, that quotes the owner's words and names every build, review, fix and recheck
+  step of the pipeline (suspends are not checked); the runner reads the line again before launching each of those
+  steps and, when it no longer names the step, stops the item as a failed step (exit 2) with the reason. The runner
   launches each step when the one before exits 0: build and fix through `route.py run` (rounds `<id>` and
-  `<id>-fix1`), review and re-check through `review.sh` (`<id>-review`, `<id>-rereview`), after
+  `<id>-fix1`), review, and the optional re-check, through `review.sh` (`<id>-review`, `<id>-rereview`), after
   `scripts/reviewprep.py` writes `REVIEW-DIFF.patch`, `REVIEW-REPORT.md` and the filled prompt (risk blocks from
-  the brief's RISK line; the re-check's findings from the fix brief's numbered list, each with its "Cases:" list as
+  the brief's RISK line; the base commit and each commit since, labelled build or fix; the re-check's findings
+  from the fix brief's numbered list, each with its "Cases:" list as
   written, which the re-reviewer checks case by case). Reviews take no slot. The
   diff starts at the HEAD the build (or fix) step had at its first launch, so a retry does not narrow it;
-  `<id>.reviewbase` overrides it after a catch-up with main.
+  `<id>.reviewbase` overrides it after a catch-up with main. A pipeline ending `fix,suspend:merge` suspends at
+  merge once the fix exits 0; `recheck` runs only when the brief's STEPS line names it.
   - **Suspend points** are the two steps that need judgement: `suspend:rulings` (accept or reject each finding)
     and `suspend:merge`. The item waits on the chat, the idle alert names it, and it resumes when
     `<run>/<id>.<name>.done` exists. For rulings, write `<id>-fix1.body.md` (or the whole
     `<id>-fix1.prompt.md`; otherwise the build's prompt with its body swapped is used) and then
-    `<id>.rulings.done`; write `none` in it to skip the fix and re-check when no finding meets the fix-now bar. Writing
-    `<id>.merge.done` after the merge marks the item done. `add` refuses a done file left from before.
+    `<id>.rulings.done`; write `none` in it to skip the fix (and a re-check, when the pipeline has one) when no finding meets the fix-now bar. Writing
+    `<id>.merge.done` after the merge marks the item done. `add` refuses a done file left from before. Before
+    writing it, run `python3 -B scripts/findings.py fixcheck <id>`: it reads the fix brief the queue records and the
+    fixer's report, and lists each finding marked `left`, each one the report does not mention, and each `fixed`
+    line whose test is not in the worktree's test files (exit 1), else exit 0. It refuses nothing; you decide.
   - **A failed step stops the pipeline**: a non-zero exit (3 capped, 4 errored, 5 brief refused, 12 load,
     124 timed out) or a prep failure (exit 2: no base, an empty diff, no report or findings) waits on the chat
     with its reason. `runqueue.py retry <id>` relaunches it; `retry <id> --passed` marks it passed after the
     chat finished it by hand, and `--report <round>` names the resume round whose report the next review or
-    re-check reads (by default the newest of `<round>.jsonl` and `<round>-resumeN.jsonl`). `retry` refuses
-    while the step's round may still run. A further fix round is never automatic.
-  - **Briefs:** review and re-check read the task and risks from the brief the build or fix was launched with
+    optional re-check reads (by default the newest of `<round>.jsonl` and `<round>-resumeN.jsonl`). `retry` refuses
+    while the step's round may still run, and a relaunch meets the STEPS check again. A further fix round is never automatic.
+  - **Briefs:** review and the optional re-check read the task and risks from the brief the build or fix was launched with
     (`--brief`, or the fix brief above).
   - **Restarts are safe:** a step that started is never relaunched; its exit code is kept in
     `<run>/<round>.queue-exit`. A restarted runner finds a round still running by its pid, its
     `<run>/<round>.queue-pid` or its command line; one that vanished without an exit code shows `failed ?`.
-  - **Finish before starting:** a ready fix, re-check or other later step of a started item takes a freed slot
+  - **Finish before starting:** a ready fix or other later step of a started item takes a freed slot
     before any new build, oldest started first, whatever the build's priority.
   - **Wait in one blocking call:** `runqueue.py wait [--max-min 4]` returns when an item newly needs the chat
     (a suspend, a failed step, a plain item that exited), printing one line each, and exits 1 on timeout.
@@ -331,7 +355,7 @@ every script in the folder.)
 
 A **time budget** is a timebox: a fixed number of minutes the worker should finish in.
 
-- **Defaults:** build 90 min, fix or resume 60, review 30, re-review 20, research 30. Override them
+- **Defaults:** build 90 min, fix or resume 60, review 30, re-review 20 (the optional re-check), research 30. Override them
   per run in `budgets.json`.
 - **Status table:** `status.py`. Its states are running, STALLED, DIED, ERRORED, CAPPED, done and
   superseded. A capped round shows its credits against the cap. A died or errored round

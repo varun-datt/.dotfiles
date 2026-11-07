@@ -197,6 +197,21 @@ class BriefTest(unittest.TestCase):
         fenced = "```\nRISK: UI\n```\n"
         self.assertEqual(brief.problems(worker(fields=fenced + FIELDS.replace("RISK: UI\n", ""))), ["no RISK line"])
 
+    def test_a_fence_closes_only_on_its_own_character_at_least_as_long(self):
+        def outside(text):
+            return [line for _, line in brief.outside_fences(text.split("\n"))]
+        self.assertEqual(outside("a\n````md\n```\nSTEPS: x\n```\nb\n````\nc"), ["a", "c"])
+        self.assertEqual(outside("a\n~~~\n```\nSTEPS: x\n```\n~~~\nc"), ["a", "c"])
+        self.assertEqual(outside("a\n```python\nSTEPS: x\n`````  \nc"), ["a", "c"])
+        self.assertEqual(outside("a\n```\nx\n``` not a close\n```\nc"), ["a", "c"])
+        self.assertEqual(outside("a\n```\nSTEPS: x\nb"), ["a"])
+        self.assertEqual(outside("a\n``` x`y\nb"), ["a", "``` x`y", "b"])
+
+    def test_a_nested_fence_example_does_not_break_the_must_count(self):
+        example = "MUST\n1. WHEN shown, the view SHALL say:\n````md\n```\n2. an example line\n```\n3. still the example\n````\n"
+        self.assertEqual(brief.problems(worker(must=example)), [])
+        self.assertEqual([m[0] for m in brief.must_items(brief.brief_lines(worker(must=example)))], ["1"])
+
     def test_kind_comes_from_the_leading_declaration_not_a_quote(self):
         quoted = worker(fields="") + "Quote from a fix: THIS IS A FIX ROUND\n> THIS IS A FIX ROUND\n"
         self.assertEqual(brief.prompt_kind(quoted), "build")

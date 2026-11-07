@@ -55,13 +55,15 @@ REVIEW_REPORT = [
     '1. The verdict as the first line: `Blocking: none`, or `N blocking` where N counts Blockers and Majors.',
     '2. **Blocking.** For each Blocker or Major: `B1. [Major] AREA L1/I2 CAUSE: title`, then `Class:` and every member '
     'of the class you found, its scenario, file:line, the reason for each grade, VERIFIED or INFERRED with the command '
-    'or test that would confirm it, and a fix in one line that covers the whole class.',
+    "or test that would confirm it, and a fix in one line that covers the whole class. Then `Why it got in:` with the "
+    'four checks\' answers quoted and each field of WHY IT GOT IN with its evidence.',
     '3. **Check.** Possible Majors with no concrete scenario yet: one line each, with what would confirm them.',
     '4. **Minor.** One line each: `AREA Lx/Ix CAUSE: what, file:line; class: ...`.',
     '5. **Pre-existing.** One line each.',
     "6. **Corrections** to the author's report: one line each.",
     '7. `Nits: N` as one line; do not list them.',
     '8. **Not checked**, and why.',
+    '9. `Lenses applied:` and the lenses you applied, on one line.',
 ]
 REREVIEW_CHECKS = [
     '1. Each finding: fixed, partly fixed or not fixed, with file:line. Fixed means its scenario can no longer happen; '
@@ -122,8 +124,8 @@ class PromptTextTest(unittest.TestCase):
         blocking = {(i, f'L{n + 1}') for i, cells in rows.items() for n, c in enumerate(cells) if c in ('Blocker', 'Major')}
         self.assertEqual(blocking, {('I1', 'L1'), ('I1', 'L2'), ('I2', 'L1'), ('I2', 'L2'), ('I3', 'L1')})
         for row in ('| Blocker, Major | Fixed first only with a WHY NOW line: harm to the owner once merged, or a planned '
-                    'item builds on it | Fix brief, and the re-review checks the fix; otherwise the tech-debt list (a Blocker '
-                    'marked follow-up) |',
+                    'item builds on it | Fix brief, and the fixer\'s report and the tests at merge decide whether the fix '
+                    'worked; otherwise the tech-debt list (a Blocker marked follow-up) |',
                     '| Minor | Does not block | One line on the repository\'s tech-debt list |',
                     '| Nit | Does not block | Counted in one line, never listed |',
                     '| Pre-existing | Does not block | Tech-debt list if it would be Major, else dropped |',
@@ -175,10 +177,13 @@ class PromptTextTest(unittest.TestCase):
             for said in ('one more fix round', 'another fix round', 'a second fix round', 'Fixes made after the re-review go'):
                 self.assertNotIn(said, flat, path)
         lifecycle = ' '.join(read('SKILL.md').split('## Lifecycle', 1)[1].split('\n## ', 1)[0].split())
-        self.assertIn('When the owner is watching, the earlier rule holds: a finding the re-review leaves open pauses the item '
+        self.assertIn('When the owner is watching, a Blocker or Major the fix round leaves open pauses the item '
                       'for the owner: one fix round, then the owner decides', lifecycle)
-        self.assertIn('what the re-review leaves open goes to tech debt marked follow-up, and the item merges.',
+        self.assertIn('what the fix round leaves open goes to tech debt marked follow-up, and the item merges.',
                       lifecycle)
+        self.assertIn('one review by another model family, then one fix round, then the merge. The fixer\'s report and '
+                      'the tests at merge decide whether the fix worked; there is no second look', lifecycle)
+        self.assertNotIn('re-review leaves open', lifecycle)
 
     def test_the_critique_asks_for_each_cited_standard_s_own_names(self):
         t = visible(read('assets', 'critique-research.md'))
@@ -207,9 +212,10 @@ class FindingsBlockTest(unittest.TestCase):
         return set(re.findall(r'`([^`]+)`', para[0])) - {'json', 'runs[0].results'}, findings
 
     def test_review_and_critique_name_the_result_fields(self):
-        for name in ('review.md', 'critique-research.md'):
-            fields, findings = self.asked(name)
-            self.assertEqual(fields, set(findings.BLOCK_FIELDS), name)
+        fields, findings = self.asked('critique-research.md')
+        self.assertEqual(fields, set(findings.BLOCK_FIELDS))
+        fields, findings = self.asked('review.md')
+        self.assertEqual(fields, set(findings.BLOCK_FIELDS) | set(findings.WHY_FIELDS))
 
     def test_rereview_also_names_the_earlier_finding_its_status_and_new_harm(self):
         fields, findings = self.asked('rereview.md')
@@ -310,6 +316,52 @@ class ReviewShTest(unittest.TestCase):
         for part in ('You can also read the run folder', 'the project repository', "check the note's claims",
                      'against them, read-only'):
             self.assertIn(part, line)
+
+    def test_the_lens_table_is_filled_as_written_from_the_lens_skill(self):
+        lenses = read_lenses()
+        section = lenses.split('\n## 2. The lenses\n', 1)[1].split('\n## ', 1)[0].strip('\n')
+        rows = [x for x in section.split('\n') if x.startswith('| **')]
+        self.assertGreaterEqual(len(rows), 12)
+        text = 'You are a read-only reviewer.\n==== LENSES ====\n{{LENSES}}\n==== END ====\n'
+        p = self.review(text)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        body = self.filled().split('==== LENSES ====\n', 1)[1].split('\n==== END ====', 1)[0]
+        self.assertTrue(body.startswith('Apply the lenses below that fit this diff'), body[:80])
+        self.assertIn('name the ones you applied on a `Lenses applied:` line of your report.', body)
+        self.assertTrue(body.endswith(section), body[-200:])
+        for row in rows:
+            self.assertIn('\n' + row + '\n', body + '\n')
+        self.assertNotIn('## 3.', body)
+        self.assertTrue(self.launched_prompt().startswith(self.filled()))
+
+    def skill_copy(self, lens_text):
+        skills = os.path.join(self.tmp, 'home', '.agents', 'skills')
+        shutil.copytree(SKILL, os.path.join(skills, 'orchestrator-workers'),
+                        ignore=shutil.ignore_patterns('__pycache__', 'fixtures'))
+        if lens_text is not None:
+            os.makedirs(os.path.join(skills, 'code-review-lenses'))
+            with open(os.path.join(skills, 'code-review-lenses', 'SKILL.md'), 'w', encoding='utf-8') as f:
+                f.write(lens_text)
+        return os.path.join(skills, 'orchestrator-workers', 'scripts', 'review.sh')
+
+    def test_a_missing_lens_file_or_section_is_refused_and_nothing_launches(self):
+        no_section = read_lenses().replace('## 2. The lenses', '## 2. Other things')
+        for lens_text, want in ((no_section, 'has no "## 2. The lenses" section; nothing launched'),
+                                (None, 'no lens skill at')):
+            shutil.rmtree(os.path.join(self.tmp, 'home'), ignore_errors=True)
+            p = self.review('{{RUBRIC}}\n{{LENSES}}\n', script=self.skill_copy(lens_text))
+            self.assertNotEqual(p.returncode, 0)
+            self.assertIn(want, p.stderr)
+            self.assertFalse(os.path.exists(self.args))
+            self.assertFalse(os.path.exists(os.path.join(self.run_dir, 'x-review.jsonl')))
+
+    def test_the_deployed_layout_finds_both_skills_and_a_lens_row_quoting_a_slot_stays_as_written(self):
+        lens_text = read_lenses().replace('\n\nAlso considered', '\n| **Quoted** | Does `{{X}}` or `{{RUBRIC}}` stay? | Here |'
+                                          '\n\nAlso considered', 1)
+        p = self.review('==== RUBRIC ====\n{{RUBRIC}}\n==== LENSES ====\n{{LENSES}}\n', script=self.skill_copy(lens_text))
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('\n| **Quoted** | Does `{{X}}` or `{{RUBRIC}}` stay? | Here |\n', self.filled())
+        self.assertIn(read('references', 'rubric.md').rstrip('\n'), self.filled())
 
     def test_rubric_is_filled_into_a_copy_and_launched(self):
         text = '<!-- {{RUBRIC}} is filled -->\nYou are a read-only reviewer.\n==== RUBRIC ====\n{{RUBRIC}}\n==== END ====\nTag & go \\1 /x/'
@@ -511,6 +563,11 @@ class ReviewShTest(unittest.TestCase):
 
 TOOL_A = 'dotfiles/dot_agents/skills/orchestrator-workers/scripts/route.py'
 TOOL_B = 'dotfiles/dot_agents/skills/kb/scripts/kb.py'
+
+
+def read_lenses():
+    with open(os.path.join(SKILL, '..', 'code-review-lenses', 'SKILL.md'), encoding='utf-8') as f:
+        return f.read()
 
 
 def filled_rubric():

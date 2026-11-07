@@ -22,11 +22,21 @@ Rulings, most trusted first: rulings.jsonl (a Blocker ruled Major is accepted), 
 ACCEPTED list, its REJECTED list (an item sent to debt is out of scope), its RECORDED / "Record only"
 lines (demoted), "could not reproduce" in the fix report (rejected, wrong), then a later re-review that
 carries the defect (accepted). A finding no source rules stays unruled.
+
+    python3 findings.py fixcheck <item> [--run-dir RUN] [--worktree DIR] [--brief FILE] [--report ROUND]
+At suspend:merge: reads the fix brief (the queue's fix step brief, else <item>-fix1.prompt.md, else .body.md) and the
+fixer's report (the newest of <item>-fix1 and its resume rounds, or the round `retry --passed --report` named), and
+prints each finding under FIX THESE whose closing line `- <n>: left, <why>` says it was left, that no `- <n>: fixed,
+<test file>::<test name>` or `left` line mentions, or whose fixed line names a test not found in that worktree file.
+Exit 0 when every finding is fixed with a test that is found, 1 otherwise, 2 when an input is missing. It refuses
+nothing: the orchestrator decides.
 """
 import collections, difflib, hashlib, json, os, re, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import age
 import mine
+import reviewprep
 
 SARIF_SCHEMA = 'https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json'
 FP_KEY = 'reviewDefect/v1'
@@ -38,6 +48,12 @@ BLOCK_FIELDS = ('ruleId', 'level', 'message.text', 'locations', 'locations[0].ph
                 'locations[0].physicalLocation.region.startLine', 'properties', 'n', 'grade', 'area', 'likelihood',
                 'impact', 'class')
 REREVIEW_FIELDS = ('earlierN', 'rereviewVerdict', 'introducedByFix')
+# Why a Blocker or Major got in (review.md): ODC v5.2 Age and Qualifier, the PSP defect log's phases.
+WHY_FIELDS = ('age', 'phaseInjected', 'phaseShouldHaveCaught', 'qualifier', 'missing', 'evidence')
+WHY_VALUES = {'age': ('Base', 'New', 'Rewritten', 'ReFixed', 'unknown'),
+              'phaseInjected': ('plan', 'brief', 'build', 'fix', 'pre-existing', 'unknown'),
+              'phaseShouldHaveCaught': ('brief-cases', 'case-table', 'test', 'self-check', 'review', 'unknown'),
+              'qualifier': ('Missing', 'Incorrect', 'Extraneous', 'unknown')}
 BLOCK_FENCE = re.compile(r'^[ \t]*```json[ \t]*\n(.*?)^[ \t]*```[ \t]*$', re.M | re.S)
 SOURCES = ('rulings.jsonl', 'fix-brief-accepted', 'fix-brief-rejected', 'fix-brief-recorded', 'fix-report',
            'rereview')
@@ -421,6 +437,13 @@ def block_of(report, rereview=False):
         for key, pat in (('area', r'[A-Z]{2,8}'), ('likelihood', r'L[1-3]'), ('impact', r'I[1-4]')):
             if p.get(key) is not None and not re.fullmatch(pat, str(p[key])):
                 bad.append(f'{key} {p[key]!r}')
+        for key, allowed in WHY_VALUES.items():
+            if p.get(key) is not None and p[key] not in allowed:
+                bad.append(f'{key} {p[key]!r}')
+        if p.get('missing') is not None and not isinstance(p['missing'], str):
+            bad.append(f"missing {p['missing']!r} is not text")
+        if p.get('evidence') is not None and not isinstance(p['evidence'], dict):
+            bad.append('evidence is not an object')
         earlier, verdict = p.get('earlierN'), p.get('rereviewVerdict')
         if rereview and earlier is not None and verdict not in ('fixed', 'partly', 'not fixed'):
             bad.append(f'rereviewVerdict {verdict!r}')
@@ -461,7 +484,8 @@ def block_of(report, rereview=False):
                       'likelihood': p.get('likelihood'), 'impact': p.get('impact'), 'grade': p['grade'],
                       'file': uri, 'line': start if isinstance(start, int) else None, 'status': status,
                       'verdict': verdict if status else None, 'ref': ref, 'blocking': bool(blocking),
-                      'introduced': p.get('introducedByFix') is True if rereview else None, 'from_block': True})
+                      'introduced': p.get('introducedByFix') is True if rereview else None, 'from_block': True,
+                      'why': {k: p[k] for k in WHY_FIELDS if p.get(k) is not None}})
     if errs:
         return None, '; '.join(errs), line
     return found, None, line
@@ -675,7 +699,7 @@ def record(run, rounds=None):
     for r in rounds:
         kind = 'critique' if CRITIQUE.search(r['name']) else ('fix' if is_fix(r) else r['kind'])
         by_item.setdefault(CRITIQUE.sub('', r['name']) if kind == 'critique' else r['item'], []).append(dict(r, kind=kind))
-    obs, unparsed, reviews, ambiguous, blocks = [], [], 0, [], 0
+    obs, unparsed, reviews, ambiguous, blocks, contexts = [], [], 0, [], 0, {}
     defects = collections.OrderedDict()
 
     def observe(f, r, item, fp_seen, next_fix, prev_fix, link=None):
@@ -791,6 +815,8 @@ def record(run, rounds=None):
                     links[id(rest[i])] = free[j]
             fp_seen = collections.Counter()
             this = [observe(f, r, item, fp_seen, next_fix, prev_fix, links.get(id(f))) for f in found]
+            if r['kind'] == 'review':
+                why_checks(run, r, item, this, unparsed, contexts)
             open_obs = [o for o in open_obs if o.get('carried_by') is None] + this
             rule(run, r, this, rulings, next_fix, ambiguous)
     for o in obs:
@@ -810,8 +836,51 @@ def record(run, rounds=None):
         unparsed.append(a)
     return results, list(defects.values()), {'reviews': reviews, 'findings': len(results), 'defects': len(defects),
                                              'unparsed': len({u['round'] for u in unparsed
-                                                              if u.get('kind') not in ('ambiguous', 'block')}),
+                                                              if u.get('kind') not in NOTES}),
                                              'ambiguous': len(ambiguous), 'blocks': blocks}, unparsed
+
+
+NOTES = ('ambiguous', 'block', 'why', 'age')
+
+
+def asks_why(run, name):
+    """True when the review round's prompt in the run folder asked for the why-it-got-in fields."""
+    for fn in (name + '.filled.md', name + '.md'):
+        try:
+            with open(os.path.join(run, fn), encoding='utf-8', errors='replace') as f:
+                if 'phaseShouldHaveCaught' in f.read():
+                    return True
+        except OSError:
+            continue
+    return False
+
+
+def why_checks(run, r, item, this, unparsed, contexts):
+    """For each Blocker or Major of a review: a note when some why-it-got-in fields are missing and either its prompt
+    asked for them or it carries any of them, and git blame's proposed Age next to the reviewer's, with a note when they
+    disagree. Findings that carry none, from a review whose prompt did not ask or is not in the run folder (recorded
+    before these fields), are left as they were."""
+    asked = asks_why(run, r['name'])
+    for o in this:
+        f = o['f']
+        if f['grade'] not in ('Blocker', 'Major') or f['section'] not in ('blocking', 'new'):
+            continue
+        why = f.get('why') or {}
+        lacking = [k for k in WHY_FIELDS if k not in why]
+        if (asked or why) and lacking:
+            unparsed.append({'kind': 'why', 'round': r['name'], 'line': 0,
+                             'why': f"{f['n']} ({f['grade']}) has no {', '.join(lacking)}"})
+        if not (asked or why) or not f['file'] or not f['line']:
+            continue
+        if item not in contexts:
+            contexts[item] = age.context(run, item)
+        o['age_proposal'] = prop = age.propose_in(contexts[item], f['file'], f['line'])
+        said = why.get('age')
+        o['age_disagrees'] = None if said in (None, 'unknown') or prop['age'] == 'unknown' else said != prop['age']
+        if o['age_disagrees']:
+            unparsed.append({'kind': 'age', 'round': r['name'], 'line': 0,
+                             'why': f"{f['n']}: the reviewer says {said}, git blame proposes {prop['age']} "
+                                    f"({prop['reason']})"})
 
 
 def rule(run, r, this, rulings, next_fix, ambiguous=None):
@@ -892,6 +961,10 @@ def result(run_name, o):
              'rulingEvidence': win and win['evidence'], 'rulingOthers': [x for x in ranked[1:]],
              'introducedBy': o.get('introduced_by'), 'unmetRequirement': None, 'mappedTest': None, 'points': None,
              'weightsVersion': None}
+    props.update(f.get('why') or {})
+    if o.get('age_proposal'):
+        props.update(ageProposed=o['age_proposal']['age'], ageProposedCommit=o['age_proposal']['commit'],
+                     ageProposedReason=o['age_proposal']['reason'], ageDisagrees=o.get('age_disagrees'))
     if f.get('ruling_only'):
         props['fromRulingOnly'] = True
     if f.get('blocking_from'):
@@ -991,6 +1064,138 @@ def write(run, out=None, sarif=False):
             lines.append(f"  ambiguous ruling: {u['round']}: {u['why']}")
         elif u.get('kind') == 'block':
             lines.append(f"  findings block: {u['file']} line {u['line']}: {u['why']}")
+        elif u.get('kind') == 'why':
+            lines.append(f"  why it got in: {u['round']}: {u['why']}")
+        elif u.get('kind') == 'age':
+            lines.append(f"  age disagrees: {u['round']}: {u['why']}")
         else:
             lines.append(f"  not parsed: {u['file']} line {u['line']}: {u['why']}")
     return '\n'.join(lines), counts
+
+
+FIX_LINE = re.compile(r'^[\s*_>]*(?:[-*+][\s*_]*)?(\d+)[\s*_]*:[\s*_]*(fixed|left)\b[\s*_]*,?\s*(.*)$', re.I)
+
+
+JS_CALL = re.compile(r"""\b(?:describe|test|it)(?:\.\w+)*\s*\(\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1""")
+
+
+def python_test_problem(source, name, path):
+    """'' when `name` (Class.method, or a module-level function) is a test the file defines; else why not."""
+    import ast
+    import reqgate
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as e:
+        return f'{path} does not parse ({e.msg}, line {e.lineno})'
+    if '.' in name:
+        if not reqgate.unittest_names(source, name):
+            return f'no test {name} in {path}: no class {name.split(".")[0]} with that method'
+    elif not any(isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) and f.name == name for f in tree.body):
+        return f'no module-level test {name} in {path}'
+    if not name.split('.')[-1].startswith('test'):
+        return f'{name} in {path} is not a test: its name does not start with test'
+    return ''
+
+
+def js_test_problem(source, name, path):
+    """'' when each part of the title (describe > test) is a describe, test or it title in the file, in order."""
+    import reqgate
+    titles = [(m.start(), re.sub(r'\\(.)', r'\1', m.group(2))) for m in JS_CALL.finditer(source)]
+    at = -1
+    for part in reqgate.title_parts(name, path):
+        hit = next((pos for pos, title in titles if pos > at and title == part.strip()), None)
+        if hit is None:
+            return f'no test titled {part.strip()!r} in {path}' + (' after the parts before it' if at >= 0 else '')
+        at = hit
+    return '' if at >= 0 else f'{name!r} names no test title'
+
+
+def test_found(wt, spec):
+    """'' when `<file>::<name>` names a test the worktree's test file defines; else why not. Python test files
+    (test_*.py, *_test.py) are parsed; a JavaScript or TypeScript one (*.test.*, *.spec.*) must hold each part of a
+    `describe > test` title as a test, it or describe title, in order."""
+    import reqgate
+    spec = spec.strip().strip('`*_ ').rstrip('.').strip('`*_ ')
+    if '::' not in spec:
+        return f'{spec!r} names no <test file>::<test name>'
+    path, name = (x.strip('` ') for x in spec.split('::', 1))
+    if not reqgate.TEST_NAME.search(os.path.basename(path)):
+        return f'{path} is not a test file (test_*.py, *_test.py, *.test.* or *.spec.*)'
+    full = os.path.join(wt, path)
+    if not os.path.isfile(full):
+        return f'no test file {path} in the worktree'
+    with open(full, encoding='utf-8', errors='replace') as f:
+        source = f.read()
+    return (python_test_problem if path.endswith('.py') else js_test_problem)(source, name.strip(), path)
+
+
+def fix_check(brief_text, report, wt):
+    """(lines, exit code): each finding under the brief's FIX THESE that the report leaves, does not mention, or claims
+    fixed with a test not found in the worktree."""
+    numbers = [n for n, *_ in reviewprep.findings(brief_text)]
+    marks = {}
+    for line in (report or '').splitlines():
+        m = FIX_LINE.match(line)
+        if m and m.group(1) in numbers:
+            marks[m.group(1)] = (m.group(2).lower(), m.group(3).strip())
+    out = []
+    for n in numbers:
+        kind, rest = marks.get(n, (None, ''))
+        if kind is None:
+            out.append(f"- {n}: not mentioned on a `- {n}: fixed|left` line of the fixer's report")
+        elif kind == 'left':
+            out.append(f"- {n}: left, {rest.strip('*_ ').rstrip('.') or 'no reason given'}")
+        else:
+            why = test_found(wt, rest)
+            if why:
+                out.append(f'- {n}: fixed, but {why}')
+    return out, (1 if out else 0)
+
+
+def fixcheck(rd, item, wt=None, brief_path=None, report_round=None):
+    fix = item + reviewprep.FIX_ROUND
+    it = None
+    try:
+        with open(os.path.join(rd, 'queue.json'), encoding='utf-8') as f:
+            it = next((x for x in json.load(f).get('items', []) if x.get('id') == item), None)
+    except (OSError, ValueError, AttributeError):
+        pass
+    step = next((s for s in (it or {}).get('pipeline', []) if s.get('name') == 'fix'), {})
+    wt = wt or (it or {}).get('worktree')
+    if not wt or not os.path.isdir(wt):
+        raise reviewprep.PrepError(f'no worktree for {item}: pass --worktree')
+    brief_path = brief_path or step.get('brief') or reviewprep.first(
+        os.path.join(rd, fix + '.prompt.md'), os.path.join(rd, fix + '.body.md'))
+    if not brief_path or not os.path.isfile(brief_path):
+        raise reviewprep.PrepError(f'no fix brief for {item}: pass --brief')
+    text = reviewprep.read(brief_path)
+    if not reviewprep.findings(text):
+        raise reviewprep.PrepError(f'no numbered findings under "FIX THESE" in {brief_path}')
+    return fix_check(text, reviewprep.report(rd, fix, report_round or step.get('report')), wt)
+
+
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(description='The review record (written by mine.py --findings), and the fix check.')
+    sub = ap.add_subparsers(dest='cmd', required=True)
+    c = sub.add_parser('fixcheck', help="list each finding of the fix brief the fixer's report leaves open")
+    c.add_argument('item')
+    c.add_argument('--run-dir', help='run folder (default: $OW_RUN_DIR)')
+    c.add_argument('--worktree', help="the item's worktree (default: the queue's)")
+    c.add_argument('--brief', help="the fix brief (default: the queue's fix step brief, else <item>-fix1.prompt.md or .body.md)")
+    c.add_argument('--report', metavar='ROUND', help='the round whose report to read (default: the newest fix round)')
+    a = ap.parse_args(argv)
+    rd = os.path.abspath(os.path.expanduser(a.run_dir or os.environ.get('OW_RUN_DIR') or '.'))
+    try:
+        lines, rc = fixcheck(rd, a.item, a.worktree and os.path.abspath(os.path.expanduser(a.worktree)), a.brief,
+                             a.report)
+    except (reviewprep.PrepError, OSError) as e:
+        print(f'findings.py fixcheck: {e}', file=sys.stderr)
+        return 2
+    if lines:
+        print('\n'.join(lines))
+    return rc
+
+
+if __name__ == '__main__':
+    sys.exit(main())
