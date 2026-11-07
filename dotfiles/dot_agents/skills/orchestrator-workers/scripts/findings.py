@@ -856,9 +856,10 @@ def asks_why(run, name):
 
 
 def why_checks(run, r, item, this, unparsed, contexts):
-    """For each Blocker or Major of a review: a note when its prompt asked for the why-it-got-in fields and some are
-    missing, and git blame's proposed Age next to the reviewer's, with a note when they disagree. Findings from a
-    review whose prompt did not ask (recorded before these fields) and that carry none are left as they were."""
+    """For each Blocker or Major of a review: a note when some why-it-got-in fields are missing and either its prompt
+    asked for them or it carries any of them, and git blame's proposed Age next to the reviewer's, with a note when they
+    disagree. Findings that carry none, from a review whose prompt did not ask or is not in the run folder (recorded
+    before these fields), are left as they were."""
     asked = asks_why(run, r['name'])
     for o in this:
         f = o['f']
@@ -866,7 +867,7 @@ def why_checks(run, r, item, this, unparsed, contexts):
             continue
         why = f.get('why') or {}
         lacking = [k for k in WHY_FIELDS if k not in why]
-        if asked and lacking:
+        if (asked or why) and lacking:
             unparsed.append({'kind': 'why', 'round': r['name'], 'line': 0,
                              'why': f"{f['n']} ({f['grade']}) has no {', '.join(lacking)}"})
         if not (asked or why) or not f['file'] or not f['line']:

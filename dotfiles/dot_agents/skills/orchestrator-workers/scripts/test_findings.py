@@ -867,6 +867,11 @@ class BlockTest(unittest.TestCase):
         self.assertNotIn('ageProposed', by[('job-review', '1')]['properties'])
         self.assertEqual(self.unparsed, [])
 
+    def test_with_no_prompt_kept_a_major_carrying_some_why_fields_is_flagged(self):
+        self.why_block({'age': 'unknown'}, self.WHY, {'age': 'New'}, asked=False)
+        notes = [u['why'] for u in self.unparsed if u.get('kind') == 'why']
+        self.assertEqual(notes, ['1 (Major) has no phaseInjected, phaseShouldHaveCaught, qualifier, missing, evidence'])
+
     def test_a_why_value_outside_its_list_or_evidence_not_an_object_is_a_validation_problem(self):
         for bad, want in (({'age': 'Old'}, "age 'Old'"), ({'phaseInjected': 'Build'}, "phaseInjected 'Build'"),
                           ({'phaseShouldHaveCaught': 'reviewer'}, "phaseShouldHaveCaught 'reviewer'"),
