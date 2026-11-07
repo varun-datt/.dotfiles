@@ -1,0 +1,3 @@
+{"type":"user.message","data":{"responsesReasoning":{"model":"claude-opus-5.5","effort":"high"}},"timestamp":"2026-11-06T04:41:29.567Z"}
+{"type":"session.usage_checkpoint","data":{"totalNanoAiu":1084068020000,"totalPremiumRequests":60},"timestamp":"2026-11-06T04:44:34.042Z"}
+{"type":"result","timestamp":"2026-11-06T04:44:34.056Z","exitCode":0,"sessionId":"00000000-0000-4000-8000-0000000000b1"}

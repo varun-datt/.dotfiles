@@ -284,12 +284,16 @@ def cumulative_usage(checkpoint, model):
             'calls': (m.get('requests') or {}).get('count') or 0}
 
 
-def load_rounds(run):
-    rounds, launched = [], launch_kinds(run)
+def load_rounds(run, keep=None):
+    """Every round in the folder, or only those whose name keep() accepts."""
+    rounds, launched, skipped = [], launch_kinds(run), set()
     for fn in sorted(os.listdir(run)):
         if not fn.endswith('.jsonl') or fn == 'markers.jsonl':
             continue
         name = fn[:-len('.jsonl')]
+        if keep and not keep(name):
+            skipped.add(name)
+            continue
         path = os.path.join(run, fn)
         r = read_round(path)
         if r is None:
@@ -324,8 +328,24 @@ def load_rounds(run):
             else:
                 rounds[-1]['verdict'], rounds[-1]['blocking'] = v, b
     rounds.sort(key=lambda x: (x['start'], x['name']))
-    decumulate(rounds, lost_rounds(run, {r['name'] for r in rounds}))
+    decumulate(rounds, lost_rounds(run, {r['name'] for r in rounds} | skipped))
     return rounds
+
+
+def round_in_folder(path):
+    """<name>.jsonl's round as load_rounds sees it, reading only the logs its per-round figures depend on."""
+    run, fn = os.path.split(os.path.abspath(path))
+    if not fn.endswith('.jsonl'):
+        return None
+    name, launched = fn[:-len('.jsonl')], launch_kinds(run)
+
+    def review(n):
+        kind = split_name(n)[1]
+        return kind in REVIEW_KINDS or launched.get(n) in REVIEW_KINDS
+
+    item = split_name(name)[0]
+    keep = (lambda n: n == name) if review(name) else (lambda n: split_name(n)[0] == item and not review(n))
+    return next((r for r in load_rounds(run, keep) if r['name'] == name), None)
 
 
 def lost_rounds(run, loaded):

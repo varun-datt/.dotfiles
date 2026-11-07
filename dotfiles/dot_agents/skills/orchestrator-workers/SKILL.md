@@ -345,6 +345,10 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **Status table:** `status.py`. Its states are running, STALLED, DIED, ERRORED, CAPPED, done and
   superseded. A capped round shows its credits against the cap. A died or errored round
   reads superseded once a later round of the same item starts.
+- **A round's credits:** `result.py`, which every round prints at its end, gives a round that continued an
+  earlier session (a fix round launched with `--resume-session`, a `-resume<N>` round) the growth since that
+  session's previous round in the folder as `ai_credits`, with the running total beside it as `session_ai_credits`;
+  when the earlier rounds are not in the folder it prints only the running total, labelled as such.
 - **Watchdog:** `watch.py`, in an async terminal; with the queue runner it is only a stall watchdog, and the
   chat waits with `runqueue.py wait`. It exits on:
   - a stall: 20 awake minutes without output;
