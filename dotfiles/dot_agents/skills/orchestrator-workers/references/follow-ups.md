@@ -295,3 +295,19 @@ Not research: each is a change with a test.
   read from `rulings.jsonl`; the skill's merge step says the merge question copies that list as it
   is, so the owner sees every lowered grade. Owner, 2026-11-07: "1. Yes: record it as a follow-up
   item for the skill now, and build it later".
+- **A ruling that lowers or rejects a finding names its evidence.** `rule.py add` refuses a ruling
+  that is lower than the reviewer's grade, or `rejected`, when its reason names no file:line.
+  Owner, 2026-11-07: "2. rule.py refuses a reject or lowered grade without file:line"; when:
+  "1. Follow-up items, build later".
+- **The launcher stamps each round's estimate itself.** `route.py run` and `review.sh` call
+  `estimates.py start` at launch and `end` at exit, under the round's id; the chat gives only the
+  estimate when it queues the item. Owner, 2026-11-07: "1. Launcher stamps itself (follow-up
+  item)".
+- **The runner resumes a round whose stream stalled.** When a running round's log gets no events
+  for N minutes, the runner stops it and resumes its session; no `caffeinate`. N: not approved.
+  Owner, 2026-11-07: "2. Runner detects a stalled stream and resumes"; when: "1. Follow-up
+  items, build later".
+- **`brief.py` warns on a MUST with no tagged case.** The brief lens in
+  [assets/task-body.md](../assets/task-body.md): a warning when a MUST's Cases hold no bracketed
+  case-list name and no `none applies`. Owner, 2026-11-07: "1. Save as written; brief.py warning
+  built with 2b"; when: "1. Follow-up items, build later".

@@ -11,6 +11,10 @@ GOAL
 {{GOAL_IN_TWO_OR_THREE_SENTENCES}}
 
 MUST (each is checked by the reviewer and by `reqgate.py`, which reads the report's REQUIREMENTS MAP; each is one testable statement, "WHEN <event or state>, <the part> SHALL <response>", with the cases that prove it)
+<!-- Brief lens, before launch: for each MUST, go down the software-testing case lists (references/case-lists.md:
+"Every change", plus the list each RISK names). Put each entry that applies into that MUST's Cases, tagged with the
+entry's name in brackets, e.g. `[edge values] a 4-backtick fence around a 3-backtick one`, `[older records] a review
+whose prompt file is gone`. A MUST that no entry applies to says `Cases: none applies: <why>`. -->
 1. WHEN {{EVENT_OR_STATE}}, {{PART}} SHALL {{RESPONSE}}. Cases: {{CASES_FOR_MUST_1}}.
 2. {{MUST_2}}
 
