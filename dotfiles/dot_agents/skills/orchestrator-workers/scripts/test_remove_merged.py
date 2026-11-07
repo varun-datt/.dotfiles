@@ -1,4 +1,5 @@
 import contextlib
+import fcntl
 import io
 import json
 import os
@@ -125,8 +126,8 @@ class RemoveMergedBase(unittest.TestCase):
     def tip(self, branch='ow/it'):
         return git(self.repo, 'rev-parse', branch).strip()
 
-    def index_rows(self):
-        with open(os.path.join(self.archive, 'index.tsv'), encoding='utf-8') as f:
+    def index_rows(self, index=None):
+        with open(index or os.path.join(self.archive, 'index.tsv'), encoding='utf-8') as f:
             return [line.split('\t') for line in f.read().split('\n') if line]
 
     def orphan(self, cwd):
@@ -175,6 +176,7 @@ class ArchiveAndRemoveTest(RemoveMergedBase):
         for rel, want in (('notes with spaces.md', b'notes\n'), ('scratch dir/deep/f.txt', b'deep\n')):
             with open(os.path.join(dest, rel), 'rb') as f:
                 self.assertEqual(f.read(), want)
+        self.assertTrue(os.path.islink(os.path.join(dest, 'link to a')))
         self.assertEqual(os.readlink(os.path.join(dest, 'link to a')), 'a.txt')
         self.assertFalse(os.path.exists(os.path.join(dest, 'ignored')))
         check = os.path.join(self.tmp, 'check')
@@ -428,6 +430,23 @@ class ArchiveIndexTest(RemoveMergedBase):
         rows = self.index_rows()
         self.assertEqual([r[1] for r in rows], ['branch', 'ow/one', 'ow/two'])
         self.assertTrue(all(len(r) == 10 for r in rows))
+
+    def test_an_append_waits_for_the_index_lock(self):
+        index = os.path.join(self.tmp, 'index.tsv')
+        code = textwrap.dedent(f'''
+            import sys; sys.path.insert(0, {HERE!r})
+            import remove_merged
+            remove_merged.append_index({index!r}, ['late'] * 10)
+        ''')
+        with open(index, 'a') as held:
+            fcntl.flock(held, fcntl.LOCK_EX)
+            p = subprocess.Popen([sys.executable, '-B', '-c', code], stdin=subprocess.DEVNULL)
+            time.sleep(1.5)
+            self.assertIsNone(p.poll())
+            self.assertEqual(os.path.getsize(index), 0)
+            fcntl.flock(held, fcntl.LOCK_UN)
+        self.assertEqual(p.wait(timeout=30), 0)
+        self.assertEqual(len(self.index_rows(index)), 2)
 
     def test_concurrent_appends_do_not_interleave(self):
         index = os.path.join(self.tmp, 'index.tsv')
