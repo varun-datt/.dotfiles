@@ -285,3 +285,13 @@ Not research: each is a change with a test.
   session total, and labels the total when the session's earlier rounds are not in the folder.
 - **Shipped 2026-10-27:** `scripts/brief.py` refuses a prompt that still holds a placeholder, and
   a worker prompt without its reuse check and allowed dependencies.
+
+## (i) Small fixes, found 2026-11-07
+
+Not research: each is a change with a test.
+- **The merge pause lists every finding not fixed at the reviewer's grade.** At `suspend:merge`,
+  the runner's wake-up message prints each finding of the item's reviews that the orchestrator
+  ruled lower than the reviewer's grade, rejected, or sent to the tech-debt list, with both grades,
+  read from `rulings.jsonl`; the skill's merge step says the merge question copies that list as it
+  is, so the owner sees every lowered grade. Owner, 2026-11-07: "1. Yes: record it as a follow-up
+  item for the skill now, and build it later".
