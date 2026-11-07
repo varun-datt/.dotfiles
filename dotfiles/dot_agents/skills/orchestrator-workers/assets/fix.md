@@ -1,5 +1,5 @@
 <!-- Fix-round prompt for round <item>-fix<N>. Sent alone to the build's own session (route.py run --resume-session <item>), or after preamble-worker.md to a fresh session when that one
-cannot be resumed; route.py writes the worktree's HEAD to <run>/<item>-fix<N>.base for the re-review diff.
+cannot be resumed; route.py writes the worktree's HEAD to <run>/<item>-fix<N>.base, where the fix commits start (a re-review diff, when the brief's STEPS line asks for one; the review prompt's fix labels).
 Narrow by ruling, because a fix round that re-reads the item and redoes the whole build method costs
 more than the build; a kind with no end of cases goes to
 the structural fix and the owner, not to another round. Every fix round names why each finding cannot wait; brief.py refuses a fix round without a WHY NOW line per finding. -->
@@ -31,4 +31,4 @@ CHECKS: run on the final tree, in the foreground: the type check, lint on the fi
 
 YOUR RESOURCES: worktree `{{WORKTREE}}`, branch `{{BRANCH}}`, ports {{PORTS}}.
 
-REPORT, your final message, plain words: per finding, the test's name, its failing and passing output in one line each, and the commit; "Left for tech debt": per finding, what is still left with file:line, or "none"; "Same kind, not fixed" with file:line; the checks with their numbers and commands; anything you could not do and why. Mark every claim VERIFIED, INFERRED or OPEN.
+REPORT, your final message, plain words: per finding, the test's name, its failing and passing output in one line each, and the commit; "Left for tech debt": per finding, what is still left with file:line, or "none"; "Same kind, not fixed" with file:line; the checks with their numbers and commands; anything you could not do and why. Mark every claim VERIFIED, INFERRED or OPEN. No second review follows: your report and the tests at merge decide whether each fix worked. End the report with one line per finding under FIX THESE, by its number: `- <n>: fixed, <test file>::<test name>` or `- <n>: left, <why>`.
