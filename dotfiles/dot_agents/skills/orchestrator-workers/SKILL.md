@@ -241,8 +241,10 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 - **Resume rounds** (`<item>-resumeN`, a stopped worker): `copilot -r ow-<item>` with the same
   flags; `python3 -B scripts/resume.py <item> <round> <stop|none> <timeout>` does it from the item's
   last launch in `routes.jsonl`, with the prompt in `$OW_RUN_DIR/<round>.prompt.md`. It refuses a fix
-  round (`<item>-fixN`): that goes through `route.py run <round> --kind fix --resume-session <item>`, which
-  checks its approval. Credit caps
+  round (`<item>-fixN`): a new one goes through `route.py run <round> --kind fix --resume-session <item>`,
+  which checks its approval. A fix round that stalled is resumed as `<item>-fixN-resumeM` with `resume.py`,
+  then `runqueue.py retry <item> --passed --report <item>-fixN-resumeM`; `route.py run` refuses it, since
+  the stalled round already counts as the item's fix round. Credit caps
   for both: [routing](references/routing.md#credit-caps).
 - **Before merging a note or page,** `python3 -B scripts/merge_check.py --patterns <file> <files>`
   checks the redaction patterns on word boundaries and literal `\u` escapes.
