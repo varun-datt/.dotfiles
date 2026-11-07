@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Archive what a merged item's worktree holds uncommitted, then remove the worktree and its merged branch.
 
-  remove_merged.py --repo REPO --branch BRANCH [--main NAME] [--run-dir RUN] [--archive DIR] [--dry-run] [--json]
+  cleanup_merged.py --repo REPO --branch BRANCH [--main NAME] [--run-dir RUN] [--archive DIR] [--dry-run] [--json]
 
 Each run's merge script calls it once main has moved. The branch counts as merged when its tip is an ancestor of
 main (git merge-base --is-ancestor), a branch with no commits of its own included. In order, it finds the branch's
@@ -394,7 +394,7 @@ def main(argv=None):
         res['error'] = str(e)
         if a.json:
             print(json.dumps({**res, 'exit': 2}))
-        print(f'remove_merged.py: {e}; nothing changed', file=sys.stderr)
+        print(f'cleanup_merged.py: {e}; nothing changed', file=sys.stderr)
         return 2
     except Failed as e:
         res['error'] = str(e)

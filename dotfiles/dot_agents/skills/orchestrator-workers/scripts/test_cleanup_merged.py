@@ -14,15 +14,15 @@ import unittest
 from unittest import mock
 
 try:
-    import remove_merged
+    import cleanup_merged
 except ModuleNotFoundError as e:
-    if e.name != 'remove_merged':
+    if e.name != 'cleanup_merged':
         raise
-    remove_merged = None
+    cleanup_merged = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.dirname(HERE)
-SCRIPT = os.path.join(HERE, 'remove_merged.py')
+SCRIPT = os.path.join(HERE, 'cleanup_merged.py')
 OLD_COLUMNS = ['repo', 'branch', 'last_commit', 'worktree', 'untracked_items_archived']
 
 
@@ -35,7 +35,7 @@ def git(cwd, *args, binary=False):
 
 class RemoveMergedBase(unittest.TestCase):
     def setUp(self):
-        self.assertIsNotNone(remove_merged, 'scripts/remove_merged.py is missing')
+        self.assertIsNotNone(cleanup_merged, 'scripts/cleanup_merged.py is missing')
         self.tmp = os.path.realpath(tempfile.mkdtemp(prefix='ow rm '))
         self.addCleanup(self.cleanup)
         self.repo = os.path.join(self.tmp, 'repo')
@@ -96,7 +96,7 @@ class RemoveMergedBase(unittest.TestCase):
             argv += ['--archive', self.archive]
         out, err = io.StringIO(), io.StringIO()
         with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-            code = remove_merged.main(argv)
+            code = cleanup_merged.main(argv)
         return code, out.getvalue(), err.getvalue()
 
     def call_json(self, *extra, **kw):
@@ -136,9 +136,9 @@ class RemoveMergedBase(unittest.TestCase):
         pid = int(p.stdout.strip())
         self.procs.append(pid)
         deadline = time.time() + 10
-        while time.time() < deadline and remove_merged.sweep.processes().get(pid, (0,))[0] != 1:
+        while time.time() < deadline and cleanup_merged.sweep.processes().get(pid, (0,))[0] != 1:
             time.sleep(0.1)
-        self.assertEqual(remove_merged.sweep.processes()[pid][0], 1, 'the test process did not become an orphan')
+        self.assertEqual(cleanup_merged.sweep.processes()[pid][0], 1, 'the test process did not become an orphan')
         return pid
 
 
@@ -284,7 +284,7 @@ class ArchiveAndRemoveTest(RemoveMergedBase):
         code, out, err = self.call()
         self.assertEqual(code, 0, out + err)
         self.assertRegex(out, rf'(?m)^stopped {pid} \S*sleep cwd=')
-        self.assertFalse(remove_merged.sweep.alive(pid))
+        self.assertFalse(cleanup_merged.sweep.alive(pid))
         self.assertFalse(os.path.exists(wt))
 
 
@@ -317,11 +317,11 @@ class StopFirstTest(RemoveMergedBase):
         wt = self.item()
         pid = self.orphan(wt)
         before = self.state()
-        with mock.patch.object(remove_merged.sweep, 'stop', lambda pids: None):
+        with mock.patch.object(cleanup_merged.sweep, 'stop', lambda pids: None):
             code, out, err = self.call()
         self.assert_kept(before, code, out, f'worktree retained_in_use {wt}: in use by {pid} ')
         self.assertIn('branch not_attempted', out)
-        self.assertTrue(remove_merged.sweep.alive(pid))
+        self.assertTrue(cleanup_merged.sweep.alive(pid))
 
     def failing(self, prog):
         real = subprocess.run
@@ -330,7 +330,7 @@ class StopFirstTest(RemoveMergedBase):
             if os.path.basename(argv[0]) == prog:
                 return subprocess.CompletedProcess(argv, 1, '', f'{prog}: cannot read the process table\n')
             return real(argv, *a, **kw)
-        return mock.patch.object(remove_merged.sweep.subprocess, 'run', run)
+        return mock.patch.object(cleanup_merged.sweep.subprocess, 'run', run)
 
     def test_a_failed_ps_keeps_the_worktree(self):
         wt = self.item()
@@ -420,13 +420,13 @@ class KeepTest(RemoveMergedBase):
         wt = self.item()
         tip = self.tip()
         moved = git(self.repo, 'commit-tree', '-p', tip, '-m', 'late', f'{tip}^{{tree}}').strip()
-        real_remove = remove_merged.remove_worktrees
+        real_remove = cleanup_merged.remove_worktrees
 
         def remove_then_move(*args):
             real_remove(*args)
             git(self.repo, 'update-ref', 'refs/heads/ow/it', moved)
 
-        with mock.patch.object(remove_merged, 'remove_worktrees', remove_then_move):
+        with mock.patch.object(cleanup_merged, 'remove_worktrees', remove_then_move):
             code, out, err = self.call()
         self.assertEqual(code, 1, out)
         self.assertIn(f'worktree removed {wt}', out)
@@ -496,8 +496,8 @@ class ArchiveIndexTest(RemoveMergedBase):
         index = os.path.join(self.tmp, 'index.tsv')
         code = textwrap.dedent(f'''
             import sys; sys.path.insert(0, {HERE!r})
-            import remove_merged
-            remove_merged.append_index({index!r}, ['late'] * 10)
+            import cleanup_merged
+            cleanup_merged.append_index({index!r}, ['late'] * 10)
         ''')
         with open(index, 'a') as held:
             fcntl.flock(held, fcntl.LOCK_EX)
@@ -513,15 +513,15 @@ class ArchiveIndexTest(RemoveMergedBase):
         index = os.path.join(self.tmp, 'index.tsv')
         code = textwrap.dedent(f'''
             import sys; sys.path.insert(0, {HERE!r})
-            import remove_merged
+            import cleanup_merged
             for n in range(300):
-                remove_merged.append_index({index!r}, [sys.argv[1]] * 9 + ['x' * 3000])
+                cleanup_merged.append_index({index!r}, [sys.argv[1]] * 9 + ['x' * 3000])
         ''')
         ps = [subprocess.Popen([sys.executable, '-B', '-c', code, tag], stdin=subprocess.DEVNULL) for tag in 'ab']
         self.assertEqual([p.wait(timeout=60) for p in ps], [0, 0])
         with open(index) as f:
             lines = f.read().split('\n')
-        self.assertEqual(lines[0], '\t'.join(remove_merged.COLUMNS))
+        self.assertEqual(lines[0], '\t'.join(cleanup_merged.COLUMNS))
         self.assertEqual(lines[-1], '')
         body = lines[1:-1]
         self.assertEqual(len(body), 600)
@@ -573,7 +573,7 @@ class DryRunTest(RemoveMergedBase):
         self.assertIn(f"dry run: archived {os.path.join(self.archive, 'repo', 'it')} (2 untracked items)", out)
         self.assertIn('dry run: skipped nest/.git', out)
         self.assertRegex(out, rf'dry run: stopped {pid} \S*sleep')
-        self.assertTrue(remove_merged.sweep.alive(pid))
+        self.assertTrue(cleanup_merged.sweep.alive(pid))
         os.kill(pid, signal.SIGKILL)
         other = os.path.join(self.tmp, 'second')
         git(self.repo, 'worktree', 'add', '-q', '--force', other, 'ow/it')
@@ -626,7 +626,7 @@ class SkillTextTest(unittest.TestCase):
 
     def test_skill_md_says_reviews_save_their_files_and_merges_remove_the_item(self):
         merge, whole = self.section('Merge discipline')
-        self.assertIn('python3 -B ~/.agents/skills/orchestrator-workers/scripts/remove_merged.py --repo $REPO '
+        self.assertIn('python3 -B ~/.agents/skills/orchestrator-workers/scripts/cleanup_merged.py --repo $REPO '
                       '--branch ow/$I --run-dir $R </dev/null > $G/remove.log 2>&1; RC=$?', merge)
         self.assertIn('once main has moved', merge)
         self.assertIn('Its exit 1 is a kept worktree or branch for the owner\'s list', merge)

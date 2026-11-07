@@ -445,7 +445,7 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **`git config rerere.enabled true`**, so redone merges reuse your resolutions.
 - **A new lockfile:** run the install step in the merge folder before the gates.
 - **Remove the merged item.** Each run's merge script, once main has moved and it has printed `MERGED`, calls
-  `python3 -B ~/.agents/skills/orchestrator-workers/scripts/remove_merged.py --repo $REPO --branch ow/$I --run-dir $R </dev/null > $G/remove.log 2>&1; RC=$?`,
+  `python3 -B ~/.agents/skills/orchestrator-workers/scripts/cleanup_merged.py --repo $REPO --branch ow/$I --run-dir $R </dev/null > $G/remove.log 2>&1; RC=$?`,
   prints that log, prints a WARN when `RC` is not 0, and still exits 0. Only when the branch's tip is in main, the script
   stops orphans left in the item's worktree and scans again, keeping the worktree while any process is still inside or
   the scan fails; then it archives what the worktree holds uncommitted (`status.txt`, `uncommitted.patch` from `git diff --binary HEAD`,
