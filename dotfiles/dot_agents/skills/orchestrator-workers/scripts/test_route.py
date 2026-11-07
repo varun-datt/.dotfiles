@@ -208,9 +208,9 @@ class Pick(unittest.TestCase):
         self.assertEqual(rec['choice']['cap'], 1234)
         self.assertEqual(self.pick('fix', call=stub('review-fix'))['choice']['cap'], CFG['default_cap'])
 
-    def test_research_stop_comes_from_history_or_none(self):
+    def test_research_gets_no_stop_even_with_history(self):
         hist = history(caps={('research', SONNET): 1234, ('research', OPUS): 1234})
-        self.assertEqual(self.pick('research', call=stub('docs-research'), hist=hist)['choice']['cap'], 1234)
+        self.assertIsNone(self.pick('research', call=stub('docs-research'), hist=hist)['choice']['cap'])
         self.assertIsNone(self.pick('research', call=stub('docs-research'))['choice']['cap'])
 
     def test_resume_keeps_the_model(self):

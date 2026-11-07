@@ -354,7 +354,7 @@ def load_history(run, root=None):
 def cap_for(kind, model, history, cfg):
     measured = history['caps'].get((mine_kind(kind), model))
     if kind in cfg.get('uncapped_kinds', ()):
-        return measured
+        return None
     return measured or cfg['default_cap']
 
 
