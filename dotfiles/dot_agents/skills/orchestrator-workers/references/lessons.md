@@ -281,3 +281,8 @@ The rules give a one-clause reason; these are the incidents behind them.
 - A research note proposed building a list that an adopted library already covered (2026-11-01). Behind the research preamble's REUSE CHECK.
 - A review of file-system race and sandbox code hit OpenAI's 422 "cybersecurity risk" filter: 3 rounds, 131 credits, no verdict (2026-10-29). Behind the fallback to Opus after one 422.
 - One stale selector got through after main moved under a branch's files, and it was not a review finding (2026-10-30, dotfiles research/2026-10-30-build-quality.md). Behind bringing main into a branch before its review.
+
+## 2026-11-07: traps from the rw item
+
+- macOS `/bin/bash` is 3.2, which cannot parse a quoted heredoc holding an apostrophe inside `$( )` ("unexpected EOF while looking for matching `''"); zsh can. Keep heredocs out of `$( )` in bash scripts (checked 2026-11-07, GNU bash 3.2.57). [notes]
+- `runqueue.py add --route-args` is split like a shell, and an `--override` value is split on commas: a reason with unquoted words or a comma made the launch fail with route.py's "unrecognized arguments" (exit 2). Quote the reason as one token with no comma. [notes]
