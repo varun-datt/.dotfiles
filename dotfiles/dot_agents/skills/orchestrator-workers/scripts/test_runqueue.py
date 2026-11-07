@@ -826,6 +826,90 @@ class PipelineTest(unittest.TestCase):
         t.join(5)
 
 
+class RunnerStartTest(unittest.TestCase):
+    cli, items, start, finish = QueueTest.cli, QueueTest.items, QueueTest.start, QueueTest.finish
+    REAL = os.path.join(S, 'fixtures', 'queue')
+    LAST_EXIT = 1793940438.940078
+    PAST = ['r1-review exited 124', 'p1b-fix3 exited 0', 'p1b-recheck3 exited 0', 'p1b-fix4 exited 0', 'p1b-recheck4 exited 0']
+
+    def setUp(self):
+        QueueTest.setUp(self)
+        os.makedirs(self.rd)
+        with open(os.path.join(self.REAL, 'queue.json')) as f:
+            self.q = json.load(f)
+        q.save(self.rd, self.q)
+
+    def wait(self):
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as out:
+            code = q.main(['wait', '--max-min', '0.002', '--settle', '0', '--poll', '0.01', '--run-dir', self.rd])
+        return code, [ln for ln in out.getvalue().splitlines() if not ln.endswith(('waiting', 'nothing needs the chat yet'))]
+
+    def note(self, n, start):
+        return (f"{n} plain item(s) exited before the queue runner started at {time.strftime('%H:%M', time.localtime(start))}; "
+                'not news: runqueue.py status lists them')
+
+    def test_exits_before_the_runner_started_are_one_note_per_runner_not_news(self):
+        start = self.LAST_EXIT + 60
+        q.write_started(self.rd, start)
+        self.assertEqual(self.wait(), (1, [self.note(5, start)]))
+        self.assertEqual(self.wait(), (1, []))
+        later = start + 600
+        q.write_started(self.rd, later)
+        self.assertEqual(self.wait(), (1, [self.note(5, later)]))
+        self.assertEqual(self.wait(), (1, []))
+
+    def test_with_the_real_seen_list_nothing_is_printed(self):
+        import shutil
+        shutil.copy(os.path.join(self.REAL, 'queue.seen'), self.rd)
+        q.write_started(self.rd, self.LAST_EXIT + 60)
+        self.assertEqual(self.wait(), (1, []))
+
+    def test_an_exit_after_the_start_and_the_latest_of_two_restarts(self):
+        first = self.LAST_EXIT - 100
+        q.write_started(self.rd, first)
+        q.write_started(self.rd, self.LAST_EXIT - 1)
+        self.assertEqual(self.wait(), (0, [self.note(4, self.LAST_EXIT - 1), 'p1b-recheck4 exited 0']))
+        self.assertEqual(self.wait(), (1, []))
+
+    def test_a_suspend_or_failed_step_before_the_start_is_still_reported(self):
+        def step(name, start, end=None, exit=None):
+            return {'name': name, 'start': start, 'end': end, 'exit': exit, 'pid': None}
+        before = self.LAST_EXIT - 50
+        self.q['items'] += [
+            {'id': 's', 'after': [], 'slot': True, 'priority': 1, 'added': before, 'done': False, 'worktree': self.rd,
+             'pipeline': [step('build', before, before + 1, 0), step('suspend:rulings', before + 2)]},
+            {'id': 'f', 'after': [], 'slot': True, 'priority': 1, 'added': before, 'done': False, 'worktree': self.rd,
+             'pipeline': [step('build', before, before + 3, 4), step('suspend:merge', None)]}]
+        q.save(self.rd, self.q)
+        start = self.LAST_EXIT + 60
+        q.write_started(self.rd, start)
+        self.assertEqual(self.wait(), (0, [self.note(5, start), 's suspend:rulings: write s.rulings.done', 'f build failed 4']))
+
+    def test_with_no_record_or_a_gone_runner_every_unseen_exit_is_reported_as_before(self):
+        import subprocess
+        self.assertEqual(self.wait(), (0, self.PAST))
+        os.remove(os.path.join(self.rd, 'queue.seen'))
+        gone = subprocess.Popen(['true'])
+        gone.wait()
+        with open(os.path.join(self.rd, 'queue.started'), 'w') as f:
+            json.dump({'pid': gone.pid, 'start': self.LAST_EXIT + 60}, f)
+        with open(os.path.join(self.rd, 'queue.pid'), 'w') as f:
+            f.write(str(gone.pid))
+        self.assertEqual(self.wait(), (0, self.PAST))
+
+    def test_the_runner_records_its_pid_and_start(self):
+        q.save(self.rd, {'items': []})
+        self.cli('add', 'a', '--cmd', 'true')
+        t0 = time.time()
+        t = self.start()
+        self.assertTrue(wait_until(lambda: os.path.exists(os.path.join(self.rd, 'queue.started'))))
+        with open(os.path.join(self.rd, 'queue.started')) as f:
+            d = json.load(f)
+        self.assertEqual(d['pid'], os.getpid())
+        self.assertTrue(t0 <= d['start'] <= time.time())
+        self.finish(t, ['a'])
+
+
 def report_log(text):
     return (json.dumps({'type': 'assistant.message', 'data': {'content': text}}) + '\n'
             + json.dumps({'type': 'result', 'exitCode': 0}) + '\n')

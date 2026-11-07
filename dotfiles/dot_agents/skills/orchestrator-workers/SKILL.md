@@ -331,6 +331,10 @@ every script in the folder.)
     (a suspend, a failed step, a plain item that exited), printing one line each, and exits 1 on timeout.
     Run it in a foreground terminal; it prints a tick each minute. More than 4 minutes is refused: the chat's
     prompt cache goes cold after 5, and each wake after that re-reads its whole context.
+    A plain item's exit from before the running runner started (`runqueue.py run` writes its pid and start to
+    `<run>/queue.started`) is not news: `wait` prints one line per runner counting those exits and pointing to
+    `runqueue.py status`, and keeps waiting. Suspends and failed steps from before the start still wake it; with no
+    live runner it reports every unseen exit, as before.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
   line to `ALERT.log`, once for each new item waiting: it does not repeat while the same items

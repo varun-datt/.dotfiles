@@ -30,7 +30,7 @@ because caffeinate is then their ancestor process.
 --slots slot items run; --no-slot items (reviews) do not count. Each item runs in its own process
 group with output in <run>/<id>.runner.log, and its pid, start, end and exit code go to queue.json.
 It exits when every item is done, or on SIGTERM, which leaves launched items running.
-A pidfile (<run>/queue.pid) stops a second copy from running.
+A pidfile (<run>/queue.pid) stops a second copy from running; <run>/queue.started holds the runner's pid and start.
 
 Dead-man alert: the chat's last activity is the newest mtime of <run>/heartbeat and --chat-log (the
 VS Code session transcript). When that is older than --idle-alert minutes and something waits on the
@@ -299,6 +299,25 @@ def touch(rd):
     with open(os.path.join(rd, 'heartbeat'), 'a'):
         pass
     os.utime(os.path.join(rd, 'heartbeat'))
+
+
+def write_started(rd, at):
+    """<run>/queue.started: this runner's pid and start, in time.time() seconds like each item's end."""
+    fd, tmp = tempfile.mkstemp(dir=rd, prefix='.queue.', suffix='.started')
+    with os.fdopen(fd, 'w', encoding='utf-8') as f:
+        json.dump({'pid': os.getpid(), 'start': at}, f)
+    os.replace(tmp, os.path.join(rd, 'queue.started'))
+
+
+def runner_start(rd):
+    """The running queue runner's start, or None when no record exists or its runner is gone."""
+    try:
+        with open(os.path.join(rd, 'queue.started'), encoding='utf-8') as f:
+            d = json.load(f)
+        pid, at = int(d['pid']), float(d['start'])
+    except (OSError, ValueError, TypeError, KeyError):
+        return None
+    return at if alive(pid) else None
 
 
 def blockers(it, by_id):
@@ -580,6 +599,7 @@ def advance(rd, it, by_id, now):
 
 def run(rd, slots=3, poll=30.0, idle_alert=20.0, chat_log=None, stop=None):
     procs, started, alerted = {}, time.time(), set()
+    write_started(rd, started)
     while True:
         with locked(rd):
             q = load(rd)
@@ -854,7 +874,9 @@ def pipeline_status(it, st, by_id, now):
 
 def wait(rd, max_min, settle, poll):
     """Block until an item reaches a point that needs the chat which no earlier call printed (kept in
-    <run>/queue.seen), print one line each and exit 0; exit 1 after max_min minutes, printing a tick each minute."""
+    <run>/queue.seen), print one line each and exit 0; exit 1 after max_min minutes, printing a tick each minute.
+    A plain item's exit from before the running queue runner started (<run>/queue.started) is not news: one line
+    per runner counts those and points to status."""
     path = os.path.join(rd, 'queue.seen')
 
     def fresh():
@@ -865,7 +887,18 @@ def wait(rd, max_min, settle, poll):
             seen = set()
         with locked(rd):
             items = load(rd)['items']
-        return [(k, line) for k, line, _ in needs(items) if k not in seen], items
+        start = runner_start(rd)
+        old = set() if start is None else {f"{it['id']}:exit:{it['end']}" for it in items if 'pipeline' not in it
+                                           and isinstance(it.get('end'), (int, float)) and it['end'] < start}
+        new = [(k, line) for k, line, _ in needs(items) if k not in seen]
+        past = sum(k in old for k, _ in new)
+        note = f'runner:{start}:before'
+        if past and note not in seen:
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(note + '\n')
+            print(f"{past} plain item(s) exited before the queue runner started at "
+                  f"{time.strftime('%H:%M', time.localtime(start))}; not news: runqueue.py status lists them", flush=True)
+        return [(k, line) for k, line in new if k not in old], items
 
     t0 = tick = time.time()
     while True:
