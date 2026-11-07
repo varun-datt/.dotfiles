@@ -855,6 +855,7 @@ class PipelineTest(unittest.TestCase):
                  ('STEPS: build, review, fix', "line 3 of"),
                  ('STEPS: build, review, fix (the owner asked)', "quotes none of the owner's words"),
                  ('```\nSTEPS: build, review, fix ("words")\n```', 'has no STEPS: line'),
+                 ('````md\n```\nSTEPS: build, review, fix, recheck ("words")\n```\n````', 'has no STEPS: line'),
                  ('<!--\nSTEPS: build, review, fix ("words")\n-->', 'has no STEPS: line'),
                  ('STEPS: build, review, fix ("a")\nSTEPS: build ("b")', 'has 2 STEPS: lines (lines 3, 4); keep one'),
                  ('STEPS: build, review, fix, merge ("words")', 'unknown step on the STEPS: line: merge'),

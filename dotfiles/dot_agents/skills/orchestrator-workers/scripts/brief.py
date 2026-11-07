@@ -63,11 +63,19 @@ def brief_lines(text):
 
 
 def outside_fences(lines):
-    fenced = False
+    """(number, line) of each line outside fenced code blocks. As CommonMark: a fence closes only on a line of its own
+    character at least as long as the one that opened it, with nothing after but spaces; an unclosed one runs to the end."""
+    fence = None
     for n, line in enumerate(lines, 1):
-        if FENCE.match(line):
-            fenced = not fenced
-        elif not fenced:
+        if fence:
+            m = re.match(r"\s*(`{3,}|~{3,})[ \t]*$", line)
+            if m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence):
+                fence = None
+            continue
+        m = re.match(r"\s*(`{3,}(?=[^`]*$)|~{3,})", line)
+        if m:
+            fence = m.group(1)
+        else:
             yield n, line
 
 
