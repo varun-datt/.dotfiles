@@ -892,6 +892,48 @@ class ReviewPrepTest(unittest.TestCase):
         self.assertEqual([n for n, *_ in q.reviewprep.findings(fix.replace('{{MORE_FINDINGS}}', '\n2. B. Where: x. Done when: y.'))],
                          ['1', '2'])
 
+    def rechecked(self, brief):
+        self.write('a-fix1.base', self.git('rev-parse', 'HEAD'))
+        self.commit('a-fix1.txt')
+        with open(os.path.join(S, 'fixtures', 'recheck', 'p1b-fix3.report.md')) as f:
+            self.write('a-fix1.jsonl', report_log(f.read()))
+        self.write('a-fix1.prompt.md', brief)
+        return self.read(os.path.basename(q.reviewprep.recheck(self.rd, 'a', self.wt)))
+
+    def test_the_recheck_keeps_each_findings_cases_from_a_real_fix_brief(self):
+        with open(os.path.join(S, 'fixtures', 'recheck', 'p1b-fix3.prompt.md')) as f:
+            brief = f.read()
+        recheck = self.rechecked(brief)
+        # The two lists as the orchestrator re-added them by hand to the re-check prompt (p1b-recheck3.md).
+        one = ('the held record keeps the file as it was when AMC acknowledged the message (for example a copy under '
+               "AMC's data folder, `~/Library/Application Support/amc` in use and the test data folder in tests, sent by "
+               "the copy's path), release and resend use that copy, and the copy is removed when the held record is "
+               'released or discarded. Cases: the file is edited before release; the file is deleted before release; '
+               'the host restarts, the file changes, then the owner resends.')
+        two = ('the fake agent can send old updates during load, and the test fails without the fix. Cases: an old update '
+               'before load starts; during load; after load but before the old answer; after the deadline (dropped as '
+               'history, as today).')
+        self.assertIn('\n1. A held file attachment is saved by its location, not its contents. Where: ', recheck)
+        self.assertIn(one, recheck)
+        self.assertIn('\n2. Text from the old prompt is dropped during a Cursor reload. Where: ', recheck)
+        self.assertIn(two, recheck)
+        self.assertEqual(recheck.count(' Cases: '), 2)
+        self.assertLess(recheck.index(one), recheck.index('\n2. Text from'))
+        self.assertIn('When a finding lists its cases ("Cases:"), check each listed case the same way', recheck)
+
+    def test_cases_before_done_when_over_several_lines_quoting_a_placeholder_or_absent(self):
+        recheck = self.rechecked(
+            'THIS IS A FIX ROUND.\n\nFIX THESE, one at a time:\n'
+            '2. First. Where: `one.py` about 1. Cases: an empty list;\n   a list quoting {{FINDING_1}} and {{MORE_FINDINGS}}.'
+            ' Done when: one holds.\n'
+            '3. Second. Where: `two.py` about 2. Done when: two holds.\n'
+            '4. Third. Where: `three.py` about 3. Done when: three holds. Cases: a; b.\n\nWHY NOW, by number:\n')
+        self.assertIn('\n2. First. Where: `one.py` about 1. Done when: one holds. Cases: an empty list; a list quoting '
+                      '{{FINDING_1}} and {{MORE_FINDINGS}}.\n', recheck)
+        self.assertIn('\n3. Second. Where: `two.py` about 2. Done when: two holds.\n', recheck)
+        self.assertIn('\n4. Third. Where: `three.py` about 3. Done when: three holds. Cases: a; b.\n', recheck)
+        self.assertEqual(recheck.count(' Cases: '), 2)
+
 
 if __name__ == '__main__':
     unittest.main()

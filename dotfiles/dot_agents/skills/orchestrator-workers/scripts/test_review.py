@@ -65,7 +65,8 @@ REVIEW_REPORT = [
 ]
 REREVIEW_CHECKS = [
     '1. Each finding: fixed, partly fixed or not fixed, with file:line. Fixed means its scenario can no longer happen; '
-    'say how you know.',
+    'say how you know. When a finding lists its cases ("Cases:"), check each listed case the same way, and name each '
+    'one not covered.',
     "2. Each finding's test: does it check the finding's scenario, and would it fail with the fix removed? Read it; you "
     'need not run it.',
     '3. Harm the fix diff itself introduces: owner data lost or corrupted, a secret or private text leaking, an approval '

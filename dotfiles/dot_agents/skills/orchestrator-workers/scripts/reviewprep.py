@@ -197,9 +197,9 @@ HEADING = re.compile(r'#|[A-Z]{3,}(?:[ -][A-Z]+)*(?=[\s:,(]|$)|\S.*:$')
 
 
 def findings(text):
-    """(number, title, where, done when) for each numbered finding under the fix brief's "FIX THESE" line, up to
-    the next section heading (an unindented capitalised label such as NOT TO CHANGE, or a line ending in a colon);
-    blank lines do not end the list."""
+    """(number, title, where, done when, cases or None) for each numbered finding under the fix brief's "FIX THESE"
+    line, up to the next section heading (an unindented capitalised label such as NOT TO CHANGE, or a line ending in a
+    colon); blank lines do not end the list."""
     head = re.search(r'^FIX THESE[^\n]*\n', text, re.M)
     if not head:
         return []
@@ -215,12 +215,17 @@ def findings(text):
     out = []
     for n, f in found:
         f = ' '.join(f.split())
-        where = re.search(r'Where: (.+?)\.(?: What goes wrong:| Done when:|$)', f)
-        done = re.search(r'Done when: (.+?)(?: Cases:|$)', f)
+        where = re.search(r'Where: (.+?)\.(?: What goes wrong:| Done when:| Cases:|$)', f)
+        done = re.search(r'Done when: (.+?)(?: Cases:| What goes wrong:|$)', f)
+        cases = re.search(r'(?:^| )Cases: (.+?)(?= Done when:| What goes wrong:|$)', f)
         title = re.split(r'\.? Where: ', f, maxsplit=1)[0].rstrip('.')
         out.append((n, title, where.group(1) if where else 'see the fix brief',
-                    done.group(1).rstrip('.') if done else 'see the fix brief'))
+                    done.group(1).rstrip('.') if done else 'see the fix brief', cases.group(1) if cases else None))
     return out
+
+
+def with_cases(cases):
+    return f' Cases: {cases}' if cases else ''
 
 
 def recheck(rd, item, wt, head=None, brief=None, report_round=None):
@@ -234,10 +239,10 @@ def recheck(rd, item, wt, head=None, brief=None, report_round=None):
         raise PrepError(f'no numbered findings under "FIX THESE" in the {fix} brief')
     rep = report(rd, fix, report_round)
     commits = git(wt, 'log', '--format=%h %s', f'{base}..HEAD').strip().replace('\n', '; ')
-    n1, t1, w1, d1 = found[0]
+    n1, t1, w1, d1, c1 = found[0]
     text = fill(strip_head(read(os.path.join(ASSETS, 'rereview.md'))), {
-        'FINDING_1': t1, 'FILE_LINE_1': w1, 'DONE_WHEN_1': d1,
-        'MORE_FINDINGS': '\n'.join(f'{n}. {t}. Where: {w}. Done when: {d}.' for n, t, w, d in found[1:]),
+        'FINDING_1': t1, 'FILE_LINE_1': w1, 'DONE_WHEN_1': d1, 'CASES_1': with_cases(c1),
+        'MORE_FINDINGS': '\n'.join(f'{n}. {t}. Where: {w}. Done when: {d}.{with_cases(c)}' for n, t, w, d, c in found[1:]),
         'FIX_COMMITS': commits, 'BRANCH': git(wt, 'rev-parse', '--abbrev-ref', 'HEAD').strip(),
     })
     if n1 != '1':

@@ -1,0 +1,1 @@
+Both findings are fixed and committed on `ow/p1b`, and all the round's checks pass. One thing to know first: in a real Cursor session, the reply to a file attached by its path may now reach the agent as a copy in AMC's data folder, and the agent reading it there may trigger a permission request (OPEN).

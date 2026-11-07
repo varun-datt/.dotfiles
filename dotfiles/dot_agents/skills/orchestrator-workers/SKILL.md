@@ -265,8 +265,8 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   builds what already exists (owner, 2026-11-01).
 - **Reviews:** [review.md](assets/review.md), which grades on [references/rubric.md](references/rubric.md)
   (`review.sh` fills `{{RUBRIC}}`) and tags each finding's cause and class, and the short
-  [rereview.md](assets/rereview.md), which only checks each named finding was fixed, its test, and
-  harm the fix itself adds, at high effort.
+  [rereview.md](assets/rereview.md), which only checks each named finding was fixed (each of its listed
+  cases too), its test, and harm the fix itself adds, at high effort.
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
   fresh session, so it names the branch, worktree, base commit and ports.
 - **Resume round, sent with `-r`:** [resume.md](assets/resume.md); short, because the session
@@ -304,7 +304,8 @@ every script in the folder.)
   launches each step when the one before exits 0: build and fix through `route.py run` (rounds `<id>` and
   `<id>-fix1`), review and re-check through `review.sh` (`<id>-review`, `<id>-rereview`), after
   `scripts/reviewprep.py` writes `REVIEW-DIFF.patch`, `REVIEW-REPORT.md` and the filled prompt (risk blocks from
-  the brief's RISK line; the re-check's findings from the fix brief's numbered list). Reviews take no slot. The
+  the brief's RISK line; the re-check's findings from the fix brief's numbered list, each with its "Cases:" list as
+  written, which the re-reviewer checks case by case). Reviews take no slot. The
   diff starts at the HEAD the build (or fix) step had at its first launch, so a retry does not narrow it;
   `<id>.reviewbase` overrides it after a catch-up with main.
   - **Suspend points** are the two steps that need judgement: `suspend:rulings` (accept or reject each finding)
