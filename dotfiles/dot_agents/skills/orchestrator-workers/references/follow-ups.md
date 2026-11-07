@@ -281,8 +281,7 @@ Not research: each is a change with a test.
 ## (h) Small fixes, found 2026-10-16
 
 Not research: each is a change with a test.
-- **`scripts/result.py` prints a resumed session's running total as the round's credits.** Print
-  the growth since the previous round of the same session, or label the figure as the session
-  total.
+- **Shipped 2026-11-06:** `scripts/result.py` prints a resumed round's own credits next to the
+  session total, and labels the total when the session's earlier rounds are not in the folder.
 - **Shipped 2026-10-27:** `scripts/brief.py` refuses a prompt that still holds a placeholder, and
   a worker prompt without its reuse check and allowed dependencies.
