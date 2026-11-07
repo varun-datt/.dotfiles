@@ -403,6 +403,19 @@ class RoundCreditsTest(Base):
         self.assertEqual(self.usage('x-fix2'),
                          ['premium_requests=5 ai_credits=40.0 session_premium_requests=10 session_ai_credits=70.0 (session total)'])
 
+    def test_only_the_items_own_worker_logs_are_read(self):
+        folder = self.real()
+        for name in ('other', 'p1b-review3', 'p1b-recheck3'):
+            shutil.copy(os.path.join(folder, 'p1b.jsonl'), os.path.join(folder, name + '.jsonl'))
+        read, real = [], mine.read_round
+        with mock.patch.object(mine, 'read_round', lambda p: read.append(os.path.basename(p)) or real(p)):
+            self.assertEqual(self.usage('p1b-fix3', folder),
+                             ['premium_requests=15 ai_credits=274.2 session_premium_requests=45 session_ai_credits=981.4 (session total)'])
+            self.assertEqual(sorted(read), ['p1b-fix3.jsonl', 'p1b-fix4.jsonl', 'p1b-resume1.jsonl', 'p1b.jsonl'])
+            read.clear()
+            self.usage('p1b-review3', folder)
+            self.assertEqual(read, ['p1b-review3.jsonl'])
+
 
 if __name__ == '__main__':
     unittest.main()
