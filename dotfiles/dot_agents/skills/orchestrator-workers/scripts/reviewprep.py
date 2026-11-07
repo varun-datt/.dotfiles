@@ -67,7 +67,8 @@ def git(wt, *args):
 
 
 def base_of(rd, wt, names, head=None):
-    """The first named file's commit, else head (the step's HEAD at its first launch), else the last named file's."""
+    """The full hash of the first named file's commit, else head (the step's HEAD at its first launch), else the last
+    named file's."""
     path = first(*(os.path.join(rd, n) for n in names[:-1]))
     if not path and head:
         base = head
@@ -78,8 +79,7 @@ def base_of(rd, wt, names, head=None):
         base = read(path).strip()
         if not base:
             raise PrepError(f'{os.path.basename(path)} is empty')
-    git(wt, 'rev-parse', '--verify', '--quiet', base + '^{commit}')
-    return base
+    return git(wt, 'rev-parse', '--verify', '--quiet', base + '^{commit}').strip()
 
 
 def report(rd, rnd, named=None):

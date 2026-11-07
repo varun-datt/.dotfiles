@@ -1134,6 +1134,24 @@ class ReviewPrepTest(unittest.TestCase):
         self.assertEqual(labels(), {'feat: a.txt': 'fix', 'feat: main.txt': 'merged', 'Merge main into ow/a': 'merge',
                                     'feat: fix | `x` {{TASK}}.txt': 'fix'})
 
+    def test_a_short_hash_a_tag_or_a_relative_name_gives_the_full_base_hash(self):
+        base = self.git('rev-parse', 'HEAD')
+        self.git('tag', 'v1')
+        self.built('TASK: t\nRISK: none\n')
+        self.commit('b.txt')
+        for given in (base[:7], base, 'v1', 'HEAD~2'):
+            with self.subTest(given=given):
+                self.write('a.reviewbase', given + '\n')
+                prompt = self.read(os.path.basename(q.reviewprep.review(self.rd, 'a', self.wt)))
+                rows = self.history(prompt).split('\n')
+                self.assertEqual(rows[0], f'Base commit: {base}')
+                self.assertEqual([r.split(': ', 1)[1] for r in rows[2:]], ['feat: a.txt', 'feat: b.txt'])
+                self.assertIn(f'base {base}, commits:', prompt)
+        self.write('a.reviewbase', 'no-such-commit\n')
+        with self.assertRaises(q.reviewprep.PrepError) as e:
+            q.reviewprep.review(self.rd, 'a', self.wt)
+        self.assertIn('git rev-parse --verify --quiet no-such-commit^{commit} failed', str(e.exception))
+
     def test_inserted_text_is_never_read_as_a_placeholder(self):
         for quoted in ('{{TASK}}', '{{GATES_RUN}}', '{{WORD_LIMIT|900}}'):
             with self.subTest(quoted=quoted):
