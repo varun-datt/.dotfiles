@@ -30,7 +30,7 @@ RUN defaults to OW_RUN_DIR. Every <name>.jsonl there is one round (markers.jsonl
 An item is the run name without its suffixes. --repo reads `git log --merges --first-parent` of that
 repository's HEAD: an item counts as merged when a merge subject names a branch "<prefix>/<item>".
 
-Caps (owner, 2026-10-13): 3 x the median credits of the last 20 rounds of the same kind and model, or a
+Caps: 3 x the median credits of the last 20 rounds of the same kind and model, or a
 fixed floor while there are fewer than 5. --audit joins each round to <run>/routes.jsonl: a decision of the
 round's item and kind, under the round's own name when the decision names a round, preferring one under
 its own name, else the latest logged no later than 2 minutes after the round started, each decision used once. A round is routed, overridden (its decision carries "override") or unrouted, and
@@ -928,8 +928,7 @@ def orchestrator_blocking(run, review, item_rounds, ruled):
 def fix_rounds(run, rounds):
     """Each item's fix-round launches in time order, each with the owner_approved its own launch line carries, read from
     routes.jsonl; a fix round with no launch line (an older run) is listed from its log. Every launch after the item's
-    first without owner_approved is unapproved, a relaunch of the same round included (owner, 2026-10-31: one fix
-    round, then the owner decides)."""
+    first without owner_approved is unapproved, a relaunch of the same round included."""
     starts = {r['name']: r['start'] for r in rounds if r['kind'] == 'fix'}
     entries, seen, last = [], collections.Counter(), datetime.datetime.min.replace(tzinfo=UTC)
     for _, d in read_routes(run):

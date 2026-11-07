@@ -45,7 +45,7 @@ steps in order, each when the one before ended with exit 0, through the skill's 
 route.py run (rounds <id> and <id>-fix1, briefs <run>/<id>.prompt.md and <id>-fix1.prompt.md), review and recheck
 with review.sh (<id>-review, <id>-rereview) after reviewprep.py writes their inputs. Reviews never take a slot.
 The fix step resumes the build's own session (route.py run --resume-session <id>, with <id>-fix1.body.md alone as its
-prompt) when routes.jsonl records the build's launch, so the builder fixes its own work (owner, 2026-11-02); else it
+prompt) when routes.jsonl records the build's launch, so the builder fixes its own work; else it
 starts a fresh session with the build's prompt, its body swapped for the fix body.
 A step that exits non-zero (or whose prep fails, exit 2) stops the pipeline: it waits on the chat with its exit
 code, until `retry <id>` relaunches it or `retry <id> --passed` marks it passed. `suspend:<name>` waits on the

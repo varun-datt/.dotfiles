@@ -4,7 +4,7 @@ Usage: python3 -B resume.py <item> <round> <stop|none> <timeout-seconds>
 Reads $OW_RUN_DIR/routes.jsonl (the item's last launch) and $OW_RUN_DIR/<round>.prompt.md;
 writes <round>.start, <round>.jsonl and <round>.err there, then prints result.py's summary.
 A round's credits are its session's running total minus the previous round's; result.py prints both.
-The worker sees no credit cap (owner, 2026-11-02): <stop> is the unseen stop route.py uses, read from
+The worker sees no credit cap: <stop> is the unseen stop route.py uses, read from
 the session's usage records; past it the round ends with exit 3 and writes <round>.stopped.
 Refuses (exit 2) when this process runs under caffeinate, however it was started: this Mac kills caffeinate.
 Refuses (exit 2) a fix round (<item>-fixN): route.py run --kind fix --resume-session checks its approval.

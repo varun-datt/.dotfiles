@@ -21,7 +21,7 @@ numbers inside paths or URLs are not claims; a rate such as 994/s is.
 
 A fix round (kind "fix") fails unless it lists numbered findings under a FIX THESE line and, under a WHY NOW line,
 gives each finding one line "N HARM: <what the owner loses if it merges>" or "N DEPENDS: <the planned item that
-builds on it>" (owner, 2026-11-02: a fix round must earn its place; other findings go to the tech-debt list).
+builds on it>"; other findings go to the tech-debt list.
 
 Any prompt naming a commit it relies on ("fixed in <commit>", "after <commit>", either with "commit" before the id,
 or a "RELIES ON: <commit> ..." line; an id is 7 to 40 hex characters, all digits or all letters included)
@@ -151,7 +151,7 @@ def brief_problems(text):
 WHY_NOW = "WHY NOW"
 WHY_LINE = re.compile(r"^\s*(\d+)[.)]?\s+(HARM|DEPENDS):(.*)$")
 WHY_HOW = ("write `N HARM: <what the owner loses if it merges>` or `N DEPENDS: <the planned item (id) that builds on "
-           "it>`; a finding that meets neither goes to the tech-debt list (owner, 2026-11-02)")
+           "it>`; a finding that meets neither goes to the tech-debt list")
 
 
 def why_now_problems(text):

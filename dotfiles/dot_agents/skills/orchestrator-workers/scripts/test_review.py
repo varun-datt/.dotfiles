@@ -162,7 +162,7 @@ class PromptTextTest(unittest.TestCase):
         self.assertEqual(numbered(t, '\nCHECK, nothing else:\n', '\nDo not look'), REREVIEW_CHECKS)
         self.assertEqual(numbered(t, 'REPORT, in this order', 'Mark every claim'), REREVIEW_REPORT)
         rule = ' '.join(raw.split('-->', 1)[0].split())
-        self.assertIn('a finding it leaves open pauses the item for the owner (owner, 2026-10-31, confirmed 2026-11-02)',
+        self.assertIn('a finding it leaves open pauses the item for the owner: one fix round, then the owner decides',
                       rule)
         self.assertNotIn('one more fix round', rule)
 
@@ -176,9 +176,9 @@ class PromptTextTest(unittest.TestCase):
                 self.assertNotIn(said, flat, path)
         lifecycle = ' '.join(read('SKILL.md').split('## Lifecycle', 1)[1].split('\n## ', 1)[0].split())
         self.assertIn('When the owner is watching, the earlier rule holds: a finding the re-review leaves open pauses the item '
-                      'for the owner (owner, 2026-10-31, confirmed 2026-11-02)', lifecycle)
-        self.assertIn('what the re-review leaves open goes to tech debt marked follow-up, and the item merges (owner, '
-                      '2026-11-02)', lifecycle)
+                      'for the owner: one fix round, then the owner decides', lifecycle)
+        self.assertIn('what the re-review leaves open goes to tech debt marked follow-up, and the item merges.',
+                      lifecycle)
 
     def test_the_critique_asks_for_each_cited_standard_s_own_names(self):
         t = visible(read('assets', 'critique-research.md'))

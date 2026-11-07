@@ -31,7 +31,7 @@ A second fix round for an item (named <item>-fixN with N >= 2, or after a fix la
 refused (exit 2, a refuse event) unless the override carries owner_approved=<where the owner said so>, logged with
 the launch. resume.py continues a round and is not checked.
 A fix round with --resume-session ROUND resumes ROUND's session (its last launch's argv, with -r) instead of starting a
-fresh one, so the builder fixes its own work (owner, 2026-11-02); it passes every check a fresh fix round does, keeps the
+fresh one, so the builder fixes its own work; it passes every check a fresh fix round does, keeps the
 build's model, effort, context and stop, and its launch line names the round it resumes.
 The policies (categories, floors, targets) and the model mapping live in ../references/routes.json.
 Design and reading guide: ../references/routing.md.
@@ -513,7 +513,7 @@ def pick(item, kind, text, history, cfg, author=None, diff='', budget_left=None,
     if kind == 'review' and avoid and family(model, cfg) == avoid:
         model = strongest(cfg, avoid)
     if kind == 'review':
-        effort, effort_why = REVIEW_EFFORT, 'reviews, re-reviews and critiques at high (owner, 2026-11-02, batch 2)'
+        effort, effort_why = REVIEW_EFFORT, 'reviews, re-reviews and critiques at high'
     cap = cap_for(kind, model, history, cfg)
     if not quality_on:
         reason += ' | budget: spend ahead of time, quality rule off'
@@ -687,8 +687,7 @@ def earlier_fix_round(run, rnd, kind):
 
 
 def fix_round_refused(run, rnd, kind, ov):
-    """Log and report a second fix round for an item without owner_approved in the override (owner, 2026-10-31:
-    one review, one fix round, then the owner decides)."""
+    """Log and report a second fix round for an item without owner_approved in the override."""
     why = earlier_fix_round(run, rnd, kind)
     if not why or (ov or {}).get('owner_approved'):
         return False
@@ -765,7 +764,7 @@ def build_launch(run, build):
 
 
 def resumed_decision(run, rnd, kind, launch):
-    """A fix round that resumes the build's session keeps the build's model, effort and context (owner, 2026-11-02)."""
+    """A fix round that resumes the build's session keeps the build's model, effort and context."""
     built = next((d for d in reversed(read_decisions(run)) if d.get('event') in ('pick', 'escalate')
                   and d.get('item') == launch['round'] and d.get('at') == launch.get('decision_at')), {})
     argv = launch['argv']

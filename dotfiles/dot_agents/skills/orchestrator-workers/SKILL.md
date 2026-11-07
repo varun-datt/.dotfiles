@@ -26,9 +26,9 @@ are separate Copilot CLI sessions, each in its own git worktree. The name follow
   4. Parked questions asked in one batch at the end.
 - **Watch it:** you don't need to. The orchestrator escalates only what needs you
   ([Escalate, don't report](#time-budgets-and-monitoring)); the status table holds the rest. The
-  watchdog below is meant to wake it, but on 2026-10-12 its alerts did not wake an idle VS Code
-  chat for four hours ([lessons](references/lessons.md)), and on 2026-10-27 an in-chat review
-  blocked the chat for three ([lessons](references/lessons.md#2026-10-27-a-subagent-review-blocked-the-run)).
+  watchdog below is meant to wake it, but its alerts do not wake an idle VS Code chat
+  ([lessons](references/lessons.md)), and an in-chat review blocks the chat until it ends
+  ([lessons](references/lessons.md#2026-10-27-a-subagent-review-blocked-the-run)).
   The [queue runner](#queue-runner) now launches the next item, and alerts you, not the chat, when
   the chat goes idle. To look yourself, set `OW_RUN_DIR` to the run folder, then:
   - `python3 ~/.agents/skills/orchestrator-workers/scripts/status.py [--all]` shows a table of every worker: its state, elapsed and idle
@@ -51,8 +51,7 @@ which answers you inferred from the repository.
 
 1. **Goal and items:** the deliverable; each item with its acceptance criteria; the plan and
    decision files that settle the details. For a complex item: what was surveyed for reuse
-   (products, libraries, patterns), or a research step first, and which dependencies it may add
-   (owner, 2026-10-27: skipping that research is "a vary big miss"). Split an item expected to
+   (products, libraries, patterns), or a research step first, and which dependencies it may add. Split an item expected to
    take over 45 minutes, or one touching two of the project's hot spots (turn and run state, file
    containment, a shared view's state), into two items: large items averaged 3.1 blocking findings
    against 1.6 for small ones, and three rounds ran out of credits or time (2026-10-30).
@@ -67,7 +66,7 @@ which answers you inferred from the repository.
    - what each item must pass;
    - how to restart and health-check the owner's running instance after a merge;
    - which ports and instances are off limits.
-4. **Models:** settled per kind of round by [references/routing.md](references/routing.md) (owner, 2026-10-13). Ask only which models are today's strongest, mid-tier and other-family reviewer, and which items touch a risk area.
+4. **Models:** settled per kind of round by [references/routing.md](references/routing.md). Ask only which models are today's strongest, mid-tier and other-family reviewer, and which items touch a risk area.
 5. **Order:** proposed waves and dependencies, and the most workers at once (recommended: 3).
    Propose any extra items now.
 6. **Rules:** confirm one review per item; a fix round only for the findings that meet the fix-now bar
@@ -123,8 +122,7 @@ task -> worker -> grade report -> ONE review -> rulings: each Blocker or Major f
   launches the review, the fix round and the re-check itself, and stops at two suspend points, ruling the
   review's findings and merging, because only those need judgement. The chat waits for the next one with
   `runqueue.py wait`; a failed step also stops the pipeline and waits on the chat.
-- **The fix-now bar** ([references/rubric.md](references/rubric.md); grades owner, 2026-10-30; bar
-  owner, 2026-11-02): the reviewer grades every finding by likelihood and impact; Blocker and Major are the
+- **The fix-now bar** ([references/rubric.md](references/rubric.md)): the reviewer grades every finding by likelihood and impact; Blocker and Major are the
   candidates for a fix now (I1 at L1–L2; I2 at L1–L2; I3 at L1). A grade is the finding's severity;
   whether it is fixed now is its priority, a separate call, as ISTQB's glossary keeps the two apart. A
   Blocker or Major is fixed now only when it would harm the owner once merged (data lost, a security
@@ -132,7 +130,7 @@ task -> worker -> grade report -> ONE review -> rulings: each Blocker or Major f
   WHY NOW line says which, and `brief.py` refuses a fix round without one. Every other finding goes to
   debt, where repeats show patterns; Minor always does: one line on the repository's `docs/tech-debt.md`.
 - The orchestrator accepts or rejects each finding, with a reason.
-- **Research learnings travel** (owner, 2026-11-01): after merging a research proposal, the
+- **Research learnings travel**: after merging a research proposal, the
   orchestrator adds a one-line pointer to each item its "Helps other items" list names, at the
   level it names; user-level changes (instructions, skills, the wiki) are proposed to the owner
   first.
@@ -145,16 +143,14 @@ task -> worker -> grade report -> ONE review -> rulings: each Blocker or Major f
   the owner is away for, a finding that needs the owner soon goes in with `--follow-up` (a Blocker
   only goes in that way, and keeps the mark until closed); `debt.py flag <repo> TD-<n> [--off]` sets
   or clears the mark, and the end-of-run report opens with `debt.py list <repo> --follow-up` for each
-  repository the run touched (owner, 2026-11-02).
+  repository the run touched.
 - In a run the owner is away for, the builder fixes each finding fixed now, or at least makes its harm
-  stop; what the re-review leaves open goes to tech debt marked follow-up, and the item merges (owner,
-  2026-11-02). When the owner is watching, the earlier rule holds: a finding the re-review leaves open
-  pauses the item for the owner (owner, 2026-10-31, confirmed
-  2026-11-02): one fix round, then the owner decides. `route.py run` refuses any fix round after an item's first (exit 2) unless `--override` carries `owner_approved=<where the owner said so>`, and `mine.py --quality` flags one launched without it.
+  stop; what the re-review leaves open goes to tech debt marked follow-up, and the item merges. When the owner is watching, the earlier rule holds: a finding the re-review leaves open
+  pauses the item for the owner: one fix round, then the owner decides. `route.py run` refuses any fix round after an item's first (exit 2) unless `--override` carries `owner_approved=<where the owner said so>`, and `mine.py --quality` flags one launched without it.
   A fix made after the re-review, once the owner
   approves it, goes to a **post-merge review (commit-then-review)** on main, so nothing lands unreviewed.
 - **Parallelism** is decided per item, from its dependencies and the files it touches.
-- **Finish before starting** (owner, 2026-10-13). A freed slot goes first to the oldest started
+- **Finish before starting**. A freed slot goes first to the oldest started
   item's next step: a fix round, a catch-up with main, then the merge. A new build starts only
   when no started item is waiting for a slot.
 
@@ -173,7 +169,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 ```
 
 - **Every round goes through `route.py run`; a run must not write its own copilot launch scripts.**
-  Scripts with a fixed `MODEL` and `EFFORT` bypassed the router on 2026-10-30. The launcher checks
+  Scripts with a fixed `MODEL` and `EFFORT` bypass the router. The launcher checks
   the brief (exit 5), picks the model, effort, context tier and cap or takes `--override` (refused
   without a `reason=`), logs the decision with the CLI version to `routes.jsonl`, waits for load
   (exit 12), writes `<item>.start`, `<item>.base` and the time budget in `budgets.json`, and runs
@@ -181,7 +177,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   questions, into `<item>.jsonl` and `<item>.err`. Every prompt but a review's ends with a `BASE COMMIT`
   line holding the round's base hash and its diff range `<hash>..HEAD`, because a worker cannot read the
   run folder: the worktree's HEAD at launch, or for a `<item>-resumeN` round the item's first base
-  (`<item>.base`); with no git HEAD the line says the base is unknown (owner, 2026-11-06). On exit it sweeps the worktree's leftovers. It
+  (`<item>.base`); with no git HEAD the line says the base is unknown. On exit it sweeps the worktree's leftovers. It
   exits non-zero when copilot fails (124 on timeout) or the round errored (4) or hit its cap (3).
   Re-running it before the round launched reuses the logged decision; `--fresh` draws again.
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
@@ -189,12 +185,11 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
 - **Load and leftovers** (`scripts/sweep.py`): a launch, review or merge gate waits while the Mac
   swaps or a `yes` stress process runs, and on exit stops orphans (parent 1) whose working folder
   is in its worktree, plus orphan `yes`, naming each in the log. Never sweep the owner's own
-  checkout. Why: on 2026-10-29 seven leaked `yes` processes ran 5 hours at 5.3 cores while the
-  Mac swapped, and the merge gates in that window failed on load-sensitive tests.
+  checkout. Why: leaked stress processes make the Mac swap, and merge gates then fail on
+  load-sensitive tests.
 - **The brief check** (`scripts/brief.py`) refuses a prompt with an unfilled `{{PLACEHOLDER}}`,
-  or a worker prompt without a filled REUSE CHECK and ALLOWED DEPENDENCIES line: on 2026-10-27 one
-  brief had no research step and another's "use a library if one fits" lost to the preamble's
-  dependency rule, so both features were hand-written. A worker brief (not a fix round) is also
+  or a worker prompt without a filled REUSE CHECK and ALLOWED DEPENDENCIES line, so a feature a
+  library covers is not hand-written. A worker brief (not a fix round) is also
   refused when a top-level numbered MUST has no "SHALL" ("WHEN <event or state>, <part> SHALL <response>"),
   or its RISK, CASES THE ORCHESTRATOR KNOWS or FACTS TO VERIFY line is missing or empty; each
   may say "none" with a reason, and a bare "none" in backticks or with punctuation is still empty.
@@ -203,7 +198,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   further down; `brief.py check --kind <kind>` overrides it. A fix round (kind fix, or a round named
   `<item>-fixN`, which `route.py run` checks as one) is refused unless each finding under FIX THESE has a
   WHY NOW line, `N HARM: <what the owner loses if it merges>` or `N DEPENDS: <the planned item that builds
-  on it>` (owner, 2026-11-02: a fix round must earn its place; other findings go to the tech-debt list).
+  on it>`; other findings go to the tech-debt list.
 - **Model, effort, context tier and credit cap:** `route.py run` (or `route.py pick` to see the choice without launching) chooses them per round and logs why ([router](references/routing.md#the-router)); the static table in [references/routing.md](references/routing.md) is its fallback. The cap comes from `python3 scripts/mine.py "$OW_RUN_DIR" --history <earlier run> ... --caps`. A kind with under 5 rounds on a model gets a cap derived from another model's rounds by price (`scripts/prices.json`, refreshed from the SDK's `listModels()`). `--chat <debug-log-dir> --budget N` prints the run's spend, chat included (an upper bound), against N and how many more rounds fit.
 - **Reviewer:** run it with `bash scripts/review.sh <item>-review <worktree> [prompt-file]`, which
   launches it through `route.py run --kind review` (`--help` lists the options it passes on, such
@@ -211,7 +206,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   The router picks another model family from the author's model, read from the author round's
   log when `--author-model` is not given. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
   shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
-  It runs at high effort, and fills the rubric's blocking scope from `--scope product|tool`, which wins over the default, by default `tool` only when every changed file is under `dotfiles/dot_agents/skills/*/scripts/` (owner, 2026-11-02); a re-review or critique prompt, which has no rubric, gets the scope line and the rubric's Scope rule at its end.
+  It runs at high effort, and fills the rubric's blocking scope from `--scope product|tool`, which wins over the default, by default `tool` only when every changed file is under `dotfiles/dot_agents/skills/*/scripts/`; a re-review or critique prompt, which has no rubric, gets the scope line and the rubric's Scope rule at its end.
   A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"
   filter on gpt-6.1-sol, or a sub-agent that refuses (2026-10-29: 3 rounds, 131 credits, no
   verdict). Tell the reviewer to work in its own session, and after one 422 fall back to Opus at
@@ -219,19 +214,14 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   Without `same_family=yes` the launcher refuses any review in the author's family, and any review whose author it
   cannot find (no `--author-model`, no author round log, none saved with a reused decision).
 - **An INFERRED vendor fact gets its live check before the build**, and the brief's FACTS TO
-  VERIFY carries the result. On 2026-10-29 a feature built on Copilot's message ids merged, and
-  the live check after it showed the ids were snapshot positions: a fix round and a second merge
-  undid it.
+  VERIFY carries the result.
 - **Bring main into a branch before its review** when main has moved under the files the item
   touches, so the reviewer reads the code that will merge (one stale selector, 2026-10-30).
 - **Fix rounds** (`<prefix><item>-fixN`) go back to the builder: `route.py run <item>-fix1 --kind fix
   --resume-session <item>` resumes the build's own session, with the fix brief alone as its prompt, so
-  it does not relearn the item (owner, 2026-11-02, reversing 2026-10-29's fresh fix sessions, which were
-  chosen when resumed rounds averaged 92k tokens per request against 75k for builds; compare the first
-  resumed fixes with run amc-2026-11-02-p1's fresh ones, median 421 credits). The pipeline does this
+  it does not relearn the item. The pipeline does this
   whenever `routes.jsonl` holds the build's launch, and starts a fresh session otherwise. Fix rounds are
-  narrow (owner,
-  2026-11-02, after fix rounds cost more than builds): the brief carries only the findings fixed now,
+  narrow: the brief carries only the findings fixed now,
   each with where, what goes wrong and what done looks like; one test per finding that fails first;
   only the checks for the changed files; no impact map, case table or mutation runs, and screenshots
   only for a UI finding ([fix.md](assets/fix.md)). A whole kind is fixed only when the finding lists
@@ -257,12 +247,11 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   the foreground, polls at most every 240 s to keep the cache warm, a labelled report with an
   impact map and a case table. Both preambles say what a `copilot -p` shell refuses: any command naming a path
   outside the worktree and its `--add-dir` folders (`/tmp`, `-o /tmp/x`, `/usr/bin/grep`), so scratch goes under
-  `.gates/` and programs are called by name; `tvly` itself works (owner, 2026-11-06: preamble lines only, no
-  launch flag for paths).
+  `.gates/` and programs are called by name; `tvly` itself works. No launch flag adds paths.
 - **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body. Its note is
   critiqued by another model family with [critique-research.md](assets/critique-research.md),
   against a snapshot of the note, page, task and report; the critic also asks whether the note
-  builds what already exists (owner, 2026-11-01).
+  builds what already exists.
 - **Reviews:** [review.md](assets/review.md), which grades on [references/rubric.md](references/rubric.md)
   (`review.sh` fills `{{RUBRIC}}`) and tags each finding's cause and class, and the short
   [rereview.md](assets/rereview.md), which only checks each named finding was fixed (each of its listed
@@ -297,8 +286,7 @@ every script in the folder.)
 - **After each merge,** call `runqueue.py done <id>`. Items that wait on it become ready.
 - **`runqueue.py status`** shows each item: waiting, ready, running, exited N or done; a pipeline item also
   names its step and what it waits on (a running round, the chat's done file, or a failure with its exit code).
-- **Pipelines: queue the whole item once** (owner, 2026-11-02, after the chat cost 7,105 of a run's 22,454 credits
-  re-reading its context at every round's end):
+- **Pipelines: queue the whole item once**, so the chat does not re-read its context at every round's end:
   `runqueue.py add <id> --pipeline build,review,suspend:rulings,fix,recheck,suspend:merge --worktree <wt>
   [--brief <prompt>] [--route-args "<route.py run options>"] [--review-args "<review.sh options>"]`. The runner
   launches each step when the one before exits 0: build and fix through `route.py run` (rounds `<id>` and
@@ -338,7 +326,7 @@ every script in the folder.)
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
   line to `ALERT.log`, once for each new item waiting: it does not repeat while the same items
-  wait (owner, 2026-11-01). Nothing is sent while the chat is active or nothing waits on it.
+  wait. Nothing is sent while the chat is active or nothing waits on it.
 
 ## Time budgets and monitoring
 
@@ -372,12 +360,12 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **At 2.5x budget:** stop it and resume it with a narrower brief, unless its final gates are
   nearly done.
 - **On a stall:** kill it by PID and restart it once.
-- **Escalate, don't report** (owner rule, 2026-10-11). Message the owner only when they must act: a
+- **Escalate, don't report**. Message the owner only when they must act: a
   decision, a point to steer, a blocker, a sign-in, or a risk such as power. Keep it concise and high
   level. Starts, finishes, verdicts, merges and overruns the orchestrator can handle go to the run
   notes, the status table and the end-of-session summary, not to the owner. A heartbeat with nothing
   to escalate gets at most one line.
-- **Call temporary things temporary** (owner rule, 2026-10-11). A stopgap, placeholder or interim
+- **Call temporary things temporary**. A stopgap, placeholder or interim
   file in a report to the owner is named as temporary, with what replaces it, so it is not read
   as the design.
 
@@ -421,9 +409,7 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
   worktrees and never touches the checkout. It runs with `--warn` (reports, exits 0) until the
   owner approves it after phase 4 of the review record; then drop `--warn`, and exit 1 blocks the
   merge (2 is a usage or setup error).
-- **Workers may run while a merge gate runs, at most 2 of them** (owner, 2026-10-29: merging one
-  item at a time left the slots idle about 45 minutes; three workers plus a gate once held the
-  load at 18-28 on 18 CPUs). Queue each merge gate as a slot item with a high `--priority`, so
+- **Workers may run while a merge gate runs, at most 2 of them**. Queue each merge gate as a slot item with a high `--priority`, so
   with `--slots 3` it takes the next free slot and two workers run beside it.
 - **Docs-only merges** go straight to main.
 - **Append-only lists** (control registries, imports): resolve conflicts as a union, then check for

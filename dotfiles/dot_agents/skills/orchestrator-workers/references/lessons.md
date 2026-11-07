@@ -264,3 +264,18 @@ Moved from that project's state file, which now keeps only current state.
 - A new owner message ends the running turn mid-item, and the item's uncommitted work stays in the tree (2026-10-26): resume it from `/memories/session/`, which subagents share and write too. [notes]
 - A resumed round keeps the ports of its first prompt: state the new ports in the fix prompt (2026-10-27). [notes]
 - Run-folder helper scripts came back after the skill gained commands for them (2026-11-02: `budget.py` counted resumes twice, `waitq2.py` was piped). At a run's start, list the run folder's scripts, map each to its skill command (`mine.py <run folder> --chat <debug-log folder> --budget N`, `runqueue.py wait`, `reviewprep.py`) and delete those the skill covers. [notes]
+
+## 2026-11-06: stories moved out of the rules
+
+The rules give a one-clause reason; these are the incidents behind them.
+
+- Seven leaked `yes` stress processes ran 5 hours at 5.3 cores while the Mac swapped, and the merge gates in that window failed on load-sensitive tests (2026-10-29). Behind `sweep.py`.
+- A feature built on Copilot's message ids merged; the live check after it showed the ids were snapshot positions, and a fix round and a second merge undid it (2026-10-29). Behind the live check of an INFERRED vendor fact before the build.
+- One brief had no research step and another's "use a library if one fits" lost to the preamble's dependency rule, so both features were hand-written (2026-10-27). Behind `brief.py`'s REUSE CHECK and ALLOWED DEPENDENCIES refusal.
+- Run scripts with a fixed `MODEL` and `EFFORT` bypassed the router (2026-10-30). Behind every round going through `route.py run`.
+- Fix rounds cost more than builds, 6,569 against 6,421 credits, because each re-read the item and redid the whole build method (2026-11-02). Behind narrow fix rounds.
+- Fresh fix sessions were chosen on 2026-10-29, when resumed rounds averaged 92k tokens per request against 75k for builds; on 2026-11-02 fix rounds went back to the build's session, against run amc-2026-11-02-p1's fresh fixes (median 421 credits).
+- The chat cost 7,105 of a run's 22,454 credits re-reading its context at every round's end (2026-11-02). Behind queueing a whole item as one pipeline.
+- A full re-review hunted each kind again; all 14 in one run still found blocking problems, for 994 credits (2026-11-02). Behind the short re-review.
+- Two max-effort reviews ran out of their 45 minutes (2026-11-02). Behind reviews at high effort.
+- A research note proposed building a list that an adopted library already covered (2026-11-01). Behind the research preamble's REUSE CHECK.

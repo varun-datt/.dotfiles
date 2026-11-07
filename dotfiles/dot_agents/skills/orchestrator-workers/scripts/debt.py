@@ -12,8 +12,7 @@ Usage:
     python3 debt.py import-plan PLAN.md --dry-run [--counts]    rows a PLAN.md's "Known gaps" passages would give,
                                                                 by item number (a column-0 "N."), or "?" under a bullet
 
-A row's Status is open, follow-up (open, and deferred from a run with the owner away: the owner looks at it after the
-run; owner, 2026-11-02) or "closed <date>: <reason>". A Blocker goes in only as follow-up and keeps the mark until closed.
+A row's Status is open, follow-up (open, and deferred from a run with the owner away: the owner looks at it after the run) or "closed <date>: <reason>". A Blocker goes in only as follow-up and keeps the mark until closed.
 The register is a markdown table; text outside the table is kept as written. Ids are TD-<n>, one above the
 highest ever used (a `<!-- debt.py next id: n -->` line after the table remembers it if a row is deleted by hand).
 A run, for `stale`, is a line of FILE that starts with its date (YYYY-MM-DD); a row's runs are those dated

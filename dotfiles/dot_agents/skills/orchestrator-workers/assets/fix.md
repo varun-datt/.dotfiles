@@ -1,10 +1,8 @@
-<!-- Fix-round prompt for round <item>-fix<N>. Sent alone to the build's own session (route.py run
---resume-session <item>, owner 2026-11-02), or after preamble-worker.md to a fresh session when that one
+<!-- Fix-round prompt for round <item>-fix<N>. Sent alone to the build's own session (route.py run --resume-session <item>), or after preamble-worker.md to a fresh session when that one
 cannot be resumed; route.py writes the worktree's HEAD to <run>/<item>-fix<N>.base for the re-review diff.
-Narrow by ruling (owner, 2026-11-02): fix rounds cost more than builds (6,569 against 6,421 credits)
-because each re-read the item and redid the whole build method; a kind with no end of cases goes to
-the structural fix and the owner, not to another round. Every fix round names why each finding cannot wait
-(owner, 2026-11-02); brief.py refuses a fix round without a WHY NOW line per finding. -->
+Narrow by ruling, because a fix round that re-reads the item and redoes the whole build method costs
+more than the build; a kind with no end of cases goes to
+the structural fix and the owner, not to another round. Every fix round names why each finding cannot wait; brief.py refuses a fix round without a WHY NOW line per finding. -->
 THIS IS A FIX ROUND for {{ITEM_TITLE}}: a review of the build on branch `{{BRANCH}}` in worktree `{{WORKTREE}}` found what follows. If this session built the item, you already know it; otherwise read only the files the findings name and the tests next to them, not the item's brief or the build's report.
 
 THIS ROUND REPLACES the preamble's "HOW TO BUILD" and "REPORT" sections: no impact map, no case table, no facts survey and no mutation runs. Everything else in the preamble holds.
@@ -13,7 +11,7 @@ FIX THESE, one at a time:
 1. {{FINDING}}. Where: {{FILE_LINE}}. What goes wrong: {{SCENARIO}}. Done when: {{WHAT_DONE_LOOKS_LIKE}}. {{CLOSED_CLASS_LIST_OR_DELETE}}
 {{MORE_FINDINGS}}
 
-WHY NOW, one line per finding above, by its number: `N HARM: <what the owner loses if this merges as it is>` or `N DEPENDS: <the planned item (id) that builds on this code>`. A finding that meets neither goes to the tech-debt list, not to this round (owner, 2026-11-02):
+WHY NOW, one line per finding above, by its number: `N HARM: <what the owner loses if this merges as it is>` or `N DEPENDS: <the planned item (id) that builds on this code>`. A finding that meets neither goes to the tech-debt list, not to this round:
 1 HARM: {{WHAT_THE_OWNER_LOSES_IF_IT_MERGES}}
 {{MORE_WHY_NOW_OR_DELETE}}
 

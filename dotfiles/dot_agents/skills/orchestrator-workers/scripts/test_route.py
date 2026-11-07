@@ -104,7 +104,7 @@ class Pick(unittest.TestCase):
             for seed in range(10):
                 rec = self.pick('review', text=text, author=OPUS, call=stub('review'), hist=history(good), seed=seed)
                 self.assertEqual(rec['choice']['effort'], 'high', (text, seed))
-                self.assertIn('owner, 2026-11-02, batch 2', rec['reason'])
+                self.assertIn('reviews, re-reviews and critiques at high', rec['reason'])
         ok = [dict(rnd(SONNET, True, item=str(i)), effort='medium') for i in range(12)]
         self.assertEqual(self.pick(hist=history(ok))['choice']['effort'], 'medium')
 

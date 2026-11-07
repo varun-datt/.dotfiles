@@ -30,8 +30,7 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    - one budget for paid live runs (a real engine that spends the owner's credits): estimate each
      item's paid calls (messages, side questions, summaries, workers it starts) and the runs they
      group into, and ask once. Runs inside the approved budget need no further ask; ask again only
-     to go over it (owner, 2026-10-25: "do not ask before each live Copilot run, ask approximate
-     whatever you need upfront").
+     to go over it.
 3. Split the work into items that each end in a commit or a finished artifact, not in a question.
    One feature at a time, its tests and doc updates inside it.
 4. Give each item a kind from [references/pace.md](references/pace.md) and an estimate with its
@@ -67,7 +66,7 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    For work that spans days ("when will these 12 items be done?"), also run
    `estimates.py throughput --items <N> [--kind <kind> ...] [--days 28]`: it draws past days'
    finished-item counts, days with none included, and prints the days to finish at P50, P85 and
-   P95 (owner, 2026-11-01; a forecast that skips zero days runs early). Give both forecasts when
+   P95, since a forecast that skips zero days runs early. Give both forecasts when
    they differ. Imported worker rounds count only when their kind is named.
 6. Arm the run guard: `estimates.py arm --run <run> --until <stop time HH:MM> --session <chat id>
    --plan plan.json`. While it is armed, a Stop hook (`~/.copilot/hooks/run-guard.json`) refuses to
@@ -120,7 +119,7 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   go over it.
 - When a feature turns out to need an enabler (a fix, a spike, some debt), take the enabler next and
   re-forecast; never hold it back to keep the mix.
-- Carry each item to completion or to a blocker (owner, 2026-10-25). Where a case is unclear, let
+- Carry each item to completion or to a blocker. Where a case is unclear, let
   research decide it, say so in the commit and the plan, and keep it for the owner's review.
 - When an item blocks on a decision, write the question down and take the next item. A question
   that blocks nothing never ends a turn: it goes in the session memory for the final report. Only

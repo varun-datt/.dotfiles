@@ -11,7 +11,7 @@ right split; this one is built from the sources in the wiki note
 | Spikes and research | about 10% | Only those that unblock a decision or a planned feature |
 | Docs and process | about 5% | What the next session or the owner needs |
 
-The mix is a starting point, not a quota. It bends to dependencies (owner, 2026-10-25):
+The mix is a starting point, not a quota. It bends to dependencies:
 
 - An enabler goes first: a spike, fix or piece of debt that a planned feature needs, or that makes
   it clearly faster or safer to build, comes before that feature whatever its kind. "For each
@@ -30,7 +30,6 @@ The mix is a starting point, not a quota. It bends to dependencies (owner, 2026-
   ("Agile Planning to 100% Capacity? Don't Do It!", Scaled Agile).
 - Polish found on the way becomes backlog items (AMC's light rule 8; Shape Up batches bugs and
   polish into a cool-down instead of interrupting feature time).
-- After the plan: depth, with at most two second-model review rounds, fixing high severity only
-  (owner, 2026-10-25).
+- After the plan: depth, with at most two second-model review rounds, fixing high severity only.
 - Report the split that happened (`estimates.py report`) beside the split asked for. On
   2026-10-25 it was 22% features and 53% fixes and review rounds, because the plan ran out early.

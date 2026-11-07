@@ -4,8 +4,7 @@
 Usage:
     python3 agreement.py CSV RUN [RUN ...] [--bar 0.9]
 
-Only blocking rows (block_reviewer yes) whose ruling the CSV took from inside the run folder are compared (owner,
-2026-11-02, 4a): ruling_source rulings.jsonl, fix-brief, fix-report or rereview. Rows ruled from PLAN.md, another
+Only blocking rows (block_reviewer yes) whose ruling the CSV took from inside the run folder are compared: ruling_source rulings.jsonl, fix-brief, fix-report or rereview. Rows ruled from PLAN.md, another
 run's discuss.md, the prior CSV or nothing are counted apart, by source. A row agrees when the record holds the same
 (round, n) with the same ruling (not-reproduced counts as rejected). Reads the run folders only; writes nothing.
 Prints one line per run folder with its agreement against the bar.

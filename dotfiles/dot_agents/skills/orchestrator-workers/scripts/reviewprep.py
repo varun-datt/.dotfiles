@@ -184,7 +184,7 @@ def review(rd, item, wt, head=None, brief=None, report_round=None):
         'PROJECT_SECURITY_SECTIONS': read(security).strip() if security else '',
         'RISK_CHECKS_OR_DELETE': risk_blocks(template, body),
         'FOCUS_AREAS_OR_DELETE': '',
-        'BLOCKING_RULE_SOURCE': 'owner, 2026-10-30, the rubric above',
+        'BLOCKING_RULE_SOURCE': 'the rubric above',
     })
     write(os.path.join(wt, 'REVIEW-DIFF.patch'), diff)
     write(os.path.join(wt, 'REVIEW-REPORT.md'), rep)

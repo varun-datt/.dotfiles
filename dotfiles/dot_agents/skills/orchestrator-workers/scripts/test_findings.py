@@ -652,7 +652,7 @@ class CliTest(unittest.TestCase):
 
 
 class BlockTest(unittest.TestCase):
-    """Reviewers' structured findings blocks (owner, 2026-11-02, 4a)."""
+    """Reviewers' structured findings blocks."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory()
