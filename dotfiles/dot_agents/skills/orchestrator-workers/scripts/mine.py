@@ -284,16 +284,12 @@ def cumulative_usage(checkpoint, model):
             'calls': (m.get('requests') or {}).get('count') or 0}
 
 
-def load_rounds(run, keep=None):
-    """Every round in the folder, or only those whose name keep() accepts."""
-    rounds, launched, skipped = [], launch_kinds(run), set()
+def load_rounds(run):
+    rounds, launched, resumes = [], launch_kinds(run), launch_resumes(run)
     for fn in sorted(os.listdir(run)):
         if not fn.endswith('.jsonl') or fn == 'markers.jsonl':
             continue
         name = fn[:-len('.jsonl')]
-        if keep and not keep(name):
-            skipped.add(name)
-            continue
         path = os.path.join(run, fn)
         r = read_round(path)
         if r is None:
@@ -313,7 +309,7 @@ def load_rounds(run, keep=None):
         cap = r['cap'] or {}
         rounds.append({'name': name, 'item': item, 'kind': kind, 'model': r['model'], 'effort': r['effort'],
                        'start': start, 'wall_min': max(0.0, (end - start).total_seconds() / 60),
-                       'active_min': r['active'], 'session': r['session'], 'cum_credits': r['cum_credits'], 'cum_premium': r['cum_premium'],
+                       'active_min': r['active'], 'session': r['session'], 'resumes': resumes.get(name), 'cum_credits': r['cum_credits'], 'cum_premium': r['cum_premium'],
                        'capped': bool(cap.get('capped')), 'cap': cap.get('cap'), 'cap_used': cap.get('used'),
                        'usage_cum': r['usage_cum'], 'cold_calls': r['cold_calls'], 'call_starts': r['call_starts'],
                        'compactions': r['compactions'], 'peak_context': r['peak_context'],
@@ -328,24 +324,16 @@ def load_rounds(run, keep=None):
             else:
                 rounds[-1]['verdict'], rounds[-1]['blocking'] = v, b
     rounds.sort(key=lambda x: (x['start'], x['name']))
-    decumulate(rounds, lost_rounds(run, {r['name'] for r in rounds} | skipped))
+    decumulate(rounds, lost_rounds(run, {r['name'] for r in rounds}))
     return rounds
 
 
 def round_in_folder(path):
-    """<name>.jsonl's round as load_rounds sees it, reading only the logs its per-round figures depend on."""
+    """<name>.jsonl's round exactly as load_rounds sees it over the whole folder, so result.py and mine.py agree."""
     run, fn = os.path.split(os.path.abspath(path))
     if not fn.endswith('.jsonl'):
         return None
-    name, launched = fn[:-len('.jsonl')], launch_kinds(run)
-
-    def review(n):
-        kind = split_name(n)[1]
-        return kind in REVIEW_KINDS or launched.get(n) in REVIEW_KINDS
-
-    item = split_name(name)[0]
-    keep = (lambda n: n == name) if review(name) else (lambda n: split_name(n)[0] == item and not review(n))
-    return next((r for r in load_rounds(run, keep) if r['name'] == name), None)
+    return next((r for r in load_rounds(run) if r['name'] == fn[:-len('.jsonl')]), None)
 
 
 def lost_rounds(run, loaded):
@@ -374,6 +362,9 @@ def decumulate(rounds, lost=()):
             known.setdefault(family(r), r['session'])
     sessions = collections.defaultdict(list)
     for r in rounds:
+        # A round with no session id of its own joins its item's session unless route.py launched it fresh.
+        if not r['session'] and r.get('resumes') is False:
+            r['session'] = 'fresh/' + r['name']
         r['session'] = r['session'] or known.get(family(r)) or '/'.join(family(r))
         sessions[r['session']].append(r)
     for rs in sessions.values():
@@ -387,6 +378,7 @@ def decumulate(rounds, lost=()):
             r['partial'] = i == 0 and r['kind'] not in FIRST_KINDS and any(
                 item == r['item'] and at <= r['start'] for item, at in lost)
             r['credits'] = r['premium'] = r['usage'] = None
+            r['continued'] = r['fell'] = False
             cum = r['usage_cum']
             if cum:
                 if cum['calls'] < prev_u['calls']:
@@ -398,6 +390,9 @@ def decumulate(rounds, lost=()):
             # A fall in the running total means a fresh session joined by name, not a resume.
             if r['cum_credits'] < prev_c:
                 prev_c = prev_p = 0
+                r['fell'] = True
+            else:
+                r['continued'] = i > 0
             r['credits'] = r['cum_credits'] - prev_c
             if r['cum_premium'] is not None:
                 r['premium'] = r['cum_premium'] - prev_p
@@ -690,6 +685,11 @@ def launch_kinds(run):
         if d.get('event') == 'launch' and d.get('round') and kind in WORKER_KINDS + REVIEW_KINDS:
             out[d['round']] = kind
     return out
+
+
+def launch_resumes(run):
+    """For each round route.py launched, whether its latest launch resumed an earlier session."""
+    return {d['round']: bool(d.get('resumes')) for _, d in read_routes(run) if d.get('event') == 'launch' and d.get('round')}
 
 
 def read_decisions(run):

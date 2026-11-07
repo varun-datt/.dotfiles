@@ -14,7 +14,9 @@ narrow it. Other outcomes: ended (exitCode 0), ERRORED (another exitCode), NO RE
 `session.usage_checkpoint` is cumulative across `copilot -r` resumes, so for a round that continued a session the
 usage line prints the growth since that session's previous round in this folder (mine.py's decumulate()) as
 premium_requests and ai_credits, with the running total as session_premium_requests and session_ai_credits; when
-the earlier rounds are not in the folder it prints only the session figures, labelled as the running total.
+the earlier rounds are not in the folder it prints only the session figures, labelled as the running total. Whether a
+round continued a session is decided by provenance (its session id, a -resume<N> name, a launch record's `resumes`),
+never by comparing figures.
 1 AI credit = totalNanoAiu / 1e9.
 """
 import argparse, collections, json, os, sys
@@ -37,10 +39,12 @@ def usage_line(path, usage):
     total_p, total_c = usage.get('totalPremiumRequests'), (usage.get('totalNanoAiu') or 0) / 1e9
     session = f"session_premium_requests={total_p} session_ai_credits={total_c:.1f}"
     r = mine.round_in_folder(path)
-    if r and r['credits'] is not None and r['credits'] < r['cum_credits']:
+    if r and r['credits'] is not None and r['continued']:
         return f"premium_requests={r['premium']} ai_credits={r['credits']:.1f} {session} (session total)"
-    if resumed(path, r):
+    if (not r or r['credits'] is None or not r['fell']) and resumed(path, r):
         return f"{session} (session running total; its earlier rounds are not in this folder, so this round's share is unknown)"
+    if r and r['credits'] is not None:
+        return f"premium_requests={r['premium']} ai_credits={r['credits']:.1f}"
     return f"premium_requests={total_p} ai_credits={total_c:.1f}"
 
 

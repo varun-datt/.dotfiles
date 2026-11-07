@@ -403,18 +403,66 @@ class RoundCreditsTest(Base):
         self.assertEqual(self.usage('x-fix2'),
                          ['premium_requests=5 ai_credits=40.0 session_premium_requests=10 session_ai_credits=70.0 (session total)'])
 
-    def test_only_the_items_own_worker_logs_are_read(self):
-        folder = self.real()
-        for name in ('other', 'p1b-review3', 'p1b-recheck3'):
-            shutil.copy(os.path.join(folder, 'p1b.jsonl'), os.path.join(folder, name + '.jsonl'))
-        read, real = [], mine.read_round
-        with mock.patch.object(mine, 'read_round', lambda p: read.append(os.path.basename(p)) or real(p)):
-            self.assertEqual(self.usage('p1b-fix3', folder),
-                             ['premium_requests=15 ai_credits=274.2 session_premium_requests=45 session_ai_credits=981.4 (session total)'])
-            self.assertEqual(sorted(read), ['p1b-fix3.jsonl', 'p1b-fix4.jsonl', 'p1b-resume1.jsonl', 'p1b.jsonl'])
-            read.clear()
-            self.usage('p1b-review3', folder)
-            self.assertEqual(read, ['p1b-review3.jsonl'])
+    def put(self, folder, name, src, start, nano=None, premium=None, session=None, ended=True, launch=None):
+        """<name>.jsonl cut from a real fixture's events, with its checkpoint, session or result changed."""
+        out = []
+        with open(os.path.join(self.REAL, src + '.jsonl')) as f:
+            for e in map(json.loads, f):
+                if e['type'] == 'session.usage_checkpoint':
+                    e['data']['totalNanoAiu'] = e['data']['totalNanoAiu'] if nano is None else nano
+                    e['data']['totalPremiumRequests'] = e['data']['totalPremiumRequests'] if premium is None else premium
+                if e['type'] == 'result':
+                    if not ended:
+                        continue
+                    e['sessionId'] = session or e['sessionId']
+                out.append(json.dumps(e))
+        with open(os.path.join(folder, name + '.jsonl'), 'w') as f:
+            f.write('\n'.join(out) + '\n')
+        with open(os.path.join(folder, name + '.start'), 'w') as f:
+            f.write(str(start))
+        if launch:
+            with open(os.path.join(folder, 'routes.jsonl'), 'a') as f:
+                f.write(json.dumps({'event': 'launch', 'round': name, **launch}) + '\n')
+
+    def figure(self, folder, name):
+        return {r['name']: r for r in mine.load_rounds(folder)}[name]
+
+    def test_a_fresh_round_without_a_session_id_stands_alone_by_its_launch_record(self):
+        folder = self.real('p1b-resume1.jsonl', 'p1b-resume1.start', 'p1b-fix3.jsonl', 'p1b-fix3.start',
+                           'p1b-fix4.jsonl', 'p1b-fix4.start')
+        self.put(folder, 'p1b-fix1', 'p1b-fix3', 1793657053, ended=False, launch={'kind': 'fix'})
+        self.assertEqual(self.usage('p1b-fix1', folder), ['premium_requests=45 ai_credits=981.4'])
+        self.assertEqual(round(self.figure(folder, 'p1b-fix1')['credits'], 1), 981.4)
+        self.assertEqual(self.usage('p1b', folder), ['premium_requests=15 ai_credits=220.7'])
+
+    def test_a_resumed_round_after_a_zero_round_or_a_fall_prints_its_known_figure(self):
+        folder = self.real('p1b-resume1.jsonl', 'p1b-resume1.start', 'p1b-fix4.jsonl', 'p1b-fix4.start')
+        self.put(folder, 'p1b', 'p1b', 1793655498, nano=0, premium=0)
+        self.assertEqual(self.usage('p1b', folder), ['premium_requests=0 ai_credits=0.0'])
+        self.assertEqual(self.usage('p1b-fix3', folder),
+                         ['premium_requests=45 ai_credits=981.4 session_premium_requests=45 session_ai_credits=981.4 (session total)'])
+        self.put(folder, 'p1b-fix4', 'p1b-fix3', 1793940084, launch={'kind': 'fix', 'resumes': 'p1b'})
+        self.assertEqual(self.usage('p1b-fix4', folder),
+                         ['premium_requests=0 ai_credits=0.0 session_premium_requests=45 session_ai_credits=981.4 (session total)'])
+        self.put(folder, 'p1b', 'p1b-fix4', 1793655498)
+        self.assertEqual(self.usage('p1b-fix3', folder), ['premium_requests=45 ai_credits=981.4'])
+        self.assertEqual(round(self.figure(folder, 'p1b-fix3')['credits'], 1), 981.4)
+
+    def test_a_round_outside_the_naming_scheme_gets_the_figure_mine_gives_and_a_review_stands_alone(self):
+        folder = self.real('p1b-fix4.jsonl', 'p1b-fix4.start')
+        self.put(folder, 'p1b-report2', 'p1b-fix4', 1793940084)
+        self.put(folder, 'p1b-review3', 'p1b-resume1', 1793938000, session='00000000-0000-4000-8000-0000000000c2',
+                 launch={'kind': 'review'})
+        mine_says = self.figure(folder, 'p1b-report2')
+        self.assertEqual(round(mine_says['credits'], 1), 102.7)
+        with open(os.path.join(folder, 'p1b-report2.jsonl')) as f:
+            usage = [json.loads(l)['data'] for l in f if 'usage_checkpoint' in l][-1]
+        self.assertEqual(result.usage_line(os.path.join(folder, 'p1b-report2.jsonl'), usage),
+                         f"premium_requests={mine_says['premium']} ai_credits={mine_says['credits']:.1f} "
+                         'session_premium_requests=60 session_ai_credits=1084.1 (session total)')
+        self.assertEqual(self.usage('p1b-review3', folder), ['premium_requests=30 ai_credits=707.1'])
+        self.assertEqual(self.usage('p1b-fix3', folder),
+                         ['premium_requests=15 ai_credits=274.2 session_premium_requests=45 session_ai_credits=981.4 (session total)'])
 
 
 if __name__ == '__main__':

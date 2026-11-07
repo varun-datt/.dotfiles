@@ -352,7 +352,9 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **A round's credits:** `result.py`, which every round prints at its end, gives a round that continued an
   earlier session (a fix round launched with `--resume-session`, a `-resume<N>` round) the growth since that
   session's previous round in the folder as `ai_credits`, with the running total beside it as `session_ai_credits`;
-  when the earlier rounds are not in the folder it prints only the running total, labelled as such.
+  when the earlier rounds are not in the folder it prints only the running total, labelled as such. Whether a round
+  continued a session comes from provenance only (its own session id, a `-resume<N>` name, a `resumes` launch record),
+  and its figures are the ones `mine.py` gives for it over the whole folder.
 - **Watchdog:** `watch.py`, in an async terminal; with the queue runner it is only a stall watchdog, and the
   chat waits with `runqueue.py wait`. It exits on:
   - a stall: 20 awake minutes without output;
