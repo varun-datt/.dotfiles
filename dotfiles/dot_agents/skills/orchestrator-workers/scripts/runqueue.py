@@ -40,10 +40,17 @@ minutes while it stays true. --idle-alert 0 turns it off.
 
 States: waiting (on an item not done), ready, running, exited N, done.
 
-Pipeline: `add <id> --pipeline build,review,suspend:rulings,fix,recheck,suspend:merge --worktree DIR` runs the
+Pipeline: `add <id> --pipeline build,review,suspend:rulings,fix,suspend:merge --worktree DIR` runs the
 steps in order, each when the one before ended with exit 0, through the skill's own launchers: build and fix with
 route.py run (rounds <id> and <id>-fix1, briefs <run>/<id>.prompt.md and <id>-fix1.prompt.md), review and recheck
 with review.sh (<id>-review, <id>-rereview) after reviewprep.py writes their inputs. Reviews never take a slot.
+That is the default: one review, one fix round, then the merge; recheck (a second review) runs only when the brief
+asks for it. `add` prints the steps one per line, then refuses (exit 2, nothing queued) unless the brief (--brief, else
+<run>/<id>.prompt.md) has one STEPS: line outside code blocks and comments, `STEPS: build, review, fix ("<the owner's
+words>")`, that quotes the owner and names every build, review, fix and recheck step in the pipeline (suspends are not
+checked); the runner reads it again before launching each such step and stops the item as a failed step (exit 2)
+when the line no longer names it. Plan, then apply, as Terraform's plan and apply
+(https://developer.hashicorp.com/terraform/cli/run).
 The fix step resumes the build's own session (route.py run --resume-session <id>, with <id>-fix1.body.md alone as its
 prompt) when routes.jsonl records the build's launch, so the builder fixes its own work; else it
 starts a fresh session with the build's prompt, its body swapped for the fix body.
@@ -61,6 +68,7 @@ import argparse, contextlib, fcntl, filecmp, json, os, re, shlex, shutil, signal
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
+import brief as brief_check  # noqa: E402
 import reviewprep  # noqa: E402
 
 ROUTE = os.path.join(HERE, 'route.py')
@@ -77,6 +85,44 @@ SCRIPT = re.compile(r'\.(?:z|ba)?sh$|\.py$|\.command$')
 LAUNCHER = re.compile(r'(?:^|[\s/;&|=(])(?:route\.py\s+run|review\.sh)(?=$|[\s;&|)])')
 PLAIN_ENV = 'OW_PLAIN_ITEM'
 WAIT_MAX_MIN = 4
+QUOTED = re.compile(r'"[^"]*\S[^"]*"|\u201c[^\u201d]*\S[^\u201d]*\u201d')
+STEPS_FORM = 'STEPS: build, review, fix ("<the owner\'s words that ask for these steps>")'
+
+
+def steps_line(path):
+    """(the step names on the brief's one STEPS: line, its line number, None), or (None, None, why it cannot be used).
+    Lines inside fenced code blocks and HTML comments do not count; names are matched without case or spaces."""
+    try:
+        text = reviewprep.read(path)
+    except OSError:
+        return None, None, f'no brief at {path}'
+    hits = [n for n, line in brief_check.outside_fences(brief_check.brief_lines(text)) if line.startswith('STEPS:')]
+    if not hits:
+        return None, None, f'{path} has no STEPS: line; add one in the form {STEPS_FORM}'
+    if len(hits) > 1:
+        return None, None, f"{path} has {len(hits)} STEPS: lines (lines {', '.join(map(str, hits))}); keep one"
+    n = hits[0]
+    rest = brief_check.brief_lines(text)[n - 1][len('STEPS:'):]
+    if not QUOTED.search(rest):
+        return None, n, f'line {n} of {path}: the STEPS: line quotes none of the owner\'s words; use {STEPS_FORM}'
+    names = [x for x in (re.sub(r'\s+', '', w).lower() for w in re.split(r'[("\u201c]', rest, maxsplit=1)[0].split(',')) if x]
+    bad = [x for x in names if x not in STEPS and not SUSPEND.match(x)]
+    if bad or not names:
+        return None, n, (f"line {n} of {path}: unknown step on the STEPS: line: {', '.join(bad) or '(none named)'}; "
+                         f"use {', '.join(STEPS)}")
+    return {x for x in names if x in STEPS}, n, None
+
+
+def steps_refusal(path, names):
+    """None when the brief's STEPS: line names every build, review, fix or recheck step among names; else why not."""
+    asked, n, why = steps_line(path)
+    if why:
+        return why
+    extra = [x for x in names if x in STEPS and x not in asked]
+    if not extra:
+        return None
+    return (f"{', '.join(extra)} not named on the STEPS: line (line {n} of {path}), which names "
+            f"{', '.join(x for x in STEPS if x in asked)}; the owner did not ask for it")
 
 
 def guard(cmd, cwd=None):
@@ -519,6 +565,10 @@ def launch_step(rd, q, it, s):
         with contextlib.suppress(FileNotFoundError):
             os.remove(path)
     try:
+        if s['name'] in STEPS:
+            why = steps_refusal(it['brief'], [s['name']])
+            if why:
+                raise reviewprep.PrepError(f"{s['name']} not launched: {why}")
         if s['name'] in ('build', 'fix') and not s.get('head'):
             s['head'] = reviewprep.git(it['worktree'], 'rev-parse', 'HEAD').strip()
         argv = step_argv(rd, it, s)
@@ -676,8 +726,9 @@ def main(argv=None):
     a.add_argument('id')
     how = a.add_mutually_exclusive_group(required=True)
     how.add_argument('--cmd', dest='shell', help='shell command that runs the item')
-    how.add_argument('--pipeline', help='steps run in order, e.g. build,review,suspend:rulings,fix,recheck,suspend:merge '
-                     '(build, review, fix, recheck, suspend:<name>; the last must be a suspend)')
+    how.add_argument('--pipeline', help='steps run in order, e.g. build,review,suspend:rulings,fix,suspend:merge '
+                     '(build, review, fix, recheck, suspend:<name>; the last must be a suspend; the brief\'s STEPS: line '
+                     'must name each build, review, fix and recheck step)')
     a.add_argument('--worktree', help="with --pipeline: the item's worktree")
     a.add_argument('--brief', help='with --pipeline: the build prompt (default <run>/<id>.prompt.md)')
     a.add_argument('--route-args', default='', help='with --pipeline: extra route.py run options for build and fix')
@@ -758,6 +809,10 @@ def main(argv=None):
                 return 2
             if args.pipeline is not None:
                 item, err = pipeline_item(rd, args)
+                if not err:
+                    print('\n'.join(f"{k}. {s['name']}" for k, s in enumerate(item['pipeline'], 1)))
+                    why = steps_refusal(item['brief'], [s['name'] for s in item['pipeline']])
+                    err = why and f'refused, nothing queued: {why}'
                 if err:
                     print(f'queue: {err}', file=sys.stderr)
                     return 2
@@ -832,7 +887,7 @@ def pipeline_item(rd, args):
     if not SUSPEND.match(names[-1]):
         return None, 'the last pipeline step must be a suspend (such as suspend:merge), so the chat ends the item'
     if len(set(names)) != len(names):
-        return None, 'a pipeline step appears twice; one review, one fix round and one re-check per item'
+        return None, 'a pipeline step appears twice; one review, one fix round and at most one re-check per item'
     if 'recheck' in names and ('fix' not in names or names.index('fix') > names.index('recheck')):
         return None, 'recheck needs a fix step before it'
     if not args.worktree or not os.path.isdir(os.path.expanduser(args.worktree)):

@@ -78,7 +78,7 @@ The owner answers in the chat. Record the answer with `answered` as soon as you 
 - **Savings:**
   - workers commit each step;
   - reviewers read a diff;
-  - re-reviews cover the fixes only;
+  - a re-review, when a brief asks for one, covers the fixes only;
   - the orchestrator reads summaries, not transcripts;
   - routing by kind of round, keep-warm polling and dynamic caps ([routing.md](routing.md)).
 - **Credit caps, probed** (VERIFIED by the orchestrator, CLI 1.0.97, `-p` with `--max-ai-credits 30`):

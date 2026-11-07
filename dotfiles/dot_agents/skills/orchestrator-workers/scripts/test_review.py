@@ -122,8 +122,8 @@ class PromptTextTest(unittest.TestCase):
         blocking = {(i, f'L{n + 1}') for i, cells in rows.items() for n, c in enumerate(cells) if c in ('Blocker', 'Major')}
         self.assertEqual(blocking, {('I1', 'L1'), ('I1', 'L2'), ('I2', 'L1'), ('I2', 'L2'), ('I3', 'L1')})
         for row in ('| Blocker, Major | Fixed first only with a WHY NOW line: harm to the owner once merged, or a planned '
-                    'item builds on it | Fix brief, and the re-review checks the fix; otherwise the tech-debt list (a Blocker '
-                    'marked follow-up) |',
+                    'item builds on it | Fix brief, and the fixer\'s report and the tests at merge decide whether the fix '
+                    'worked; otherwise the tech-debt list (a Blocker marked follow-up) |',
                     '| Minor | Does not block | One line on the repository\'s tech-debt list |',
                     '| Nit | Does not block | Counted in one line, never listed |',
                     '| Pre-existing | Does not block | Tech-debt list if it would be Major, else dropped |',
@@ -175,10 +175,13 @@ class PromptTextTest(unittest.TestCase):
             for said in ('one more fix round', 'another fix round', 'a second fix round', 'Fixes made after the re-review go'):
                 self.assertNotIn(said, flat, path)
         lifecycle = ' '.join(read('SKILL.md').split('## Lifecycle', 1)[1].split('\n## ', 1)[0].split())
-        self.assertIn('When the owner is watching, the earlier rule holds: a finding the re-review leaves open pauses the item '
+        self.assertIn('When the owner is watching, a Blocker or Major the fix round leaves open pauses the item '
                       'for the owner: one fix round, then the owner decides', lifecycle)
-        self.assertIn('what the re-review leaves open goes to tech debt marked follow-up, and the item merges.',
+        self.assertIn('what the fix round leaves open goes to tech debt marked follow-up, and the item merges.',
                       lifecycle)
+        self.assertIn('one review by another model family, then one fix round, then the merge. The fixer\'s report and '
+                      'the tests at merge decide whether the fix worked; there is no second look', lifecycle)
+        self.assertNotIn('re-review leaves open', lifecycle)
 
     def test_the_critique_asks_for_each_cited_standard_s_own_names(self):
         t = visible(read('assets', 'critique-research.md'))
