@@ -82,6 +82,19 @@ class PreambleTest(unittest.TestCase):
         hits = [str(p) for p in SKILL.rglob("*") if p.is_file() and gone in p.read_text(errors="replace")]
         self.assertEqual(hits, [])
 
+    def test_both_preambles_say_tvly_works_and_the_shell_refuses_outside_paths(self):
+        for name in ("preamble-worker.md", "preamble-research.md"):
+            text = " ".join((SKILL / "assets" / name).read_text().split())
+            for line in ("`tvly` works in this session",
+                         "The shell refuses any command that names a path outside this worktree and its `--add-dir` folders",
+                         "`/tmp`, `cd /tmp`, `-o /tmp/x`", "`/usr/bin/grep` or `/usr/bin/git`", "another session's folder",
+                         "scratch and tool output under the worktree's `.gates/`", "call programs by name"):
+                self.assertIn(line, text, name)
+        for p in sorted((SKILL / "assets").glob("*.md")) + [SKILL / "SKILL.md"]:
+            text = " ".join(p.read_text().split())
+            self.assertNotIn("not chained with", text, p.name)
+            self.assertNotIn("one `tvly` call per shell command", text, p.name)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -254,7 +254,7 @@ that point at it), and no work product, repository, customer, host or cloud reso
 
 Moved from that project's state file, which now keeps only current state.
 
-- `route.py` writes `<item>.base` in the run folder, not the worktree; briefs that said "base in .base" had workers report it missing: name the full path. A worker stopped after 8 of its 45 minutes, believing its time was up: briefs ask for `date` at start and end (run amc-2026-11-02-p1). [notes]
+- `route.py` writes `<item>.base` in the run folder, which a `copilot -p` worker cannot read: `route.py run` now ends every prompt but a review's with a `BASE COMMIT` line holding the hash and the round's diff range, so a brief need not name the base. A worker stopped after 8 of its 45 minutes, believing its time was up: briefs ask for `date` at start and end (run amc-2026-11-02-p1). [notes]
 - `runqueue.py add` returned 0 for a review whose prompt was not written yet, and the review then failed: write the prompt before queueing it. `premium_requests=15` says nothing about cost: read `ai_credits` (run amc-2026-11-02). [notes]
 - Hand a fix round the peer reviewer's final note, and give page work its own round (2026-11-01). [notes]
 - `runqueue.py` has no remove, and `--after` releases only on `done`: to re-gate, `done` the dependents, add `<gate>b` and re-add them `--after <gate>b`. Pass `OW_RUN_DIR=<run>` on every command. Workers cannot read outside their worktree, so copy the reports they need into `<worktree>/.gates/` (2026-10-31). [notes]

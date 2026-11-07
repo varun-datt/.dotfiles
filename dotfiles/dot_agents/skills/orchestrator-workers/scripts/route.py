@@ -922,6 +922,34 @@ def outcome(rc, path):
 REVIEW_TAIL = '\n\nYour LAST message is the only one read: repeat every finding in it in full, even ones an earlier message gave.\n'
 
 
+def head_of(wt):
+    """The worktree's HEAD commit in full, else None."""
+    done = subprocess.run(['git', '-C', wt, 'rev-parse', 'HEAD'], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    return done.stdout.strip() if done.returncode == 0 and done.stdout.strip() else None
+
+
+def base_tail(run, rnd, kind, head):
+    """The labelled prompt line naming the round's base commit: a worker cannot read <run>/*.base itself. A resume
+    round continues earlier work, so its base is the item's first round's when <run>/<item>.base exists."""
+    import mine
+    item, name_kind = mine.split_name(rnd)
+    first = None
+    if kind == 'resume' or name_kind == 'resume':
+        with contextlib.suppress(OSError):
+            with open(os.path.join(run, item + '.base'), encoding='utf-8') as f:
+                first = f.read().strip() or None
+        if first:
+            return (f"\n\nBASE COMMIT (the base of {item}'s first round, from route.py): `{first}`. "
+                    f"This round's diff is `{first}..HEAD`.\n")
+        if head:
+            return (f"\n\nBASE COMMIT (the worktree's HEAD at this round's launch; {item}'s first base was not found): "
+                    f"`{head}`. This round's diff is `{head}..HEAD`.\n")
+    elif head:
+        return f"\n\nBASE COMMIT (the worktree's HEAD at this round's launch): `{head}`. This round's diff is `{head}..HEAD`.\n"
+    return ('\n\nBASE COMMIT: unknown: the worktree had no git HEAD at launch. Do not invent one; '
+            'say so in your report.\n')
+
+
 def run_round(a, cfg):
     import runqueue
     refusal = runqueue.caffeinate_refusal() or runqueue.plain_refusal()
@@ -990,10 +1018,12 @@ def run_round(a, cfg):
     if a.load_wait and sweep('load', '--wait', str(a.load_wait)):
         print(f'LOAD: {rnd} not launched', file=sys.stderr)
         return 12
+    head = head_of(wt)
+    tail = REVIEW_TAIL if kind == 'review' else base_tail(run, rnd, kind, head)
     if resumed:
-        argv = resumed_argv(resumed, c, a.add_dir or [], text)
+        argv = resumed_argv(resumed, c, a.add_dir or [], text + tail)
     else:
-        argv = launch_argv(rnd, kind, wt, c, a.add_dir or [], text + (REVIEW_TAIL if kind == 'review' else ''))
+        argv = launch_argv(rnd, kind, wt, c, a.add_dir or [], text + tail)
     session = argv[argv.index('-r' if resumed else '-n') + 1]
     jsonl = os.path.join(run, rnd + '.jsonl')
     measured = {}
@@ -1002,10 +1032,9 @@ def run_round(a, cfg):
     try:
         with open(os.path.join(run, rnd + '.start'), 'w') as f:
             f.write(f'{int(datetime.datetime.now().timestamp())}\n')
-        base = subprocess.run(['git', '-C', wt, 'rev-parse', 'HEAD'], capture_output=True, text=True, stdin=subprocess.DEVNULL)
-        if base.returncode == 0:
+        if head:
             with open(os.path.join(run, rnd + '.base'), 'w') as f:
-                f.write(base.stdout)
+                f.write(head + '\n')
         else:
             print(f'route.py run: no git HEAD in {wt}; {rnd}.base not written', file=sys.stderr)
         log(run, {'event': 'launch', 'at': datetime.datetime.now().astimezone().isoformat(timespec='seconds'),

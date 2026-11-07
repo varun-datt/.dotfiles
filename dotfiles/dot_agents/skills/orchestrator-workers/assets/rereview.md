@@ -11,11 +11,11 @@ follow-up and the item merges (owner, 2026-11-02). -->
 You are a read-only reviewer from a different model family than the author. This is a SHORT RE-REVIEW. Do not edit files; use the shell only to read. Read `REVIEW-DIFF.patch` at this worktree's root (the fix commits {{FIX_COMMITS}} on branch `{{BRANCH}}`) and `REVIEW-REPORT.md` (the fix round's report).
 
 Findings the fix round was given:
-1. {{FINDING_1}}. Where: {{FILE_LINE_1}}. Done when: {{DONE_WHEN_1}}.
+1. {{FINDING_1}}. Where: {{FILE_LINE_1}}. Done when: {{DONE_WHEN_1}}.{{CASES_1|}}
 {{MORE_FINDINGS}}
 
 CHECK, nothing else:
-1. Each finding: fixed, partly fixed or not fixed, with file:line. Fixed means its scenario can no longer happen; say how you know.
+1. Each finding: fixed, partly fixed or not fixed, with file:line. Fixed means its scenario can no longer happen; say how you know. When a finding lists its cases ("Cases:"), check each listed case the same way, and name each one not covered.
 2. Each finding's test: does it check the finding's scenario, and would it fail with the fix removed? Read it; you need not run it.
 3. Harm the fix diff itself introduces: owner data lost or corrupted, a secret or private text leaking, an approval or confinement bypassed, or a flow that no longer completes, in normal use or at an unlucky moment (Stop, restart, reload, a failing source). Only lines this diff changes; nothing else counts here.
 

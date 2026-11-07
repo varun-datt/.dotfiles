@@ -826,6 +826,93 @@ class PipelineTest(unittest.TestCase):
         t.join(5)
 
 
+class RunnerStartTest(unittest.TestCase):
+    cli, items, start, finish = QueueTest.cli, QueueTest.items, QueueTest.start, QueueTest.finish
+    REAL = os.path.join(S, 'fixtures', 'queue')
+    LAST_EXIT = 1793940438.940078
+    PAST = ['r1-review exited 124', 'p1b-fix3 exited 0', 'p1b-recheck3 exited 0', 'p1b-fix4 exited 0', 'p1b-recheck4 exited 0']
+
+    def setUp(self):
+        QueueTest.setUp(self)
+        os.makedirs(self.rd)
+        with open(os.path.join(self.REAL, 'queue.json')) as f:
+            self.q = json.load(f)
+        q.save(self.rd, self.q)
+
+    def wait(self):
+        with mock.patch('sys.stdout', new_callable=io.StringIO) as out:
+            code = q.main(['wait', '--max-min', '0.002', '--settle', '0', '--poll', '0.01', '--run-dir', self.rd])
+        return code, [ln for ln in out.getvalue().splitlines() if not ln.endswith(('waiting', 'nothing needs the chat yet'))]
+
+    def note(self, n, start):
+        return (f"{n} plain item(s) exited before the queue runner started at {time.strftime('%H:%M', time.localtime(start))}; "
+                'not news: runqueue.py status lists them')
+
+    def started(self, at, pid=None):
+        with open(os.path.join(self.rd, 'queue.started'), 'w') as f:
+            json.dump({'pid': pid or os.getpid(), 'start': at}, f)
+
+    def test_exits_before_the_runner_started_are_one_note_per_runner_not_news(self):
+        start = self.LAST_EXIT + 60
+        self.started(start)
+        self.assertEqual(self.wait(), (1, [self.note(5, start)]))
+        self.assertEqual(self.wait(), (1, []))
+        later = start + 600
+        self.started(later)
+        self.assertEqual(self.wait(), (1, [self.note(5, later)]))
+        self.assertEqual(self.wait(), (1, []))
+
+    def test_with_the_real_seen_list_nothing_is_printed(self):
+        import shutil
+        shutil.copy(os.path.join(self.REAL, 'queue.seen'), self.rd)
+        self.started(self.LAST_EXIT + 60)
+        self.assertEqual(self.wait(), (1, []))
+
+    def test_an_exit_after_the_start_and_the_latest_of_two_restarts(self):
+        first = self.LAST_EXIT - 100
+        self.started(first)
+        self.started(self.LAST_EXIT - 1)
+        self.assertEqual(self.wait(), (0, [self.note(4, self.LAST_EXIT - 1), 'p1b-recheck4 exited 0']))
+        self.assertEqual(self.wait(), (1, []))
+
+    def test_a_suspend_or_failed_step_before_the_start_is_still_reported(self):
+        def step(name, start, end=None, exit=None):
+            return {'name': name, 'start': start, 'end': end, 'exit': exit, 'pid': None}
+        before = self.LAST_EXIT - 50
+        self.q['items'] += [
+            {'id': 's', 'after': [], 'slot': True, 'priority': 1, 'added': before, 'done': False, 'worktree': self.rd,
+             'pipeline': [step('build', before, before + 1, 0), step('suspend:rulings', before + 2)]},
+            {'id': 'f', 'after': [], 'slot': True, 'priority': 1, 'added': before, 'done': False, 'worktree': self.rd,
+             'pipeline': [step('build', before, before + 3, 4), step('suspend:merge', None)]}]
+        q.save(self.rd, self.q)
+        start = self.LAST_EXIT + 60
+        self.started(start)
+        self.assertEqual(self.wait(), (0, [self.note(5, start), 's suspend:rulings: write s.rulings.done', 'f build failed 4']))
+
+    def test_with_no_record_or_a_gone_runner_every_unseen_exit_is_reported_as_before(self):
+        import subprocess
+        self.assertEqual(self.wait(), (0, self.PAST))
+        os.remove(os.path.join(self.rd, 'queue.seen'))
+        gone = subprocess.Popen(['true'])
+        gone.wait()
+        self.started(self.LAST_EXIT + 60, gone.pid)
+        with open(os.path.join(self.rd, 'queue.pid'), 'w') as f:
+            f.write(str(gone.pid))
+        self.assertEqual(self.wait(), (0, self.PAST))
+
+    def test_the_runner_records_its_pid_and_start(self):
+        q.save(self.rd, {'items': []})
+        self.cli('add', 'a', '--cmd', 'true')
+        t0 = time.time()
+        t = self.start()
+        self.assertTrue(wait_until(lambda: os.path.exists(os.path.join(self.rd, 'queue.started'))))
+        with open(os.path.join(self.rd, 'queue.started')) as f:
+            d = json.load(f)
+        self.assertEqual(d['pid'], os.getpid())
+        self.assertTrue(t0 <= d['start'] <= time.time())
+        self.finish(t, ['a'])
+
+
 def report_log(text):
     return (json.dumps({'type': 'assistant.message', 'data': {'content': text}}) + '\n'
             + json.dumps({'type': 'result', 'exitCode': 0}) + '\n')
@@ -891,6 +978,48 @@ class ReviewPrepTest(unittest.TestCase):
             fix = f.read()
         self.assertEqual([n for n, *_ in q.reviewprep.findings(fix.replace('{{MORE_FINDINGS}}', '\n2. B. Where: x. Done when: y.'))],
                          ['1', '2'])
+
+    def rechecked(self, brief):
+        self.write('a-fix1.base', self.git('rev-parse', 'HEAD'))
+        self.commit('a-fix1.txt')
+        with open(os.path.join(S, 'fixtures', 'recheck', 'p1b-fix3.report.md')) as f:
+            self.write('a-fix1.jsonl', report_log(f.read()))
+        self.write('a-fix1.prompt.md', brief)
+        return self.read(os.path.basename(q.reviewprep.recheck(self.rd, 'a', self.wt)))
+
+    def test_the_recheck_keeps_each_findings_cases_from_a_real_fix_brief(self):
+        with open(os.path.join(S, 'fixtures', 'recheck', 'p1b-fix3.prompt.md')) as f:
+            brief = f.read()
+        recheck = self.rechecked(brief)
+        # The two lists as the orchestrator re-added them by hand to the re-check prompt (p1b-recheck3.md).
+        one = ('the held record keeps the file as it was when AMC acknowledged the message (for example a copy under '
+               "AMC's data folder, `~/Library/Application Support/amc` in use and the test data folder in tests, sent by "
+               "the copy's path), release and resend use that copy, and the copy is removed when the held record is "
+               'released or discarded. Cases: the file is edited before release; the file is deleted before release; '
+               'the host restarts, the file changes, then the owner resends.')
+        two = ('the fake agent can send old updates during load, and the test fails without the fix. Cases: an old update '
+               'before load starts; during load; after load but before the old answer; after the deadline (dropped as '
+               'history, as today).')
+        self.assertIn('\n1. A held file attachment is saved by its location, not its contents. Where: ', recheck)
+        self.assertIn(one, recheck)
+        self.assertIn('\n2. Text from the old prompt is dropped during a Cursor reload. Where: ', recheck)
+        self.assertIn(two, recheck)
+        self.assertEqual(recheck.count(' Cases: '), 2)
+        self.assertLess(recheck.index(one), recheck.index('\n2. Text from'))
+        self.assertIn('When a finding lists its cases ("Cases:"), check each listed case the same way', recheck)
+
+    def test_cases_before_done_when_over_several_lines_quoting_a_placeholder_or_absent(self):
+        recheck = self.rechecked(
+            'THIS IS A FIX ROUND.\n\nFIX THESE, one at a time:\n'
+            '2. First. Where: `one.py` about 1. Cases: an empty list;\n   a list quoting {{FINDING_1}} and {{MORE_FINDINGS}}.'
+            ' Done when: one holds.\n'
+            '3. Second. Where: `two.py` about 2. Done when: two holds.\n'
+            '4. Third. Where: `three.py` about 3. Done when: three holds. Cases: a; b.\n\nWHY NOW, by number:\n')
+        self.assertIn('\n2. First. Where: `one.py` about 1. Done when: one holds. Cases: an empty list; a list quoting '
+                      '{{FINDING_1}} and {{MORE_FINDINGS}}.\n', recheck)
+        self.assertIn('\n3. Second. Where: `two.py` about 2. Done when: two holds.\n', recheck)
+        self.assertIn('\n4. Third. Where: `three.py` about 3. Done when: three holds. Cases: a; b.\n', recheck)
+        self.assertEqual(recheck.count(' Cases: '), 2)
 
 
 if __name__ == '__main__':

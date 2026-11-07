@@ -178,7 +178,10 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   without a `reason=`), logs the decision with the CLI version to `routes.jsonl`, waits for load
   (exit 12), writes `<item>.start`, `<item>.base` and the time budget in `budgets.json`, and runs
   `copilot -p` under a timeout with exactly the logged values, no MCP servers, push denied and no
-  questions, into `<item>.jsonl` and `<item>.err`. On exit it sweeps the worktree's leftovers. It
+  questions, into `<item>.jsonl` and `<item>.err`. Every prompt but a review's ends with a `BASE COMMIT`
+  line holding the round's base hash and its diff range `<hash>..HEAD`, because a worker cannot read the
+  run folder: the worktree's HEAD at launch, or for a `<item>-resumeN` round the item's first base
+  (`<item>.base`); with no git HEAD the line says the base is unknown (owner, 2026-11-06). On exit it sweeps the worktree's leftovers. It
   exits non-zero when copilot fails (124 on timeout) or the round errored (4) or hit its cap (3).
   Re-running it before the round launched reuses the logged decision; `--fresh` draws again.
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
@@ -252,15 +255,18 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   broken, rows checked against evidence), naming the `software-testing` case lists by their
   deployed path, then carries the shared rules: never push, no secrets, `commit --only`, gates in
   the foreground, polls at most every 240 s to keep the cache warm, a labelled report with an
-  impact map and a case table.
+  impact map and a case table. Both preambles say what a `copilot -p` shell refuses: any command naming a path
+  outside the worktree and its `--add-dir` folders (`/tmp`, `-o /tmp/x`, `/usr/bin/grep`), so scratch goes under
+  `.gates/` and programs are called by name; `tvly` itself works (owner, 2026-11-06: preamble lines only, no
+  launch flag for paths).
 - **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body. Its note is
   critiqued by another model family with [critique-research.md](assets/critique-research.md),
   against a snapshot of the note, page, task and report; the critic also asks whether the note
   builds what already exists (owner, 2026-11-01).
 - **Reviews:** [review.md](assets/review.md), which grades on [references/rubric.md](references/rubric.md)
   (`review.sh` fills `{{RUBRIC}}`) and tags each finding's cause and class, and the short
-  [rereview.md](assets/rereview.md), which only checks each named finding was fixed, its test, and
-  harm the fix itself adds, at high effort.
+  [rereview.md](assets/rereview.md), which only checks each named finding was fixed (each of its listed
+  cases too), its test, and harm the fix itself adds, at high effort.
 - **Fix round:** [preamble-worker.md](assets/preamble-worker.md) + [fix.md](assets/fix.md), a
   fresh session, so it names the branch, worktree, base commit and ports.
 - **Resume round, sent with `-r`:** [resume.md](assets/resume.md); short, because the session
@@ -298,7 +304,8 @@ every script in the folder.)
   launches each step when the one before exits 0: build and fix through `route.py run` (rounds `<id>` and
   `<id>-fix1`), review and re-check through `review.sh` (`<id>-review`, `<id>-rereview`), after
   `scripts/reviewprep.py` writes `REVIEW-DIFF.patch`, `REVIEW-REPORT.md` and the filled prompt (risk blocks from
-  the brief's RISK line; the re-check's findings from the fix brief's numbered list). Reviews take no slot. The
+  the brief's RISK line; the re-check's findings from the fix brief's numbered list, each with its "Cases:" list as
+  written, which the re-reviewer checks case by case). Reviews take no slot. The
   diff starts at the HEAD the build (or fix) step had at its first launch, so a retry does not narrow it;
   `<id>.reviewbase` overrides it after a catch-up with main.
   - **Suspend points** are the two steps that need judgement: `suspend:rulings` (accept or reject each finding)
@@ -324,6 +331,10 @@ every script in the folder.)
     (a suspend, a failed step, a plain item that exited), printing one line each, and exits 1 on timeout.
     Run it in a foreground terminal; it prints a tick each minute. More than 4 minutes is refused: the chat's
     prompt cache goes cold after 5, and each wake after that re-reads its whole context.
+    A plain item's exit from before the running runner started (`runqueue.py run` writes its pid and start to
+    `<run>/queue.started`) is not news: `wait` prints one line per runner counting those exits and pointing to
+    `runqueue.py status`, and keeps waiting. Suspends and failed steps from before the start still wake it; with no
+    live runner it reports every unseen exit, as before.
 - **It alerts the owner, not the chat.** When the chat has been idle for `--idle-alert` minutes
   (default 20) and something waits on it, the runner posts a macOS notification and appends the
   line to `ALERT.log`, once for each new item waiting: it does not repeat while the same items
@@ -338,6 +349,12 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
 - **Status table:** `status.py`. Its states are running, STALLED, DIED, ERRORED, CAPPED, done and
   superseded. A capped round shows its credits against the cap. A died or errored round
   reads superseded once a later round of the same item starts.
+- **A round's credits:** `result.py`, which every round prints at its end, gives a round that continued an
+  earlier session (a fix round launched with `--resume-session`, a `-resume<N>` round) the growth since that
+  session's previous round in the folder as `ai_credits`, with the running total beside it as `session_ai_credits`;
+  when the earlier rounds are not in the folder it prints only the running total, labelled as such. Whether a round
+  continued a session comes from provenance only (its own session id, a `-resume<N>` name, a `resumes` launch record),
+  and its figures are the ones `mine.py` gives for it over the whole folder.
 - **Watchdog:** `watch.py`, in an async terminal; with the queue runner it is only a stall watchdog, and the
   chat waits with `runqueue.py wait`. It exits on:
   - a stall: 20 awake minutes without output;
