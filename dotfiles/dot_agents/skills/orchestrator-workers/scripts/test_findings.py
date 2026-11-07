@@ -663,8 +663,15 @@ class FixCheckTest(unittest.TestCase):
         self.wt = os.path.join(tmp.name, 'wt')
         os.makedirs(os.path.join(self.wt, 'tests'))
         with open(os.path.join(self.wt, 'tests', 'test_a.py'), 'w') as f:
-            f.write('class StoreTest:\n    def test_rows_survive(self): pass\n    def test_check_fails(self): pass\n'
-                    '    def test_late_event_ignored(self): pass\n')
+            f.write('SCRIPT = 1\n\n\nclass StoreTest:\n    def test_rows_survive(self): pass\n    def test_check_fails(self): pass\n'
+                    '    def helper(self): pass\n\n\ndef test_late_event_ignored(): pass\n')
+        with open(os.path.join(self.wt, 'store.py'), 'w') as f:
+            f.write('def record(): pass\n')
+        with open(os.path.join(self.wt, 'tests', 'test_broken.py'), 'w') as f:
+            f.write('def test_x(:\n')
+        with open(os.path.join(self.wt, 'tests', 'pan.test.ts'), 'w') as f:
+            f.write("describe('pan', () => {\n  it(\"keeps the view's edge\", () => {});\n  test.skip(`zooms`, () => {});\n});\n"
+                    "test('alone', () => {});\n")
 
     def check(self, report):
         return findings.fix_check(self.BRIEF, report, self.wt)
@@ -682,12 +689,30 @@ class FixCheckTest(unittest.TestCase):
         lines, rc = self.check(report)
         self.assertEqual(rc, 1)
         self.assertEqual(lines, ['- 3: left, the restart path needs a design',
-                                 '- 4: fixed, but no test StoreTest.test_no_such_test in tests/test_a.py',
+                                 '- 4: fixed, but no test StoreTest.test_no_such_test in tests/test_a.py: no class StoreTest '
+                                 'with that method',
                                  "- 5: not mentioned on a `- 5: fixed|left` line of the fixer's report"])
-        lines, _ = self.check('- 3: fixed, tests/gone.py::test_rows_survive\n- 4: fixed, test_check_fails\n'
-                              '- 5: fixed, tests/test_a.py::StoreTest.test_late_event_ignored\n')
-        self.assertEqual(lines, ['- 3: fixed, but no test file tests/gone.py in the worktree',
+        lines, _ = self.check('- 3: fixed, tests/test_gone.py::test_rows_survive\n- 4: fixed, test_check_fails\n'
+                              '- 5: fixed, tests/test_a.py::test_late_event_ignored\n')
+        self.assertEqual(lines, ['- 3: fixed, but no test file tests/test_gone.py in the worktree',
                                  "- 4: fixed, but 'test_check_fails' names no <test file>::<test name>"])
+
+    def test_a_name_that_is_not_a_test_is_refused(self):
+        refused = {'store.py::record': 'store.py is not a test file',
+                   'tests/test_a.py::NoSuchTest.test_rows_survive': 'no class NoSuchTest with that method',
+                   'tests/test_a.py::NonexistentClass.SCRIPT': 'no class NonexistentClass with that method',
+                   'tests/test_a.py::SCRIPT': 'no module-level test SCRIPT in tests/test_a.py',
+                   'tests/test_a.py::StoreTest.helper': 'StoreTest.helper in tests/test_a.py is not a test: its name',
+                   'tests/test_a.py::test_rows_survive': 'no module-level test test_rows_survive',
+                   'tests/test_broken.py::test_x': 'tests/test_broken.py does not parse (',
+                   'tests/pan.test.ts::pan > rotates': "no test titled 'rotates' in tests/pan.test.ts after the parts",
+                   'tests/pan.test.ts::alone > pan': "no test titled 'pan' in tests/pan.test.ts after the parts"}
+        for spec, want in refused.items():
+            self.assertIn(want, findings.test_found(self.wt, spec), spec)
+        for spec in ('tests/test_a.py::StoreTest.test_rows_survive', 'tests/test_a.py::test_late_event_ignored',
+                     "tests/pan.test.ts::pan > keeps the view's edge", 'tests/pan.test.ts::pan > zooms',
+                     'tests/pan.test.ts::alone'):
+            self.assertEqual(findings.test_found(self.wt, spec), '', spec)
 
     def test_the_real_report_before_the_line_form_lists_every_finding_as_not_mentioned(self):
         fx = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures', 'findings')

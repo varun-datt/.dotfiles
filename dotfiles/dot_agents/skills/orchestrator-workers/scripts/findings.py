@@ -1075,21 +1075,57 @@ def write(run, out=None, sarif=False):
 FIX_LINE = re.compile(r'^[\s*_>]*(?:[-*+][\s*_]*)?(\d+)[\s*_]*:[\s*_]*(fixed|left)\b[\s*_]*,?\s*(.*)$', re.I)
 
 
+JS_CALL = re.compile(r"""\b(?:describe|test|it)(?:\.\w+)*\s*\(\s*(['"`])((?:\\.|(?!\1)[^\\])*)\1""")
+
+
+def python_test_problem(source, name, path):
+    """'' when `name` (Class.method, or a module-level function) is a test the file defines; else why not."""
+    import ast
+    import reqgate
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as e:
+        return f'{path} does not parse ({e.msg}, line {e.lineno})'
+    if '.' in name:
+        if not reqgate.unittest_names(source, name):
+            return f'no test {name} in {path}: no class {name.split(".")[0]} with that method'
+    elif not any(isinstance(f, (ast.FunctionDef, ast.AsyncFunctionDef)) and f.name == name for f in tree.body):
+        return f'no module-level test {name} in {path}'
+    if not name.split('.')[-1].startswith('test'):
+        return f'{name} in {path} is not a test: its name does not start with test'
+    return ''
+
+
+def js_test_problem(source, name, path):
+    """'' when each part of the title (describe > test) is a describe, test or it title in the file, in order."""
+    import reqgate
+    titles = [(m.start(), re.sub(r'\\(.)', r'\1', m.group(2))) for m in JS_CALL.finditer(source)]
+    at = -1
+    for part in reqgate.title_parts(name, path):
+        hit = next((pos for pos, title in titles if pos > at and title == part.strip()), None)
+        if hit is None:
+            return f'no test titled {part.strip()!r} in {path}' + (' after the parts before it' if at >= 0 else '')
+        at = hit
+    return '' if at >= 0 else f'{name!r} names no test title'
+
+
 def test_found(wt, spec):
-    """'' when the test `<file>::<name>` is in that worktree file (its last name part, as a whole word); else why not."""
+    """'' when `<file>::<name>` names a test the worktree's test file defines; else why not. Python test files
+    (test_*.py, *_test.py) are parsed; a JavaScript or TypeScript one (*.test.*, *.spec.*) must hold each part of a
+    `describe > test` title as a test, it or describe title, in order."""
+    import reqgate
     spec = spec.strip().strip('`*_ ').rstrip('.').strip('`*_ ')
     if '::' not in spec:
         return f'{spec!r} names no <test file>::<test name>'
     path, name = (x.strip('` ') for x in spec.split('::', 1))
+    if not reqgate.TEST_NAME.search(os.path.basename(path)):
+        return f'{path} is not a test file (test_*.py, *_test.py, *.test.* or *.spec.*)'
     full = os.path.join(wt, path)
     if not os.path.isfile(full):
         return f'no test file {path} in the worktree'
-    last = re.split(r'::|\.', name)[-1].strip()
     with open(full, encoding='utf-8', errors='replace') as f:
-        text = f.read()
-    if not last or not re.search(r'(?<![\w])' + re.escape(last) + r'(?![\w])', text):
-        return f'no test {name} in {path}'
-    return ''
+        source = f.read()
+    return (python_test_problem if path.endswith('.py') else js_test_problem)(source, name.strip(), path)
 
 
 def fix_check(brief_text, report, wt):
