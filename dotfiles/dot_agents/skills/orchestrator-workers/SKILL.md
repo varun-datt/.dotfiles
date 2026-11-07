@@ -127,7 +127,7 @@ task -> worker -> grade report -> ONE review -> rulings: each Blocker or Major f
 - **Steps declared before work starts:** each item's brief carries one line `STEPS: build, review, fix ("<the
   owner's words that ask for these steps>")`. `runqueue.py add` lists the pipeline's steps and refuses any build,
   review, fix or recheck step the line does not name, and the runner checks the line again before each launch,
-  as Terraform shows its plan before it applies it.
+  as Terraform shows its plan before it applies it ([terraform plan](https://developer.hashicorp.com/terraform/cli/commands/plan)).
 - **Only judgement wakes the chat.** Queue each item as a [pipeline](#queue-runner): the runner prepares and
   launches the review and the fix round itself, and stops at two suspend points, ruling the
   review's findings and merging, because only those need judgement. The chat waits for the next one with
