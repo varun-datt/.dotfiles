@@ -4,8 +4,10 @@
 #
 # Usage: bash review.sh [route.py run options] <name> <worktree> [prompt-file]
 #   prompt-file  default: $OW_RUN_DIR/<name>.md; each bare {{RUBRIC}} (not in `code`, a fence, a > quote or a comment)
-#                is filled from references/rubric.md into $OW_RUN_DIR/<name>.filled.md, launched instead; a prompt
-#                with no {{RUBRIC}} gets the scope line and the rubric's Scope rule appended there. Any {{...}} left outside `code` and comments is refused.
+#                is filled from references/rubric.md, and each bare {{LENSES}} from section "## 2. The lenses" of the
+#                sibling skill code-review-lenses/SKILL.md, into $OW_RUN_DIR/<name>.filled.md, launched instead; a
+#                missing rubric or lens section is refused. A prompt with no {{RUBRIC}} gets the scope line and the
+#                rubric's Scope rule appended there. Any {{...}} left outside `code` and comments is refused.
 #   options      passed to route.py run: --override "model=..,effort=..,cap=..,reason=.." (reason required),
 #                --author-model M (default: read from the author round's log), --timeout S (default: budgets.json
 #                <name> or "review" minutes x 60), --add-dir D, --load-wait MIN, --seed N, --no-classifier, --fresh
@@ -23,7 +25,7 @@ set -u
 opts=(); project=; scope=
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,20p' "$0" | cut -c3-; exit 0 ;;
+    -h|--help) sed -n '2,22p' "$0" | cut -c3-; exit 0 ;;
     --no-classifier|--fresh) opts+=("$1"); shift ;;
     --project) [ $# -ge 2 ] && [ -d "$2" ] || { echo "review.sh: --project needs a folder" >&2; exit 2; }
       project="$(cd "$2" && pwd)"; shift 2 ;;
@@ -46,9 +48,10 @@ python3 -B -c 'import sys; sys.path.insert(0, sys.argv[1]); import runqueue; r =
 r and print("review.sh: " + r, file=sys.stderr); sys.exit(2 if r else 0)' "$here" </dev/null || exit 2
 [ -d "$wt" ] || { echo "review.sh: no worktree at $wt" >&2; exit 2; }
 [ -f "$prompt" ] || { echo "review.sh: no prompt at $prompt" >&2; exit 2; }
-prompt="$(python3 -B - "$prompt" "$here/../references/rubric.md" "$run/$name.filled.md" "$here" "$wt" "$scope" <<'EOF'
+prompt="$(python3 -B - "$prompt" "$here/../references/rubric.md" "$run/$name.filled.md" "$here" "$wt" "$scope" \
+  "$here/../../code-review-lenses/SKILL.md" <<'EOF'
 import os, re, sys
-src, rubric, out, here, wt, given = sys.argv[1:7]
+src, rubric, out, here, wt, given, lenses = sys.argv[1:8]
 with open(src, encoding='utf-8') as f:
     text = f.read()
 masked = re.sub(r'<!--.*?-->', lambda m: re.sub(r'[^\n]', ' ', m.group()), text, flags=re.S)
@@ -68,7 +71,7 @@ for line in masked.split('\n'):
         continue
     # Spans paired as brief.py pairs them, so a slot left unfilled is one its check would also see.
     spans = [s.span() for s in re.finditer(r'`[^`]*`', line)]
-    slots += [at + s.start() for s in re.finditer(r'\{\{RUBRIC\}\}', line)
+    slots += [(at + s.start(), s.group()) for s in re.finditer(r'\{\{(?:RUBRIC|LENSES)\}\}', line)
               if not any(a <= s.start() < b for a, b in spans)]
 if os.path.realpath(src) == os.path.realpath(out):
     sys.exit(f'review.sh: {src} would be overwritten by its filled copy; rename it; nothing launched')
@@ -87,17 +90,32 @@ if os.path.isfile(rubric):
     with open(rubric, encoding='utf-8') as f:
         body = f.read().rstrip('\n')
     rule = next((l[len('- **Scope.** '):] for l in body.split('\n') if l.startswith('- **Scope.** ')), '')
-if slots:
+fills = {}
+if any(s == '{{LENSES}}' for _, s in slots):
+    try:
+        with open(lenses, encoding='utf-8') as f:
+            skill = f.read()
+    except OSError:
+        sys.exit(f'review.sh: {src} needs {{{{LENSES}}}} but there is no lens skill at {lenses}; nothing launched')
+    sec = re.search(r'^## 2\. The lenses[ \t]*\n(.*?)(?=^## |\Z)', skill, re.M | re.S)
+    if not sec or '|' not in sec.group(1):
+        sys.exit(f'review.sh: {src} needs {{{{LENSES}}}} but {lenses} has no "## 2. The lenses" section; nothing launched')
+    fills['{{LENSES}}'] = ('Apply the lenses below that fit this diff, each as its own question of the changed code, and '
+                           'name the ones you applied on a `Lenses applied:` line of your report.\n\n'
+                           + sec.group(1).strip('\n'))
+if any(s == '{{RUBRIC}}' for _, s in slots):
     if not os.path.isfile(rubric):
         sys.exit(f'review.sh: {src} needs {{{{RUBRIC}}}} but there is no rubric at {rubric}')
-    body += f'\n\nScope of this change: {scope} ({note}). Grade with the Scope rule in section 4.' + listed
-    filled = text
-    for p in reversed(slots):
-        filled = filled[:p] + body + filled[p + len('{{RUBRIC}}'):]
-else:
-    filled = text.rstrip('\n') + f'\n\nScope of this change: {scope} ({note}).' + listed + \
+    fills['{{RUBRIC}}'] = body + f'\n\nScope of this change: {scope} ({note}). Grade with the Scope rule in section 4.' + listed
+filled = rest = text
+for p, s in reversed(slots):
+    filled = filled[:p] + fills[s] + filled[p + len(s):]
+    rest = rest[:p] + rest[p + len(s):]
+if '{{RUBRIC}}' not in fills:
+    filled = filled.rstrip('\n') + f'\n\nScope of this change: {scope} ({note}).' + listed + \
         (f" Grade with the review rubric's Scope rule: {rule}" if rule else '') + '\n'
-visible = re.sub(r'`[^`\n]*`', '', re.sub(r'<!--.*?-->', '', filled, flags=re.S))
+# Only the text of the prompt itself is checked: inserted rubric or lens text may quote {{...}} as written.
+visible = re.sub(r'`[^`\n]*`', '', re.sub(r'<!--.*?-->', '', rest, flags=re.S))
 left = sorted(set(re.findall(r'\{\{[^{}\n]+\}\}', visible)))
 if left:
     sys.exit(f'review.sh: {src} has unfilled placeholders: {" ".join(left)}; nothing launched')

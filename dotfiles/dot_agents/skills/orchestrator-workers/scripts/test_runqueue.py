@@ -477,7 +477,7 @@ class PipelineTest(unittest.TestCase):
         self.assertIn('- Processes: what starts', prompt)
         self.assertIn('- The checks themselves:', prompt)
         self.assertNotIn('Trust boundaries', prompt)
-        self.assertEqual(re.findall(r'\{\{[^}]+\}\}', prompt), ['{{RUBRIC}}'])
+        self.assertEqual(re.findall(r'\{\{[^}]+\}\}', prompt), ['{{RUBRIC}}', '{{LENSES}}'])
         self.assertIn('+++ b/a.txt', self.read('a-review.seen-diff'))
         with open(os.path.join(self.items()['a']['worktree'], 'REVIEW-REPORT.md')) as f:
             self.assertEqual(f.read().strip(), 'REPORT of a')
@@ -1091,6 +1091,46 @@ class ReviewPrepTest(unittest.TestCase):
         self.write('a.prompt.md', 'PREAMBLE\n' + task)
         self.write('a.jsonl', report_log('REPORT of a'))
         return q.reviewprep.review(self.rd, 'a', self.wt)
+
+    def history(self, prompt):
+        return prompt.split('==== BRANCH HISTORY ====\n', 1)[1].split('\n==== END OF BRANCH HISTORY', 1)[0]
+
+    def test_the_review_prompt_holds_the_base_and_each_commit_labelled_build(self):
+        base = self.git('rev-parse', 'HEAD')
+        prompt = self.read(os.path.basename(self.built('TASK: t\nRISK: none\n')))
+        build = self.git('rev-parse', 'HEAD')
+        self.assertEqual(self.history(prompt), f'Base commit: {base}\nCommits from the base to HEAD, oldest first (no fix '
+                         'round has run, so none is fix; merge is a merge commit on the branch, merged a commit it brought '
+                         f"in, from main or elsewhere, not this item's work):\n- {build[:12]} build: feat: a.txt")
+        for part in ('WHY IT GOT IN', 'phaseShouldHaveCaught, the step', '1. Does the brief name the case? Quote the line, '
+                     'or write "not named".', 'the phase injected is still the brief, with cause SPEC',
+                     'evidence for and against', '`git blame -w -L <line>,<line> <base>..HEAD -- <file>`',
+                     'or says "unknown"', '==== LENSES ====\n{{LENSES}}'):
+            self.assertIn(part, prompt)
+
+    def test_commits_after_the_fix_start_are_fix_and_a_merged_branch_is_labelled(self):
+        base = self.git('rev-parse', 'HEAD')
+        self.write('a.base', base)
+        self.commit('a.txt')
+        self.git('checkout', '-q', '-b', 'main', base)
+        self.commit('main.txt')
+        self.git('checkout', '-q', 'ow/a')
+        self.git('merge', '-q', '--no-ff', '-m', 'Merge main into ow/a', 'main')
+        start = self.git('rev-parse', 'HEAD')
+        q.save(self.rd, {'items': [{'id': 'a', 'pipeline': [{'name': 'build', 'head': base},
+                                                              {'name': 'fix', 'head': start}]}]})
+        self.write('a-fix1.base', base)
+        self.commit('fix | `x` {{TASK}}.txt')
+        self.write('a.prompt.md', 'PREAMBLE\nTASK: t\nRISK: none\n')
+        self.write('a.jsonl', report_log('REPORT of a'))
+        def labels():
+            rows = self.history(self.read(os.path.basename(q.reviewprep.review(self.rd, 'a', self.wt)))).split('\n')[2:]
+            return {r.split(': ', 1)[1]: r.split(' ', 2)[2].split(':', 1)[0] for r in rows}
+        self.assertEqual(labels(), {'feat: a.txt': 'build', 'feat: main.txt': 'merged', 'Merge main into ow/a': 'merge',
+                                    'feat: fix | `x` {{TASK}}.txt': 'fix'})
+        os.remove(os.path.join(self.rd, 'queue.json'))
+        self.assertEqual(labels(), {'feat: a.txt': 'fix', 'feat: main.txt': 'merged', 'Merge main into ow/a': 'merge',
+                                    'feat: fix | `x` {{TASK}}.txt': 'fix'})
 
     def test_inserted_text_is_never_read_as_a_placeholder(self):
         for quoted in ('{{TASK}}', '{{GATES_RUN}}', '{{WORD_LIMIT|900}}'):

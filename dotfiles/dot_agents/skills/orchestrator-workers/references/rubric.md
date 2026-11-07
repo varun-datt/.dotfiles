@@ -70,3 +70,7 @@ A finding with no concrete scenario is not Major: list it under **Check** for th
 | VERIF | The checks | A check cannot fail, an existing test breaks or flakes, or a test the brief names is missing (in scope product, only with an owner-visible effect) |
 | MAINT | Maintainability | Only when it blocks the next planned change |
 | REPORT | The author's report | Never Major: a Correction |
+
+## 8. Why it got in
+
+Each Blocker or Major also records where it got in, so a phase and cause that repeat become a change to the method: its age (ODC v5.2: Base, New, Rewritten, ReFixed), the phase that injected it and the phase that should have removed it (after the PSP defect log), ODC's qualifier (Missing, Incorrect, Extraneous) and a few words on what was missing. Each field cites its evidence or says unknown; a guess is not evidence. The review prompt defines the values and the fixed order of checks; a Minor needs none of them. Sources: research/2026-11-06-why-a-major-got-in.md in the dotfiles repository.

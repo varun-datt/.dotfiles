@@ -13,15 +13,17 @@ of <item>.jsonl and its resume rounds' <item>-resumeN.jsonl, or --report's) into
 fills assets/review.md into <run>/<item>-review.md: the task from the build's brief (--brief, else
 <item>.prompt.md, else <item>.body.md), cut to <item>.body.md when the brief holds it, one risk block per name on
 its RISK line (from the menu in review.md's own comment), prior rulings from <item>.rulings.md, project rules from
-<item>.security.md or security.md.
+<item>.security.md or security.md, and the base commit in full with each commit from it to HEAD labelled build, fix
+(after the fix round's start: the queue's fix step head, else <item>-fix1.base), merge or merged (brought in by a
+merge commit).
 recheck: writes the fix diff (`git diff <base>..HEAD`, base from --base, else <item>-fix1.base) and the fix report,
 and fills assets/rereview.md into <run>/<item>-rereview.md from the numbered findings under "FIX THESE" in the fix
 brief (--brief, else <item>-fix1.prompt.md, else <item>-fix1.body.md), up to the next section heading.
-Placeholders are filled in one pass over the template, so inserted text is never read as one. {{RUBRIC}} is left
-for review.sh. Exit 2, with the reason and nothing launched, when a base is missing or unknown to git, the diff is
-empty, a report or findings are missing, or a placeholder stays.
+Placeholders are filled in one pass over the template, so inserted text is never read as one. {{RUBRIC}} and
+{{LENSES}} are left for review.sh. Exit 2, with the reason and nothing launched, when a base is missing or unknown to
+git, the diff is empty, a report or findings are missing, or a placeholder stays.
 """
-import argparse, os, re, subprocess, sys
+import argparse, json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, '..', 'assets')
@@ -114,7 +116,7 @@ def fill(text, fills):
                 return fills[key]
         if default is not None:
             return default
-        if name != 'RUBRIC':
+        if name not in ('RUBRIC', 'LENSES'):
             left.add(whole)
         return m.group(0)
     text = re.sub(r'\{\{(([^}|]+)(?:\|([^}]*))?)\}\}', one, text)
@@ -166,6 +168,50 @@ def task_text(rd, rnd, brief=None):
     return text
 
 
+def fix_start(rd, item):
+    """The commit the item's fix round started from: the queue's fix step head (kept across a retry), else
+    <item>-fix1.base (rewritten at every launch of the round); None when no fix round has started."""
+    with_queue = None
+    try:
+        with open(os.path.join(rd, 'queue.json'), encoding='utf-8') as f:
+            it = next((x for x in json.load(f).get('items', []) if x.get('id') == item), None)
+        with_queue = next((s.get('head') for s in (it or {}).get('pipeline', []) if s.get('name') == 'fix'), None)
+    except (OSError, ValueError, AttributeError, TypeError):
+        pass
+    path = first(os.path.join(rd, item + FIX_ROUND + '.base'))
+    return with_queue or (read(path).strip() if path else None) or None
+
+
+def labelled_commits(wt, base, fix=None):
+    """(sha, subject, label) for each commit from base to HEAD, oldest first. Labels: merge (a merge commit on the
+    branch), merged (brought in by a merge, from main or elsewhere), fix (after the fix round's start), else build."""
+    fixed = set()
+    if fix:
+        git(wt, 'rev-parse', '--verify', '--quiet', fix + '^{commit}')
+        if subprocess.run(['git', '-C', wt, 'merge-base', '--is-ancestor', fix, 'HEAD'], capture_output=True,
+                          stdin=subprocess.DEVNULL).returncode:
+            raise PrepError(f'the fix round start {fix[:12]} is not an ancestor of HEAD')
+        fixed = set(git(wt, 'rev-list', f'{fix}..HEAD').split())
+    own = set(git(wt, 'rev-list', '--first-parent', f'{base}..HEAD').split())
+    rows = []
+    for line in git(wt, 'log', '--reverse', '--format=%H%x00%P%x00%s', f'{base}..HEAD').splitlines():
+        sha, parents, subject = line.split('\0', 2)
+        label = ('merge' if len(parents.split()) > 1 else 'merged' if sha not in own else
+                 'fix' if sha in fixed else 'build')
+        rows.append((sha, subject, label))
+    return rows
+
+
+def branch_history(rd, item, wt, base):
+    fix = fix_start(rd, item)
+    rows = labelled_commits(wt, base, fix)
+    where = f'a commit after the fix round started at {fix} is fix' if fix else 'no fix round has run, so none is fix'
+    return '\n'.join([f'Base commit: {base}',
+                      f'Commits from the base to HEAD, oldest first ({where}; merge is a merge commit on the branch, '
+                      'merged a commit it brought in, from main or elsewhere, not this item\'s work):']
+                     + [f'- {sha[:12]} {label}: {subject}' for sha, subject, label in rows])
+
+
 def review(rd, item, wt, head=None, brief=None, report_round=None):
     base = base_of(rd, wt, [item + '.reviewbase', item + '.base'], head)
     diff = git(wt, 'diff', f'{base}...HEAD')
@@ -174,6 +220,7 @@ def review(rd, item, wt, head=None, brief=None, report_round=None):
     body, rep = task_text(rd, item, brief), report(rd, item, report_round)
     template = read(os.path.join(ASSETS, 'review.md'))
     commits = git(wt, 'log', '--format=%h %s', f'{base}..HEAD').strip().replace('\n', '; ')
+    history = branch_history(rd, item, wt, base)
     branch = git(wt, 'rev-parse', '--abbrev-ref', 'HEAD').strip()
     rulings = first(os.path.join(rd, item + '.rulings.md'))
     security = first(os.path.join(rd, item + '.security.md'), os.path.join(rd, 'security.md'))
@@ -185,6 +232,7 @@ def review(rd, item, wt, head=None, brief=None, report_round=None):
         'RISK_CHECKS_OR_DELETE': risk_blocks(template, body),
         'FOCUS_AREAS_OR_DELETE': '',
         'BLOCKING_RULE_SOURCE': 'the rubric above',
+        'BRANCH_HISTORY': history,
     })
     write(os.path.join(wt, 'REVIEW-DIFF.patch'), diff)
     write(os.path.join(wt, 'REVIEW-REPORT.md'), rep)
