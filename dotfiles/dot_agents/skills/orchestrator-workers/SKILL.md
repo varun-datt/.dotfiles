@@ -218,6 +218,7 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   The router picks another model family from the author's model, read from the author round's
   log when `--author-model` is not given. It denies `shell(git push)`, `shell(git commit)`, `shell(npm)` and `url`, not the whole
   shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
+  After the round, whatever its exit code, review.sh copies each regular file at the worktree's root named `REVIEW-*` into the run folder as `<round>.<file name>` (for example `<item>-review.REVIEW-DIFF.patch`), replacing an earlier copy, so the review's inputs outlive the worktree; a folder or symlink is not copied, and a copy that fails warns on stderr.
   It runs at high effort, and fills the rubric's blocking scope from `--scope product|tool`, which wins over the default, by default `tool` only when every changed file is under `dotfiles/dot_agents/skills/*/scripts/`; a re-review or critique prompt, which has no rubric, gets the scope line and the rubric's Scope rule at its end.
   A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"
   filter on gpt-6.1-sol, or a sub-agent that refuses. Tell the reviewer to work in its own session, and after one 422 fall back to Opus at
@@ -443,6 +444,17 @@ A **time budget** is a timebox: a fixed number of minutes the worker should fini
   at the merge.
 - **`git config rerere.enabled true`**, so redone merges reuse your resolutions.
 - **A new lockfile:** run the install step in the merge folder before the gates.
+- **Remove the merged item.** Each run's merge script, once main has moved and it has printed `MERGED`, calls
+  `python3 -B ~/.agents/skills/orchestrator-workers/scripts/remove_merged.py --repo $REPO --branch ow/$I --run-dir $R </dev/null > $G/remove.log 2>&1; RC=$?`,
+  prints that log, prints a WARN when `RC` is not 0, and still exits 0. Only when the branch's tip is in main, the script
+  stops orphans left in the item's worktree and scans again, keeping the worktree while any process is still inside or
+  the scan fails; then it archives what the worktree holds uncommitted (`status.txt`, `uncommitted.patch` from `git diff --binary HEAD`,
+  and the untracked files git does not ignore) into `~/.local/state/orchestrator-workers/_archive/worktrees/<repo>/<item>/`
+  (`<item>-<tip>` when taken, never overwritten), appends a line to `index.tsv` there,
+  removes the worktree and the worktrees nested in it, and deletes the branch if it has not moved. Its exit 1 is a kept
+  worktree or branch for the owner's list (`retained_unmerged`, `retained_locked`, `retained_in_use` with the process ids,
+  `retained_checked_out`, `retained_raced`, `retained_failed`), not a failed merge; exit 2 is a usage error and changed
+  nothing. `--dry-run` shows what it would do; `--help` lists every outcome. Never call it for the merge folder.
 - **After the merge:** restart the owner's instance and check its health.
 
 ## Records

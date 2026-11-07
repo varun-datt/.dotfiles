@@ -15,9 +15,23 @@ SWAP_PAGES = 1000  # pages swapped out per sample that count as swapping: a gues
 SAMPLE_S = 5
 
 
-def processes():
-    out = subprocess.run(['/bin/ps', '-axo', 'pid=,ppid=,comm='], capture_output=True, text=True,
-                         stdin=subprocess.DEVNULL).stdout
+class ScanFailed(Exception):
+    pass
+
+
+def scan(argv, check):
+    p = subprocess.run(argv, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    name = os.path.basename(argv[0])
+    if check and p.returncode:
+        err = p.stderr.strip().splitlines()
+        raise ScanFailed(f'{name} exited {p.returncode}' + (f': {err[-1]}' if err else ''))
+    if check and not p.stdout.strip():
+        raise ScanFailed(f'{name} printed nothing')
+    return p.stdout
+
+
+def processes(check=False):
+    out = scan(['/bin/ps', '-axo', 'pid=,ppid=,comm='], check)
     procs = {}
     for line in out.splitlines():
         parts = line.split(None, 2)
@@ -26,9 +40,8 @@ def processes():
     return procs
 
 
-def cwds():
-    out = subprocess.run(['/usr/sbin/lsof', '-nP', '-d', 'cwd', '-Fpn'], capture_output=True, text=True,
-                         stdin=subprocess.DEVNULL).stdout
+def cwds(check=False):
+    out = scan(['/usr/sbin/lsof', '-nP', '-d', 'cwd', '-Fpn'], check)
     res, pid = {}, None
     for line in out.splitlines():
         if line.startswith('p') and line[1:].isdigit():
