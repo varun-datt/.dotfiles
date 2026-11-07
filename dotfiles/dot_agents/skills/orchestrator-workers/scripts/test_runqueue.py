@@ -1093,6 +1093,7 @@ class ReviewPrepTest(unittest.TestCase):
         return q.reviewprep.review(self.rd, 'a', self.wt)
 
     def history(self, prompt):
+        self.assertIn('==== BRANCH HISTORY ====\n', prompt)
         return prompt.split('==== BRANCH HISTORY ====\n', 1)[1].split('\n==== END OF BRANCH HISTORY', 1)[0]
 
     def test_the_review_prompt_holds_the_base_and_each_commit_labelled_build(self):
