@@ -178,7 +178,10 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   without a `reason=`), logs the decision with the CLI version to `routes.jsonl`, waits for load
   (exit 12), writes `<item>.start`, `<item>.base` and the time budget in `budgets.json`, and runs
   `copilot -p` under a timeout with exactly the logged values, no MCP servers, push denied and no
-  questions, into `<item>.jsonl` and `<item>.err`. On exit it sweeps the worktree's leftovers. It
+  questions, into `<item>.jsonl` and `<item>.err`. Every prompt but a review's ends with a `BASE COMMIT`
+  line holding the round's base hash and its diff range `<hash>..HEAD`, because a worker cannot read the
+  run folder: the worktree's HEAD at launch, or for a `<item>-resumeN` round the item's first base
+  (`<item>.base`); with no git HEAD the line says the base is unknown (owner, 2026-11-06). On exit it sweeps the worktree's leftovers. It
   exits non-zero when copilot fails (124 on timeout) or the round errored (4) or hit its cap (3).
   Re-running it before the round launched reuses the logged decision; `--fresh` draws again.
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.

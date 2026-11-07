@@ -435,7 +435,7 @@ class Launcher(unittest.TestCase):
         for flag in ('--no-ask-user', '--disable-builtin-mcps', 'shell(git push)'):
             self.assertIn(flag, argv)
         with open(self.brief) as f:
-            self.assertEqual(argv[argv.index('-p') + 1], f.read())
+            self.assertEqual(argv[argv.index('-p') + 1], f.read() + route.base_tail(self.run_dir, 'x', 'small', self.head.strip()))
         launch = [x for x in route.read_decisions(self.run_dir) if x.get('event') == 'launch']
         self.assertEqual(launch[0]['argv'], ['copilot'] + argv[:-1])
         with open(os.path.join(self.run_dir, 'x.base')) as f:
@@ -807,7 +807,7 @@ class Launcher(unittest.TestCase):
             self.assertEqual(argv[argv.index(flag) + 1], build[build.index(flag) + 1], flag)
         self.assertEqual([argv[i + 1] for i, x in enumerate(argv) if x == '--add-dir'], [self.tmp, self.run_dir])
         with open(self.fix_brief) as f:
-            self.assertEqual(argv[-1], f.read())
+            self.assertEqual(argv[-1], f.read() + route.base_tail(self.run_dir, 'x-fix1', 'fix', self.head.strip()))
         self.assertEqual(argv[-2], '-p')
         launch = self.launches()[-1]
         self.assertEqual((launch['round'], launch['kind'], launch['resumes']), ('x-fix1', 'fix', 'x'))
@@ -836,6 +836,46 @@ class Launcher(unittest.TestCase):
         self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
         self.assertEqual(self.argv()[self.argv().index('-r') + 1], 'ow-x-fix1')
         self.assertEqual(self.refusals(), [])
+
+    def prompt(self):
+        argv = self.argv()
+        return argv[argv.index('-p') + 1] if '-p' in argv[:-1] else argv[-1]
+
+    def test_every_round_but_a_review_names_its_base_commit_in_the_prompt(self):
+        base = self.head.strip()
+        line = f"This round's diff is `{base}..HEAD`."
+        for rnd, kind, extra in (('x', 'build', ()), ('y-fix1', 'fix', ()), ('x-fix1', 'fix', ('--resume-session', 'x'))):
+            p = self.launch(rnd, kind, *extra)
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            prompt = self.prompt()
+            self.assertEqual(prompt.count('BASE COMMIT'), 1, rnd)
+            self.assertTrue(prompt.endswith(f"HEAD at this round's launch): `{base}`. {line}\n"), (rnd, prompt[-300:]))
+            with open(os.path.join(self.run_dir, rnd + '.base')) as f:
+                self.assertEqual(f.read().strip(), base)
+        self.assertEqual('-r', self.argv()[self.argv().index('ow-x') - 1])
+        self.sp.run(['git', '-C', self.wt, '-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-q',
+                     '--allow-empty', '-m', 'later'], check=True, stdin=self.sp.DEVNULL)
+        later = route.head_of(self.wt)
+        self.assertEqual(self.launch('x-resume1', 'resume').returncode, 0)
+        self.assertTrue(self.prompt().endswith(f"(the base of x's first round, from route.py): `{base}`. {line}\n"))
+        self.assertEqual(self.launch('z-resume1', 'resume').returncode, 0)
+        self.assertTrue(self.prompt().endswith(
+            f"(the worktree's HEAD at this round's launch; z's first base was not found): `{later}`. "
+            f"This round's diff is `{later}..HEAD`.\n"), self.prompt()[-300:])
+        p = self.launch('x-review', 'review', '--author-model', OPUS)
+        self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+        self.assertNotIn('BASE COMMIT', self.prompt())
+        self.assertTrue(self.prompt().endswith(route.REVIEW_TAIL))
+
+    def test_a_worktree_without_a_head_gets_an_unknown_base_and_no_base_file(self):
+        self.sp.run(['git', '-C', self.wt, 'update-ref', '-d', 'HEAD'], check=True, stdin=self.sp.DEVNULL)
+        self.assertIsNone(route.head_of(self.wt))
+        for rnd, kind in (('x', 'build'), ('z-resume1', 'resume')):
+            p = self.launch(rnd, kind)
+            self.assertEqual(p.returncode, 0, p.stdout + p.stderr)
+            self.assertTrue(self.prompt().endswith('BASE COMMIT: unknown: the worktree had no git HEAD at launch. '
+                                                   'Do not invent one; say so in your report.\n'), rnd)
+            self.assertFalse(os.path.exists(os.path.join(self.run_dir, rnd + '.base')))
 
 
 class Outcome(unittest.TestCase):
