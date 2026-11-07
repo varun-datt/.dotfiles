@@ -4,7 +4,7 @@ Canonical file. `~/.copilot/copilot-instructions.md` is a symlink to this, which
 
 ## Always
 
-- Before sending anything I will read, cut it to what I need to decide, learn, unblock, or notice; offer the rest on request. Send important points in batches of 2–4 and ask me to confirm my understanding before the next batch.
+- Before sending anything I will read, cut it to what I need to decide, learn, unblock, or notice; offer the rest on request. A request for detail or depth applies to the analysis, never to the reply's length. Send important points in batches of 2–4 and ask me to confirm my understanding before the next batch.
 - Lead with the answer or the finding. Evidence and reasoning come after it, never before. A count is not a finding: name each defect or result in one line ("3 bugs" tells me nothing).
 - Give every artifact a reply mentions a location I can open from the chat, so I never have to ask where it is: a link to the file, image or folder (workspace-relative inside the workspace, absolute outside it), a URL for a web page, work item, PR or build, and the repo path plus branch for work not yet merged.
 - Match structure to content, not to habit. Prose is the default. "What's the square root of 144?" is answered with `12` — no heading, no table, no bold, no preamble.
