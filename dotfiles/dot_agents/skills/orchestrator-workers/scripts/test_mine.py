@@ -366,6 +366,7 @@ class RoundCreditsTest(Base):
 
     def real(self, *drop):
         folder = os.path.join(self.tmp, 'real')
+        shutil.rmtree(folder, ignore_errors=True)
         shutil.copytree(self.REAL, folder)
         for fn in drop:
             os.remove(os.path.join(folder, fn))
@@ -390,7 +391,6 @@ class RoundCreditsTest(Base):
                 self.assertTrue(line.startswith('session_premium_requests='), line)
                 self.assertIn(f'session_ai_credits={total} (session running total;', line)
                 self.assertNotIn(' ai_credits=', line)
-                shutil.rmtree(folder)
 
     def test_a_fresh_session_that_reuses_a_name_and_an_unfinished_round(self):
         self.run.round('x', credits=100, premium=15, session='A')

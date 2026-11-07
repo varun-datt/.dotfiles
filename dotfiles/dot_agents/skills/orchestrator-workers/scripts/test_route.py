@@ -855,7 +855,8 @@ class Launcher(unittest.TestCase):
         self.assertEqual('-r', self.argv()[self.argv().index('ow-x') - 1])
         self.sp.run(['git', '-C', self.wt, '-c', 'user.name=t', '-c', 'user.email=t@example.com', 'commit', '-q',
                      '--allow-empty', '-m', 'later'], check=True, stdin=self.sp.DEVNULL)
-        later = route.head_of(self.wt)
+        later = self.sp.run(['git', '-C', self.wt, 'rev-parse', 'HEAD'], check=True, capture_output=True, text=True,
+                            stdin=self.sp.DEVNULL).stdout.strip()
         self.assertEqual(self.launch('x-resume1', 'resume').returncode, 0)
         self.assertTrue(self.prompt().endswith(f"(the base of x's first round, from route.py): `{base}`. {line}\n"))
         self.assertEqual(self.launch('z-resume1', 'resume').returncode, 0)
@@ -869,7 +870,8 @@ class Launcher(unittest.TestCase):
 
     def test_a_worktree_without_a_head_gets_an_unknown_base_and_no_base_file(self):
         self.sp.run(['git', '-C', self.wt, 'update-ref', '-d', 'HEAD'], check=True, stdin=self.sp.DEVNULL)
-        self.assertIsNone(route.head_of(self.wt))
+        self.assertNotEqual(self.sp.run(['git', '-C', self.wt, 'rev-parse', '--verify', '-q', 'HEAD'], capture_output=True,
+                                        stdin=self.sp.DEVNULL).returncode, 0)
         for rnd, kind in (('x', 'build'), ('z-resume1', 'resume')):
             p = self.launch(rnd, kind)
             self.assertEqual(p.returncode, 0, p.stdout + p.stderr)

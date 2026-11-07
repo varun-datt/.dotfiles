@@ -848,26 +848,30 @@ class RunnerStartTest(unittest.TestCase):
         return (f"{n} plain item(s) exited before the queue runner started at {time.strftime('%H:%M', time.localtime(start))}; "
                 'not news: runqueue.py status lists them')
 
+    def started(self, at, pid=None):
+        with open(os.path.join(self.rd, 'queue.started'), 'w') as f:
+            json.dump({'pid': pid or os.getpid(), 'start': at}, f)
+
     def test_exits_before_the_runner_started_are_one_note_per_runner_not_news(self):
         start = self.LAST_EXIT + 60
-        q.write_started(self.rd, start)
+        self.started(start)
         self.assertEqual(self.wait(), (1, [self.note(5, start)]))
         self.assertEqual(self.wait(), (1, []))
         later = start + 600
-        q.write_started(self.rd, later)
+        self.started(later)
         self.assertEqual(self.wait(), (1, [self.note(5, later)]))
         self.assertEqual(self.wait(), (1, []))
 
     def test_with_the_real_seen_list_nothing_is_printed(self):
         import shutil
         shutil.copy(os.path.join(self.REAL, 'queue.seen'), self.rd)
-        q.write_started(self.rd, self.LAST_EXIT + 60)
+        self.started(self.LAST_EXIT + 60)
         self.assertEqual(self.wait(), (1, []))
 
     def test_an_exit_after_the_start_and_the_latest_of_two_restarts(self):
         first = self.LAST_EXIT - 100
-        q.write_started(self.rd, first)
-        q.write_started(self.rd, self.LAST_EXIT - 1)
+        self.started(first)
+        self.started(self.LAST_EXIT - 1)
         self.assertEqual(self.wait(), (0, [self.note(4, self.LAST_EXIT - 1), 'p1b-recheck4 exited 0']))
         self.assertEqual(self.wait(), (1, []))
 
@@ -882,7 +886,7 @@ class RunnerStartTest(unittest.TestCase):
              'pipeline': [step('build', before, before + 3, 4), step('suspend:merge', None)]}]
         q.save(self.rd, self.q)
         start = self.LAST_EXIT + 60
-        q.write_started(self.rd, start)
+        self.started(start)
         self.assertEqual(self.wait(), (0, [self.note(5, start), 's suspend:rulings: write s.rulings.done', 'f build failed 4']))
 
     def test_with_no_record_or_a_gone_runner_every_unseen_exit_is_reported_as_before(self):
@@ -891,8 +895,7 @@ class RunnerStartTest(unittest.TestCase):
         os.remove(os.path.join(self.rd, 'queue.seen'))
         gone = subprocess.Popen(['true'])
         gone.wait()
-        with open(os.path.join(self.rd, 'queue.started'), 'w') as f:
-            json.dump({'pid': gone.pid, 'start': self.LAST_EXIT + 60}, f)
+        self.started(self.LAST_EXIT + 60, gone.pid)
         with open(os.path.join(self.rd, 'queue.pid'), 'w') as f:
             f.write(str(gone.pid))
         self.assertEqual(self.wait(), (0, self.PAST))
