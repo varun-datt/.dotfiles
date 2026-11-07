@@ -892,12 +892,15 @@ class BlockTest(unittest.TestCase):
         self.run.round('mf', at=T0)
         self.run.round('mf-review', at=T0 + 10, report=report)
         by = self.record()
-        self.assertEqual([(u.get('kind'), u['why'][:60]) for u in self.unparsed],
-                         [('block', "findings block not read (result 6 (P1): grade 'Pre-existing'"),
-                          (None, 'verdict says 5 blocking but no finding was split out')])
-        self.assertEqual(self.counts['blocks'], 0)
+        self.assertEqual(sorted((k[1], r['properties']['grade'], r['properties']['blocking']) for k, r in by.items()),
+                         [('1', 'Major', True), ('2', 'Major', True), ('3', 'Major', True), ('4', 'Major', True),
+                          ('5', 'Major', True), ('p1', None, False), ('x1', None, False), ('x2', None, False)])
         for r in by.values():
             self.assertFalse(set(r['properties']) & (set(findings.WHY_FIELDS) | {'ageProposed', 'ageDisagrees'}))
+        # The block is rejected for its "Pre-existing" grade, so the prose, kept whole in the fixture, is read.
+        self.assertEqual([(u.get('kind'), u['why'][:60]) for u in self.unparsed],
+                         [('block', "findings block not read (result 6 (P1): grade 'Pre-existing'")])
+        self.assertEqual(self.counts['blocks'], 0)
 
 
 if __name__ == '__main__':
