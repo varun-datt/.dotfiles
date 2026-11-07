@@ -250,7 +250,8 @@ class ReviewShTest(unittest.TestCase):
         with open(fake, 'w') as f:
             f.write('#!/bin/sh\nprintf "%s\\0" "$@" > "' + self.args + '"\n'
                     'printf \'%s\\n\' \'{"type":"assistant.message","data":{"content":"Blocking: none"}}\'\n'
-                    'printf \'%s\\n\' \'{"type":"result","exitCode":0}\'\n')
+                    'printf \'%s\\n\' \'{"type":"result","exitCode":0}\'\n'
+                    'exit "${FAKE_RC:-0}"\n')
         os.chmod(fake, 0o755)
         self.env = {**os.environ, 'PATH': bin_dir + os.pathsep + os.environ['PATH'], 'OW_RUN_DIR': self.run_dir,
                     'PYTHONDONTWRITEBYTECODE': '1', 'HOME': self.tmp}
@@ -275,6 +276,55 @@ class ReviewShTest(unittest.TestCase):
         with open(self.args, encoding='utf-8') as f:
             argv = f.read().split('\0')
         return [argv[i + 1] for i, a in enumerate(argv) if a == '--add-dir']
+
+    def review_copies(self):
+        return sorted(n for n in os.listdir(self.run_dir) if n.startswith('x-review.REVIEW-'))
+
+    def write_wt(self, name, text):
+        with open(os.path.join(self.wt, name), 'w', encoding='utf-8') as f:
+            f.write(text)
+
+    def test_review_files_are_copied_to_the_run_folder_whatever_the_round_exit_and_a_retry_replaces_them(self):
+        self.write_wt('REVIEW-DIFF.patch', 'diff one\n')
+        self.write_wt('REVIEW-REPORT.md', 'report one\n')
+        self.write_wt('REVIEW-TASK notes.md', 'task\n')
+        self.write_wt('NOT-REVIEW-x.md', 'no\n')
+        os.makedirs(os.path.join(self.wt, 'REVIEW-folder'))
+        self.write_wt(os.path.join('REVIEW-folder', 'inside.md'), 'no\n')
+        os.symlink(os.path.join(self.wt, 'REVIEW-REPORT.md'), os.path.join(self.wt, 'REVIEW-LINK.md'))
+        env = self.env
+        self.env = {**env, 'FAKE_RC': '7'}
+        p = self.review('You are a read-only reviewer.\n')
+        self.env = env
+        self.assertNotEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(self.review_copies(), ['x-review.REVIEW-DIFF.patch', 'x-review.REVIEW-REPORT.md',
+                                                'x-review.REVIEW-TASK notes.md'])
+        with open(os.path.join(self.run_dir, 'x-review.REVIEW-DIFF.patch'), encoding='utf-8') as f:
+            self.assertEqual(f.read(), 'diff one\n')
+        self.assertNotIn('could not copy', p.stderr)
+        self.write_wt('REVIEW-DIFF.patch', 'diff two\n')
+        p = self.review('You are a read-only reviewer.\n')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        with open(os.path.join(self.run_dir, 'x-review.REVIEW-DIFF.patch'), encoding='utf-8') as f:
+            self.assertEqual(f.read(), 'diff two\n')
+        self.assertFalse([n for n in os.listdir(self.run_dir) if n.endswith('.tmp')])
+
+    def test_a_round_with_no_review_files_copies_nothing_and_says_nothing_about_it(self):
+        p = self.review('You are a read-only critic from a different model family.\n')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(self.review_copies(), [])
+        self.assertNotIn('copy', p.stderr)
+
+    def test_a_copy_that_cannot_be_written_warns_and_keeps_the_round_exit_code(self):
+        self.write_wt('REVIEW-DIFF.patch', 'diff\n')
+        self.write_wt('REVIEW-REPORT.md', 'report\n')
+        os.makedirs(os.path.join(self.run_dir, 'x-review.REVIEW-DIFF.patch'))
+        p = self.review('You are a read-only reviewer.\n')
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn('review.sh: could not copy REVIEW-DIFF.patch into the run folder: ', p.stderr)
+        with open(os.path.join(self.run_dir, 'x-review.REVIEW-REPORT.md'), encoding='utf-8') as f:
+            self.assertEqual(f.read(), 'report\n')
+        self.assertFalse([n for n in os.listdir(self.run_dir) if n.endswith('.tmp')])
 
     def test_review_started_by_a_caffeinate_process_is_refused_and_nothing_launches(self):
         under = ['bash', '-c', 'exec -a caffeinate /bin/bash -c "\\"\\$@\\"; exit \\$?" inner "$@"', 'outer']

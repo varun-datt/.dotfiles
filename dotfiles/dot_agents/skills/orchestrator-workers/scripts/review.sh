@@ -20,12 +20,14 @@
 # Refuses (exit 2) when started under caffeinate, which this Mac kills within seconds.
 # Output: $OW_RUN_DIR/<name>.jsonl, <name>.err and <name>.txt (the verdict line of the last message, which
 # mine.py reads); prints the decision, start, end, exit code and result.py's summary.
+# After the round, whatever its exit code, each regular file REVIEW-* at the worktree's root is copied to
+# $OW_RUN_DIR/<name>.<file name>, replacing an earlier copy; a failed copy warns on stderr and keeps the exit code.
 set -u
 
 opts=(); project=; scope=
 while [ $# -gt 0 ]; do
   case "$1" in
-    -h|--help) sed -n '2,22p' "$0" | cut -c3-; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0" | cut -c3-; exit 0 ;;
     --no-classifier|--fresh) opts+=("$1"); shift ;;
     --project) [ $# -ge 2 ] && [ -d "$2" ] || { echo "review.sh: --project needs a folder" >&2; exit 2; }
       project="$(cd "$2" && pwd)"; shift 2 ;;
@@ -150,5 +152,28 @@ if line:
         f.write(line + '\n')
 else:
     print('review.sh: no "Blocking: none" or "N blocking" line in the last message; no verdict written', file=sys.stderr)
+EOF
+python3 -B - "$run" "$wt" "$name" <<'EOF'
+import os, shutil, sys
+run, wt, name = sys.argv[1:4]
+try:
+    names = sorted(os.listdir(wt))
+except OSError as e:
+    sys.exit(f'review.sh: could not list {wt} to copy its REVIEW-* files: {e.strerror or e}')
+for n in names:
+    src = os.path.join(wt, n)
+    if not n.startswith('REVIEW-') or os.path.islink(src) or not os.path.isfile(src):
+        continue
+    dst = os.path.join(run, f'{name}.{n}')
+    tmp = f'{dst}.{os.getpid()}.tmp'
+    try:
+        shutil.copyfile(src, tmp)
+        os.replace(tmp, dst)
+    except OSError as e:
+        print(f'review.sh: could not copy {n} into the run folder: {e.strerror or e}', file=sys.stderr)
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
 EOF
 exit "$rc"
