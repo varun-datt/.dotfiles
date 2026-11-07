@@ -30,6 +30,7 @@ HARD RULES
 - Background processes you start are yours to stop. Start no load or stress loop while `python3 ~/.agents/skills/orchestrator-workers/scripts/sweep.py load` exits non-zero. Run a script under the shell its first line names, and give a loop an EXIT trap that stops every child (`pkill -P $$`). Before your report, show `pgrep -x yes | wc -l` = 0 and that nothing you started still runs.
 - Keep your saved context warm: the provider drops it after 300 idle seconds. Start any command that may take over 4 minutes with `initial_wait` at 240 or less, then wait with `read_bash` `delay` at 240 or less, until it finishes.
 - Tee each gate's full output to `.gates/<gate>.log` at the worktree root (untracked, never committed), so results survive a lost report.
+- The shell refuses any command that names a path outside this worktree and its `--add-dir` folders: `/tmp`, `cd /tmp`, `-o /tmp/x`, an absolute program path such as `/usr/bin/grep` or `/usr/bin/git`, another session's folder. Write scratch and tool output under the worktree's `.gates/`, and call programs by name (`grep`, `git`). `tvly` works in this session; a refused `tvly` command named such a path.
 - Your LAST message is the report, written only after every gate has finished.
 - {{SHELL_TRAPS_OR_DELETE}}
 

@@ -252,7 +252,10 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   broken, rows checked against evidence), naming the `software-testing` case lists by their
   deployed path, then carries the shared rules: never push, no secrets, `commit --only`, gates in
   the foreground, polls at most every 240 s to keep the cache warm, a labelled report with an
-  impact map and a case table.
+  impact map and a case table. Both preambles say what a `copilot -p` shell refuses: any command naming a path
+  outside the worktree and its `--add-dir` folders (`/tmp`, `-o /tmp/x`, `/usr/bin/grep`), so scratch goes under
+  `.gates/` and programs are called by name; `tvly` itself works (owner, 2026-11-06: preamble lines only, no
+  launch flag for paths).
 - **Research worker:** [preamble-research.md](assets/preamble-research.md) + a body. Its note is
   critiqued by another model family with [critique-research.md](assets/critique-research.md),
   against a snapshot of the note, page, task and report; the critic also asks whether the note
