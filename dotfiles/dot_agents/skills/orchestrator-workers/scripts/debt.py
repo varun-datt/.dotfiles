@@ -3,6 +3,7 @@
 
 Usage:
     python3 debt.py add <repo> --area A --grade Blocker|Major|Minor --file PATH --scenario "one line" --source ROUND --minutes N [--follow-up]
+                    [--why "age=New; phaseInjected=build; phaseShouldHaveCaught=test; qualifier=Missing; missing=<words>"]
     python3 debt.py list <repo> [--open|--all|--follow-up]      the table's rows (default: open ones)
     python3 debt.py flag <repo> TD-<n> [--off]                  mark an open row for follow-up, or take the mark off
     python3 debt.py close <repo> TD-<n> --reason "one line"     mark a row closed; it is never deleted
@@ -12,6 +13,10 @@ Usage:
     python3 debt.py import-plan PLAN.md --dry-run [--counts]    rows a PLAN.md's "Known gaps" passages would give,
                                                                 by item number (a column-0 "N."), or "?" under a bullet
 
+--why records why a Blocker or Major got in, with the findings record's field names and values (findings.py WHY_VALUES;
+"unknown" allowed; no "|", "[", "]" or ";" in the words), as a fixed suffix of the Scenario cell:
+"<scenario> [why: age=..; phaseInjected=..; phaseShouldHaveCaught=..; qualifier=..; missing=..]", which list, for-files and
+stale print. Rows without it, and registers written before it, read as they are.
 A row's Status is open, follow-up (open, and deferred from a run with the owner away: the owner looks at it after the run) or "closed <date>: <reason>". A Blocker goes in only as follow-up and keeps the mark until closed.
 The register is a markdown table; text outside the table is kept as written. Ids are TD-<n>, one above the
 highest ever used (a `<!-- debt.py next id: n -->` line after the table remembers it if a row is deleted by hand).
@@ -52,6 +57,31 @@ def cell(value, what, allow_empty=False):
     if '|' in text:
         raise Refused(f'{what} must not hold a "|", which would break the table')
     return text
+
+
+WHY_KEYS = ('age', 'phaseInjected', 'phaseShouldHaveCaught', 'qualifier', 'missing')
+WHY_MARK = re.compile(r' \[why: ([^\]]*)\]$')
+
+
+def why_suffix(text):
+    """' [why: k=v; ...]' from --why's "k=v; ..." text, every key of WHY_KEYS once, each value in its list."""
+    import findings  # noqa: E402 - the record's own value lists, read only when --why is given
+    raw = cell(text, '--why')
+    if '[' in raw or ']' in raw:
+        raise Refused('--why must not hold "[" or "]", which would end its mark in the Scenario cell')
+    got = {}
+    for piece in (x.strip() for x in raw.split(';') if x.strip()):
+        key, eq, value = (x.strip() for x in piece.partition('='))
+        if not eq or key not in WHY_KEYS or key in got or not value:
+            raise Refused(f'--why part {piece!r} is not one of {", ".join(k + "=..." for k in WHY_KEYS)}, each once')
+        allowed = findings.WHY_VALUES.get(key)
+        if allowed and value not in allowed:
+            raise Refused(f'--why {key}={value} is not one of {", ".join(allowed)}')
+        got[key] = value
+    lacking = [k for k in WHY_KEYS if k not in got]
+    if lacking:
+        raise Refused(f'--why lacks {", ".join(lacking)} (write unknown when it is not known)')
+    return ' [why: ' + '; '.join(f'{k}={got[k]}' for k in WHY_KEYS) + ']'
 
 
 def rel_path(repo, path):
@@ -156,7 +186,8 @@ def is_open(row):
 def cmd_add(a):
     repo = repo_dir(a.repo)
     fields = {'Area': cell(a.area, '--area'), 'Grade': a.grade, 'File': rel_path(repo, a.file),
-              'Scenario': cell(a.scenario, '--scenario'), 'Source': cell(a.source, '--source')}
+              'Scenario': cell(a.scenario, '--scenario') + (why_suffix(a.why) if a.why is not None else ''),
+              'Source': cell(a.source, '--source')}
     if a.minutes < 1:
         raise Refused('--minutes must be 1 or more')
     if a.grade == 'Blocker' and not a.follow_up:
@@ -253,7 +284,9 @@ def cmd_stale(a):
     for r in ([] if text is None else Register(text).rows):
         since = sum(1 for d in runs if d > r['Date'])
         if is_open(r) and since >= a.threshold:
-            out.append(f"{r['Id']} {since} runs since {r['Date']}: re-grade (close won't fix with a reason, or keep) `{r['File']}`")
+            why = WHY_MARK.search(r['Scenario'])
+            out.append(f"{r['Id']} {since} runs since {r['Date']}: re-grade (close won't fix with a reason, or keep) `{r['File']}`"
+                       + (f' [why: {why.group(1)}]' if why else ''))
     return '\n'.join(out)
 
 
@@ -342,6 +375,8 @@ def parser():
     p.add_argument('--minutes', type=int, required=True, help='estimated minutes to fix')
     p.add_argument('--follow-up', action='store_true',
                    help='deferred from a run the owner was away for: the owner looks at it after the run')
+    p.add_argument('--why', help='why a Blocker or Major got in: "age=..; phaseInjected=..; phaseShouldHaveCaught=..; '
+                   'qualifier=..; missing=<words>", kept at the end of the Scenario cell')
     p.set_defaults(fn=cmd_add)
     p = sub.add_parser('list', help='print the rows')
     p.add_argument('repo')

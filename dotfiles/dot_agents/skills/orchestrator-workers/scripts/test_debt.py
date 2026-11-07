@@ -281,6 +281,40 @@ class DebtTest(unittest.TestCase):
         with open(os.path.join(root, debt.REGISTER), encoding='utf-8') as f:
             debt.Register(f.read())
 
+    WHY = 'age=Rewritten; phaseInjected=brief; phaseShouldHaveCaught=brief-cases; qualifier=Missing; missing=a restart case'
+
+    def test_a_why_rides_in_the_scenario_and_list_for_files_and_stale_print_it(self):
+        self.cli('add', self.repo, '--area', 'REL', '--grade', 'Major', '--file', 'src/host/a.ts', '--scenario',
+                 'rows lost on restart', '--source', 'a-review', '--minutes', '20', '--why', ' ' + self.WHY.replace('; ', ' ;  '))
+        mark = ('rows lost on restart [why: age=Rewritten; phaseInjected=brief; phaseShouldHaveCaught=brief-cases; '
+                'qualifier=Missing; missing=a restart case]')
+        row = self.rows()
+        self.assertEqual(len(row), 1)
+        self.assertEqual(debt.Register.parse(row[0], 1)['Scenario'], mark)
+        self.assertIn(mark, self.cli('for-files', self.repo, 'src/host').stdout)
+        runs = os.path.join(self.tmp.name, 'runs.txt')
+        with open(runs, 'w') as f:
+            f.write('2999-01-01 a\n2999-01-02 b\n2999-01-03 c\n')
+        self.assertTrue(self.cli('stale', self.repo, '--runs', runs).stdout.rstrip().endswith(mark[len('rows lost on restart'):]))
+        self.add()
+        self.assertEqual(len(debt.Register(self.text()).rows), 2)
+        self.assertEqual(debt.Register(self.text()).rows[1]['Scenario'], 'a stale cache shows old names')
+
+    def test_a_bad_why_is_refused_and_unknown_is_accepted(self):
+        unknown = 'age=unknown; phaseInjected=unknown; phaseShouldHaveCaught=unknown; qualifier=unknown; missing=unknown'
+        for bad, want in ((self.WHY.replace('Rewritten', 'Old'), 'age=Old is not one of'),
+                          (self.WHY.replace('a restart', 'a | b'), 'must not hold a "|"'),
+                          (self.WHY.replace('a restart', 'a ] b'), 'must not hold "[" or "]"'),
+                          (self.WHY.replace('; missing=a restart case', ''), 'lacks missing'),
+                          (self.WHY + '; age=New', "is not one of age=..."), ('age New', "'age New' is not one of")):
+            p = self.cli('add', self.repo, '--area', 'REL', '--grade', 'Major', '--file', 'src/host/a.ts', '--scenario',
+                         's', '--source', 'r', '--minutes', '5', '--why', bad, ok=False)
+            self.assertIn(want, p.stderr, bad)
+            self.assertFalse(os.path.exists(self.reg), bad)
+        self.cli('add', self.repo, '--area', 'REL', '--grade', 'Major', '--file', 'src/host/a.ts', '--scenario', 's',
+                 '--source', 'r', '--minutes', '5', '--why', unknown)
+        self.assertIn(f's [why: {unknown}]', self.rows()[0])
+
     def test_help_runs(self):
         self.assertIn('tech-debt', self.cli('--help').stdout)
 
