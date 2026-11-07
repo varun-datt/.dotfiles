@@ -9,13 +9,17 @@ Prints `<Age> <commit or -> <reason>`, exit 0 (2 on a usage error). Age (ODC v5.
 https://s3.us.cloud-object-storage.appdomain.cloud/res-files/70-ODC-5-2.pdf):
     Base       the line is at the base commit or before it (blame marks it boundary)
     ReFixed    a fix commit put it in (after --fix-start)
-    Rewritten  a build commit put it in, in a hunk that replaced lines of its parent
-    New        a build commit put it in, in a hunk that only added lines
+    Rewritten  a build commit put it in, in a hunk that replaced lines which trace back to the base
+    New        a build commit put it in, in a hunk that only added lines or replaced lines the branch itself added
     unknown    anything else, with the reason: a line out of range, a file not in HEAD, a blame that fails, an
                uncommitted change to the file, or a commit brought in by a merge (main merged in after the base)
 Blame runs as `git blame --porcelain -w -L <line>,<line> <base>..HEAD -- <file>`: -w gives a whitespace-only change
-to the commit before it; a whole-file rename is followed without -M or -C, which are not used. A file the worktree
-does not have at that path is looked up as the one tracked file ending in /<file>. Labels come from reviewprep.py's
+to the commit before it; a whole-file rename is followed without -M or -C, which are not used. A file HEAD does not
+have at that path (deleted, or the name before a rename) is unknown; give the path HEAD has. Whether replaced lines
+trace back to the base is found by blaming each line the hunk removed in the commit's parent, a line whose commit is
+the base or its ancestor (`git merge-base --is-ancestor`) being from the base, and again for each line that came from
+an earlier branch commit (`git log -L` would give the same chain as patches to
+parse). Labels come from reviewprep.py's
 labelled_commits. Blame only proposes: SZZ-style linking was right about half the time (recall and precision 0.40 to
 0.60, https://arxiv.org/html/2308.05060v2; research/2026-11-06-why-a-major-got-in.md in the dotfiles repository).
 """
@@ -25,7 +29,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import reviewprep  # noqa: E402
 
 AGES = ('Base', 'New', 'Rewritten', 'ReFixed', 'unknown')
-HUNK = re.compile(r'^@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', re.M)
+HUNK = re.compile(r'^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@', re.M)
 
 
 def git(wt, *args):
@@ -37,13 +41,61 @@ def unknown(reason, commit=None):
 
 
 def tracked(wt, path):
-    """(the path HEAD has, note) for the file; a path HEAD lacks is matched as the one tracked file ending in it."""
-    if not git(wt, 'cat-file', '-e', f'HEAD:{path}').returncode:
-        return path, ''
-    hits = [f for f in git(wt, 'ls-files').stdout.splitlines() if f.endswith('/' + path.lstrip('./'))]
-    if len(hits) == 1:
-        return hits[0], f' ({path} read as {hits[0]})'
-    return None, ''
+    """(the path HEAD has, '') for the file, `./` and `a/../` resolved; (None, why) when HEAD has no file there."""
+    norm = os.path.normpath(path).replace(os.sep, '/')
+    if norm.startswith('../') or norm in ('.', '..') or os.path.isabs(norm):
+        return None, f'{path} is not inside the worktree'
+    if not git(wt, 'cat-file', '-e', f'HEAD:{norm}').returncode:
+        return norm, ''
+    return None, f'{path} is not in HEAD (deleted, renamed away or never committed); give the path HEAD has'
+
+
+def blame_one(wt, rng, path, line):
+    """(commit, line there, file name there, boundary) of one line, or None when blame fails."""
+    p = git(wt, 'blame', '--porcelain', '-w', '-L', f'{line},{line}', rng, '--', path)
+    head = p.stdout.splitlines()
+    first = head[0].split() if not p.returncode and head else []
+    if len(first) < 2:
+        return None
+    named = next((h[len('filename '):] for h in head if h.startswith('filename ')), path)
+    return first[0], int(first[1]), named, 'boundary' in head
+
+
+def hunk_of(wt, sha, path, line):
+    """(old path, first removed line, removed count) of the hunk of commit `sha` that added line `line` of `path`."""
+    d = git(wt, 'show', '-U0', '-w', '-M', '--format=', sha)
+    if d.returncode:
+        return None
+    for sec in re.split(r'^diff --git ', d.stdout, flags=re.M):
+        if not re.search(r'^\+\+\+ b/' + re.escape(path) + r'$', sec, re.M):
+            continue
+        old = re.search(r'^--- (?:a/(.*)|/dev/null)$', sec, re.M)
+        for m in HUNK.finditer(sec):
+            start, count = int(m.group(3)), int(m.group(4) or 1)
+            if start <= line < start + count:
+                return (old and old.group(1)) or path, int(m.group(1)), int(m.group(2) or 1)
+    return None
+
+
+def from_base(wt, base, sha, path, line, seen):
+    """True when the lines commit `sha`'s hunk replaced to write line `line` of `path` trace back to the base."""
+    if (sha, path, line) in seen:
+        return False
+    seen.add((sha, path, line))
+    hunk = hunk_of(wt, sha, path, line)
+    if not hunk or not hunk[2]:
+        return False
+    old_path, first, count = hunk
+    for n in range(first, first + count):
+        b = blame_one(wt, f'{sha}^', old_path, n)
+        if not b:
+            continue
+        # A blame range base..<parent> is empty when the parent is the base, and git then blames HEAD instead.
+        if not git(wt, 'merge-base', '--is-ancestor', b[0], base).returncode:
+            return True
+        if from_base(wt, base, b[0], b[2], b[1], seen):
+            return True
+    return False
 
 
 def propose(wt, base, path, line, fix=None):
@@ -58,9 +110,10 @@ def propose(wt, base, path, line, fix=None):
         labels = {sha: label for sha, _, label in reviewprep.labelled_commits(wt, base, fix)}
     except (reviewprep.PrepError, OSError) as e:
         return unknown(f'the branch history could not be read: {e}')
-    real, note = tracked(wt, path)
+    real, why = tracked(wt, path)
     if real is None:
-        return unknown(f'{path} is not in HEAD (deleted, renamed away or never committed)')
+        return unknown(why)
+    note = '' if real == path else f' ({path} read as {real})'
     if git(wt, 'status', '--porcelain', '--', real).stdout.strip():
         return unknown(f'{real} has an uncommitted change, so its line numbers may not be HEAD\'s')
     p = git(wt, 'blame', '--porcelain', '-w', '-L', f'{line},{line}', f'{base}..HEAD', '--', real)
@@ -81,19 +134,14 @@ def propose(wt, base, path, line, fix=None):
         return unknown(f'{sha[:12]} came in through a merge ({label}), not from this item\'s own work', sha)
     if label == 'fix':
         return {'age': 'ReFixed', 'commit': sha, 'reason': f'{sha[:12]} is a fix commit{note}'}
-    d = git(wt, 'show', '-U0', '-w', '-M', '--format=', sha)
-    if d.returncode:
-        return unknown(f'git show {sha[:12]} failed', sha)
-    section = next((s for s in re.split(r'^diff --git ', d.stdout, flags=re.M)
-                    if re.search(r'^\+\+\+ b/' + re.escape(named) + r'$', s, re.M)), '')
-    for m in HUNK.finditer(section):
-        old, start, count = int(m.group(1) or 1), int(m.group(2)), int(m.group(3) or 1)
-        if start <= orig < start + count:
-            if old:
-                return {'age': 'Rewritten', 'commit': sha,
-                        'reason': f'build commit {sha[:12]} replaced {old} line(s) there{note}'}
-            return {'age': 'New', 'commit': sha, 'reason': f'build commit {sha[:12]} only added lines there{note}'}
-    return unknown(f'line {orig} of {named} is not in a hunk of {sha[:12]}', sha)
+    hunk = hunk_of(wt, sha, named, orig)
+    if hunk is None:
+        return unknown(f'line {orig} of {named} is not in a hunk of {sha[:12]}', sha)
+    if from_base(wt, base, sha, named, orig, set()):
+        return {'age': 'Rewritten', 'commit': sha,
+                'reason': f'build commit {sha[:12]} replaced line(s) that trace back to the base{note}'}
+    did = 'replaced only lines the branch added' if hunk[2] else 'only added lines'
+    return {'age': 'New', 'commit': sha, 'reason': f'build commit {sha[:12]} {did} there{note}'}
 
 
 def context(run, item):

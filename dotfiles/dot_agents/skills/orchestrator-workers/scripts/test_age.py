@@ -58,6 +58,31 @@ class AgeTest(unittest.TestCase):
         self.r.git('commit', '-qm', 'build: rename')
         self.assertEqual(self.age('g.py', 1)['age'], 'Base')
         self.assertEqual(self.age('g.py', 3)['age'], 'Rewritten')
+        self.assertEqual(self.age('./g.py', 3)['age'], 'Rewritten')
+        r = self.age('f.py', 1)
+        self.assertEqual(r['age'], 'unknown')
+        self.assertIn('f.py is not in HEAD', r['reason'])
+
+    def test_rewritten_needs_the_replaced_lines_to_trace_back_to_the_base(self):
+        self.r.git('checkout', '-q', '-b', 'b2', self.base)
+        self.r.commit('f.py', 'a = 1\nb = 2\nc = 3\nd = 4\nnew = 1\n', 'build A: add a line')
+        self.r.commit('f.py', 'a = 1\nb = 2\nc = 3\nd = 4\nnew = 2\n', 'build B: change the added line')
+        r = age.propose(self.r.wt, self.base, 'f.py', 5)
+        self.assertEqual(r['age'], 'New', r)
+        self.assertIn('replaced only lines the branch added', r['reason'])
+        self.r.commit('f.py', 'a = 1\nb = 20\nc = 3\nd = 4\nnew = 2\n', 'build C: change a base line')
+        self.r.commit('f.py', 'a = 1\nb = 200\nc = 3\nd = 4\nnew = 2\n', 'build D: change it again')
+        r = age.propose(self.r.wt, self.base, 'f.py', 2)
+        self.assertEqual(r['age'], 'Rewritten', r)
+
+    def test_a_deleted_root_file_is_unknown_though_a_nested_one_of_its_name_survives(self):
+        os.makedirs(os.path.join(self.r.wt, 'nested'))
+        self.r.commit('nested/f.py', 'n = 1\n', 'build: nested file')
+        self.r.git('rm', '-q', 'f.py')
+        self.r.git('commit', '-qm', 'build: delete the root file')
+        r = self.age('f.py', 1)
+        self.assertEqual(r['age'], 'unknown', r)
+        self.assertIn('f.py is not in HEAD', r['reason'])
 
     def test_what_cannot_be_decided_is_unknown_with_the_reason(self):
         for path, line, want in (('f.py', 99, 'git blame failed: fatal: file f.py has only 5 lines'),
