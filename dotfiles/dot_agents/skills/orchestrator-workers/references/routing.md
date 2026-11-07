@@ -83,3 +83,4 @@ At the end of each day:
 2. Adjust routing and caps only where the data supports it, inside the rulings above.
 3. Record each change at once with `python3 scripts/state.py marker "<what changed>" --scope all|workers|reviews|merges`. Markers go to `<run>/markers.jsonl`, outside `orchestrator.json`.
 4. Report the saving by marker from the `markers` section of `mine.py`: the median credits per round before and after each marker, for each kind it covers, up to the neighbouring markers.
+5. When two Blocker or Major findings share a cause and the step where they got in, propose a lens for the code-review-lenses skill to the owner. It is added only if it clears that skill's bar: a mechanical check, a cost, and a real defect it would have caught.

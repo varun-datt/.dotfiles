@@ -208,15 +208,14 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   shell, because the reviewer reads `git diff`. Write `REVIEW-DIFF.patch` and `REVIEW-REPORT.md` into the author's worktree, uncommitted.
   It runs at high effort, and fills the rubric's blocking scope from `--scope product|tool`, which wins over the default, by default `tool` only when every changed file is under `dotfiles/dot_agents/skills/*/scripts/`; a re-review or critique prompt, which has no rubric, gets the scope line and the rubric's Scope rule at its end.
   A diff about file-system races or sandbox escapes can hit OpenAI's 422 "cybersecurity risk"
-  filter on gpt-6.1-sol, or a sub-agent that refuses (2026-10-29: 3 rounds, 131 credits, no
-  verdict). Tell the reviewer to work in its own session, and after one 422 fall back to Opus at
+  filter on gpt-6.1-sol, or a sub-agent that refuses. Tell the reviewer to work in its own session, and after one 422 fall back to Opus at
   max in a fresh session, saying the review is same-family: `--override "model=..,effort=max,same_family=yes,reason=422 .."`.
   Without `same_family=yes` the launcher refuses any review in the author's family, and any review whose author it
   cannot find (no `--author-model`, no author round log, none saved with a reused decision).
 - **An INFERRED vendor fact gets its live check before the build**, and the brief's FACTS TO
   VERIFY carries the result.
 - **Bring main into a branch before its review** when main has moved under the files the item
-  touches, so the reviewer reads the code that will merge (one stale selector, 2026-10-30).
+  touches, so the reviewer reads the code that will merge.
 - **Fix rounds** (`<prefix><item>-fixN`) go back to the builder: `route.py run <item>-fix1 --kind fix
   --resume-session <item>` resumes the build's own session, with the fix brief alone as its prompt, so
   it does not relearn the item. The pipeline does this
@@ -447,7 +446,8 @@ Label every claim VERIFIED (read or ran), INFERRED or OPEN.
 - **Mid-session:** record the question, park only the part it blocks, and carry on. Ask everything
   at the end, unless it blocks all the work.
 - **Hand off before the context fills.** After a compaction, or when the queue outlives the session,
-  write a handoff (rulings, queue, in-flight workers with resume commands, waiting questions) and
+  write a handoff (the owner's rulings in their words, apart from defaults and picks marked
+  `not approved`; queue, in-flight workers with resume commands, waiting questions) and
   start a new orchestrator session. Never archive a chat that owns running worker terminals: that
   disposes them.
 - **Only the owner decides:** security findings in someone else's system, weakening a check, and

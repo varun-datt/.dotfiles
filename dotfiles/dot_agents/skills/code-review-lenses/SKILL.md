@@ -12,6 +12,11 @@ Style, naming and formatting are out of scope. Evidence rules — N files read f
 N, re-derive an absence, provenance tags — are in the repository's own `AGENTS.md`, where it has
 them, and are not repeated.
 
+This skill is the one home for what a review looks for, in any repository. How a review grades,
+reports and records what it finds belongs to the process that runs it; for the
+orchestrator-workers pipeline, that is its rubric and review prompt. A question that holds in one
+repository only stays in that repository's own review rules.
+
 ## 1. Scope the review before starting
 
 1. List the surfaces: each service, library, and **each remote call by endpoint**, caller and

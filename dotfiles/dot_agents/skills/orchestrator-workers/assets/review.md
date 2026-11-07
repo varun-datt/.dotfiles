@@ -3,6 +3,13 @@ worktree, uncommitted: REVIEW-DIFF.patch (`git diff <base>...<branch>`) and REVI
 author's final message). Launch with scripts/review.sh, a CLI process under `timeout`, never an
 in-chat subagent, with a model from a different family than the author, at max effort when the diff
 touches a risk area (references/routing.md). The cause tag feeds `mine.py --quality`.
+This prompt and references/rubric.md are the one home for how a pipeline review checks a branch,
+grades and reports what it finds, and records it, including why a Major got in. What to look for in
+code lives in the code-review-lenses skill: a new question goes there as a lens (routing.md, learning
+loop), not into this prompt. The risk checks below stay here, with the risk areas that set a review's
+model and effort.
+Findings block: SARIF 2.1.0, https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html; why
+it was adopted: research/2026-11-02-review-focus-learning.md in the dotfiles repository.
 Placeholders: {{RUBRIC}} is the text of references/rubric.md, filled by review.sh. {{GATES_RUN}} lists the gates
 the author ran and their results. {{PRIOR_RULINGS|none}} lists findings already rejected or accepted
 as known gaps, with the reason. {{RISK_CHECKS_OR_DELETE}} takes one block per risk area the diff

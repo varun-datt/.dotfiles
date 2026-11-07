@@ -279,3 +279,5 @@ The rules give a one-clause reason; these are the incidents behind them.
 - A full re-review hunted each kind again; all 14 in one run still found blocking problems, for 994 credits (2026-11-02). Behind the short re-review.
 - Two max-effort reviews ran out of their 45 minutes (2026-11-02). Behind reviews at high effort.
 - A research note proposed building a list that an adopted library already covered (2026-11-01). Behind the research preamble's REUSE CHECK.
+- A review of file-system race and sandbox code hit OpenAI's 422 "cybersecurity risk" filter: 3 rounds, 131 credits, no verdict (2026-10-29). Behind the fallback to Opus after one 422.
+- One stale selector got through after main moved under a branch's files, and it was not a review finding (2026-10-30, dotfiles research/2026-10-30-build-quality.md). Behind bringing main into a branch before its review.

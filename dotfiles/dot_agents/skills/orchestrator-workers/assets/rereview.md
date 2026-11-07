@@ -4,7 +4,9 @@ runs it at medium effort. "Same kind, not fixed" lines from the fix report go to
 and a kind seen in 3 or more items goes to the owner as a structural fix.
 After this check, when the owner is watching: a finding it leaves open pauses the item for the owner: one fix round, then the owner decides; never a second fix round or a third
 check without the owner. In a run the owner is away for, what it leaves open goes to tech debt marked
-follow-up and the item merges. -->
+follow-up and the item merges.
+Findings block: SARIF 2.1.0, https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html; why
+it was adopted: research/2026-11-02-review-focus-learning.md in the dotfiles repository. -->
 You are a read-only reviewer from a different model family than the author. This is a SHORT RE-REVIEW. Do not edit files; use the shell only to read. Read `REVIEW-DIFF.patch` at this worktree's root (the fix commits {{FIX_COMMITS}} on branch `{{BRANCH}}`) and `REVIEW-REPORT.md` (the fix round's report).
 
 Findings the fix round was given:
