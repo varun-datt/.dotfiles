@@ -12,9 +12,15 @@ import time
 import unittest
 from unittest import mock
 
-import remove_merged
+try:
+    import remove_merged
+except ModuleNotFoundError as e:
+    if e.name != 'remove_merged':
+        raise
+    remove_merged = None
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+SKILL = os.path.dirname(HERE)
 SCRIPT = os.path.join(HERE, 'remove_merged.py')
 OLD_COLUMNS = ['repo', 'branch', 'last_commit', 'worktree', 'untracked_items_archived']
 
@@ -28,6 +34,7 @@ def git(cwd, *args, binary=False):
 
 class RemoveMergedBase(unittest.TestCase):
     def setUp(self):
+        self.assertIsNotNone(remove_merged, 'scripts/remove_merged.py is missing')
         self.tmp = os.path.realpath(tempfile.mkdtemp(prefix='ow rm '))
         self.addCleanup(self.cleanup)
         self.repo = os.path.join(self.tmp, 'repo')
@@ -529,6 +536,29 @@ class DryRunTest(RemoveMergedBase):
                            capture_output=True, text=True, env=env, stdin=subprocess.DEVNULL)
         self.assertEqual(p.returncode, 2)
         self.assertIn('nothing changed', p.stderr)
+
+
+class SkillTextTest(unittest.TestCase):
+    def section(self, head):
+        with open(os.path.join(SKILL, 'SKILL.md'), encoding='utf-8') as f:
+            text = f.read()
+        return ' '.join(text.split(f'\n## {head}\n', 1)[1].split('\n## ', 1)[0].split()), ' '.join(text.split())
+
+    def test_skill_md_says_reviews_save_their_files_and_merges_remove_the_item(self):
+        merge, whole = self.section('Merge discipline')
+        self.assertIn('python3 -B ~/.agents/skills/orchestrator-workers/scripts/remove_merged.py --repo $REPO '
+                      '--branch ow/$I --run-dir $R </dev/null > $G/remove.log 2>&1; RC=$?', merge)
+        self.assertIn('once main has moved', merge)
+        self.assertIn('Its exit 1 is a kept worktree or branch for the owner\'s list', merge)
+        self.assertIn('not a failed merge', merge)
+        self.assertIn('~/.local/state/orchestrator-workers/_archive/worktrees/<repo>/<item>/', merge)
+        self.assertIn('index.tsv', merge)
+        launch, _ = self.section('Launch recipe')
+        reviewer = launch.split('**Reviewer:**', 1)[1].split(' - **', 1)[0]
+        self.assertIn('copies each regular file at the worktree\'s root named `REVIEW-*` into the run folder as '
+                      '`<round>.<file name>`', reviewer)
+        self.assertIn('Tell the orchestrator "stop". It stops launching, reports, and leaves worktrees and commits in',
+                      whole)
 
 
 if __name__ == '__main__':
