@@ -193,6 +193,8 @@ python3 ~/.agents/skills/orchestrator-workers/scripts/route.py run <item> --kind
   exits non-zero when copilot fails (124 on timeout) or the round errored (4) or hit its cap (3).
   Re-running it before the round launched reuses the logged decision; `--fresh` draws again.
 - **Run it in an async terminal**, so its completion wakes the orchestrator. Never poll in a loop.
+  Never detach it (`nohup`, `& disown`) while the owner is watching: a detached round wakes no
+  one, so its result waits unreported until the owner asks.
   Why each flag is there: [references/details.md](references/details.md#launch-flags).
 - **Load and leftovers** (`scripts/sweep.py`): a launch, review or merge gate waits while the Mac
   swaps or a `yes` stress process runs, and on exit stops orphans (parent 1) whose working folder
