@@ -46,6 +46,10 @@ These rules hold for every format. The format skill (`pptx`, `visual-explainer`,
   ("records the plan you approve"), not how ("as a Task"). A prompt shown must read like speech.
 - Use the organisation's names for roles and things: SME, user story, the repository's real name.
 - Technical pieces are pictures first: an icon per piece, labels of one to three words.
+- Logos and icons in a piece others may see come only from CC0 or MIT sets, with the set's notice
+  kept; check each icon's own licence where a set allows exceptions (Simple Icons does). That
+  leaves out share-alike sets (OpenMoji) and sets whose terms forbid use in apps (unDraw). Cloud
+  vendors' icons and other marks under vendor terms go only in private pieces.
 - For a piece meant to excite, render two or three bold palettes on the real piece, side by side,
   and let the user pick by number.
 - The post that carries the image: bullets with bold lead-ins, each command in code and each link

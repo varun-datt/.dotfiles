@@ -16,6 +16,11 @@ for it.
 
 ## 2. Read primary sources
 
+- Before a caller starts several researchers at once, it runs `sh ~/.agents/skills/research/scripts/tvly-quota.sh`
+  and tells the owner if fewer than about 30 Tavily credits remain per researcher (one worker used
+  24 calls, 2026-11-07), because one shared quota ends every researcher's search together.
+  Each brief names the fallback for when `tvly` refuses: `curl` or the fetch tool for pages,
+  OpenAlex's API for papers, `gh api` for repositories.
 - Find with `tvly search "<query>" --json`, read with `tvly extract "<url>" --json`. Keep raw output
   in a temporary folder outside the repository.
 - Primary sources are official docs, source code, specs, first-party APIs and the paper itself.
