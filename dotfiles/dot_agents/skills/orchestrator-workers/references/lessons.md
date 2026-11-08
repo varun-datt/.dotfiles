@@ -294,7 +294,7 @@ The rules give a one-clause reason; these are the incidents behind them.
 
 ## 2026-11-07: traps from the ram item (remove-at-merge)
 
-- A dotfiles source file whose name starts with a chezmoi attribute prefix is not installed as that file: `remove_merged.py` was read as "remove the target `merged.py`", so it never reached `~/.agents` while its test file did, and the merge gate's deploy diff caught it only after the merge. Run `chezmoi target-path <source file>` for each new file before a review. [notes]
+- A dotfiles source file whose name starts with a chezmoi attribute prefix is not installed as that file: `remove_merged.py` was read as "remove the target `merged.py`", so it never reached `~/.agents` while its test file did, and the merge gate's deploy diff caught it only after the merge. Run `chezmoi target-path <source file>` for each new file before a review. The dotfiles' pre-commit hook now blocks such a name (`scripts/check_install_names.py`). [notes]
 - A brief that put a destructive step "before removal" let the builder stop leftover processes after taking the archive, so their last writes would be lost; the review traced the Blocker to the brief. For a destructive step, a brief states the whole order: stop, check nothing runs, snapshot, delete. [notes]
 - Extras the orchestrator marked `not approved` were still written as MUSTs, so the worker built them; about 4 of the 9 debt rows from the item's review sit in them. Anything beyond the owner's words goes to the owner as a question, never into a MUST. [notes]
 - A fix round resumed into the builder's session 15 minutes after the build re-cached the builder's whole context: 97 of its 205 credits were cache writes (`mine.py`, 2026-11-07). [notes]

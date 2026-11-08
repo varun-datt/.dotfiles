@@ -10,4 +10,5 @@ for ident in GIT_AUTHOR_IDENT GIT_COMMITTER_IDENT; do
   esac
 done
 
+python3 -B scripts/check_install_names.py
 exec python3 dotfiles/dot_agents/skills/commit-guard/scripts/guard.py --staged

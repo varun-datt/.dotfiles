@@ -83,6 +83,7 @@ Settings for both editors come from a single source, [`dotfiles/.chezmoidata/edi
 ## Conventions
 
 - **Secrets and work identifiers:** none committed. `.githooks/pre-commit` runs the repo's own [commit-guard](dotfiles/dot_agents/skills/commit-guard/SKILL.md) on the staged changes: gitleaks, plus the redaction patterns, work repository names and organisation URLs listed in `~/.config/commit-guard/config.json`. Without that file it refuses the commit rather than skip the check; on a machine with no work lists, `{"gitleaks": true}` keeps the secret check. Both hooks also refuse any author or committer other than the GitHub noreply address: pre-commit for new commits, `.githooks/pre-push` for everything pushed, since a rebase, a cherry-pick or another machine's commit never runs pre-commit. After cloning, run `git config core.hooksPath .githooks`.
+- **Install names:** the same hook blocks a new source file that chezmoi would install under another name or run as an action (`remove_`, `run_`, `create_`, `modify_`, `symlink_`); list a deliberate one in `.githooks/install-names-allow.txt`.
 - **Per-machine data:** `dotfiles/.chezmoidata.yaml` (gitignored; see `.chezmoidata.yaml.example`).
 - **CI:** `.github/workflows/lint.yml` runs shellcheck, stylua, `chezmoi apply --dry-run`, and `chezmoi doctor`.
 - **Docs:** one page per topic in `docs/` at the repo root, for a choice or a how-to too long for this README. It sits outside `.chezmoiroot`, so chezmoi never deploys it.
