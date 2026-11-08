@@ -26,6 +26,30 @@ Where it does not apply, and what to do instead:
 - **Automation the person supervises.** Its state and recent actions stay one click away, and every
   exception links to them, so the person does not fall out of the loop.
 
+## Engaging visuals within quiet attention
+
+A view can be rich and still quiet. Evidence: AMC's note
+`research/2026-11-07-apps-visual-cues-evidence.md`.
+
+- **Rich identity, quiet status.** Position shows structure; a logo or icon with a short label says
+  what a thing is; one reserved hue, plus a shape and words, marks an exception. A unique feature
+  pops out and a mix of features does not ([Healey](https://www.csc2.ncsu.edu/faculty/healey/PP/)),
+  and colour pop-out fades under load (Haroz and Whitney 2012), so keep colour variety low across
+  the whole view. Logos sit in neutral ink while working and
+  take full colour on focus or in detail.
+- **Pictures only when tied to data**: a logo per service, a pictograph per kind of payload,
+  illustration only where it shows data or fills an empty state. Decorative pictures distract and
+  confuse ([Haroz, Kosara and Franconeri 2015](https://osf.io/7mdw5/download)).
+- **Motion only when it is the information** (change over time, a replay, a playhead) or a short
+  transition the person starts. One non-looping cue for a new exception; nothing ambient at rest.
+  About 150 to 400 ms for interface moves and about 1 s for a staged data transition
+  ([Carbon](https://carbondesignsystem.com/elements/motion/overview/),
+  [Heer and Robertson 2007](https://idl.cs.washington.edu/files/2007-AnimatedTransitions-InfoVis.pdf)).
+  Every animation has a static equivalent, can be cancelled, and respects reduced motion
+  ([Apple HIG](https://developer.apple.com/design/human-interface-guidelines/motion);
+  [WCAG 2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html) for motion over
+  5 s).
+
 ## Patterns
 
 | Pattern | Rule | Source |
@@ -41,6 +65,7 @@ Where it does not apply, and what to do instead:
 ## Check before calling a screen done
 
 - [ ] Every coloured or moving element is an exception someone must act on or know about.
+- [ ] Each picture or logo stands for data; each animation has a static equivalent.
 - [ ] With everything fine, the screen is calm: no success marks, no idle badges.
 - [ ] Each exception says what happened and offers the next step.
 - [ ] A quiet source can be told apart from a dead one.

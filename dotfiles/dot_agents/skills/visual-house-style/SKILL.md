@@ -97,6 +97,8 @@ These rules hold for every format. The format skill (`pptx`, `visual-explainer`,
   sound and notifications go only to what needs the person. Where that stops applying (the
   person's own action, a monitor that may have died, newcomers, supervised automation) and the
   patterns that go with it: [references/attention-and-interaction.md](references/attention-and-interaction.md).
+- Engaging and quiet together: rich identity, quiet status; pictures only when tied to data;
+  motion only when it is the information, always with a static equivalent. Same reference.
 
 ## Before calling it done
 
