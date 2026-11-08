@@ -543,10 +543,75 @@ def usage_by_kind(rounds):
     return out
 
 
+def _apply_session_edit(state, m):
+    k = m.get('kind')
+    if k == 0:
+        return m.get('v')
+    keys = m.get('k') or []
+    if not isinstance(state, (dict, list)) or not keys:
+        return state
+    t = state
+    try:
+        for key in keys[:-1]:
+            t = t[key]
+        last = keys[-1]
+        if k == 1:
+            t[last] = m.get('v')
+        elif k == 2:
+            cur = t[last] if (isinstance(t, list) or last in t) else []
+            lst = cur if isinstance(cur, list) else []
+            if isinstance(m.get('i'), int) and m['i'] >= 0:
+                del lst[m['i']:]
+            lst.extend(m.get('v') or [])
+            t[last] = lst
+        elif k == 3:
+            del t[last]
+    except (KeyError, IndexError, TypeError):
+        pass
+    return state
+
+
+def load_chat_session(fp):
+    """A VS Code chat session file: a .json object, or a .jsonl of edits replayed in order."""
+    with open(fp, encoding='utf-8', errors='replace') as f:
+        if fp.endswith('.json'):
+            try:
+                return json.load(f)
+            except ValueError:
+                return None
+        st = None
+        for line in f:
+            if line.strip():
+                try:
+                    st = _apply_session_edit(st, json.loads(line))
+                except ValueError:
+                    pass
+        return st
+
+
+def chat_session_file(path):
+    """The chat session file for a debug-log folder or its main.jsonl, or the path itself when it is one."""
+    p = os.path.abspath(path)
+    if os.path.isfile(p) and os.path.basename(os.path.dirname(p)) in ('chatSessions', 'emptyWindowChatSessions'):
+        return p
+    d = p if os.path.isdir(p) else os.path.dirname(p)
+    ws = os.path.dirname(os.path.dirname(os.path.dirname(d)))
+    for ext in ('.jsonl', '.json'):
+        f = os.path.join(ws, 'chatSessions', os.path.basename(d) + ext)
+        if os.path.isfile(f):
+            return f
+    return None
+
+
 def chat_spend(path, prices):
-    """Price an orchestrator chat's llm_request records; uncached input is priced as cache writes (an upper bound)."""
-    files = [path] if os.path.isfile(path) else [os.path.join(path, f) for f in sorted(os.listdir(path))
-                                                 if f.endswith('.jsonl')]
+    """An orchestrator chat's credits: VS Code's own per-message figures from its chat session file, else
+    the debug log's llm_request records priced with uncached input as cache writes (low when the log lost lines)."""
+    session = chat_session_file(path)
+    if session == os.path.abspath(path):
+        files = []
+    else:
+        files = [path] if os.path.isfile(path) else [os.path.join(path, f) for f in sorted(os.listdir(path))
+                                                     if f.endswith('.jsonl')]
     by = collections.defaultdict(lambda: {**dict.fromkeys(CLASSES, 0), 'calls': 0})
     for fp in files:
         with open(fp, encoding='utf-8', errors='replace') as f:
@@ -576,7 +641,18 @@ def chat_spend(path, prices):
             total += credits
         models.append({'model': model, 'calls': t['calls'], 'tokens': {c: t[c] for c in CLASSES},
                        'credits': credits})
-    return {'credits': total, 'upper_bound': True, 'models': models, 'unpriced': unpriced}
+    st = load_chat_session(session) if session else None
+    reqs = [r for r in (st.get('requests') or []) if isinstance(r, dict)] if isinstance(st, dict) else []
+    known = [r['copilotCredits'] for r in reqs if isinstance(r.get('copilotCredits'), (int, float))]
+    out = {'priced': total if files else None, 'models': models, 'unpriced': unpriced,
+           'messages': len(reqs), 'messages_without_credits': len(reqs) - len(known)}
+    if known:
+        return {'credits': float(sum(known)), 'source': 'vscode', **out}
+    return {'credits': total, 'source': 'debug-log', **out}
+
+
+def chat_label(chat):
+    return "VS Code's per-message credits" if chat['source'] == 'vscode' else 'debug-log estimate, low when the log lost lines'
 
 
 def budget_report(budget, rounds, chat, cap_rows):
@@ -586,6 +662,7 @@ def budget_report(budget, rounds, chat, cap_rows):
     fit = [{'kind': c['kind'], 'model': c['model'], 'median': c['median'],
             'rounds': int(left // c['median']) if left > 0 and c['median'] > 0 else 0} for c in cap_rows]
     return {'budget': budget, 'rounds_credits': spent_rounds, 'chat_credits': chat['credits'] if chat else None,
+            'chat_source': chat['source'] if chat else None,
             'spent': spent, 'left': left, 'fit': fit}
 
 
@@ -1091,8 +1168,8 @@ def text(report):
                      + ', '.join(f"{k} {v}" for k, v in ev['hit'].items()))
     if report.get('chat'):
         ch = report['chat']
-        lines.append(f"orchestrator chat: {ch['credits']:,.0f} credits, upper bound (uncached input priced as cache writes)"
-                     + (f"; unpriced models: {', '.join(ch['unpriced'])}" if ch['unpriced'] else ''))
+        lines.append(f"orchestrator chat: {ch['credits']:,.0f} credits ({chat_label(ch)})"
+                     + (f"; unpriced models: {', '.join(ch['unpriced'])}" if ch['unpriced'] and ch['source'] != 'vscode' else ''))
     if report.get('budget'):
         lines.append(spend_line(report['budget']))
     lines.append('by day: rounds, credits, capped')
@@ -1121,7 +1198,8 @@ def text(report):
 
 
 def spend_line(b):
-    chat = '' if b['chat_credits'] is None else f" + chat {b['chat_credits']:,.0f} (upper bound)"
+    chat = '' if b['chat_credits'] is None else (
+        f" + chat {b['chat_credits']:,.0f} ({'VS Code' if b['chat_source'] == 'vscode' else 'debug-log estimate'})")
     return (f"spend: {b['spent']:,.0f} of {b['budget']:,.0f} credits (rounds {b['rounds_credits']:,.0f}{chat}), "
             f"{b['left']:,.0f} left; more rounds at their medians: "
             + ', '.join(f"{f['kind']} {f['model']} {f['rounds']}" for f in b['fit']))
@@ -1152,7 +1230,7 @@ def main(argv=None):
     ap.add_argument('--sarif', action='store_true', help='with --findings: also write findings.sarif, one SARIF 2.1.0 log')
     ap.add_argument('--history', nargs='+', default=[], metavar='RUN', help="earlier run folders whose rounds join the caps' window")
     ap.add_argument('--prices', help='prices.json (default: <run>/prices.json, else the one beside this script)')
-    ap.add_argument('--chat', help='VS Code debug-log folder (or main.jsonl) of the orchestrator chat to price')
+    ap.add_argument('--chat', help="the orchestrator chat's VS Code debug-log folder, its main.jsonl, or its chat session file")
     ap.add_argument('--budget', type=float, help="the run's credit ceiling: print spend against it")
     ap.add_argument('--floor', type=int, default=FLOOR, help=f'cap while a kind and model has fewer than {MIN_ROUNDS} rounds (default {FLOOR})')
     a = ap.parse_args(argv)
@@ -1223,7 +1301,7 @@ def main(argv=None):
         if budget:
             print(spend_line(budget))
         elif chat:
-            print(f"chat: {chat['credits']:,.0f} credits, upper bound")
+            print(f"chat: {chat['credits']:,.0f} credits ({chat_label(chat)})")
         return 0
     report = {'run': run, 'since': a.since, 'rounds': rounds, 'items': items(rounds, merge_rows),
               'kinds': kinds(rounds), 'days': days(rounds), 'caps': cap_rows,

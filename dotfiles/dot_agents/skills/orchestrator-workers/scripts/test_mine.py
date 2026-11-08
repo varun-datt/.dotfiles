@@ -547,9 +547,45 @@ class MetricsTest(Base):
             f.write('not json\n{"type":"other"}\n')
         return d
 
-    def test_chat_is_priced_as_an_upper_bound(self):
+    def test_chat_without_a_session_file_is_priced_from_the_debug_log(self):
         chat = mine.chat_spend(self.write_chat(), PRICES)
-        self.assertEqual((chat['credits'], chat['upper_bound'], chat['models'][0]['calls']), (566.0, True, 2))
+        self.assertEqual((chat['credits'], chat['source'], chat['models'][0]['calls']), (566.0, 'debug-log', 2))
+
+    def write_session(self, edits, ext='.jsonl'):
+        ws = os.path.join(self.tmp, 'ws')
+        log = os.path.join(ws, 'GitHub.copilot-chat', 'debug-logs', 'sid1')
+        os.makedirs(log)
+        os.makedirs(os.path.join(ws, 'chatSessions'))
+        with open(os.path.join(log, 'main.jsonl'), 'w') as f:
+            f.write(json.dumps({'type': 'llm_request', 'attrs': {'model': 'big', 'inputTokens': 1_000_000,
+                                                                  'cachedTokens': 400_000, 'outputTokens': 0}}) + '\n')
+        sf = os.path.join(ws, 'chatSessions', 'sid1' + ext)
+        with open(sf, 'w') as f:
+            if ext == '.json':
+                json.dump(edits, f)
+            else:
+                f.write(''.join(json.dumps(e) + '\n' for e in edits) + 'not json\n')
+        return log, sf
+
+    def test_chat_takes_vscode_per_message_credits_over_the_debug_log(self):
+        log, sf = self.write_session([{'kind': 0, 'v': {'requests': [{'copilotCredits': 300}, {'message': 'x'}]}},
+                                      {'kind': 2, 'k': ['requests'], 'v': [{'copilotCredits': 50.5}]}])
+        for p in (log, os.path.join(log, 'main.jsonl')):
+            chat = mine.chat_spend(p, PRICES)
+            self.assertEqual((chat['credits'], chat['source'], chat['messages'], chat['messages_without_credits']),
+                             (350.5, 'vscode', 3, 1))
+            self.assertGreater(chat['priced'], 0)
+        chat = mine.chat_spend(sf, PRICES)
+        self.assertEqual((chat['credits'], chat['source'], chat['priced']), (350.5, 'vscode', None))
+
+    def test_chat_reads_a_whole_json_session_file(self):
+        log, _ = self.write_session({'requests': [{'copilotCredits': 12}, {'copilotCredits': 8}]}, ext='.json')
+        self.assertEqual(mine.chat_spend(log, PRICES)['credits'], 20.0)
+
+    def test_chat_session_without_credits_falls_back_to_the_debug_log(self):
+        log, _ = self.write_session([{'kind': 0, 'v': {'requests': [{'message': 'x'}]}}])
+        chat = mine.chat_spend(log, PRICES)
+        self.assertEqual((chat['source'], chat['credits'], chat['messages_without_credits']), ('debug-log', chat['priced'], 1))
 
     def test_budget_counts_rounds_and_chat_and_how_many_more_fit(self):
         for i in range(5):
@@ -558,7 +594,7 @@ class MetricsTest(Base):
         with open(p, 'w') as f:
             json.dump(PRICES, f)
         out = self.cli(self.run.dir, '--caps', '--prices', p, '--chat', self.write_chat(), '--budget', '10000').stdout
-        self.assertIn('spend: 1,066 of 10,000 credits (rounds 500 + chat 566 (upper bound)), 8,934 left', out)
+        self.assertIn('spend: 1,066 of 10,000 credits (rounds 500 + chat 566 (debug-log estimate)), 8,934 left', out)
         self.assertIn('fix small 89', out)
 
     def test_cap_evidence_counts_rounds_over_each_candidate(self):
