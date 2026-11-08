@@ -116,4 +116,4 @@ True for this repository but unsafe to commit there (private, employer or person
 
 ## Handoff
 
-Session mode only. When asked for a handoff, distill first, then end the report with a short prompt that starts the next session: the goal, the user's decisions in their own words (apart from defaults and the agent's own picks, which are marked `not approved`), where the records are, the first step, and anything waiting on the user. Put it last, in a fenced `text` block under the heading "Next session". Do not save it as a file.
+Session mode only. A handoff is not a yes to distill: list what is worth distilling, and distill only on the user's explicit yes. Then end with a short prompt that starts the next session: the goal, the user's decisions in their own words (apart from defaults and the agent's own picks, which are marked `not approved`), where the records are, the first step, and anything waiting on the user. Put it last, in a fenced `text` block under the heading "Next session". Do not save it as a file.
