@@ -87,6 +87,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 ## During
 
+- Update the session memory's plan at each change of state (a commit, a check started or
+  finished, a merge), so a compaction or the owner's question finds it current.
 - Stamp every item: `estimates.py start --id <id> --kind <kind> --estimate <min> --method <method>
   --run <run>` before it (an enabler adds `--serves <feature id>`), `estimates.py end --id <id>`
   after its commit. Never work out minutes by hand. An item another item covered, or one logged by
