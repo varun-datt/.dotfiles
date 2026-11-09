@@ -1,0 +1,78 @@
+#!/bin/zsh
+# slide-pictures deck.pptx [folder]: one PNG per slide, drawn by PowerPoint itself.
+# Works on a copy inside PowerPoint's own folder (its sandbox ignores other paths) and closes
+# that copy by its path, so decks open in PowerPoint are never touched.
+emulate -L zsh
+setopt no_unset pipe_fail
+
+die() { print -u2 -- "slide-pictures: $1"; exit 1 }
+
+(( $# >= 1 && $# <= 2 )) || die "usage: slide-pictures deck.pptx [folder]"
+deck=${1:A}
+[[ -f $deck && ${${deck:e}:l} == pptx ]] || die "$1 is not a .pptx file"
+[[ $OSTYPE == darwin* && -d "/Applications/Microsoft PowerPoint.app" ]] || die "slide pictures need Microsoft PowerPoint on macOS"
+pdftoppm=${commands[pdftoppm]:-}
+[[ -n $pdftoppm ]] || die "slide pictures need Poppler: brew install poppler"
+out=${2:-/tmp/slide-pictures/${${deck:t}:r}}
+box=$HOME/Library/Containers/com.microsoft.Powerpoint/Data
+[[ -d $box ]] || die "PowerPoint has not run on this Mac yet; open it once"
+
+work=$(/usr/bin/mktemp -d "$box/slide-pictures.XXXXXX") || die "could not make a folder in $box"
+trap '/bin/rm -rf -- "$work"' EXIT
+copy=$work/deck.pptx
+pdf=$work/deck.pdf
+/bin/cp -- "$deck" "$copy" || die "could not copy $deck"
+/usr/bin/open -g -j -a "Microsoft PowerPoint" || die "could not start PowerPoint"
+
+/usr/bin/osascript - "$copy" "$pdf" >"$work/said" 2>&1 <<'EOF' &
+on run argv
+  set deckPath to item 1 of argv
+  set pdfPath to item 2 of argv
+  tell application "Microsoft PowerPoint"
+    with timeout of 60 seconds
+      open POSIX file deckPath
+      set p to missing value
+      repeat 300 times
+        repeat with i from 1 to (count of presentations)
+          if full name of presentation i is deckPath then set p to presentation i
+        end repeat
+        if p is not missing value then exit repeat
+        delay 0.1
+      end repeat
+      if p is missing value then error "PowerPoint did not open the deck."
+      save p in POSIX file pdfPath as save as PDF
+      close p saving no
+    end timeout
+  end tell
+end run
+EOF
+job=$!
+( sleep 60; kill $job 2>/dev/null ) </dev/null >/dev/null 2>&1 &!
+dog=$!
+wait $job
+rc=$?
+kill $dog 2>/dev/null
+
+if (( rc != 0 )); then
+  /usr/bin/osascript - "$copy" >/dev/null 2>&1 <<'EOF'
+on run argv
+  tell application "Microsoft PowerPoint"
+    with timeout of 5 seconds
+      repeat with i from (count of presentations) to 1 by -1
+        if full name of presentation i is (item 1 of argv) then close presentation i saving no
+      end repeat
+    end timeout
+  end tell
+end run
+EOF
+  said=$(<"$work/said")
+  (( rc > 128 )) && die "PowerPoint did not finish in 60 seconds; a PowerPoint dialog may be waiting"
+  [[ $said == *-1743* ]] && die "macOS did not let this terminal control PowerPoint; allow it in System Settings > Privacy & Security > Automation"
+  die "PowerPoint could not save the deck as a PDF: $said"
+fi
+[[ -s $pdf ]] || die "PowerPoint saved no PDF"
+
+/bin/mkdir -p -- "$out" || die "could not make $out"
+/bin/rm -f -- "$out"/slide-*.png(N)
+"$pdftoppm" -png -r 150 "$pdf" "$out/slide" || die "pdftoppm could not cut the PDF into pictures"
+print -l -- "$out"/slide-*.png(N)

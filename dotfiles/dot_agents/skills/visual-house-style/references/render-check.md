@@ -41,15 +41,6 @@ Look at the rendered result before calling it done. Commands are for macOS.
 
 ## A .pptx on this Mac
 
-LibreOffice, pdftoppm and markitdown are not installed, and pptxgenjs and sharp are not global,
-although the pptx skill says they are preinstalled. Install those two into a local folder, then
-render through PowerPoint and PyMuPDF (absolute paths):
-
-```sh
-osascript -e 'tell application "Microsoft PowerPoint"' -e "open POSIX file \"$PWD/deck.pptx\"" \
-  -e 'delay 3' -e "save active presentation in POSIX file \"$PWD/deck.pdf\" as save as PDF" \
-  -e 'close active presentation saving no' -e 'end tell'
-uv run --with pymupdf python -c "import fitz; [p.get_pixmap(dpi=110).save(f'slide-{i+1}.png') for i, p in enumerate(fitz.open('deck.pdf'))]"
-```
-
-PowerPoint's `open` returns nothing, so `set p to open …` fails; use `active presentation`.
+Run `slide-pictures deck.pptx [folder]` (the dotfiles' `~/.local/bin`): PowerPoint draws each
+slide, so its fonts are the deck's own, and the pictures land in `/tmp/slide-pictures/<deck>/`
+unless a folder is given. It needs PowerPoint and Poppler, and says why when it fails.
