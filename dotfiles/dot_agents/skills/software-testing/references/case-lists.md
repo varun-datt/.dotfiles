@@ -83,6 +83,7 @@ From one migration skill's five review rounds (2026-11-02 to 11-03), where editi
 - **Removing coverage to fix a flake** needs a replacement test for what it covered.
 - **A replay test's recording comes from a real run** and holds every field the test asserts on.
 - **Meters and counters see every call,** including calls the system makes on its own (titles, retries).
+- **A test of a refusal checks which guard refused.** When several guards give the same verdict (a reject, an ask, a 403), assert the reason or rule as well, so a request refused for the wrong reason fails the test.
 - **The test reaches the path at risk.** Starting an app misses what it sets up on first use (a connection pool, a Kerberos login): call something that uses it. A harness whose settings switch the risky part off (security off, an unencrypted broker) proves nothing about it; a smoke test on a local plaintext Kafka reported healthy while the encrypted broker failed in the cluster.
 - **An end-to-end step can be tied to what it caused.** Each step sends a W3C trace context ([`traceparent`](https://www.w3.org/TR/trace-context/), or the `TRACEPARENT` environment variable for a child process) and logs the domain ids it creates, so a failed step leads to the services' spans, logs and rows instead of a search by time.
 
