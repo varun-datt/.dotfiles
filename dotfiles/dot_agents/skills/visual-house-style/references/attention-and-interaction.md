@@ -61,6 +61,8 @@ A view can be rich and still quiet. Evidence: AMC's note
 | Undo over confirm | Reversible routine actions get undo; confirm only the irreversible or costly, and say what will happen | [Raskin](https://alistapart.com/article/neveruseawarning/), [NN/g](https://www.nngroup.com/articles/confirmation-dialog/) |
 | Recognition over recall | Offer the commands, names and values instead of asking the person to remember them; shortcuts for experts alongside | [NN/g](https://www.nngroup.com/articles/recognition-and-recall/) |
 | Resizable panes | A side panel whose content varies gets a window splitter: arrow keys move it, Enter collapses and restores, its size is kept | [WAI-ARIA APG](https://www.w3.org/WAI/ARIA/apg/patterns/windowsplitter/) |
+| A picture wider than its pane | Do not fit it all when that makes text unreadable, nor centre on an arbitrary middle: open at the first item that matters, top-aligned, never below a readable zoom; check it at the narrowest width | AMC's Lens (a10), 2026-11-09; not researched |
+| Labels on lines | Try candidate spots along each line, from the middle outwards, and take the first that covers no node and no earlier label; check overlap on the rendered page, since a text-width estimate can be wrong | AMC's Lens (a10), 2026-11-09; not researched |
 
 ## Check before calling a screen done
 
