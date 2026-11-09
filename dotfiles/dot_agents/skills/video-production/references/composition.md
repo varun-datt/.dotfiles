@@ -7,7 +7,7 @@ HyperFrames (`heygen-com/hyperframes`, Apache-2.0) renders an HTML page driven b
 The contract the renderer expects:
 
 - A root element `<div data-composition-id="<id>" data-start="0" data-duration="<seconds>" data-width="1920" data-height="1080">`.
-- Each scene is a clip inside it with `data-start`, `data-duration` and `data-track-index`.
+- Each scene is a clip inside it with `class="clip"`, `data-start`, `data-duration` and `data-track-index`. The lint flags a timed element without the class.
 - One paused GSAP timeline, `gsap.timeline({ paused: true })`, registered as `window.__timelines['<id>']`. Everything moves on that timeline. CSS transitions, `setTimeout` and anything driven by the wall clock cannot be seeked, so they render wrong.
 
 The build step generates the page from `script.json`: it fills each scene's start and duration, inlines local fonts (`@fontsource/*`), icons (`lucide-static`) and logos (`devicon`), and writes `asset-notices.txt` with each font and icon licence, the logo trademark line and the renderer and animation licences. It refuses to build when the scene ids in the script and the markup differ.

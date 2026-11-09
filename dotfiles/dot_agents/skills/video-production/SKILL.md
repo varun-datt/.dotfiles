@@ -53,6 +53,8 @@ What a reviewer catches, and an audience does not forgive.
 
 - **Transcribing a whole recording at once misleads.** Whisper drops a line read twice in a row, and it smears word times across a pause, so a false start and its restart read as one clean sentence and the false start ships. Transcribe each voiced island on its own, as `scripts/align_takes.py` does, and listen to every take it lists.
 - **`hyperframes snapshot` sends frames to Gemini when `GEMINI_API_KEY` is set.** Pass `--describe false`, strip API keys from the renderer's environment, and set `HYPERFRAMES_NO_TELEMETRY=1`.
+- **Load GSAP from a local file beside the page, never pasted inline.** `hyperframes check` scans inline scripts and fails on GSAP's own `Math.random` and `Date.now`.
+- **Give the page its own font from the first draft.** With only a system font stack, HyperFrames 0.8.156 downloads Inter and Roboto from Google Fonts at check, snapshot and render time and renders in them (checked 2026-11-09).
 - **faster-whisper's own decoder can fail** on a PyAV version mismatch. Decode with ffmpeg to 16 kHz mono float32 and pass the array. Load models with `local_files_only=True` so nothing downloads mid-run.
 - **The contrast check reports drawn text that a screenshot card covers.** Confirm the card is on top at that moment, then treat those warnings as false positives; never dismiss one you haven't looked at.
 - **A still on screen for under 2 s can't be read.** Hold it, or drop it.
