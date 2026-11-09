@@ -37,6 +37,7 @@ or waitFor with a time delay to enforce ordering."
 | OS events late, repeated or missing | A test waits for a file watcher (FSEvents, inotify) to report its own writes | Only tests about the watcher wait on the OS, in their own project run alone; other tests report the event themselves, or create their files before the first scan |
 | Slow start near a short deadline | A feature asserted before its server (a language server, a cold process) has answered | Wait for a sign that it answered, then assert |
 | Shared ports, folders or state; test order | Passes alone, fails in the suite or when two runs overlap | A temp folder per test; port 0, or a port derived from the process id; no shared mutable fixture |
+| Probe on an element a re-render removes | A layout probe asks for one element's box (Playwright `boundingBox()`) while the view switches layout; the element is replaced and the call waits for it until the test times out | Read every box in one `page.evaluate` that returns null for a missing element, inside a poll |
 | Child-process-heavy tests near the timeout | git or subprocess tests time out under load | Share a read-only fixture per file; a longer timeout is not the fix |
 
 Never only lengthen a wait: find what the test is really waiting for, and wait for that.
