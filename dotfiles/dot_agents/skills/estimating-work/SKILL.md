@@ -50,6 +50,11 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
    An item a person would need hours for is where agents fail more often (METR: the 80% time
    horizon is about a fifth of the 50% one), so split it until each piece ends in a commit.
+
+   A feature built with the owner's yes to its behaviours, the repository's full check, renders
+   and a merge per item is kind `feature-gated`, not `feature`, whose history holds none of those
+   steps. An item that first adopts a library or draws a new kind of picture is estimated by
+   rounds with `--risk 2.0`.
 5. Forecast: write the plan as JSON (`[{"id", "what", "kind", "estimate", "method"}]`, where
    `what` is one line saying what the item is: after a compaction, ids alone lost what four items
    meant, 2026-10-26) and run
@@ -87,6 +92,10 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   after its commit. Never work out minutes by hand. An item another item covered, or one logged by
   mistake, is closed with `estimates.py drop --id <id> --reason "covered by <id>"` instead of
   `end`, so no history or report counts it (2026-10-26: two covered items logged 0 minutes).
+  An item that waits for the owner's yes to its behaviours starts after the yes, and every item
+  ends at its commit, before merges and records, so neither a wait nor the wrap-up is counted.
+  `start` refuses a chat item while another chat item in the same run is open; worker items
+  run beside them.
 - Worker items (`copilot -p` runs of the orchestrator-workers skill) have their own kinds:
   `worker-build`, `worker-fix`, `worker-review`, `worker-research`. Workers took 7 to 66 minutes
   per build on 2026-10-28 (median 31, 14 builds) and reviews 2 to 48 (median 6, 11 reviews), against

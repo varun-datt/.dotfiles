@@ -8,6 +8,7 @@ with fewer than 5 items is estimated by counting rounds instead (SKILL.md, step 
 | Kind | Items | P50 (min) | P90 (min) | What it covers |
 | --- | --- | --- | --- | --- |
 | feature | 9 | 9 | 29 | A backlog feature with its tests; P90 is a dialog with drag and keyboard |
+| feature-gated | 0 | | | A feature with the owner's yes to its behaviours, the full check, renders and a merge per item; counts rounds until 5 items |
 | fix | 21 | 5 | 7.1 | A bug or gap fixed, with a test that fails on the old code |
 | review | 14 | 8 | 16 | One second-model review round and its fixes |
 | check | 5 | 4 | 6 | Screenshots, a probe, verification without a change |

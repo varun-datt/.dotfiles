@@ -612,6 +612,11 @@ def main(argv=None):
     args = parser.parse_args(argv)
 
     if args.command == "start":
+        if args.run and not args.kind.startswith("worker-"):
+            busy = [s["id"] for s in running(read(), now()) if s.get("run") == args.run and s["id"] != args.id and not str(s.get("kind", "")).startswith("worker-")]
+            if busy:
+                print(f"{', '.join(busy)} is still open in run {args.run}: end or drop it before starting {args.id}", file=sys.stderr)
+                return 1
         credits = credits_fields("start")
         record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "credits_estimate": args.credits} | credits | {"at": now().isoformat()}
         append(record)

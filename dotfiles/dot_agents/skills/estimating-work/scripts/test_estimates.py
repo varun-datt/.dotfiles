@@ -172,6 +172,20 @@ class CreditsTest(Isolated):
         with contextlib.redirect_stderr(io.StringIO()):
             self.assertEqual(estimates.main(["end", "--id", "never-started"]), 1)
 
+    def test_a_chat_item_cannot_start_while_another_in_its_run_is_open(self):
+        start = lambda i, kind="feature", run="r": estimates.main(["start", "--id", i, "--kind", kind, "--estimate", "8", "--method", "rounds", "--run", run])
+        err = io.StringIO()
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+            self.assertEqual(start("a"), 0)
+            self.assertEqual(start("b"), 1)
+            self.assertEqual(start("w", kind="worker-build"), 0)
+            self.assertEqual(start("c", run="other"), 0)
+            self.assertEqual(start("a"), 0)
+            estimates.main(["end", "--id", "a"])
+            self.assertEqual(start("b"), 0)
+        self.assertIn("a is still open", err.getvalue())
+        self.assertEqual([r["id"] for r in estimates.read() if r["event"] == "start"], ["a", "w", "c", "a", "b"])
+
     def test_free_text_in_a_start_record_never_reaches_the_end_record_or_the_report(self):
         estimates.append({"event": "start", "id": "f", "kind": "fix", "estimate": 4, "run": "r", "credits_at_start": None, "credits_unknown": "at start: gh exited 4: login secret-login-marker", "at": datetime.now(timezone.utc).isoformat()})
         out = io.StringIO()
