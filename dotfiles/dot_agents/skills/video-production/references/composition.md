@@ -28,7 +28,7 @@ hyperframes render <dir> --quality delivery --resolution 4k --fps 30 --workers 4
 
 ## Motion
 
-- Calm: crossfades, one deliberate camera move where it earns it. No shakes, whips, flashes or punch zooms.
+- Animate illustrations, icons and logos to cue each idea. Camera moves stay deliberate: no shakes, whips, flashes or punch zooms.
 - Build two variants from one source, switched by a flag such as `window.__MOTION`: the motion build is the main file, and a fades-only build is the fallback if a screen share stutters.
 - Pictures follow the words. Anchor each highlight to its caption's start time, or to a word timestamp when you have them, and hold a question or a decisive result until it can be read.
 - Position highlight boxes from measurements (fractions of the still, or the element's own rectangle), never by eye.

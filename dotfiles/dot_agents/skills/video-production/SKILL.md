@@ -18,7 +18,8 @@ The owner's, until a brief says otherwise.
 - An upbeat music bed generated in code (no samples, nothing to license), 12 dB under the voice and ducked further while it speaks.
 - Master to −14 LUFS integrated, −1 dBTP.
 - For a large screen: 3840×2160, 30 fps, H.264 High. Keep a 1080p copy for sharing and review.
-- The host deck's visual language when there is one, otherwise the Artifacts palette in `~/.agents/AGENTS.md`. Light stage. Fonts, icons and logos are local files.
+- Palette and style are a question in the brief: free, or these defaults. Default: the host deck's visual language when there is one, otherwise the Artifacts palette in `~/.agents/AGENTS.md`, on a light stage. Fonts, icons and logos are local files either way.
+- Visual and illustrative: every beat carries a picture that cues its idea (an illustration, an icon or a logo), animated where that helps; on-screen text never stands alone.
 - Real screenshots carry a label chip ("● Real session").
 - Plain names before technical ones, one term per concept, and no count that will drift by the time it plays.
 
@@ -26,7 +27,7 @@ The owner's, until a brief says otherwise.
 
 Each step ends at a gate. Don't polish past an open one.
 
-1. **Brief.** Audience, slot length, where it plays (a deck slide, a projector, a Teams share), the one takeaway, what may appear on screen, who narrates. Keep the owner's rulings in one versioned list; each new ruling names what it supersedes.
+1. **Brief.** Audience, slot length, where it plays (a deck slide, a projector, a Teams share), the one takeaway, what may appear on screen, who narrates, and whether palette and style are free or follow the defaults. Keep the owner's rulings in one versioned list; each new ruling names what it supersedes.
 2. **Single source.** `script.json` holds `version`, `durationSeconds`, `scenes` (`id`, `name`, `start`, `end`) and `captions` (`[start, end, text]`). The build derives every scene's timing from it and fails when scenes and markup disagree. Feedback names a scene id.
 3. **Animatic before polish.** A silent timed draft first: review the story and the flow, then the motion. Snapshot single scenes for small changes; render the whole film before any release. See [composition.md](references/composition.md).
 4. **Real evidence.** Screenshots of a real run, taken at the key beats, beat a screen recording: they are quicker to take, crop and re-time, and an agent run never repeats exactly. Show each one just after the drawn beat it proves. See [composition.md](references/composition.md#real-evidence).
