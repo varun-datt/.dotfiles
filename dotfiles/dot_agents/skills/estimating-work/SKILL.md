@@ -53,8 +53,9 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
    A feature built with the owner's yes to its behaviours, the repository's full check, renders
    and a merge per item is kind `feature-gated`, not `feature`, whose history holds none of those
-   steps. An item that first adopts a library or draws a new kind of picture is estimated by
-   rounds with `--risk 2.0`.
+   steps. An item that first adopts a library, draws a new kind of picture or first reads a real
+   outside system's output (a real test run, a real service's data) is estimated by rounds with
+   `--risk 2.0`.
 5. Forecast: write the plan as JSON (`[{"id", "what", "kind", "estimate", "method"}]`, where
    `what` is one line saying what the item is: after a compaction, ids alone lost what four items
    meant, 2026-10-26) and run
