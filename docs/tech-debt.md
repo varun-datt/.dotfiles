@@ -55,4 +55,5 @@ Known findings that did not block a merge, kept by `debt.py` (the orchestrator-w
 | TD-49 | 2026-11-07 | COR | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/cleanup_merged.py | Stripping each porcelain line drops trailing spaces, so a worktree path that ends in a space is not found | ram-review | 10 | open |
 | TD-50 | 2026-11-07 | COR | Minor | dotfiles/dot_agents/skills/orchestrator-workers/SKILL.md | The merge rule says index.tsv sits in the item archive folder; it sits at the shared archive root | ram-review | 5 | open |
 | TD-51 | 2026-11-07 | REL | Minor | dotfiles/dot_agents/skills/orchestrator-workers/scripts/cleanup_merged.py | A process scan that succeeds but misses a process (one lsof cannot read) still counts the worktree as unused | ram-review | 15 | open |
-<!-- debt.py next id: 52 -->
+| TD-52 | 2026-11-09 | COR | Minor | dotfiles/dot_agents/skills/estimating-work/scripts/estimates.py | An item stopped mid-way can only be ended (understates it) or dropped (loses its minutes); owner ruled 2026-11-09: '1. New pause command', where pause --id keeps the minutes and the next start --id resumes and adds to them | AMC dogfood distill 2026-11-09 | 45 | open |
+<!-- debt.py next id: 53 -->
