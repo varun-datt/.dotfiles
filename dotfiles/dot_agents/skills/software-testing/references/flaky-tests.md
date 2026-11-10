@@ -8,6 +8,14 @@ Luo, Hariri, Eloussi and Marinov, ["An Empirical Analysis of Flaky Tests"](https
 dependency were the largest categories, and "25 out of 74 (34%) Async Wait flaky tests use sleep
 or waitFor with a time delay to enforce ordering."
 
+## A full suite that fails while checking a change
+
+When a full run fails only on tests the change does not touch, rerun only those tests, alone,
+three times; if each passes every time, record each one as a flake (its scenario and the load at
+the time) in the repository's debt register and count the full run as passed, so an unrelated
+flake does not cost another full run. A failed test the change touches, or one that also fails
+alone, blocks the change.
+
 ## Procedure
 
 1. **Reproduce and count.** Run the test alone about 30 times, then in the full suite, then under

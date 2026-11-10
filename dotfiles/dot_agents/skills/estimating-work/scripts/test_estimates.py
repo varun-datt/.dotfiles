@@ -61,6 +61,7 @@ class Isolated(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         os.environ["ESTIMATES_LOG"] = str(Path(self.dir.name) / "log.jsonl")
         os.environ["ESTIMATES_RUN"] = str(Path(self.dir.name) / "run.json")
+        os.environ["ESTIMATES_DEBUG_ROOTS"] = str(Path(self.dir.name) / "workspaceStorage")
         os.environ["FAKE_GH_MODE"] = "used"
         Path(os.environ["FAKE_GH_CALLS"]).unlink(missing_ok=True)
 
@@ -139,6 +140,41 @@ class CreditsTest(Isolated):
         [item] = estimates.completed(estimates.read())
         self.assertIsNone(item["credits_actual"])
         self.assertEqual(item["credits_unknown"], "start:timeout end:timeout")
+
+    def chat_log(self, session, rows):
+        folder = Path(self.dir.name) / "workspaceStorage" / "ws1" / "GitHub.copilot-chat" / "debug-logs" / session
+        folder.mkdir(parents=True, exist_ok=True)
+        with (folder / "main.jsonl").open("a") as f:
+            for ts, nano in rows:
+                f.write(json.dumps({"ts": ts, "type": "llm_request", "attrs": {"copilotUsageNanoAiu": nano}}) + "\n")
+            f.write(json.dumps({"ts": rows[0][0], "type": "tool_call", "attrs": {"copilotUsageNanoAiu": 9e9}}) + "\n")
+
+    def test_an_item_with_a_session_takes_its_credits_from_that_chat_log_in_its_window_only(self):
+        ms = lambda: datetime.now(timezone.utc).timestamp() * 1000
+        self.chat_log("chat-a", [(ms() - 60_000, 7e9)])
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["start", "--id", "w", "--kind", "fix", "--estimate", "4", "--method", "rounds", "--session", "chat-a"])
+            self.chat_log("chat-a", [(ms(), 1.5e9), (ms(), 2.25e9), (ms() + 3_600_000, 5e9)])
+            os.environ["FAKE_GH_USED"] = "500"
+            estimates.main(["end", "--id", "w"])
+        [item] = estimates.completed(estimates.read())
+        self.assertEqual((item["session"], item["credits_actual"], item["credits_source"]), ("chat-a", 3.75, "chat log"))
+        self.assertEqual(estimates.credits_report([item], [item, {**item, "id": "other"}])["items"][0].get("overlaps"), None)
+
+    def test_start_takes_the_session_of_the_run_it_belongs_to(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["arm", "--run", "r1", "--until", "23:59", "--session", "chat-b"])
+            estimates.main(["start", "--id", "x", "--kind", "fix", "--estimate", "4", "--method", "rounds", "--run", "r1"])
+        self.assertEqual(estimates.read()[-1]["session"], "chat-b")
+
+    def test_a_session_with_no_chat_log_falls_back_to_the_account_counter(self):
+        with contextlib.redirect_stdout(io.StringIO()):
+            estimates.main(["start", "--id", "y", "--kind", "fix", "--estimate", "4", "--method", "rounds", "--session", "no-such-chat"])
+            os.environ["FAKE_GH_USED"] = "12.5"
+            estimates.main(["end", "--id", "y"])
+        [item] = estimates.completed(estimates.read())
+        self.assertEqual(item["credits_actual"], 2.5)
+        self.assertNotIn("credits_source", item)
 
     def test_start_and_end_read_the_figure_and_store_the_delta(self):
         with contextlib.redirect_stdout(io.StringIO()):

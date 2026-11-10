@@ -113,8 +113,10 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   the id its launcher logs as the round name (`<item>`, `<item>-fixN`, `<item>-review`).
 - Per-item credits for workers come from the worker's own log (`mine.py`), not the account
   counter: the counter's delta double counts when workers overlap and includes the owner's other
-  chats. Imported items carry `credits_source: "log"`; stamped in-chat items show
-  `"account counter"`. The counter stays only as the whole account's total.
+  chats. Imported items carry `credits_source: "log"`. An in-chat item started with `--session`
+  (or under a run armed with one) takes its credits from that VS Code chat's own debug log for its
+  start-to-end window and shows `"chat log"`; without a session or a log it shows
+  `"account counter"`. The counter stays as the whole account's total and the fallback.
 - Give `start` a credit estimate too, `--credits <n>`. `start` and `end` each read the account's
   credits-used figure (`gh api /copilot_internal/user`, undocumented) and `end` stores the
   difference as the item's credit actual (in-chat items only). A failed read never blocks a stamp; it marks the
@@ -123,9 +125,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   11:22:06, while this session made paid calls, read 858929 first and 858929 last: it did
   not move in those five minutes. That shows nothing about how often it moves; the lag after a
   known spend is not yet measured. On 2026-11-05 it rose 6 over a 20-minute in-chat run, then
-  1,578 in the next 25 minutes: it lags or batches, so an item's delta reads near zero. Known
-  defect: in-chat items still take credits from it; take them from the chat's debug log
-  (`main.jsonl` tokens times prices) as workers do from theirs.
+  1,578 in the next 25 minutes: it lags or batches, so an item's delta reads near zero. It also
+  counts every lane running at once, which is why an in-chat item takes its chat's own log first.
 - Re-run the forecast after each item, and move the overflow line if it shifts.
 - Count each live run's paid calls against the approved budget, and ask before a run that would
   go over it.

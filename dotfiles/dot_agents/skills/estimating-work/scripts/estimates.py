@@ -114,8 +114,52 @@ def known_reasons(text, fallback="unknown"):
     return " ".join(tokens) if tokens and all(REASON.fullmatch(t) for t in tokens) else fallback
 
 
-def end_credits(start):
+def debug_roots():
+    if os.environ.get("ESTIMATES_DEBUG_ROOTS"):
+        return [Path(p) for p in os.environ["ESTIMATES_DEBUG_ROOTS"].split(os.pathsep) if p]
+    home = Path.home()
+    apps = ("Code", "Code - Insiders")
+    return [home / "Library/Application Support" / a / "User/workspaceStorage" for a in apps] + [home / ".config" / a / "User/workspaceStorage" for a in apps]
+
+
+def chat_log(session):
+    for root in debug_roots():
+        if not root.is_dir():
+            continue
+        for workspace in root.iterdir():
+            path = workspace / "GitHub.copilot-chat" / "debug-logs" / session / "main.jsonl"
+            if path.is_file():
+                return path
+    return None
+
+
+def chat_credits(session, since, until):
+    """Credits one VS Code chat spent between two times, from its own debug log, or None when there is no log."""
+    path = chat_log(session)
+    if path is None:
+        return None
+    low, high = since.timestamp() * 1000, until.timestamp() * 1000
+    nano = 0
+    with path.open(errors="replace") as f:
+        for line in f:
+            if '"llm_request"' not in line:
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            usage = (row.get("attrs") or {}).get("copilotUsageNanoAiu")
+            if row.get("type") == "llm_request" and is_number(row.get("ts")) and low <= row["ts"] <= high and is_number(usage):
+                nano += usage
+    return round(nano / 1e9, 2)
+
+
+def end_credits(start, at=None):
     fields = credits_fields("end")
+    if start.get("session"):
+        spent = chat_credits(start["session"], parse_time(start["at"]), at or now())
+        if spent is not None:
+            return fields | {"credits_actual": spent, "credits_source": "chat log"}
     before, after = start.get("credits_at_start"), fields["credits_at_end"]
     if is_number(before) and is_number(after):
         return fields | {"credits_actual": round(after - before, 2)}
@@ -139,7 +183,7 @@ def completed(records):
             minutes = (parse_time(r["at"]) - parse_time(s["at"])).total_seconds() / 60
             item = {k: v for k, v in s.items() if k != "credits_unknown"}
             item |= {"event": "done", "actual": round(minutes, 1), "started": s["at"], "at": r["at"]}
-            item |= {k: r[k] for k in ("credits_actual", "credits_unknown") if k in r}
+            item |= {k: r[k] for k in ("credits_actual", "credits_unknown", "credits_source") if k in r}
             items.append(item)
         elif r["event"] == "drop":
             if starts.pop(r["id"], None) is None:
@@ -365,7 +409,7 @@ def overlaps(items, logged):
     found = []
     for item in items:
         mine = window(item)
-        if item.get("credits_source") == "log":
+        if item.get("credits_source") in ("log", "chat log"):
             found.append([])
             continue
         others = [(o, window(o)) for o in logged if o is not item and not (o.get("id") == item.get("id") and o.get("started") == item.get("started"))]
@@ -560,6 +604,7 @@ def main(argv=None):
     p.add_argument("--serves", default="", help="id of the planned feature this enabler makes possible or faster")
     p.add_argument("--run", default="")
     p.add_argument("--credits", type=float, default=None, help="estimated credits the item spends")
+    p.add_argument("--session", default=None, help="the chat's session id, so end takes the item's credits from that chat's own log; default the armed run's")
     p = sub.add_parser("end", help="stamp the end of an item")
     p.add_argument("--id", required=True)
     p = sub.add_parser("drop", help="close an item another item covered, or one logged by mistake, so no history counts it")
@@ -618,7 +663,8 @@ def main(argv=None):
                 print(f"{', '.join(busy)} is still open in run {args.run}: end or drop it before starting {args.id}", file=sys.stderr)
                 return 1
         credits = credits_fields("start")
-        record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "credits_estimate": args.credits} | credits | {"at": now().isoformat()}
+        session = args.session or next((r.get("session") for _, r in armed()[0] if isinstance(r, dict) and args.run and r.get("run") == args.run and r.get("session")), None)
+        record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "credits_estimate": args.credits} | credits | ({"session": session} if session else {}) | {"at": now().isoformat()}
         append(record)
         targets = [pr for pr in armed()[0] if isinstance(pr[1], dict) and pr[1].get("run") == args.run] if args.run else [c for c in [pick()[0]] if c]
         for path, run in targets:
@@ -628,12 +674,13 @@ def main(argv=None):
         print(json.dumps({k: record[k] for k in shown if k in record} | {"started": record["at"]}))
     elif args.command == "end":
         start = open_start(read(), args.id)
-        append({"event": "end", "id": args.id} | (end_credits(start) if start else {}) | {"at": now().isoformat()})
+        at = now()
+        append({"event": "end", "id": args.id} | (end_credits(start, at) if start else {}) | {"at": at.isoformat()})
         done = [i for i in completed(read()) if i["id"] == args.id]
         if not done:
             print(f"no open start for {args.id}", file=sys.stderr)
             return 1
-        shown = ("id", "kind", "estimate", "actual", "credits_estimate", "credits_actual", "credits_unknown")
+        shown = ("id", "kind", "estimate", "actual", "credits_estimate", "credits_actual", "credits_source", "credits_unknown")
         print(json.dumps({k: done[-1][k] for k in shown if k in done[-1]}))
     elif args.command == "drop":
         append({"event": "drop", "id": args.id, "reason": args.reason, "at": now().isoformat()})
