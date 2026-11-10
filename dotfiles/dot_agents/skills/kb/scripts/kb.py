@@ -8,7 +8,7 @@
 Usage:
     kb.py search QUERY [--source NAME ...] [--mode auto|fused|regex|lex|sem|hybrid] [--kind KIND ...] [--limit N] [--json]
     kb.py index [--source NAME ...]     build or refresh ck's index of each folder (default: every source)
-    kb.py sources
+    kb.py sources [--json]              name and root per line; --json gives the sources file's shape, each source resolved
 
 Sources come from $KB_SOURCES, else ~/.config/kb/sources.json:
     {"sources": [{"name": "wiki", "root": "~/sandbox/wiki"}, {"name": "my-service", "root": "~/src/my-service"}]}
@@ -383,7 +383,9 @@ def main(argv=None):
     ix = sub.add_parser("index")
     ix.add_argument("--source", action="append", help="a source name; repeat for more; default all")
     ix.add_argument("--sources-file")
-    sub.add_parser("sources").add_argument("--sources-file")
+    so = sub.add_parser("sources")
+    so.add_argument("--sources-file")
+    so.add_argument("--json", action="store_true", help="print the sources file's shape, each source resolved")
     a = p.parse_args(argv)
     kinds = [k.strip() for v in getattr(a, "kind", None) or [] for k in v.split(",")]
     unknown_kinds = [k for k in kinds if k not in KINDS]
@@ -391,6 +393,9 @@ def main(argv=None):
         p.error(f"unknown kind: {', '.join(map(repr, unknown_kinds))}; use one of {', '.join(KINDS)}")
     sources = load_sources(a.sources_file)
     if a.cmd == "sources":
+        if a.json:
+            print(json.dumps({"sources": [{**s, "kinds": dict(s["kinds"])} for s in sources]}))
+            return 0
         for src in sources:
             print(f"{src['name']}\t{src['root']}")
         return 0

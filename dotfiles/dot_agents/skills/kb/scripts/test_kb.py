@@ -308,6 +308,29 @@ class Kinds(unittest.TestCase):
             kb.load_sources(f.name)
         self.assertIn("unknown kind 'notes' for 'exports/*'; use one of note, code, test, data", str(stop.exception))
 
+    def test_sources_json_gives_each_source_resolved_and_plain_sources_is_unchanged(self):
+        d = tempfile.mkdtemp()
+        self.addCleanup(lambda: subprocess.run(["rm", "-rf", d]))
+        os.mkdir(os.path.join(d, "wiki"))
+        os.symlink(os.path.join(d, "wiki"), os.path.join(d, "link"))
+        sources = {"sources": [{"name": "w", "root": os.path.join(d, "link"), "exclude": ["/old/", "a/../b"],
+                                "kinds": {"exports/*": "data", "*.sql": "code"}},
+                               {"name": "p", "root": d, "paths": ["docs"]}]}
+        f = os.path.join(d, "sources.json")
+        with open(f, "w") as out:
+            json.dump(sources, out)
+        run = lambda *extra: subprocess.run([sys.executable, "-B", os.path.join(HERE, "kb.py"), "sources", *extra, "--sources-file", f],  # noqa: E731
+                                            capture_output=True, text=True, stdin=subprocess.DEVNULL)
+        real = os.path.realpath(d)
+        got = run("--json")
+        self.assertEqual(got.returncode, 0, got.stderr)
+        self.assertEqual(json.loads(got.stdout), {"sources": [
+            {"name": "w", "root": os.path.join(real, "wiki"), "paths": ["."], "exclude": ["old", "b"],
+             "kinds": {"exports/*": "data", "*.sql": "code"}},
+            {"name": "p", "root": real, "paths": ["docs"], "exclude": [], "kinds": {}}]})
+        self.assertEqual(list(json.loads(got.stdout)["sources"][0]["kinds"]), ["exports/*", "*.sql"])
+        self.assertEqual(run().stdout, f"w\t{os.path.join(real, 'wiki')}\np\t{real}\n")
+
     def test_every_hit_carries_its_kind_and_the_sources_override_applies(self):
         d, sources = kind_corpus(self)
         out = kb_cli(["search", "larch", "--mode", "regex", "--json"], sources, d)
