@@ -19,3 +19,5 @@ Intermittent behaviour needs about 30 runs per mutant: see [flaky tests](flaky-t
 Seen 2026-10-30: seven runtime mutants each failed the check written for it, while a first attempt that swapped in the old file crashed on a new keyword argument, and a mutant that left out the old code's guards crashed on a missing folder.
 
 Seen 2026-11-02: two "refuses" tests passed only because a step before the guard raised the same exception type; the fix was to assert the message. Copy-based mutants also reached CLI wiring that a runtime patch could not.
+
+Seen 2026-11-10: a mutation tool that switches mutants on per test (Stryker) cannot reach code a test file runs once when it loads, such as a renderer built at the file's top: 105 mutants showed as survived, most of them for that reason. Build such an instance inside each test, then read the survivors.
