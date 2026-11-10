@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+# wait-exit --pid N | --file F [--timeout S]: wait for one process to end, or for F to hold an exit code.
+# Never matches processes by text: `pgrep -f` also matches other wait loops whose code holds the text.
+import argparse
+import os
+import re
+import select
+import sys
+import time
+
+CODE = re.compile(r"\s*(-?\d+)\s*")
+
+
+def remaining(deadline):
+    return None if deadline is None else max(0.0, deadline - time.monotonic())
+
+
+def wait_pid_kqueue(pid, deadline):
+    kq = select.kqueue()
+    try:
+        ev = select.kevent(pid, filter=select.KQ_FILTER_PROC,
+                           flags=select.KQ_EV_ADD | select.KQ_EV_ONESHOT, fflags=select.KQ_NOTE_EXIT)
+        try:
+            kq.control([ev], 0, 0)
+        except ProcessLookupError:
+            return "gone"
+        return "ended" if kq.control(None, 1, remaining(deadline)) else "timeout"
+    finally:
+        kq.close()
+
+
+def wait_pid_pidfd(pid, deadline):
+    try:
+        fd = os.pidfd_open(pid)
+    except ProcessLookupError:
+        return "gone"
+    try:
+        p = select.poll()
+        p.register(fd, select.POLLIN)
+        left = remaining(deadline)
+        return "ended" if p.poll(None if left is None else left * 1000) else "timeout"
+    finally:
+        os.close(fd)
+
+
+def alive(pid):
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def wait_pid_poll(pid, deadline):
+    if not alive(pid):
+        return "gone"
+    while alive(pid):
+        left = remaining(deadline)
+        if left == 0:
+            return "timeout"
+        time.sleep(0.5 if left is None else min(0.5, left))
+    return "ended"
+
+
+def wait_pid(pid, deadline):
+    if hasattr(select, "kqueue"):
+        return wait_pid_kqueue(pid, deadline)
+    if hasattr(os, "pidfd_open"):
+        return wait_pid_pidfd(pid, deadline)
+    return wait_pid_poll(pid, deadline)
+
+
+def read_code(path):
+    try:
+        with open(path) as f:
+            m = CODE.fullmatch(f.read())
+    except FileNotFoundError:
+        return None
+    return int(m.group(1)) if m else None
+
+
+def wait_file(path, deadline):
+    while (code := read_code(path)) is None:
+        left = remaining(deadline)
+        if left == 0:
+            return None
+        time.sleep(0.2 if left is None else min(0.2, left))
+    return code
+
+
+def main(argv):
+    ap = argparse.ArgumentParser(prog="wait-exit", description="Wait for one process id to end, or for a file to hold an exit code.")
+    mode = ap.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--pid", type=int, help="process id to wait on")
+    mode.add_argument("--file", help="file the command writes its exit code to (echo $? > F)")
+    ap.add_argument("--timeout", type=float, help="seconds; exit 124 when reached (default: wait forever)")
+    a = ap.parse_args(argv)
+    if a.pid is not None and a.pid < 1:
+        ap.error("--pid must be 1 or more (0 and below name process groups)")
+    if a.timeout is not None and a.timeout < 0:
+        ap.error("--timeout must be 0 or more")
+    start = time.monotonic()
+    deadline = None if a.timeout is None else start + a.timeout
+    if a.pid is not None:
+        result = wait_pid(a.pid, deadline)
+        if result == "gone":
+            print(f"pid {a.pid} was not running")
+            return 0
+        if result == "timeout":
+            print(f"pid {a.pid} still running after {a.timeout:g} s")
+            return 124
+        print(f"pid {a.pid} ended after {time.monotonic() - start:.0f} s")
+        return 0
+    code = wait_file(a.file, deadline)
+    if code is None:
+        print(f"{a.file}: no exit code after {a.timeout:g} s")
+        return 124
+    if not 0 <= code <= 255:
+        print(f"{a.file}: exit {code} is not an exit code (0 to 255)")
+        return 1
+    print(f"{a.file}: exit {code}")
+    return code
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        print("wait-exit: cancelled", file=sys.stderr)
+        sys.exit(130)
