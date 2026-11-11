@@ -21,3 +21,5 @@ Seen 2026-10-30: seven runtime mutants each failed the check written for it, whi
 Seen 2026-11-02: two "refuses" tests passed only because a step before the guard raised the same exception type; the fix was to assert the message. Copy-based mutants also reached CLI wiring that a runtime patch could not.
 
 Seen 2026-11-10: a mutation tool that switches mutants on per test (Stryker) cannot reach code a test file runs once when it loads, such as a renderer built at the file's top: 105 mutants showed as survived, most of them for that reason. Build such an instance inside each test, then read the survivors.
+
+With Stryker, name a run's test files as one comma-separated `--testFiles` value: given twice, it keeps only the last, and the mutants the dropped file covers show as having no coverage. Check its "Found N test file(s)" line before reading survivors. When the mutated module is imported by most of the suite, its `related` option pulls in nearly every test and the dry run times out; name the test files instead, with `--ignoreStatic`. Seen 2026-11-11.
