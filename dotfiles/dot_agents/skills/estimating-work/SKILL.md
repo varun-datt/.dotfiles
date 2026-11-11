@@ -148,7 +148,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   see, and one held a run for 4 h 47 min (2026-10-30, owner's ruling the same day). Keep in-chat
   sub-agents (`runSubagent`, agent `worker`) for short attended work. Brief a worker with the
   item's `what`, the owner's rulings and the files; read its diff and look at its renders before
-  the next item.
+  the next item. A repository whose `AGENTS.md` says items are built in the main chat wins over
+  this: the chat builds them and a hung request is an accepted risk.
 - Keep the todo list current: after a reset it is the one list still in view, and a stale one makes
   a run look unstarted.
 - Polish found on the way becomes a backlog item, not work now.
