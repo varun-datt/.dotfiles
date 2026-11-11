@@ -14,6 +14,7 @@ A bug that depends on order (Stop arriving while a send awaits, a stale callback
 ## Traps
 
 - A sleep is not a seam: it makes the order likely, not certain, and the test flaky ([flaky tests](flaky-tests.md)).
+- Stepping a fake clock to catch a moving element at a spot misses it when the motion is short; pause the clock, then set the element's Web Animation `currentTime` across its whole run in one evaluation and assert at each point.
 - A fake that answers in a fixed order hides every other order; give it a way to hold and release each reply.
 - Capture the round or generation before the first `await`, and check it after every `await`: capturing it after the first `await` let an earlier round's write consume a later round's approval.
 - An `await` on the call under test is a sync point only while the call returns when its work ends. A change that makes it return earlier (a message queued instead of sent) leaves those tests asserting too soon; wait for the outcome a person would see (the send, the record) instead.
