@@ -117,6 +117,9 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   (or under a run armed with one) takes its credits from that VS Code chat's own debug log for its
   start-to-end window and shows `"chat log"`; without a session or a log it shows
   `"account counter"`. The counter stays as the whole account's total and the fallback.
+- An in-chat item's clock pauses while a question waits on the owner: with a session, `end` reads
+  the chat's question-tool calls (`QUESTION_TOOLS`) from its debug log and leaves their time inside
+  the item's window out of `actual`; `wall_min` keeps the start-to-end time.
 - Give `start` a credit estimate too, `--credits <n>`. `start` and `end` each read the account's
   credits-used figure (`gh api /copilot_internal/user`, undocumented) and `end` stores the
   difference as the item's credit actual (in-chat items only). A failed read never blocks a stamp; it marks the

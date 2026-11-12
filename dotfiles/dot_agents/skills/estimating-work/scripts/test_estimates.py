@@ -161,6 +161,21 @@ class CreditsTest(Isolated):
         self.assertEqual((item["session"], item["credits_actual"], item["credits_source"]), ("chat-a", 3.75, "chat log"))
         self.assertEqual(estimates.credits_report([item], [item, {**item, "id": "other"}])["items"][0].get("overlaps"), None)
 
+    def test_a_chat_items_actual_leaves_out_the_time_its_questions_waited_and_keeps_wall_time(self):
+        t0 = datetime(2026, 11, 12, 18, 0, tzinfo=timezone.utc)
+        ms = lambda minutes: (t0 + timedelta(minutes=minutes)).timestamp() * 1000
+        folder = Path(self.dir.name) / "workspaceStorage" / "ws1" / "GitHub.copilot-chat" / "debug-logs" / "chat-q"
+        folder.mkdir(parents=True, exist_ok=True)
+        rows = [("vscode_askQuestions", -5, 10), ("vscode_askQuestions", 20, 6), ("run_in_terminal", 30, 8), ("vscode_askQuestions", 35, 30)]
+        (folder / "main.jsonl").write_text("".join(json.dumps({"ts": ms(m), "dur": d * 60_000, "type": "tool_call", "name": n}) + "\n" for n, m, d in rows))
+        with contextlib.redirect_stdout(io.StringIO()):
+            with mock.patch.object(estimates, "now", return_value=t0):
+                estimates.main(["start", "--id", "q", "--kind", "fix", "--estimate", "4", "--method", "rounds", "--session", "chat-q"])
+            with mock.patch.object(estimates, "now", return_value=t0 + timedelta(minutes=40)):
+                estimates.main(["end", "--id", "q"])
+        [item] = estimates.completed(estimates.read())
+        self.assertEqual((item["actual"], item["wall_min"]), (24.0, 40.0))
+
     def test_start_takes_the_session_of_the_run_it_belongs_to(self):
         with contextlib.redirect_stdout(io.StringIO()):
             estimates.main(["arm", "--run", "r1", "--until", "23:59", "--session", "chat-b"])

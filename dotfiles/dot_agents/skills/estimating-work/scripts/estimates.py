@@ -154,6 +154,36 @@ def chat_credits(session, since, until):
     return round(nano / 1e9, 2)
 
 
+QUESTION_TOOLS = ("vscode_askQuestions",)
+
+
+def chat_question_minutes(session, since, until):
+    """Minutes the chat's question-tool calls waited on the owner between two times, from its debug log, or None when there is no log."""
+    path = chat_log(session)
+    if path is None:
+        return None
+    low, high = since.timestamp() * 1000, until.timestamp() * 1000
+    waited = 0
+    with path.open(errors="replace") as f:
+        for line in f:
+            if '"tool_call"' not in line:
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            if row.get("type") == "tool_call" and row.get("name") in QUESTION_TOOLS and is_number(row.get("ts")) and is_number(row.get("dur")):
+                waited += max(0, min(high, row["ts"] + row["dur"]) - max(low, row["ts"]))
+    return waited / 60_000
+
+
+def end_paused(start, at):
+    if not start.get("session"):
+        return {}
+    paused = chat_question_minutes(start["session"], parse_time(start["at"]), at)
+    return {"paused_min": round(paused, 2)} if paused else {}
+
+
 def end_credits(start, at=None):
     fields = credits_fields("end")
     if start.get("session"):
@@ -181,8 +211,9 @@ def completed(records):
         elif r["event"] == "end" and r["id"] in starts:
             s = starts.pop(r["id"])
             minutes = (parse_time(r["at"]) - parse_time(s["at"])).total_seconds() / 60
+            paused = r["paused_min"] if is_number(r.get("paused_min")) else 0
             item = {k: v for k, v in s.items() if k != "credits_unknown"}
-            item |= {"event": "done", "actual": round(minutes, 1), "started": s["at"], "at": r["at"]}
+            item |= {"event": "done", "actual": round(max(0, minutes - paused), 1), "wall_min": round(minutes, 1), "started": s["at"], "at": r["at"]}
             item |= {k: r[k] for k in ("credits_actual", "credits_unknown", "credits_source") if k in r}
             items.append(item)
         elif r["event"] == "drop":
@@ -675,12 +706,12 @@ def main(argv=None):
     elif args.command == "end":
         start = open_start(read(), args.id)
         at = now()
-        append({"event": "end", "id": args.id} | (end_credits(start, at) if start else {}) | {"at": at.isoformat()})
+        append({"event": "end", "id": args.id} | (end_credits(start, at) | end_paused(start, at) if start else {}) | {"at": at.isoformat()})
         done = [i for i in completed(read()) if i["id"] == args.id]
         if not done:
             print(f"no open start for {args.id}", file=sys.stderr)
             return 1
-        shown = ("id", "kind", "estimate", "actual", "credits_estimate", "credits_actual", "credits_source", "credits_unknown")
+        shown = ("id", "kind", "estimate", "actual", "wall_min", "credits_estimate", "credits_actual", "credits_source", "credits_unknown")
         print(json.dumps({k: done[-1][k] for k in shown if k in done[-1]}))
     elif args.command == "drop":
         append({"event": "drop", "id": args.id, "reason": args.reason, "at": now().isoformat()})
