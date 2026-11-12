@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# wait-exit --pid N | --file F [--timeout S]: wait for one process to end, or for F to hold an exit code.
+# wait-exit --pid N | --file F [--timeout S] [--log L]: wait for one process to end, or for F to hold an exit code.
 # Never matches processes by text: `pgrep -f` also matches other wait loops whose code holds the text.
 import argparse
 import os
@@ -9,6 +9,8 @@ import sys
 import time
 
 CODE = re.compile(r"\s*(-?\d+)\s*")
+ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]")
+FAIL = r"(^|\s)(FAIL|✘|×)\s|^\s*\d+ failed\b|error TS\d+|^\s*Error:"
 
 
 def remaining(deadline):
@@ -105,6 +107,52 @@ def with_dots(wait, still, deadline, every):
         ticked = True
 
 
+class Progress:
+    def __init__(self, path, fail, every):
+        self.path, self.fail, self.every = path, re.compile(fail), every
+        self.offset, self.partial, self.newest = 0, "", ""
+        self.start = time.monotonic()
+        self.next_line = self.start + every
+
+    def say(self, text):
+        s = int(time.monotonic() - self.start)
+        print(f"[{s // 60}:{s % 60:02d}] {text}", flush=True)
+
+    def poll(self, final=False):
+        try:
+            with open(self.path, "rb") as f:
+                if os.fstat(f.fileno()).st_size < self.offset:
+                    self.offset, self.partial = 0, ""
+                f.seek(self.offset)
+                chunk = f.read()
+        except FileNotFoundError:
+            chunk = b""
+        self.offset += len(chunk)
+        lines = (self.partial + chunk.decode("utf-8", "replace")).replace("\r", "\n").split("\n")
+        self.partial = "" if final else lines.pop()
+        for line in lines:
+            line = ANSI.sub("", line).strip()
+            if line:
+                self.newest = line
+            if self.fail.search(line):
+                self.say(f"failure: {line[:200]}")
+        if not final and time.monotonic() >= self.next_line:
+            self.say(self.newest[:160] or f"nothing in {self.path} yet")
+            self.next_line += self.every
+
+
+def with_log(wait, still, deadline, progress):
+    ticked = False
+    while True:
+        step = time.monotonic() + 1
+        result = wait(step if deadline is None else min(step, deadline))
+        done = result != still or (deadline is not None and time.monotonic() >= deadline)
+        progress.poll(final=done)
+        if done:
+            return result, ticked
+        ticked = True
+
+
 def main(argv):
     ap = argparse.ArgumentParser(prog="wait-exit", description="Wait for one process id to end, or for a file to hold an exit code.")
     mode = ap.add_mutually_exclusive_group(required=True)
@@ -114,6 +162,11 @@ def main(argv):
     ap.add_argument("--dots", type=float, metavar="S",
                     help="print a dot every S seconds while waiting, so the terminal shows it is alive; "
                          "use this, never a shell loop: the exit code is the command's")
+    ap.add_argument("--log", metavar="F",
+                    help="the command's output file: print its newest line every --every seconds, "
+                         "and each failure line as soon as it appears (replaces --dots)")
+    ap.add_argument("--every", type=float, default=60, metavar="S", help="seconds between progress lines (default 60)")
+    ap.add_argument("--fail", default=FAIL, metavar="REGEX", help="what a failure line looks like in the log")
     a = ap.parse_args(argv)
     if a.pid is not None and a.pid < 1:
         ap.error("--pid must be 1 or more (0 and below name process groups)")
@@ -121,10 +174,21 @@ def main(argv):
         ap.error("--timeout must be 0 or more")
     if a.dots is not None and a.dots <= 0:
         ap.error("--dots must be more than 0")
+    if a.every <= 0:
+        ap.error("--every must be more than 0")
+    try:
+        re.compile(a.fail)
+    except re.error as e:
+        ap.error(f"--fail is not a regular expression: {e}")
     start = time.monotonic()
     deadline = None if a.timeout is None else start + a.timeout
+    if a.log is not None:
+        progress = Progress(a.log, a.fail, a.every)
+        wait_with = lambda wait, still: with_log(wait, still, deadline, progress)
+    else:
+        wait_with = lambda wait, still: with_dots(wait, still, deadline, a.dots)
     if a.pid is not None:
-        result, ticked = with_dots(lambda d: wait_pid(a.pid, d), "timeout", deadline, a.dots)
+        result, ticked = wait_with(lambda d: wait_pid(a.pid, d), "timeout")
         if result == "gone" and not ticked:
             print(f"pid {a.pid} was not running")
             return 0
@@ -133,7 +197,7 @@ def main(argv):
             return 124
         print(f"pid {a.pid} ended after {time.monotonic() - start:.0f} s")
         return 0
-    code, _ = with_dots(lambda d: wait_file(a.file, d), None, deadline, a.dots)
+    code, _ = wait_with(lambda d: wait_file(a.file, d), None)
     if code is None:
         print(f"{a.file}: no exit code after {a.timeout:g} s")
         return 124

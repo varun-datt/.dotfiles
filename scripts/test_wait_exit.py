@@ -2,6 +2,7 @@ import importlib.machinery
 import importlib.util
 import io
 import os
+import select
 import signal
 import subprocess
 import sys
@@ -241,6 +242,70 @@ class Dots(unittest.TestCase):
                 mock.patch("sys.stdout", new_callable=io.StringIO) as out:
             self.assertEqual(mod.main(["--pid", "5", "--dots", "0.01"]), 0)
         self.assertRegex(out.getvalue(), r"^\.\npid 5 ended after \d+ s\n$")
+
+
+class Log(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = os.path.join(self.tmp.name, "check.exit")
+        self.log = os.path.join(self.tmp.name, "check.log")
+
+    def append(self, text):
+        with open(self.log, "a") as f:
+            f.write(text)
+
+    def test_progress_shows_the_newest_log_line(self):
+        self.append("\x1b[32m RUN  phase one\x1b[0m\n")
+        p = start("--file", self.path, "--log", self.log, "--every", "0.5")
+        time.sleep(1.5)
+        self.append(" RUN  phase two\n")
+        time.sleep(1.5)
+        with open(self.path, "w") as f:
+            f.write("0\n")
+        out, _ = p.communicate(timeout=10)
+        self.assertEqual(p.returncode, 0)
+        self.assertRegex(out, r"\[0:0\d\] RUN  phase one\n")
+        self.assertRegex(out, r"\[0:0\d\] RUN  phase two\n")
+        self.assertNotIn(".", out.replace(self.path, ""))
+
+    def test_a_failure_line_shows_before_the_command_ends(self):
+        p = start("--file", self.path, "--log", self.log, "--every", "60")
+        self.addCleanup(lambda: p.poll() is None and (p.kill(), p.communicate()))
+        self.append(" \u2713 passes\n FAIL  tests/runs.test.ts > refused\n")
+        ready, _, _ = select.select([p.stdout], [], [], 5)
+        self.assertTrue(ready, "no failure line within 5 s")
+        seen = p.stdout.readline()
+        self.assertIsNone(p.poll())
+        self.assertRegex(seen, r"^\[0:0\d\] failure: FAIL  tests/runs.test.ts > refused\n$")
+        with open(self.path, "w") as f:
+            f.write("1\n")
+        self.assertEqual(finish(p), 1)
+
+    def test_a_last_line_without_a_newline_is_read_at_the_end(self):
+        r = None
+        t = write_later(self.path, "1\n", 1.5)
+        self.append("  1 failed")
+        r = run("--file", self.path, "--log", self.log)
+        t.join()
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stdout, r"failure: 1 failed\n")
+
+    def test_a_missing_log_says_so_and_bad_options_exit_2(self):
+        t = write_later(self.path, "0\n", 1.5)
+        r = run("--file", self.path, "--log", self.log, "--every", "0.5")
+        t.join()
+        self.assertIn(f"nothing in {self.log} yet", r.stdout)
+        for args in (["--every", "0"], ["--fail", "("]):
+            with self.subTest(args=args):
+                self.assertEqual(run("--file", self.path, "--log", self.log, *args).returncode, 2)
+
+    def test_a_pid_gone_at_the_start_was_not_running(self):
+        mod = load()
+        with mock.patch.object(mod, "wait_pid", return_value="gone"), \
+                mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.assertEqual(mod.main(["--pid", "5", "--log", self.log]), 0)
+        self.assertEqual(out.getvalue(), "pid 5 was not running\n")
 
 
 class Usage(unittest.TestCase):

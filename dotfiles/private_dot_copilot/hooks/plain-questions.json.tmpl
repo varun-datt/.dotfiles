@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "type": "command",
+        "command": "python3 -B '{{ .chezmoi.homeDir }}/.agents/hooks/plain-questions.py'",
+        "timeout": 10
+      }
+    ]
+  }
+}
