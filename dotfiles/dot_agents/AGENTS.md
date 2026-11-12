@@ -63,7 +63,7 @@ Read the repository's `Layout:` line in its `AGENTS.md` first; its own named hom
 
 ## Artifacts
 
-- Palette follows the mood the piece is for. Calm and trustworthy (documents, reports, screens people work in): brand anchor `oklch(0.400 0.110 250.0)` — blueprint ink, accent `oklch(0.650 0.146 60.0)` — editorial gold, and never neon cyan on dark, gradient mesh, or the violet family (`#8b5cf6`, `#7c3aed`, `#a78bfa`, `#d946ef`). Excitement (a launch meant to get people trying something): bold is right — dark ground, saturated colour, glow, gradients. Another mood, or unsure: ask what the piece should make people feel.
+- Palette follows the mood the piece is for. Calm and trustworthy (documents, reports, screens people work in): brand anchor `oklch(0.400 0.110 250.0)` — blueprint ink, accent `oklch(0.650 0.146 60.0)` — editorial gold, and never neon cyan on dark, gradient mesh, or the violet family (`#8b5cf6`, `#7c3aed`, `#a78bfa`, `#d946ef`). Polished and modern (dashboards and status views I watch): Aurora Indigo by default, or Metal or Frost; violet allowed ([palettes](skills/visual-house-style/references/palettes.md)). Excitement (a launch meant to get people trying something): bold is right — dark ground, saturated colour, glow, gradients. Another mood, or unsure: ask what the piece should make people feel.
 - Type: system stack by default. IBM Plex Sans / IBM Plex Mono only when the artifact will certainly be viewed online.
 - No font or script CDN in a self-contained artifact. Assume the network is blocked.
 - Default density: compact.
