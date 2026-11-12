@@ -1,5 +1,6 @@
 import importlib.machinery
 import importlib.util
+import io
 import os
 import signal
 import subprocess
@@ -195,6 +196,51 @@ class File(unittest.TestCase):
             f.write("4\n")
         self.assertEqual(finish(a), 4)
         self.assertEqual(finish(b), 4)
+
+
+class Dots(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = os.path.join(self.tmp.name, "check.exit")
+
+    def test_dots_while_waiting_then_the_failed_code_ends_the_wait(self):
+        t = write_later(self.path, "1\n", 0.9)
+        r = run("--file", self.path, "--dots", "0.2")
+        t.join()
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stdout, rf"^\.{{2,}}\n{self.path}: exit 1\n$")
+
+    def test_a_code_already_written_prints_no_dots(self):
+        with open(self.path, "w") as f:
+            f.write("0\n")
+        r = run("--file", self.path, "--dots", "0.2")
+        self.assertEqual(r.stdout, f"{self.path}: exit 0\n")
+
+    def test_the_timeout_still_applies(self):
+        t0 = time.monotonic()
+        r = run("--file", self.path, "--dots", "0.2", "--timeout", "0.7")
+        self.assertEqual(r.returncode, 124)
+        self.assertLess(time.monotonic() - t0, 2.5)
+        self.assertRegex(r.stdout, rf"^\.+\n{self.path}: no exit code after 0.7 s\n$")
+
+    def test_a_pid_that_ends_between_dots_is_ended_not_gone(self):
+        pid = orphan_sleep(1)
+        self.addCleanup(kill_quietly, pid)
+        r = run("--pid", str(pid), "--dots", "0.3")
+        self.assertEqual(r.returncode, 0)
+        self.assertRegex(r.stdout, rf"^\.+\npid {pid} ended after \d+ s\n$")
+
+    def test_dots_must_be_positive(self):
+        r = run("--file", self.path, "--dots", "0")
+        self.assertEqual(r.returncode, 2)
+
+    def test_a_pid_gone_after_a_dot_is_reported_ended(self):
+        mod = load()
+        with mock.patch.object(mod, "wait_pid", side_effect=["timeout", "gone"]), \
+                mock.patch("sys.stdout", new_callable=io.StringIO) as out:
+            self.assertEqual(mod.main(["--pid", "5", "--dots", "0.01"]), 0)
+        self.assertRegex(out.getvalue(), r"^\.\npid 5 ended after \d+ s\n$")
 
 
 class Usage(unittest.TestCase):

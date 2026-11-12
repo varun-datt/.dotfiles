@@ -90,22 +90,42 @@ def wait_file(path, deadline):
     return code
 
 
+def with_dots(wait, still, deadline, every):
+    if not every:
+        return wait(deadline), False
+    ticked = False
+    while True:
+        tick = time.monotonic() + every
+        result = wait(tick if deadline is None else min(tick, deadline))
+        if result != still or (deadline is not None and time.monotonic() >= deadline):
+            if ticked:
+                print(flush=True)
+            return result, ticked
+        print(".", end="", flush=True)
+        ticked = True
+
+
 def main(argv):
     ap = argparse.ArgumentParser(prog="wait-exit", description="Wait for one process id to end, or for a file to hold an exit code.")
     mode = ap.add_mutually_exclusive_group(required=True)
     mode.add_argument("--pid", type=int, help="process id to wait on")
     mode.add_argument("--file", help="file the command writes its exit code to (echo $? > F)")
     ap.add_argument("--timeout", type=float, help="seconds; exit 124 when reached (default: wait forever)")
+    ap.add_argument("--dots", type=float, metavar="S",
+                    help="print a dot every S seconds while waiting, so the terminal shows it is alive; "
+                         "use this, never a shell loop: the exit code is the command's")
     a = ap.parse_args(argv)
     if a.pid is not None and a.pid < 1:
         ap.error("--pid must be 1 or more (0 and below name process groups)")
     if a.timeout is not None and a.timeout < 0:
         ap.error("--timeout must be 0 or more")
+    if a.dots is not None and a.dots <= 0:
+        ap.error("--dots must be more than 0")
     start = time.monotonic()
     deadline = None if a.timeout is None else start + a.timeout
     if a.pid is not None:
-        result = wait_pid(a.pid, deadline)
-        if result == "gone":
+        result, ticked = with_dots(lambda d: wait_pid(a.pid, d), "timeout", deadline, a.dots)
+        if result == "gone" and not ticked:
             print(f"pid {a.pid} was not running")
             return 0
         if result == "timeout":
@@ -113,7 +133,7 @@ def main(argv):
             return 124
         print(f"pid {a.pid} ended after {time.monotonic() - start:.0f} s")
         return 0
-    code = wait_file(a.file, deadline)
+    code, _ = with_dots(lambda d: wait_file(a.file, d), None, deadline, a.dots)
     if code is None:
         print(f"{a.file}: no exit code after {a.timeout:g} s")
         return 124
