@@ -21,6 +21,8 @@ alone, blocks the change.
 1. **Reproduce and count.** Run the test alone about 30 times, then in the full suite, then under
    load (below), and note passes and failures at each level. Green alone and red in the suite
    points to order or shared state; green when idle and red under load, to a timing assumption.
+   To tell whether a change brought the flake, repeat it as often on the commit before the change,
+   in a throwaway worktree linked to the same installed packages.
 2. **Read before you touch.** The failure's trace (Playwright: `unzip trace.zip`, pair the
    `before` and `after` events), the app's logged state at the failure, the timings. Blame the
    framework or the browser last: once, logging inside the app showed that the next view update
