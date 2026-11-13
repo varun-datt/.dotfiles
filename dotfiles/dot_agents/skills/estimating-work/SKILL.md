@@ -96,7 +96,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   its build begins. Never work out minutes by hand. An item another item covered, or one logged by
   mistake, is closed with `estimates.py drop --id <id> --reason "covered by <id>"` instead of
   `end`, so no history or report counts it (2026-10-26: two covered items logged 0 minutes).
-  An item that waits for the owner's yes to its behaviours starts after the yes, and every item
+  An item that waits for the owner's yes to its behaviours starts at its first reading as well,
+  since its clock pauses while the question waits, and every item
   ends at its commit, before merges and records, so neither a wait nor the wrap-up is counted.
   `start` refuses a chat item while another chat item in the same run is open; worker items
   run beside them.
