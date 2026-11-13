@@ -299,3 +299,7 @@ The rules give a one-clause reason; these are the incidents behind them.
 - Extras the orchestrator marked `not approved` were still written as MUSTs, so the worker built them; about 4 of the 9 debt rows from the item's review sit in them. Anything beyond the owner's words goes to the owner as a question, never into a MUST. [notes]
 - A fix round resumed into the builder's session 15 minutes after the build re-cached the builder's whole context: 97 of its 205 credits were cache writes (`mine.py`, 2026-11-07). [notes]
 - The orchestrating chat cost 1,459 of the session's 2,558 credits: it ran at the 872K context size and max effort, its requests reached 434K tokens, and two pauses by the owner cost 308 credits in cold re-reads (the chat's debug log, 2026-11-07). [notes]
+
+## 2026-11-12: debt.py close
+
+- `debt.py close` writes "closed <date>: " before the reason itself, so a reason that starts with "closed …" doubles it; it did on nine rows in one session, fixed by hand. Write the reason alone. A fix, not built: strip or refuse such a reason. [notes]
