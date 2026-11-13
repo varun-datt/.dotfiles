@@ -169,6 +169,12 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   figure counts every session's spend on the account, so an item whose window overlaps another's
   is marked `overlaps`: their actuals double count the shared spend. Put it in the final message
   and the state file.
+- The run's spend in the final message is the whole chat's over the run plus every worker round's
+  (`mine.py <run> --chat <the chat's debug-log folder>`), not the sum of item credits: item windows
+  leave out the spend between items, and a chat's own figure leaves out its workers.
+- Before the final message, write each `not approved` choice and each pattern to discuss into the
+  file the repository keeps them in (its plan, map or state file); the final message points there
+  and never holds their only copy.
 - The report's `left_open` lists items started more than a day ago and never closed. Drop each
   (`estimates.py drop`), since an `end` now would log the days it sat open; left alone, every
   later item is marked as overlapping it (2026-11-05: 19 such items, 10-25 to 11-03).
