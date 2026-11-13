@@ -308,6 +308,62 @@ class Log(unittest.TestCase):
         self.assertEqual(out.getvalue(), "pid 5 was not running\n")
 
 
+class Stall(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.path = os.path.join(self.tmp.name, "run.exit")
+        self.log = os.path.join(self.tmp.name, "run.log")
+
+    def command(self, code):
+        # The command holds the log open, as `cmd > L 2>&1` does, and is not the waiter's child.
+        with open(self.log, "a") as out:
+            p = subprocess.Popen([sys.executable, "-c", code], stdout=out, stderr=out,
+                                 stdin=subprocess.DEVNULL)
+        self.addCleanup(lambda: (p.kill(), p.wait()))
+        return p
+
+    def test_a_silent_idle_command_warns_then_stops_the_wait_and_is_left_running(self):
+        p = self.command("import time; time.sleep(600)")
+        t0 = time.monotonic()
+        r = run("--file", self.path, "--log", self.log, "--stall", "0.05", timeout=30)
+        self.assertEqual(r.returncode, 125, r.stdout + r.stderr)
+        self.assertLess(time.monotonic() - t0, 12)
+        self.assertRegex(r.stdout, r"stalled\? no new output and no CPU use for 1\.5 s")
+        self.assertRegex(r.stdout, r"stalled: no new output and no CPU use for 3 s\. The command was not stopped")
+        self.assertIsNone(p.poll())
+
+    def test_a_busy_silent_command_is_not_a_stall(self):
+        self.command("while True: pass")
+        t = write_later(self.path, "0\n", 6)
+        r = run("--file", self.path, "--log", self.log, "--stall", "0.05", timeout=30)
+        t.join()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotIn("stalled", r.stdout)
+
+    def test_a_command_still_writing_is_not_a_stall(self):
+        self.command("import time\nfor i in range(60):\n    print(i, flush=True); time.sleep(0.5)")
+        t = write_later(self.path, "0\n", 6)
+        r = run("--file", self.path, "--log", self.log, "--stall", "0.05", timeout=30)
+        t.join()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotIn("stalled", r.stdout)
+
+    def test_stall_zero_turns_it_off_and_a_negative_is_refused(self):
+        self.command("import time; time.sleep(600)")
+        t = write_later(self.path, "0\n", 5)
+        r = run("--file", self.path, "--log", self.log, "--stall", "0", timeout=30)
+        t.join()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertEqual(run("--file", self.path, "--log", self.log, "--stall", "-1").returncode, 2)
+
+    def test_cpu_time_formats(self):
+        mod = load()
+        self.assertEqual(mod.cpu_seconds("0:00.65"), 0.65)
+        self.assertEqual(mod.cpu_seconds("152:02.54"), 152 * 60 + 2.54)
+        self.assertEqual(mod.cpu_seconds("1-02:03:04"), 86400 + 2 * 3600 + 3 * 60 + 4)
+
+
 class Usage(unittest.TestCase):
     def test_bad_use_exits_2(self):
         for args in ([], ["--pid", "1", "--file", "x"], ["--pid", "abc"], ["--pid", "0"],

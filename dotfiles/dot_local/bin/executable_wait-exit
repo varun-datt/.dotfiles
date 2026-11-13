@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-# wait-exit --pid N | --file F [--timeout S] [--log L]: wait for one process to end, or for F to hold an exit code.
+# wait-exit --pid N | --file F [--timeout S] [--log L [--stall MIN]]: wait for one process to end, or for F to hold an exit code.
 # Never matches processes by text: `pgrep -f` also matches other wait loops whose code holds the text.
 import argparse
 import os
 import re
 import select
+import subprocess
 import sys
 import time
 
@@ -141,16 +142,104 @@ class Progress:
             self.next_line += self.every
 
 
-def with_log(wait, still, deadline, progress):
+def cpu_seconds(text):
+    days, _, rest = text.strip().rpartition("-")
+    total = 0.0
+    for part in rest.split(":"):
+        total = total * 60 + float(part)
+    return total + (int(days) * 86400 if days else 0)
+
+
+def tree_cpu(roots):
+    """{pid: CPU seconds} for the roots and every process below them."""
+    out = subprocess.run(["ps", "-A", "-o", "pid=,ppid=,time="], capture_output=True, text=True,
+                         timeout=10, stdin=subprocess.DEVNULL).stdout
+    rows, kids = {}, {}
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) == 3:
+            pid, ppid = int(parts[0]), int(parts[1])
+            rows[pid] = cpu_seconds(parts[2])
+            kids.setdefault(ppid, []).append(pid)
+    seen, todo = {}, [p for p in roots if p in rows]
+    while todo:
+        p = todo.pop()
+        if p not in seen:
+            seen[p] = rows[p]
+            todo.extend(kids.get(p, []))
+    return seen
+
+
+def writers(path):
+    """Processes holding the log open: the command whose output it is."""
+    try:
+        out = subprocess.run(["lsof", "-t", "--", path], capture_output=True, text=True,
+                             timeout=10, stdin=subprocess.DEVNULL).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return set()
+    return {int(p) for p in out.split() if p.isdigit() and int(p) != os.getpid()}
+
+
+class Stall:
+    """No new log output and no CPU use by the command's processes for `limit` seconds.
+    A supervisor that waits on the chat (a queue runner) looks exactly like this."""
+
+    def __init__(self, limit, log, pid):
+        self.limit, self.log, self.pid = limit, log, pid
+        self.every = min(60.0, limit / 4)
+        self.last = self.next = time.monotonic()
+        self.base, self.offset, self.rebase, self.warned = {}, 0, True, False
+
+    def snapshot(self):
+        return tree_cpu({self.pid} if self.pid else writers(self.log))
+
+    def check(self, offset):
+        now = time.monotonic()
+        if offset != self.offset:
+            self.offset, self.last, self.rebase, self.warned = offset, now, True, False
+        if now < self.next:
+            return None
+        self.next = now + self.every
+        snap = self.snapshot()
+        used = sum(max(0.0, c - self.base.get(p, 0.0)) for p, c in snap.items())
+        if self.rebase or used >= max(0.005, 0.01 * self.every):
+            if not self.rebase:
+                self.last, self.warned = now, False
+            self.base, self.rebase = snap, False
+            return None
+        idle = now - self.last
+        if idle >= self.limit:
+            return "stop"
+        if idle >= self.limit / 2 and not self.warned:
+            self.warned = True
+            return "warn"
+        return None
+
+
+def idle_text(seconds):
+    return f"{seconds / 60:g} min" if seconds >= 60 else f"{seconds:g} s"
+
+
+def with_log(wait, still, deadline, progress, stall=None):
     ticked = False
     while True:
-        step = time.monotonic() + 1
+        step = time.monotonic() + min(1.0, stall.every if stall else 1.0)
         result = wait(step if deadline is None else min(step, deadline))
         done = result != still or (deadline is not None and time.monotonic() >= deadline)
         progress.poll(final=done)
         if done:
             return result, ticked
         ticked = True
+        verdict = stall.check(progress.offset) if stall else None
+        if verdict == "warn":
+            progress.say(f"stalled? no new output and no CPU use for {idle_text(stall.limit / 2)}; "
+                         f"stopping the wait at {idle_text(stall.limit)}")
+        elif verdict == "stop":
+            progress.say(f"stalled: no new output and no CPU use for {idle_text(stall.limit)}. "
+                         "The command was not stopped. It may be waiting on you (a queue runner waits "
+                         "for its items to be marked done) or have died without writing its exit code. "
+                         "Check it, then wait again.")
+            return "stalled", ticked
 
 
 def main(argv):
@@ -167,6 +256,10 @@ def main(argv):
                          "and each failure line as soon as it appears (replaces --dots)")
     ap.add_argument("--every", type=float, default=60, metavar="S", help="seconds between progress lines (default 60)")
     ap.add_argument("--fail", default=FAIL, metavar="REGEX", help="what a failure line looks like in the log")
+    ap.add_argument("--stall", type=float, default=30, metavar="MIN",
+                    help="with --log: warn at half and stop waiting (exit 125, the command left running) when "
+                         "the log has not grown and the command's processes used no CPU for MIN minutes "
+                         "(default 30; 0 turns it off)")
     a = ap.parse_args(argv)
     if a.pid is not None and a.pid < 1:
         ap.error("--pid must be 1 or more (0 and below name process groups)")
@@ -176,6 +269,8 @@ def main(argv):
         ap.error("--dots must be more than 0")
     if a.every <= 0:
         ap.error("--every must be more than 0")
+    if a.stall < 0:
+        ap.error("--stall must be 0 or more")
     try:
         re.compile(a.fail)
     except re.error as e:
@@ -184,11 +279,14 @@ def main(argv):
     deadline = None if a.timeout is None else start + a.timeout
     if a.log is not None:
         progress = Progress(a.log, a.fail, a.every)
-        wait_with = lambda wait, still: with_log(wait, still, deadline, progress)
+        stall = Stall(a.stall * 60, a.log, a.pid) if a.stall else None
+        wait_with = lambda wait, still: with_log(wait, still, deadline, progress, stall)
     else:
         wait_with = lambda wait, still: with_dots(wait, still, deadline, a.dots)
     if a.pid is not None:
         result, ticked = wait_with(lambda d: wait_pid(a.pid, d), "timeout")
+        if result == "stalled":
+            return 125
         if result == "gone" and not ticked:
             print(f"pid {a.pid} was not running")
             return 0
@@ -198,6 +296,8 @@ def main(argv):
         print(f"pid {a.pid} ended after {time.monotonic() - start:.0f} s")
         return 0
     code, _ = wait_with(lambda d: wait_file(a.file, d), None)
+    if code == "stalled":
+        return 125
     if code is None:
         print(f"{a.file}: no exit code after {a.timeout:g} s")
         return 124
