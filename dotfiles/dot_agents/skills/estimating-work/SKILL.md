@@ -92,7 +92,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
   finished, a merge), so a compaction or the owner's question finds it current.
 - Stamp every item: `estimates.py start --id <id> --kind <kind> --estimate <min> --method <method>
   --run <run>` before it (an enabler adds `--serves <feature id>`), `estimates.py end --id <id>`
-  after its commit. Never work out minutes by hand. An item another item covered, or one logged by
+  after its commit. Start the clock before the item's first step, its reading included, not when
+  its build begins. Never work out minutes by hand. An item another item covered, or one logged by
   mistake, is closed with `estimates.py drop --id <id> --reason "covered by <id>"` instead of
   `end`, so no history or report counts it (2026-10-26: two covered items logged 0 minutes).
   An item that waits for the owner's yes to its behaviours starts after the yes, and every item

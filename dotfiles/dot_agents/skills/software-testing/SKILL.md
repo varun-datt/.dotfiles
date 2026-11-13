@@ -22,6 +22,8 @@ Read the topic that matches the task; each file stands alone.
   Never undo it with a pattern delete: a `sed '/text/d'` once removed 12 identical lines, and a
   checkout run after a commit whose hook had failed reverted the uncommitted fix. Breaking it at
   runtime instead changes no file: [mutation checks](references/mutation-checks.md).
+  Record the proof for each new test where the item is reported (the commit message or the
+  run's report): the break used and the assertion that failed.
 - **Read before you touch.** The failure's trace and the app's logged state come before any change
   to the test.
 - **A case nobody listed is the usual miss.** List the cases before the code
