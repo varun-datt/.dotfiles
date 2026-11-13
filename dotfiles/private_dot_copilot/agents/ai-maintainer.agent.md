@@ -41,6 +41,12 @@ The eval-set format is skill-creator's: a JSON list of `{"query": ..., "should_t
 3. Present the cost and run the trigger test on the current description. Then, if approved, run the loop.
 4. Show the old and new description with train and test scores. A new description replaces the old one only on approval.
 
+**Question review** (part of every periodic review; tunes the user instructions' "Deciding whether to ask"):
+1. From the question tool's calls and answers in the session transcripts since the last review, group the questions by kind (what was being decided, not the item).
+2. Per kind: how many asks, how often the recommended option was taken, and any the owner called unnecessary or answered with a new rule instead.
+3. From final reports, the `not approved` choices the owner later overturned, by kind.
+4. Propose: kinds taken nearly every time stop being asked, with where the answer is recorded (a skill default or a ruling); overturned kinds become asks. Each proposal names its counts and sessions.
+
 **New skill, script or prompt candidates:**
 - Recurring multi-step work in session history: the same terminal commands, file reads or questions across sessions. Use the session store, `/chronicle tips` and `/chronicle improve`.
 - `SKILL.md` files read outside the checked inventory (listed at the end of the usage report), which are things the owner reaches for that are not installed.
