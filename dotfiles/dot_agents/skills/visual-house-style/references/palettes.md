@@ -19,6 +19,14 @@ Rules that hold for all three:
 - The effect (glow, mesh, glass, gradient text) goes on the background, the hero and the selected
   item; charts, tables and body text stay solid and plain.
 - Check text contrast (WCAG AA) over the brightest point of any gradient or glass behind it.
+- Glass in a screen people work in: every floating layer is glass, content sits on frosted cards,
+  and menus, dialogs and command palettes stay nearly opaque so what is behind never competes with
+  their rows; everything turns solid under `prefers-reduced-transparency: reduce`
+  ([Chrome blog](https://developer.chrome.com/blog/css-prefers-reduced-transparency),
+  [mironsoft](https://www.mironsoft.de/en/blog/css-backdrop-filter-frosted-glass-effects)).
+  Refraction (`backdrop-filter: url()` with an SVG displacement map) is decoration only, on a
+  see-through layer, never on a menu or over text people read; it works only in Chromium and
+  needs a pixel-sized filter per element ([kube.io](https://kube.io/blog/liquid-glass-css-svg)).
 
 ## Aurora Indigo (dark, the default for this mood)
 

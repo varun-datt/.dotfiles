@@ -49,6 +49,15 @@ A view can be rich and still quiet. Evidence: AMC's note
   ([Apple HIG](https://developer.apple.com/design/human-interface-guidelines/motion);
   [WCAG 2.2.2](https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide.html) for motion over
   5 s).
+- **Motion in apps**: a change of view animates (the View Transitions API); a spring goes only on
+  what the person drags or on something that settles (a star, a toast); an action from the
+  keyboard changes at once, with no open or close animation
+  ([Raycast](https://www.raycast.com/blog/the-new-raycast),
+  [mironsoft](https://www.mironsoft.de/en/blog/spring-easing-with-linear-function)).
+- **Loading**: a skeleton only for data from outside the app, shown after a short delay (about
+  300 ms) so a fast load never flashes; local data appears at once
+  ([NN/g](https://www.nngroup.com/articles/skeleton-screens),
+  [progress indicators](https://www.nngroup.com/articles/progress-indicators)).
 
 ## Patterns
 
