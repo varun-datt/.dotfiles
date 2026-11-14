@@ -1,1 +1,4 @@
 .agents/skills/deck-house-style
+.copilot/hooks/gated-steps.json
+.copilot/hooks/npx-no-install.json
+.copilot/hooks/plain-questions.json
