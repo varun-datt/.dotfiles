@@ -95,7 +95,8 @@ def other_problem(command):
         plain = [w for w in words if not re.match(r"^[A-Za-z_]\w*=", w)]
         if plain and base(plain[0]) in EDITORS and any(IN_PLACE.match(w) for w in plain[1:]):
             return (f"{base(plain[0])} edits a file in place from the terminal. Edit files with the edit tools "
-                    "(user rule: never edit a file by running terminal commands).")
+                    "(user rule: never edit a file by running terminal commands). To prove a test can fail, follow the "
+                    "software-testing skill's references/mutation-checks.md: patch at runtime or edit a temporary copy.")
         if op in ("|", "|&") and i + 1 < len(cmds) and cmds[i + 1][0] and base(cmds[i + 1][0][0]) in CUTTERS \
                 and is_check(words):
             return (f"a check's output is cut with {base(cmds[i + 1][0][0])}, which can hide its failures and "

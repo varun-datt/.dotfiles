@@ -1,14 +1,9 @@
 ---
-name: planning-work
-description: Decide which work comes first and how long it takes - rank work by value (gates first, then cost of delay divided by the scarce resource, with a card of measured and judged inputs), estimate it in minutes from measured pace, and plan, run and report a window of unattended work. Use when proposing, ranking or planning work in any repository (what to do next, a run's plan, a fix, a flaky test or a debt payment), when asked for an estimate or "how long will this take", when the owner approves a list of items to build, or when the owner leaves the agent to work alone for some hours. Not for project schedules, story points or other people's work.
+name: estimating-work
+description: Estimate work in minutes from measured pace, and plan, run and report a window of unattended work. Use when asked for an estimate or "how long will this take", when planning work for a set time, when the owner approves a list of items to build, or when the owner leaves the agent to work alone for some hours. Not for project schedules, story points or other people's work.
 ---
 
-# planning-work
-
-Every proposal or plan ranks its candidates by value first: gates, then cost of delay divided by
-the scarce resource, each proposal carrying its card of inputs. Method:
-[references/value.md](references/value.md). The rest of this skill turns the ranked list into
-minutes and a plan.
+# estimating-work
 
 A language model estimates in human time: its pre-task estimates "overshoot actual duration by
 4–7×" (arXiv 2604.00010), and an agent's estimate "is often from training data, which is based on
@@ -25,11 +20,10 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 1. Run `date`. Write down the window's end and the stop time: the end minus 30 minutes for the
    wrap-up.
-2. Rank the candidates by [value](references/value.md), gates first; enablers go before the
-   feature they serve and count toward it. No kind of work gets a share: the mix is reported after
-   the run, not asked or planned ([references/work-mix.md](references/work-mix.md)). Then ask the
-   owner, in one question round before they leave:
-   - the pick from queue A, and any ruling the value method leaves to the owner;
+2. Ask the owner, in one question round before they leave:
+   - the work mix; the default is about 70% features, 15% bugs and fixes, 10% spikes that unblock a
+     decision, 5% docs, and it bends to dependencies: an enabler a planned feature needs goes first
+     and counts toward that feature ([references/work-mix.md](references/work-mix.md));
    - every decision the planned items need. A UX decision not taken is built as the recommended
      option, chosen from human-factors research (the `visual-house-style` skill's attention and
      interaction rules), and flagged for review.
@@ -73,8 +67,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
    those earlier items finish; a waiting item holds no slot. The output adds `slots` and
    `sequential_p50` (the one-at-a-time sum). `--slots 1` reproduces the old numbers only for plans
    without `slot` or `after` fields: with `slot: false` an item runs beside the single slot.
-   Fill the plan to the window's P50 in rank order, then add an overflow tier from the backlog, in
-   rank order, up to what fits at P90. Say what is out of scope.
+   Fill the plan to the window's P50, then add an overflow tier from the backlog, in the owner's
+   mix, up to what fits at P90. Say what is out of scope.
    For work that spans days ("when will these 12 items be done?"), also run
    `estimates.py throughput --items <N> [--kind <kind> ...] [--days 28]`: it draws past days'
    finished-item counts, days with none included, and prints the days to finish at P50, P85 and
@@ -142,7 +136,7 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 - Count each live run's paid calls against the approved budget, and ask before a run that would
   go over it.
 - When a feature turns out to need an enabler (a fix, a spike, some debt), take the enabler next and
-  re-forecast.
+  re-forecast; never hold it back to keep the mix.
 - Carry each item to completion or to a blocker. Where a case is unclear, let
   research decide it, say so in the commit and the plan, and keep it for the owner's review.
 - When an item blocks on a decision, write the question down and take the next item. A question
@@ -172,7 +166,7 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 
 - `estimates.py disarm --session <chat id>` first, so the wrap-up's final message can end the turn.
 - `estimates.py report --run <run>`: estimate against actual, how many came within 25%, minutes by
-  kind, and features with their enablers as one share: the mix that came out. Its `credits`
+  kind, and features with their enablers as one share, against the mix asked for. Its `credits`
   part lists each item's minutes and credits, estimate beside actual, and the run's totals. The
   figure counts every session's spend on the account, so an item whose window overlaps another's
   is marked `overlaps`: their actuals double count the shared spend. Put it in the final message
