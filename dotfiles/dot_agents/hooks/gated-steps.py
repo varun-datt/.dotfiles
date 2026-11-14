@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # preToolUse hook: refuses a terminal command that commits, merges or pushes after a step whose failure it cannot see.
 import json
+import os
 import re
 import shlex
 import sys
@@ -16,6 +17,7 @@ NPM_CHECKS = re.compile(r"^(?:check|lint|typecheck|test\S*|e2e|mutate)$")
 WRAPPERS = {"npx", "queue.zsh", "time", "timeout"}
 CUTTERS = {"head", "tail"}
 REDIRECT = re.compile(r"\d?>&\d")
+DOTFILES = os.path.expanduser("~/.local/share/chezmoi")
 
 
 def tokens(text):
@@ -104,6 +106,47 @@ def other_problem(command):
     return None
 
 
+def moved(here, target):
+    target = os.path.expanduser(os.path.expandvars(target))
+    return os.path.normpath(os.path.join(here or "", target)) if here or os.path.isabs(target) else None
+
+
+def in_dotfiles(path):
+    if not path:
+        return False
+    real, root = os.path.realpath(path), os.path.realpath(DOTFILES)
+    return real == root or real.startswith(root + os.sep)
+
+
+def pathless_dotfiles_commit(command, cwd):
+    try:
+        cmds = commands(command)
+    except ValueError:
+        return None
+    here = cwd
+    for words, _ in cmds:
+        plain = [w for w in words if not re.match(r"^[A-Za-z_]\w*=", w)]
+        if not plain:
+            continue
+        if plain[0] in ("cd", "pushd") and len(plain) > 1:
+            here = moved(here, plain[1])
+            continue
+        if base(plain[0]) != "git":
+            continue
+        rest, where = plain[1:], here
+        while len(rest) > 1 and rest[0] == "-C":
+            where = moved(where, rest[1])
+            rest = rest[2:]
+        if not rest or rest[0] != "commit" or not in_dotfiles(where):
+            continue
+        args = rest[1:]
+        if "--" in args and args.index("--") < len(args) - 1:
+            continue
+        return ("a commit in the dotfiles source must list its files after --, so it cannot take in changes "
+                "another chat staged: git commit -m <message> -- <paths>.")
+    return None
+
+
 def deny(reason):
     return {"permissionDecision": "deny", "permissionDecisionReason": reason,
             "hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny",
@@ -121,6 +164,9 @@ def decide(event):
     other = other_problem(command)
     if other:
         return deny(other)
+    pathless = pathless_dotfiles_commit(command, event.get("cwd"))
+    if pathless:
+        return deny(pathless)
     why = problem(command)
     if not why:
         return {}
