@@ -26,7 +26,8 @@ note `00-inbox/research-agent-work-planning/findings-estimation.md`.
 1. Run `date`. Write down the window's end and the stop time: the end minus 30 minutes for the
    wrap-up.
 2. Rank the candidates by [value](references/value.md), gates first; enablers go before the
-   feature they serve and count toward it. No kind of work gets a share: the mix is reported after
+   feature they serve and count toward it. A flaky test or debt row takes its cost of delay from
+   `estimates.py interest --checks <check log> --debt <register>`. No kind of work gets a share: the mix is reported after
    the run, not asked or planned ([references/work-mix.md](references/work-mix.md)). Then ask the
    owner, in one question round before they leave:
    - the pick from queue A, and any ruling the value method leaves to the owner;

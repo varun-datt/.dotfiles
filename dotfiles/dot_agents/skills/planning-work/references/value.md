@@ -53,6 +53,14 @@ A debt item's cost of delay is its interest, in agent-minute equivalents a week:
   share of failures that reach the owner times the owner's minutes, and the share that block a
   merge times the lane's wait. `w` = 10 agent minutes per owner minute until it is measured.
 - Rank it against features with `I / fix hours`, the fix including its proof under load.
+- `estimates.py interest --checks <check log> [--debt <register>]` gives `I` for each test that
+  failed or passed only on retry, and for each open debt row that names one. It measures N,
+  `p_fail`, `p_retry`, `t_rerun` (the median check length), `t_block` (the median wait from a
+  failing check to the next passing check on its branch) and `b` (the share of failing checks
+  run to merge), and lists the items whose start-to-end window on that repository and branch held
+  a failing check. `t_diag`, `a`, `t_owner`, `w` and `C_retry` are judged defaults, as are
+  `t_rerun`, `t_block` and `b` when the log cannot measure them; each row says which; `--judge
+  NAME=VALUE` replaces one.
 
 Then one rule per item:
 

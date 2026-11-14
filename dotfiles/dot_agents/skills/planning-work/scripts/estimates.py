@@ -407,6 +407,107 @@ def throughput(counts, items, runs=1000, seed=None):
     }
 
 
+JUDGED = {"t_diag": 10.0, "a": 0.1, "t_owner": 5.0, "w": 10.0, "c_retry": 1.0, "t_rerun": 15.0, "t_block": 0.0, "merge_share": 0.5}
+
+
+def debt_tests(register):
+    """Open and follow-up debt rows by each test their `[tests: <file> > <title>; ...]` mark names."""
+    rows = {}
+    for line in register.splitlines():
+        cells = [c.strip() for c in line.split("|")]
+        mark = re.search(r"\[tests: ([^\]]*)\]", line)
+        if len(cells) < 3 or not re.fullmatch(r"TD-\d+", cells[1]) or not mark or cells[-2] not in ("open", "follow-up"):
+            continue
+        for test in re.split(r"; (?=\S+ > )", mark.group(1)):
+            rows.setdefault(test, []).append(cells[1])
+    return rows
+
+
+def read_checks(path, days, at):
+    cutoff = at - timedelta(days=days)
+    checks = []
+    for line in Path(path).read_text().splitlines():
+        try:
+            r = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(r, dict) and isinstance(r.get("levels"), dict) and isinstance(r.get("at"), str) and parse_time(r["at"]) >= cutoff:
+            checks.append(r)
+    return sorted(checks, key=lambda r: parse_time(r["at"]))
+
+
+def span_minutes(since, until):
+    return (parse_time(until) - parse_time(since)).total_seconds() / 60
+
+
+def median(values):
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    return ordered[middle] if len(ordered) % 2 else (ordered[middle - 1] + ordered[middle]) / 2
+
+
+def interest(checks, items, debt, days, at, judged=None):
+    """Each failing or retried test's weekly interest, `N x (p_fail x C_fail + p_retry x C_retry)`, with every input marked measured or judged; then the same per debt row."""
+    judged = JUDGED | (judged or {})
+    weeks = max(1, min(days * 1440, span_minutes(checks[0]["at"], at.isoformat()))) / 10080 if checks else days / 7
+    seen = {}
+    for index, r in enumerate(checks):
+        for level, result in r["levels"].items():
+            if level.startswith("quarantine:") or not isinstance(result, dict):
+                continue
+            for kind in ("failed", "flaky"):
+                for t in result.get(kind) or []:
+                    seen.setdefault((level, t["file"], t["title"]), {"failed": set(), "flaky": set()})[kind].add(index)
+    tests = []
+    for (level, file, title), hit in seen.items():
+        ran = [i for i, r in enumerate(checks) if i in hit["failed"] | hit["flaky"] or (isinstance(r["levels"].get(level), dict) and file in (r["levels"][level].get("files") or []))]
+        lengths = [span_minutes(checks[i]["started"], checks[i]["at"]) for i in ran if checks[i].get("started")]
+        waits, blocked = [], set()
+        for i in sorted(hit["failed"]):
+            r = checks[i]
+            lane = r.get("branch") or r.get("lane")
+            after = next((c for c in checks[i + 1:] if c.get("passed") and (c.get("branch") or c.get("lane")) == lane and c.get("repo") == r.get("repo")), None)
+            if after:
+                waits.append(span_minutes(r["at"], after["at"]))
+            for item in items:
+                if item.get("branch") == lane and item.get("repo") == r.get("repo") and item.get("started") and parse_time(item["started"]) <= parse_time(r["at"]) <= parse_time(item["at"]):
+                    blocked.add(item["id"])
+        inputs = {
+            "checks_a_week": len(ran) / weeks,
+            "p_fail": len(hit["failed"]) / len(ran),
+            "p_retry": len(hit["flaky"]) / len(ran),
+        }
+        merges = [checks[i]["merge"] for i in hit["failed"] if isinstance(checks[i].get("merge"), bool)]
+        if merges:
+            inputs["merge_share"] = sum(merges) / len(merges)
+        measured = list(inputs)
+        if lengths:
+            inputs["t_rerun"] = median(lengths)
+            measured.append("t_rerun")
+        if waits:
+            inputs["t_block"] = median(waits)
+            measured.append("t_block")
+        values = judged | inputs
+        c_fail = values["t_rerun"] + values["t_diag"] + values["a"] * values["w"] * values["t_owner"] + values["merge_share"] * values["t_block"]
+        weekly = values["checks_a_week"] * (values["p_fail"] * c_fail + values["p_retry"] * values["c_retry"])
+        name = f"{file} > {title}"
+        tests.append({"level": level, "test": name, "debt_rows": debt.get(name, []), "failed": len(hit["failed"]), "flaky": len(hit["flaky"]), "ran": len(ran)}
+                     | {k: round(v, 3) for k, v in inputs.items()}
+                     | {"items_blocked": sorted(blocked), "measured": measured, "judged": sorted(k for k in judged if k not in inputs), "interest": round(weekly, 1)})
+    tests.sort(key=lambda t: -t["interest"])
+    rows = {}
+    for name, ids in debt.items():
+        for row in ids:
+            rows.setdefault(row, {"row": row, "tests": 0, "tests_seen": 0, "items_blocked": set(), "interest": 0.0})["tests"] += 1
+    for t in tests:
+        for row in t["debt_rows"]:
+            rows[row]["tests_seen"] += 1
+            rows[row]["items_blocked"] |= set(t["items_blocked"])
+            rows[row]["interest"] += t["interest"]
+    ranked = sorted(({**r, "items_blocked": sorted(r["items_blocked"]), "interest": round(r["interest"], 1)} for r in rows.values()), key=lambda r: -r["interest"])
+    return {"checks": len(checks), "weeks": round(weeks, 2), "judged": judged, "tests": tests, "rows": ranked}
+
+
 def report(items, logged=None):
     if not items:
         return {"n": 0}
@@ -690,6 +791,11 @@ def main(argv=None):
     p.add_argument("--run", default=None)
     p = sub.add_parser("kinds", help="markdown table of measured pace per kind")
     p.add_argument("--days", type=int, default=180)
+    p = sub.add_parser("interest", help="weekly interest of each failing or retried test and each debt row naming one, from a check log, with inputs marked measured or judged")
+    p.add_argument("--checks", required=True, help="JSON lines, one check each: at, started, passed, merge, repo, branch or lane, levels {name: {files, failed, flaky}} holding {file, title} tests")
+    p.add_argument("--debt", default=None, help="debt register whose open rows name tests in a [tests: <file> > <title>; ...] mark")
+    p.add_argument("--days", type=int, default=28)
+    p.add_argument("--judge", action="append", default=[], metavar="NAME=VALUE", help=f"replace a judged input; defaults {JUDGED}")
     p = sub.add_parser("arm", help="start the run guard: a Stop hook keeps the agent working until the stop time")
     p.add_argument("--run", required=True)
     p.add_argument("--until", required=True, help="stop time, HH:MM (its next occurrence) or ISO")
@@ -779,6 +885,26 @@ def main(argv=None):
         print(json.dumps(report(items, logged) | {"left_open": left_open(records, at)}, indent=2))
     elif args.command == "kinds":
         print(kinds_table(recent(completed(read()), args.days)))
+    elif args.command == "interest":
+        judged = {}
+        for pair in args.judge:
+            name, _, value = pair.partition("=")
+            try:
+                judged[name] = float(value)
+            except ValueError:
+                judged[name] = None
+            if name not in JUDGED or not is_number(judged[name]):
+                print(f"--judge takes NAME=VALUE with NAME one of {', '.join(JUDGED)}", file=sys.stderr)
+                return 2
+        try:
+            at = now()
+            checks = read_checks(args.checks, args.days, at)
+            debt = debt_tests(Path(args.debt).read_text()) if args.debt else {}
+        except OSError as e:
+            print(e, file=sys.stderr)
+            return 2
+        records = read()
+        print(json.dumps(interest(checks, completed(records) + running(records, at), debt, args.days, at, judged), indent=2))
     elif args.command == "arm":
         at = now()
         planned = [item["id"] for item in json.loads(Path(args.plan).read_text())] if args.plan else None

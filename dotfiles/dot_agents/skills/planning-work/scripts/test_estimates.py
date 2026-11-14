@@ -781,5 +781,80 @@ class ThroughputTest(Isolated):
             self.assertEqual(estimates.main(["throughput", "--items", "2", "--kind", "review"]), 2)
 
 
+class InterestTest(Isolated):
+    t0 = datetime(2026, 11, 1, 12, tzinfo=timezone.utc)
+
+    def check(self, start, length, lane, passed, merge=False, **levels):
+        return {"started": (self.t0 + timedelta(minutes=start)).isoformat(), "at": (self.t0 + timedelta(minutes=start + length)).isoformat(),
+                "repo": "/r", "lane": lane, "passed": passed, "merge": merge, "levels": levels}
+
+    def level(self, files, failed=(), flaky=()):
+        return {"complete": True, "files": files, "failed": [{"file": f, "title": t} for f, t in failed], "flaky": [{"file": f, "title": t} for f, t in flaky], "errors": 0}
+
+    def setUp(self):
+        super().setUp()
+        self.checks = [
+            self.check(0, 10, "features", False, merge=True, unit=self.level(["a.test.ts", "b.test.ts"], failed=[("a.test.ts", "x")])),
+            self.check(15, 5, "other", True, unit=self.level(["a.test.ts"])),
+            self.check(30, 10, "features", True, unit=self.level(["a.test.ts"], flaky=[("a.test.ts", "x")]), **{"quarantine:unit": self.level(["a.test.ts"], failed=[("a.test.ts", "x")])}),
+            {"at": (self.t0 + timedelta(minutes=50)).isoformat(), "repo": "/r", "lane": "features", "passed": True, "levels": {"unit": self.level(["b.test.ts"], flaky=[("b.test.ts", "y; z")])}},
+        ]
+        self.items = [
+            {"id": "hit", "repo": "/r", "branch": "features", "started": (self.t0 - timedelta(minutes=5)).isoformat(), "at": (self.t0 + timedelta(minutes=20)).isoformat()},
+            {"id": "other-lane", "repo": "/r", "branch": "other", "started": self.t0.isoformat(), "at": (self.t0 + timedelta(minutes=20)).isoformat()},
+            {"id": "ended-before", "repo": "/r", "branch": "features", "started": (self.t0 - timedelta(minutes=30)).isoformat(), "at": (self.t0 - timedelta(minutes=1)).isoformat()},
+        ]
+        self.register = "\n".join([
+            "| Id | Scenario | Status |",
+            "| TD-1 | flaky [tests: a.test.ts > x; b.test.ts > y; z; c.test.ts > never] | open |",
+            "| TD-2 | closed one [tests: a.test.ts > x] | closed |",
+        ])
+
+    def test_measures_runs_failures_retries_check_length_wait_merge_share_and_items_blocked(self):
+        at = self.t0 + timedelta(minutes=10, days=7)
+        result = estimates.interest(self.checks, self.items, estimates.debt_tests(self.register), 28, at)
+        self.assertEqual((result["checks"], result["weeks"]), (4, 1.0))
+        x = next(t for t in result["tests"] if t["test"] == "a.test.ts > x")
+        self.assertEqual((x["level"], x["ran"], x["failed"], x["flaky"]), ("unit", 3, 1, 1))
+        self.assertEqual((x["checks_a_week"], x["p_fail"], x["p_retry"], x["merge_share"]), (3.0, 0.333, 0.333, 1.0))
+        self.assertEqual((x["t_rerun"], x["t_block"], x["items_blocked"], x["debt_rows"]), (10, 30.0, ["hit"], ["TD-1"]))
+        self.assertEqual(x["judged"], ["a", "c_retry", "t_diag", "t_owner", "w"])
+        self.assertEqual(x["interest"], round(3 * ((10 + 10 + 0.1 * 10 * 5 + 30) / 3 + 1 / 3), 1))
+        y = next(t for t in result["tests"] if t["test"] == "b.test.ts > y; z")
+        self.assertEqual((y["ran"], y["t_rerun"], y["debt_rows"], y["judged"]), (2, 10, ["TD-1"], ["a", "c_retry", "merge_share", "t_block", "t_diag", "t_owner", "w"]))
+        self.assertEqual(y["interest"], 1.0)
+        self.assertEqual(result["tests"][0]["test"], "a.test.ts > x")
+        self.assertEqual(result["rows"], [{"row": "TD-1", "tests": 3, "tests_seen": 2, "items_blocked": ["hit"], "interest": round(x["interest"] + 1.0, 1)}])
+
+    def test_a_judged_input_can_be_replaced_and_no_check_gives_no_rows_of_tests(self):
+        at = self.t0 + timedelta(minutes=10, days=7)
+        base = estimates.interest(self.checks, [], {}, 28, at)["tests"][0]["interest"]
+        raised = estimates.interest(self.checks, [], {}, 28, at, {"t_diag": 40.0})["tests"][0]["interest"]
+        self.assertEqual(round(raised - base, 1), 30.0)
+        self.checks[0]["merge"] = False
+        outside = estimates.interest(self.checks, [], {}, 28, at)["tests"][0]
+        self.assertEqual((outside["merge_share"], round(base - outside["interest"], 1)), (0.0, 30.0))
+        del self.checks[0]["merge"]
+        unrecorded = estimates.interest(self.checks, [], {}, 28, at)["tests"][0]
+        self.assertEqual(("merge_share" in unrecorded, "merge_share" in unrecorded["judged"], round(base - unrecorded["interest"], 1)), (False, True, 15.0))
+        empty = estimates.interest([], [], estimates.debt_tests(self.register), 14, at)
+        self.assertEqual((empty["tests"], empty["weeks"], empty["rows"][0]["interest"]), ([], 2.0, 0.0))
+
+    def test_command_line_reads_the_log_and_register_and_refuses_bad_input(self):
+        checks = Path(self.dir.name) / "checks.jsonl"
+        checks.write_text("\n".join(json.dumps(c) for c in self.checks) + "\nnot json\n")
+        register = Path(self.dir.name) / "debt.md"
+        register.write_text(self.register)
+        out = io.StringIO()
+        with mock.patch.object(estimates, "now", return_value=self.t0 + timedelta(days=7)), contextlib.redirect_stdout(out):
+            self.assertEqual(estimates.main(["interest", "--checks", str(checks), "--debt", str(register), "--judge", "w=2"]), 0)
+        result = json.loads(out.getvalue())
+        self.assertEqual((result["checks"], result["judged"]["w"], result["rows"][0]["row"]), (4, 2.0, "TD-1"))
+        with contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(estimates.main(["interest", "--checks", str(checks), "--judge", "nope=1"]), 2)
+            self.assertEqual(estimates.main(["interest", "--checks", str(checks), "--judge", "w=x"]), 2)
+            self.assertEqual(estimates.main(["interest", "--checks", str(Path(self.dir.name) / "missing.jsonl")]), 2)
+
+
 if __name__ == "__main__":
     unittest.main()
