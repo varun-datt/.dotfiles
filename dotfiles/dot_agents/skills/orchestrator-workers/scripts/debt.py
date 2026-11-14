@@ -5,6 +5,8 @@ Usage:
     python3 debt.py add <repo> --area A --grade Blocker|Major|Minor --file PATH --scenario "one line" --source ROUND --minutes N [--follow-up]
                     [--why "age=New; phaseInjected=build; phaseShouldHaveCaught=test; qualifier=Missing; missing=<words>"]
     python3 debt.py list <repo> [--open|--all|--follow-up]      the table's rows (default: open ones)
+                    [--tests "<file> > <title>" ...]
+    python3 debt.py tests <repo> TD-<n> --tests "<file> > <title>" ...   set the tests a row names, replacing any it named
     python3 debt.py flag <repo> TD-<n> [--off]                  mark an open row for follow-up, or take the mark off
     python3 debt.py close <repo> TD-<n> --reason "one line"     mark a row closed; it is never deleted
     python3 debt.py for-files <repo> PATH ...                   open rows on these files or under these folders,
@@ -17,6 +19,9 @@ Usage:
 "unknown" allowed; no "|", "[", "]" or ";" in the words), as a fixed suffix of the Scenario cell:
 "<scenario> [why: age=..; phaseInjected=..; phaseShouldHaveCaught=..; qualifier=..; missing=..]", which list, for-files and
 stale print. Rows without it, and registers written before it, read as they are.
+--tests names a test the row is about (a flaky test's row names it so a flaky-test report can find it), as
+"<file> > <title>" with the title's describe blocks joined by " > "; repeat it for more tests. They go in a suffix
+"[tests: <file> > <title>; ...]" before any [why: ...]; no "|", "[" or "]" in them, and no "; <file> > ", which starts the next.
 A row's Status is open, follow-up (open, and deferred from a run with the owner away: the owner looks at it after the run) or "closed <date>: <reason>". A Blocker goes in only as follow-up and keeps the mark until closed.
 The register is a markdown table; text outside the table is kept as written. Ids are TD-<n>, one above the
 highest ever used (a `<!-- debt.py next id: n -->` line after the table remembers it if a row is deleted by hand).
@@ -82,6 +87,30 @@ def why_suffix(text):
     if lacking:
         raise Refused(f'--why lacks {", ".join(lacking)} (write unknown when it is not known)')
     return ' [why: ' + '; '.join(f'{k}={got[k]}' for k in WHY_KEYS) + ']'
+
+
+TESTS_MARK = re.compile(r' \[tests: [^\]]*\]')
+NEXT_TEST = re.compile(r'; \S+ > ')
+
+
+def tests_suffix(tests):
+    names = []
+    for given in tests:
+        name = cell(given, '--tests')
+        if any(ch in name for ch in '[]') or NEXT_TEST.search(name):
+            raise Refused(f'--tests {name!r} must not hold "[", "]" or "; <file> > ", which would break its mark in the Scenario cell')
+        file, sep, title = (x.strip() for x in name.partition(' > '))
+        if not sep or not file or not title:
+            raise Refused(f'--tests {name!r} is not "<file> > <title>"')
+        names.append(f'{file} > {title}')
+    return ' [tests: ' + '; '.join(dict.fromkeys(names)) + ']'
+
+
+def with_tests(scenario, tests):
+    bare = TESTS_MARK.sub('', scenario)
+    why = WHY_MARK.search(bare)
+    at = why.start() if why else len(bare)
+    return bare[:at] + tests_suffix(tests) + bare[at:]
 
 
 def rel_path(repo, path):
@@ -186,7 +215,8 @@ def is_open(row):
 def cmd_add(a):
     repo = repo_dir(a.repo)
     fields = {'Area': cell(a.area, '--area'), 'Grade': a.grade, 'File': rel_path(repo, a.file),
-              'Scenario': cell(a.scenario, '--scenario') + (why_suffix(a.why) if a.why is not None else ''),
+              'Scenario': cell(a.scenario, '--scenario') + (tests_suffix(a.tests) if a.tests else '')
+              + (why_suffix(a.why) if a.why is not None else ''),
               'Source': cell(a.source, '--source')}
     if a.minutes < 1:
         raise Refused('--minutes must be 1 or more')
@@ -229,6 +259,21 @@ def cmd_flag(a):
         row['Status'] = want
         return f'{a.id} is now {want}'
     return change(repo, flag)
+
+
+def cmd_tests(a):
+    repo = repo_dir(a.repo)
+    tests_suffix(a.tests)
+    if not os.path.isfile(os.path.join(repo, REGISTER)):
+        raise Refused(f'{a.repo} has no {REGISTER}')
+
+    def name(reg):
+        row = next((r for r in reg.rows if r['Id'] == a.id), None)
+        if row is None:
+            raise Refused(f'no row {a.id!r} in {REGISTER}')
+        row['Scenario'] = with_tests(row['Scenario'], a.tests)
+        return f'{a.id} names {len(a.tests)} test(s)'
+    return change(repo, name)
 
 
 def cmd_close(a):
@@ -377,7 +422,13 @@ def parser():
                    help='deferred from a run the owner was away for: the owner looks at it after the run')
     p.add_argument('--why', help='why a Blocker or Major got in: "age=..; phaseInjected=..; phaseShouldHaveCaught=..; '
                    'qualifier=..; missing=<words>", kept at the end of the Scenario cell')
+    p.add_argument('--tests', action='append', help='"<file> > <title>" of a test the row is about; repeat for more')
     p.set_defaults(fn=cmd_add)
+    p = sub.add_parser('tests', help='set the tests a row names, replacing any it named')
+    p.add_argument('repo')
+    p.add_argument('id', help='TD-<n>')
+    p.add_argument('--tests', action='append', required=True, help='"<file> > <title>"; repeat for more')
+    p.set_defaults(fn=cmd_tests)
     p = sub.add_parser('list', help='print the rows')
     p.add_argument('repo')
     g = p.add_mutually_exclusive_group()

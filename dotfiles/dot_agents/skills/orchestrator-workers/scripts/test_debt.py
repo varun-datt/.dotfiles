@@ -315,6 +315,32 @@ class DebtTest(unittest.TestCase):
                  '--source', 'r', '--minutes', '5', '--why', unknown)
         self.assertIn(f's [why: {unknown}]', self.rows()[0])
 
+    def test_a_row_names_its_tests_before_its_why_and_the_tests_command_replaces_them(self):
+        self.cli('add', self.repo, '--area', 'REL', '--grade', 'Major', '--file', 'src/host/a.ts', '--scenario', 'flips',
+                 '--source', 'r', '--minutes', '5', '--why', self.WHY, '--tests', 'tests/a.test.ts > group > flips',
+                 '--tests', ' tests/b.spec.ts  >  opens ')
+        why = ' [why: ' + self.WHY + ']'
+        scenario = lambda: debt.Register(self.text()).rows[0]['Scenario']
+        self.assertEqual(scenario(), 'flips [tests: tests/a.test.ts > group > flips; tests/b.spec.ts > opens]' + why)
+        self.assertIn('[tests: tests/a.test.ts', self.cli('for-files', self.repo, 'src/host').stdout)
+        self.assertIn('2 test(s)', self.cli('tests', self.repo, 'TD-1', '--tests', 'tests/c.test.ts > c', '--tests', 'tests/c.test.ts > c').stdout)
+        self.assertEqual(scenario(), 'flips [tests: tests/c.test.ts > c]' + why)
+        self.add(scenario='plain')
+        self.cli('tests', self.repo, 'TD-2', '--tests', 'tests/d.test.ts > d; and e')
+        self.assertEqual(debt.Register(self.text()).rows[1]['Scenario'], 'plain [tests: tests/d.test.ts > d; and e]')
+
+    def test_a_bad_test_name_is_refused_and_leaves_the_register_alone(self):
+        self.add()
+        before = self.text()
+        for bad, want in (('tests/a.test.ts > a; tests/b.test.ts > b', 'must not hold "[", "]" or "; <file> > "'), ('tests/a.test.ts > [a]', 'must not hold'),
+                          ('tests/a.test.ts > a | b', 'must not hold a "|"'), ('tests/a.test.ts', 'is not "<file> > <title>"'),
+                          (' > a', 'is not "<file> > <title>"')):
+            self.assertIn(want, self.cli('tests', self.repo, 'TD-1', '--tests', bad, ok=False).stderr, bad)
+            self.assertIn(want, self.cli('add', self.repo, '--area', 'a', '--grade', 'Minor', '--file', 'src/host/a.ts', '--scenario',
+                                         's', '--source', 'r', '--minutes', '5', '--tests', bad, ok=False).stderr, bad)
+        self.assertIn("no row 'TD-9'", self.cli('tests', self.repo, 'TD-9', '--tests', 'a > b', ok=False).stderr)
+        self.assertEqual(self.text(), before)
+
     def test_help_runs(self):
         self.assertIn('tech-debt', self.cli('--help').stdout)
 
