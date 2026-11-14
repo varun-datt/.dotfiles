@@ -91,6 +91,22 @@ def read_credits():
     return parse_credits(payload)
 
 
+def git_place(cwd=None):
+    """The branch and the main checkout's folder where the item starts, so a check log joins to items by branch; {} outside git."""
+    def git(*args):
+        try:
+            done = subprocess.run(["git", *args], capture_output=True, text=True, timeout=5, cwd=cwd, stdin=subprocess.DEVNULL)
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
+        return done.stdout.strip() if done.returncode == 0 else ""
+
+    common = git("rev-parse", "--path-format=absolute", "--git-common-dir")
+    if not common:
+        return {}
+    branch = git("symbolic-ref", "--short", "-q", "HEAD")
+    return {"repo": str(Path(common).parent)} | ({"branch": branch} if branch else {})
+
+
 def credits_fields(prefix):
     value, reason = read_credits()
     return {f"credits_at_{prefix}": value} | ({"credits_unknown": f"{prefix}:{reason}"} if reason else {})
@@ -695,13 +711,13 @@ def main(argv=None):
                 return 1
         credits = credits_fields("start")
         session = args.session or next((r.get("session") for _, r in armed()[0] if isinstance(r, dict) and args.run and r.get("run") == args.run and r.get("session")), None)
-        record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "credits_estimate": args.credits} | credits | ({"session": session} if session else {}) | {"at": now().isoformat()}
+        record = {"event": "start", "id": args.id, "kind": args.kind, "estimate": args.estimate, "method": args.method, "serves": args.serves, "run": args.run, "credits_estimate": args.credits} | credits | ({"session": session} if session else {}) | git_place() | {"at": now().isoformat()}
         append(record)
         targets = [pr for pr in armed()[0] if isinstance(pr[1], dict) and pr[1].get("run") == args.run] if args.run else [c for c in [pick()[0]] if c]
         for path, run in targets:
             if run.get("blocked"):
                 save_run(path, {k: v for k, v in run.items() if k not in ("blocked", "blockedAt")})
-        shown = ("id", "kind", "estimate", "method", "credits_estimate", "credits_at_start", "credits_unknown")
+        shown = ("id", "kind", "estimate", "method", "credits_estimate", "credits_at_start", "credits_unknown", "branch")
         print(json.dumps({k: record[k] for k in shown if k in record} | {"started": record["at"]}))
     elif args.command == "end":
         start = open_start(read(), args.id)

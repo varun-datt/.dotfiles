@@ -591,6 +591,22 @@ class EstimatesTest(Isolated):
         self.assertEqual({k: printed[k] for k in ("id", "kind", "estimate", "method")}, {"id": "x", "kind": "check", "estimate": 4.0, "method": "history"})
         self.assertIn("started", printed)
 
+    def test_start_records_the_branch_and_the_main_checkouts_folder_and_nothing_outside_git(self):
+        git = lambda cwd, *a: subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=cwd, check=True, capture_output=True, stdin=subprocess.DEVNULL)
+        root = Path(self.dir.name).resolve()
+        main = root / "main"
+        git(root, "init", "-q", "-b", "main", str(main))
+        git(main, "commit", "-q", "--allow-empty", "-m", "start")
+        git(main, "worktree", "add", "-q", "-b", "lane", str(root / "lane"))
+        git(main, "checkout", "-q", "--detach")
+        outside = root / "plain"
+        outside.mkdir()
+        for folder, i in ((root / "lane", "in-lane"), (main, "detached"), (outside, "outside")):
+            with contextlib.chdir(folder), contextlib.redirect_stdout(io.StringIO()):
+                estimates.main(["start", "--id", i, "--kind", "fix", "--estimate", "4", "--method", "rounds"])
+        places = [{k: r.get(k) for k in ("branch", "repo")} for r in estimates.read()]
+        self.assertEqual(places, [{"branch": "lane", "repo": str(main)}, {"branch": None, "repo": str(main)}, {"branch": None, "repo": None}])
+
     def test_command_line_refuses_a_plan_item_without_a_method(self):
         plan = Path(self.dir.name) / "plan.json"
         plan.write_text(json.dumps([{"id": "a", "kind": "fix", "estimate": 5}]))
