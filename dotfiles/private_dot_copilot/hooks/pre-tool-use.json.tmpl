@@ -7,6 +7,13 @@
         "command": "python3 -B '{{ .chezmoi.homeDir }}/.agents/hooks/pre-tool-use.py'",
         "timeout": 10
       }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "python3 -B '{{ .chezmoi.homeDir }}/.agents/hooks/post-tool-use.py'",
+        "timeout": 10
+      }
     ]
   }
 }

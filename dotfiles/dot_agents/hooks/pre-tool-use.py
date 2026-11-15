@@ -15,7 +15,7 @@ def load(name):
     return module
 
 
-CHECKS = [load(name) for name in ("plain-questions", "gated-steps", "npx-no-install")]
+CHECKS = [load(name) for name in ("plain-questions", "question-rules", "gated-steps", "npx-no-install")]
 
 
 def decide(event):
