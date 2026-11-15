@@ -25,6 +25,7 @@ personal wiki, whose commit check refuses it.
 | `workflows.resources` | Where durable reference knowledge lives |
 | `workflows.maps` | Where Maps of Content live |
 | `workflows.weekly` | Where weekly review records go |
+| `workflows.review_also` | Other sources, by name in `sources.json`, that a weekly review run from this repository walks too |
 | `workflows.learn` | Where learning workspaces live |
 | `workflows.check` | The command that runs the repository's checks |
 | `workflows.state` | The agent state file the weekly review reads |
