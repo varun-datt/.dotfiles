@@ -87,6 +87,15 @@ class EngineTest(unittest.TestCase):
             {(f.path, f.severity) for f in found if f.rule == "FRONTMATTER_REQUIRED"},
         )
 
+    def test_notes_git_ignores_are_skipped(self) -> None:
+        import subprocess
+
+        subprocess.run(["git", "init", "-q", str(self.root)], check=True)
+        write(self.root / ".gitignore", "notes/tmp/\n")
+        write(self.root / "notes/tmp/scratch.md", "no front matter\n")
+        write(self.root / "notes/kept.md", "no front matter\n")
+        self.assertEqual({("FRONTMATTER_PARSE", "notes/kept.md")}, self.errors())
+
     def test_command_needs_a_rules_file(self) -> None:
         with contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(2, main(["--root", str(self.root)]))

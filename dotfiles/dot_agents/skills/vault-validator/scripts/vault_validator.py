@@ -11,6 +11,7 @@ import argparse
 import datetime as dt
 import json
 import re
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -153,6 +154,23 @@ def meaningful(value: Any) -> bool:
     return value is not None and value != "" and value != []
 
 
+def git_ignored(root: Path, paths: list[Path]) -> set[Path]:
+    if not paths:
+        return set()
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "check-ignore", "--stdin", "-z"],
+            input="\0".join(str(path) for path in paths) + "\0",
+            capture_output=True,
+            text=True,
+        )
+    except OSError:
+        return set()
+    if result.returncode not in (0, 1):
+        return set()
+    return {Path(item) for item in result.stdout.split("\0") if item}
+
+
 def load_rules(path: Path) -> dict[str, Any]:
     rules = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(rules, dict):
@@ -244,13 +262,17 @@ class VaultValidator:
 
     def _collect_notes(self) -> None:
         skip = {name.lower() for name in self.rules.get("skip_names", ["readme.md"])}
+        candidates: list[Path] = []
         for directory in self.rules.get("note_roots", []):
             base = self.root / directory
             if not base.exists():
                 continue
-            for path in sorted(base.rglob("*.md")):
-                if path.name.lower() in skip:
-                    continue
+            candidates.extend(
+                path for path in sorted(base.rglob("*.md")) if path.name.lower() not in skip
+            )
+        ignored = git_ignored(self.root, candidates)
+        for path in candidates:
+            if path not in ignored:
                 self.notes.append(read_markdown(path, self.root))
 
     def _validate_notes(self) -> None:
