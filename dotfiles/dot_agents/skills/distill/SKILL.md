@@ -1,6 +1,6 @@
 ---
 name: distill
-description: Distills a source into lasting records, with a mode per source - a finished or paused agent session (the default, read from its full log on disk rather than the context window), a research, spike or scratch folder, or a document. Workspace knowledge goes into the repository's own homes (or a standard layout it creates), personal and generic knowledge goes to the user's wiki inbox, each item verified first; then it reports what it kept and dropped. Use when the user asks to distill, wrap up, archive or hand off a session, to save what a session learned, or to distil, mine, close out or clean up a research folder or a document. Replaces distill-session.
+description: Distills a source into lasting records, with a mode per source - a finished or paused agent session (the default, read from its full log on disk rather than the context window), a research, spike or scratch folder, or a document. Workspace knowledge goes into the repository's own homes (or a standard layout it creates), personal and generic knowledge goes to the user's wiki inbox, each item verified first; then it reports what it kept and dropped. Use when the user asks to distill, wrap up, archive or hand off a session, to save what a session learned, or to distil, mine or clean up a research folder or a document. Closing out and archiving a project, area or learning note is archive-closeout, which calls this skill. Replaces distill-session.
 ---
 
 # Distill

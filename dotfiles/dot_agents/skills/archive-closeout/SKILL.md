@@ -34,7 +34,7 @@ Return one bounded closeout plan:
 
 1. **Closeout state** — target, state, outcome, effective date, and unresolved ambiguity.
 2. **Task disposition** — move, cancel, retain as unresolved history, or remove a completed one-off whose completion is recorded. Never silently mark work complete.
-3. **Distillation** — each durable item, its existing or proposed destination, and the minimal patch needed. Prefer an existing area/resource over creating a note. Include how the owning note will retain **exactly one** canonical link to the archived source (see Distillation rules).
+3. **Distillation** — found with the `distill` skill: its document mode for one note, its research mode for a folder. Run only its steps 1 to 3 (find the homes, gather candidates, judge and sort) and list here each durable item, its existing or proposed destination, and the minimal patch needed. Prefer an existing area/resource over creating a note. Include how the owning note will retain **exactly one** canonical link to the archived source (see Distillation rules).
 4. **Owning state** — at most one current-state patch and one calendar-day Log entry (with timed sub-bullets if needed) per affected area when meaning changed.
 5. **Archive move** — proposed path under the archive folder and links requiring repair.
 6. **External records** — safe pointers only; classify documents and identifiers before retention.
@@ -56,7 +56,7 @@ Call out facts that need verification. Ask for approval of destinations, task di
 
 After approval:
 
-1. patch approved destination notes and bump `updated`;
+1. patch approved destination notes with `distill`'s step 4 (verify, then write) and step 5 for personal or generic items, and bump `updated`; its finish step does not run here, so nothing is removed or committed;
 2. apply approved task transfers/cancellations/removals;
 3. add or update the source `## Closeout` summary;
 4. move the source or workspace to the approved path under the archive folder;
