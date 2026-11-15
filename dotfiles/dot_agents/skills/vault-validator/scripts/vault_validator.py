@@ -657,8 +657,17 @@ class VaultValidator:
         if not skills:
             return
         skill_root = self.root / skills.get("root", ".agents/skills")
+        shared = skills.get("shared_root")
+        shared_root = Path(shared).expanduser() if shared else None
+
+        def skill_dir(name: str) -> Path:
+            if shared_root and not (skill_root / name / "SKILL.md").is_file():
+                if (shared_root / name / "SKILL.md").is_file():
+                    return shared_root / name
+            return skill_root / name
+
         for skill_name in skills.get("required", []):
-            skill = skill_root / skill_name / "SKILL.md"
+            skill = skill_dir(skill_name) / "SKILL.md"
             if not skill.is_file():
                 self.add(
                     "error",
@@ -687,8 +696,8 @@ class VaultValidator:
                         parsed.key_lines.get("description"),
                     )
         for skill_name, reference in skills.get("references", {}).items():
-            skill_file = skill_root / skill_name / "SKILL.md"
-            reference_file = skill_root / skill_name / reference
+            skill_file = skill_dir(skill_name) / "SKILL.md"
+            reference_file = skill_dir(skill_name) / reference
             if not skill_file.is_file():
                 continue
             rule = f"{skill_name.upper().replace('-', '_')}_{Path(reference).stem.upper()}"

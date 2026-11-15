@@ -105,6 +105,24 @@ class EngineTest(unittest.TestCase):
             self.assertEqual(0, main(["--root", str(self.root)]))
         self.assertIn("0 error(s)", out.getvalue())
 
+    def test_a_required_skill_may_live_in_the_shared_root(self) -> None:
+        shared = self.root / "home-skills"
+        write(shared / "tend/SKILL.md", "---\nname: tend\ndescription: Shared.\n---\n")
+        write(shared / "learning/SKILL.md", "---\nname: learning\ndescription: Shared.\n---\n")
+        skills = {"required": ["tend", "learning", "quiz"], "references": {"learning": "METHOD.md"}}
+        self.assertEqual(
+            {("WORKFLOW_SKILL_MISSING", ".agents/skills/tend/SKILL.md"),
+             ("WORKFLOW_SKILL_MISSING", ".agents/skills/learning/SKILL.md"),
+             ("WORKFLOW_SKILL_MISSING", ".agents/skills/quiz/SKILL.md")},
+            self.errors(skills=skills),
+        )
+        skills["shared_root"] = str(shared)
+        self.assertEqual(
+            {("WORKFLOW_SKILL_MISSING", ".agents/skills/quiz/SKILL.md"),
+             ("LEARNING_METHOD_MISSING", "home-skills/learning/METHOD.md")},
+            self.errors(skills=skills),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -32,9 +32,10 @@ A section that is absent switches its check off. The wiki's file is the full exa
 | `dated_types`, `dated_month_ok` | Dated notes are named after their `date:`; `YYYY-MM` allowed when the day is unknown |
 | `read_later`, `inbox`, `retention_tags` | Wiki workflow warnings |
 | `summaries` | Warns (`SUMMARY_STALE`) when a note of a listed type is older than a note it links to by more than `grace_days`; links under `skip_prefixes` are not counted |
-| `skills` | Required skills, name and description checks, required references |
+| `skills` | Required skills, found in `root` (the repo's own) or else in `shared_root` (such as `~/.agents/skills`); name and description checks on the repo's own skills; required references |
 | `required_files`, `obsidian_plugins`, `operator_guide`, `tend_state` | Repository furniture |
 | `baseline` | Default accepted-debt file |
+| `workflows` | Not a check: folders and commands the PARA workflow skills read ([workflows.md](references/workflows.md)) |
 
 Rules are data: never put names, employers or other private values in this skill; they belong in
 the calling repository's file.
