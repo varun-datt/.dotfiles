@@ -59,7 +59,7 @@ Event orders were 9 of the 24 accepted findings on these items.
 - **Global names:** search for a CSS class before adding one.
 - **One colour, one meaning; the normal state is quiet;** a chart says what its bars measure.
 - **Browser tests own their data:** a test creates and finds its own rows by id and passes in any order.
-- **Visible is not open:** a visibility check passes on a panel collapsed to zero width; check its size or that it is in the viewport, and look at the image the test takes.
+- **Visible is not open:** a visibility check passes on a panel collapsed to zero width; check its size or that it is in the viewport, and look at the image the test takes. A shared layout check that every browser test runs can catch it once for all: text inside a clipping box narrower than a set minimum, or outside the window with no scrolling box that reaches it; leave out text a pan moves (a transform), text drawn in SVG, screen-reader-only text (clip or clip-path) and a third-party editor's internals.
 
 ## dotfiles and scripts
 
